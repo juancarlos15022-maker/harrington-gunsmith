@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07140f">
+<title>Harrington Gunsmith · Calculadora</title>
+<style>
+*{box-sizing:border-box}:root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
+body{margin:0;color:var(--ink);font-family:Georgia,"Times New Roman",serif;background:
+radial-gradient(circle at 50% -10%,#6a3d1d55,transparent 35%),
+linear-gradient(#120d09cc,#050a07f5),
+repeating-linear-gradient(90deg,#24160f 0 2px,#170f0a 2px 7px);min-height:100vh}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;background-image:
+repeating-linear-gradient(0deg,transparent 0 3px,#fff 4px,transparent 5px);mix-blend-mode:soft-light}
+.wrap{max-width:1500px;margin:auto;padding:14px}
+.hero{position:relative;overflow:hidden;text-align:center;border:2px solid #8b6a2e;border-radius:10px;padding:26px 12px 20px;
+background:linear-gradient(135deg,#07150f,#0b251a 50%,#07130e);box-shadow:0 10px 35px #0009,inset 0 0 45px #000}
+.hero:before,.hero:after{content:"✦ ─────── ✦";position:absolute;color:#8f6b2d;top:12px;font-size:13px;letter-spacing:4px}
+.hero:before{left:18px}.hero:after{right:18px}
+h1{margin:4px 0 2px;color:var(--gold2);font-size:clamp(31px,7vw,67px);letter-spacing:.07em;text-shadow:0 2px #000,0 0 16px #d7ae5430}
+.hero .place{color:#e6c56c;letter-spacing:.28em;font-size:13px}.hero .motto{font-style:italic;font-size:20px;margin:8px 0 0;color:#f0d99a}
+.orn{color:#b98b3c;margin-top:8px;letter-spacing:.3em}
+.tabs{display:flex;overflow:auto;border:1px solid #8b6a2e;border-radius:8px;margin:12px 0;background:#06130e;scrollbar-width:none}
+.tabs button{flex:1;min-width:120px;border:0;border-right:1px solid #6f5427;background:transparent;color:#d8bd75;padding:13px 9px;font-family:inherit;font-weight:bold;cursor:pointer}
+.tabs button.active{background:linear-gradient(#80601f,#3a2a0c);color:#fff0b6;box-shadow:inset 0 0 20px #0008}
+.grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(310px,.7fr);gap:12px}
+.panel{border:1px solid #72572b;background:#07120eeb;border-radius:8px;box-shadow:0 10px 30px #0008;overflow:hidden}
+.search{display:flex;gap:8px;padding:10px;border-bottom:1px solid #72572b;background:#091711}
+.search input{width:100%;background:#040b08;border:1px solid #425746;color:#eee0bd;border-radius:6px;padding:12px;font-size:16px}
+.table-head,.product{display:grid;grid-template-columns:44px minmax(170px,1fr) 105px 160px 105px;align-items:center}
+.table-head{padding:9px 12px;color:#e8c96f;font-size:12px;font-weight:bold;border-bottom:1px solid #72572b;background:#15150d}
+.product{padding:8px 12px;border-bottom:1px solid #26382d;min-height:60px;background:linear-gradient(90deg,#0a1711,#08110d)}
+.product:hover{background:#10231a}.weapon-icon{color:#cda64c;font-size:23px;text-align:center;text-shadow:0 0 10px #e6bd5360}
+.pname{font-size:16px}.pname small{display:block;color:#786f5d;font-size:10px;margin-top:3px;text-transform:uppercase;letter-spacing:.12em}
+.price,.subtotal{text-align:right;font-variant-numeric:tabular-nums}.price{color:#f0dfae}.subtotal{color:#f3d47c;font-weight:bold}
+.qty{display:flex;justify-content:center;align-items:center}.qty button{width:37px;height:37px;background:#11140e;border:1px solid #b88931;color:#f4d87f;font-size:22px;cursor:pointer}
+.qty input{width:58px;height:37px;text-align:center;background:#030806;color:white;border:1px solid #5d4928;border-left:0;border-right:0;font-size:16px;font-weight:bold}
+.order{position:sticky;top:8px}.order-title{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;border-bottom:1px solid #8b6a2e;background:linear-gradient(90deg,#25180e,#0d1c14);color:#f0d278;font-size:21px;font-weight:bold}
+.danger{background:#5b1515;border:1px solid #a84532;color:#f7d7c4;border-radius:5px;padding:7px 10px;cursor:pointer}
+.cart{padding:8px;max-height:390px;overflow:auto;min-height:190px}.empty{text-align:center;color:#827866;padding:52px 20px;line-height:1.6}
+.cartrow{display:grid;grid-template-columns:1fr 45px 72px 80px;gap:5px;padding:8px 5px;border-bottom:1px solid #26382d;font-size:13px;align-items:center}.cartrow span:not(:first-child){text-align:right}
+.total{display:flex;justify-content:space-between;align-items:center;margin:9px;border:1px solid #8b6a2e;border-radius:6px;padding:14px;background:#0c2819;color:#f1cf68;font-size:25px;font-weight:bold}
+.actions{padding:0 9px 10px;display:grid;grid-template-columns:1fr 1fr;gap:8px}.actions button{padding:12px 8px;border-radius:6px;border:1px solid #76633e;background:#242522;color:#eee1c6;font-weight:bold;cursor:pointer}
+.actions .finish{grid-column:1/-1;background:linear-gradient(#1b6c16,#0a430b);border-color:#d2a733;color:#fff7c9;font-size:16px}
+.actions .new{grid-column:1/-1}.stamp{margin:8px;border:1px solid #59482b;padding:16px;text-align:center;color:#9b865b;background:linear-gradient(#4e35141c,#291b0d33);font-size:12px;letter-spacing:.14em}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(100px);background:#10291b;border:1px solid #c69a3f;color:#f5e3b3;padding:12px 18px;border-radius:7px;opacity:0;transition:.25s;z-index:20;box-shadow:0 6px 30px #000}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+footer{text-align:center;color:#746a58;padding:18px;font-size:12px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.order{position:relative;top:0}}
+@media(max-width:650px){.wrap{padding:7px}.hero{padding:22px 8px 16px}.hero:before,.hero:after{display:none}.tabs button{min-width:105px}.table-head{display:none}.product{grid-template-columns:34px 1fr 80px;gap:6px;padding:10px 7px}.product .qty{grid-column:2/3;justify-content:flex-start}.product .subtotal{grid-column:3/4;grid-row:2}.pname{font-size:15px}.price{font-size:14px}.qty button{width:36px}.qty input{width:54px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+  <div class="place">SAINT DENIS · 1880</div>
+  <h1>HARRINGTON GUNSMITH</h1>
+  <div class="motto">El precio de un apellido.</div>
+  <div class="orn">◆ ─── ✦ ─── ◆</div>
+</header>
+
+<nav class="tabs">
+<button class="active" data-cat="todos">✦ Todos</button>
+<button data-cat="revolveres">◉ Revólveres</button>
+<button data-cat="pistolas">▰ Pistolas</button>
+<button data-cat="repetidoras">➶ Repetidoras</button>
+<button data-cat="rifles">━ Rifles</button>
+<button data-cat="escopetas">═ Escopetas</button>
+<button data-cat="blancas">◆ Armas blancas</button>
+<button data-cat="municion">▥ Munición</button>
+<button data-cat="suministros">◈ Suministros</button>
+</nav>
+
+<div class="grid">
+<section class="panel">
+  <div class="search"><input id="search" placeholder="⌕  Buscar producto..." autocomplete="off"></div>
+  <div class="table-head"><span></span><span>PRODUCTO</span><span style="text-align:right">PRECIO</span><span style="text-align:center">CANTIDAD</span><span style="text-align:right">SUBTOTAL</span></div>
+  <div id="products"><div class="product" data-cat="revolveres" data-name="cattleman revolver">
+      <div class="weapon-icon">✦</div>
+      <div class="pname">Cattleman Revolver<small>Revolveres</small></div>
+      <div class="price">$13.80</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="13.80" data-name="Cattleman Revolver"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="revolveres" data-name="doble action revolver">
+      <div class="weapon-icon">✦</div>
+      <div class="pname">Doble Action Revolver<small>Revolveres</small></div>
+      <div class="price">$14.90</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="14.90" data-name="Doble Action Revolver"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="revolveres" data-name="schofield revolver">
+      <div class="weapon-icon">✦</div>
+      <div class="pname">Schofield Revolver<small>Revolveres</small></div>
+      <div class="price">$62.10</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="62.10" data-name="Schofield Revolver"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="revolveres" data-name="lemat revolver">
+      <div class="weapon-icon">✦</div>
+      <div class="pname">Lemat Revolver<small>Revolveres</small></div>
+      <div class="price">$89.00</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="89.00" data-name="Lemat Revolver"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="revolveres" data-name="navy revolver">
+      <div class="weapon-icon">✦</div>
+      <div class="pname">Navy Revolver<small>Revolveres</small></div>
+      <div class="price">$108.30</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="108.30" data-name="Navy Revolver"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="revolveres" data-name="navy crossover revolver">
+      <div class="weapon-icon">✦</div>
+      <div class="pname">Navy Crossover Revolver<small>Revolveres</small></div>
+      <div class="price">$134.00</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="134.00" data-name="Navy Crossover Revolver"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="pistolas" data-name="semiautomática pistola">
+      <div class="weapon-icon">✦</div>
+      <div class="pname">Semiautomática Pistola<small>Pistolas</small></div>
+      <div class="price">$111.40</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="111.40" data-name="Semiautomática Pistola"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="pistolas" data-name="mauser pistola">
+      <div class="weapon-icon">✦</div>
+      <div class="pname">Mauser Pistola<small>Pistolas</small></div>
+      <div class="price">$98.10</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="98.10" data-name="Mauser Pistola"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="pistolas" data-name="volcanic pistola">
+      <div class="weapon-icon">✦</div>
+      <div class="pname">Volcanic Pistola<small>Pistolas</small></div>
+      <div class="price">$165.10</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="165.10" data-name="Volcanic Pistola"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="pistolas" data-name="m1899 pistola">
+      <div class="weapon-icon">✦</div>
+      <div class="pname">M1899 Pistola<small>Pistolas</small></div>
+      <div class="price">$135.80</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="135.80" data-name="M1899 Pistola"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="repetidoras" data-name="carabina repetición">
+      <div class="weapon-icon">◆</div>
+      <div class="pname">Carabina Repetición<small>Repetidoras</small></div>
+      <div class="price">$73.40</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="73.40" data-name="Carabina Repetición"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="repetidoras" data-name="evans repetición">
+      <div class="weapon-icon">◆</div>
+      <div class="pname">Evans Repetición<small>Repetidoras</small></div>
+      <div class="price">$173.90</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="173.90" data-name="Evans Repetición"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="repetidoras" data-name="henry repetición">
+      <div class="weapon-icon">◆</div>
+      <div class="pname">Henry Repetición<small>Repetidoras</small></div>
+      <div class="price">$216.30</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="216.30" data-name="Henry Repetición"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="repetidoras" data-name="winchester repetición">
+      <div class="weapon-icon">◆</div>
+      <div class="pname">Winchester Repetición<small>Repetidoras</small></div>
+      <div class="price">$260.90</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="260.90" data-name="Winchester Repetición"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="rifles" data-name="varmint">
+      <div class="weapon-icon">◆</div>
+      <div class="pname">Varmint<small>Rifles</small></div>
+      <div class="price">$32.90</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="32.90" data-name="Varmint"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="rifles" data-name="springfield rifle">
+      <div class="weapon-icon">◆</div>
+      <div class="pname">Springfield Rifle<small>Rifles</small></div>
+      <div class="price">$351.00</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="351.00" data-name="Springfield Rifle"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="rifles" data-name="cerrojo rifle">
+      <div class="weapon-icon">◆</div>
+      <div class="pname">Cerrojo Rifle<small>Rifles</small></div>
+      <div class="price">$375.90</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="375.90" data-name="Cerrojo Rifle"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="escopetas" data-name="recortada escopeta">
+      <div class="weapon-icon">◆</div>
+      <div class="pname">Recortada Escopeta<small>Escopetas</small></div>
+      <div class="price">$292.00</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="292.00" data-name="Recortada Escopeta"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="escopetas" data-name="doble cañón escopeta">
+      <div class="weapon-icon">◆</div>
+      <div class="pname">Doble Cañón Escopeta<small>Escopetas</small></div>
+      <div class="price">$323.00</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="323.00" data-name="Doble Cañón Escopeta"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="escopetas" data-name="escopeta exótica">
+      <div class="weapon-icon">◆</div>
+      <div class="pname">Escopeta Exótica<small>Escopetas</small></div>
+      <div class="price">$368.70</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="368.70" data-name="Escopeta Exótica"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="blancas" data-name="cuchillo">
+      <div class="weapon-icon">▲</div>
+      <div class="pname">Cuchillo<small>Blancas</small></div>
+      <div class="price">$4.50</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="4.50" data-name="Cuchillo"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="blancas" data-name="hacha">
+      <div class="weapon-icon">▲</div>
+      <div class="pname">Hacha<small>Blancas</small></div>
+      <div class="price">$3.60</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="3.60" data-name="Hacha"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="blancas" data-name="machete">
+      <div class="weapon-icon">▲</div>
+      <div class="pname">Machete<small>Blancas</small></div>
+      <div class="price">$19.40</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="19.40" data-name="Machete"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="blancas" data-name="arco">
+      <div class="weapon-icon">▲</div>
+      <div class="pname">Arco<small>Blancas</small></div>
+      <div class="price">$3.00</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="3.00" data-name="Arco"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="municion" data-name="munición escopeta">
+      <div class="weapon-icon">●</div>
+      <div class="pname">Munición Escopeta<small>Municion</small></div>
+      <div class="price">$2.30</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="2.30" data-name="Munición Escopeta"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="municion" data-name="munición pistola">
+      <div class="weapon-icon">●</div>
+      <div class="pname">Munición Pistola<small>Municion</small></div>
+      <div class="price">$1.30</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="1.30" data-name="Munición Pistola"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="municion" data-name="munición repetidora">
+      <div class="weapon-icon">●</div>
+      <div class="pname">Munición Repetidora<small>Municion</small></div>
+      <div class="price">$1.30</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="1.30" data-name="Munición Repetidora"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="municion" data-name="munición revolver">
+      <div class="weapon-icon">●</div>
+      <div class="pname">Munición Revolver<small>Municion</small></div>
+      <div class="price">$1.30</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="1.30" data-name="Munición Revolver"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="municion" data-name="munición rifle">
+      <div class="weapon-icon">●</div>
+      <div class="pname">Munición Rifle<small>Municion</small></div>
+      <div class="price">$2.30</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="2.30" data-name="Munición Rifle"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="municion" data-name="flechas">
+      <div class="weapon-icon">●</div>
+      <div class="pname">Flechas<small>Municion</small></div>
+      <div class="price">$1.00</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="1.00" data-name="Flechas"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="suministros" data-name="trapo">
+      <div class="weapon-icon">●</div>
+      <div class="pname">Trapo<small>Suministros</small></div>
+      <div class="price">$0.90</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="0.90" data-name="Trapo"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="suministros" data-name="pólvora">
+      <div class="weapon-icon">●</div>
+      <div class="pname">Pólvora<small>Suministros</small></div>
+      <div class="price">$0.50</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="0.50" data-name="Pólvora"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="suministros" data-name="lazo">
+      <div class="weapon-icon">●</div>
+      <div class="pname">Lazo<small>Suministros</small></div>
+      <div class="price">$2.00</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="2.00" data-name="Lazo"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="suministros" data-name="lazo reforzado">
+      <div class="weapon-icon">●</div>
+      <div class="pname">Lazo Reforzado<small>Suministros</small></div>
+      <div class="price">$4.70</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="4.70" data-name="Lazo Reforzado"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div>
+<div class="product" data-cat="suministros" data-name="aceite de arma">
+      <div class="weapon-icon">●</div>
+      <div class="pname">Aceite de Arma<small>Suministros</small></div>
+      <div class="price">$0.20</div>
+      <div class="qty"><button class="minus" aria-label="Restar">−</button><input type="number" min="0" step="1" value="0" inputmode="numeric" data-price="0.20" data-name="Aceite de Arma"><button class="plus" aria-label="Sumar">+</button></div>
+      <div class="subtotal">$0.00</div>
+    </div></div>
+</section>
+
+<aside class="panel order">
+  <div class="order-title"><span>PEDIDO ACTUAL</span><button class="danger" id="clear">Vaciar</button></div>
+  <div class="cart" id="cart"><div class="empty">▣<br>Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div></div>
+  <div class="total"><span>TOTAL</span><span id="grand">$0.00</span></div>
+  <div class="actions">
+    <button class="finish" id="finish">▣ Finalizar venta</button>
+    <button id="copy">▤ Copiar para Discord</button>
+    <button id="download">⇩ Descargar comprobante</button>
+    <button class="new" id="new">↻ Nueva venta</button>
+  </div>
+  <div class="stamp">HARRINGTON GUNSMITH<br>FINE FIREARMS · AMMUNITION · REPAIRS<br>SAINT DENIS</div>
+</aside>
+</div>
+<footer>Harrington Gunsmith · Saint Denis · 1880</footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const inputs=[...document.querySelectorAll('.qty input')];
+const grand=document.getElementById('grand'), cart=document.getElementById('cart'), toast=document.getElementById('toast');
+let lastReceipt='';
+function money(n){return '$'+n.toFixed(2)}
+function selected(){
+ return inputs.map(i=>({name:i.dataset.name,price:+i.dataset.price,qty:Math.max(0,parseInt(i.value)||0)})).filter(x=>x.qty>0);
+}
+function calc(){
+ let total=0;
+ inputs.forEach(i=>{
+   let q=Math.max(0,parseInt(i.value)||0), sub=q*(+i.dataset.price);
+   i.closest('.product').querySelector('.subtotal').textContent=money(sub); total+=sub;
+ });
+ grand.textContent=money(total);
+ const items=selected();
+ if(!items.length) cart.innerHTML='<div class="empty">▣<br>Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div>';
+ else cart.innerHTML=items.map(x=>`<div class="cartrow"><span>${x.name}</span><span>${x.qty}</span><span>${money(x.price)}</span><span>${money(x.qty*x.price)}</span></div>`).join('');
+ return total;
+}
+function receipt(){
+ const items=selected(), total=calc(), now=new Date();
+ if(!items.length) return '';
+ const lines=[
+ 'HARRINGTON GUNSMITH — REGISTRO DE VENTA',
+ 'Saint Denis · 1880',
+ '────────────────────────────',
+ ...items.map(x=>`${x.name} × ${x.qty} — ${money(x.price)}/u — ${money(x.qty*x.price)}`),
+ '────────────────────────────',
+ `TOTAL DE LA VENTA: ${money(total)}`,
+ `Registro: ${now.toLocaleDateString('es-ES')} · ${now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`,
+ 'El precio de un apellido.'
+ ];
+ return lines.join('\n');
+}
+function say(t){toast.textContent=t;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
+document.querySelectorAll('.plus').forEach(b=>b.onclick=()=>{let i=b.parentElement.querySelector('input');i.value=(parseInt(i.value)||0)+1;calc()});
+document.querySelectorAll('.minus').forEach(b=>b.onclick=()=>{let i=b.parentElement.querySelector('input');i.value=Math.max(0,(parseInt(i.value)||0)-1);calc()});
+inputs.forEach(i=>i.oninput=calc);
+document.getElementById('clear').onclick=()=>{inputs.forEach(i=>i.value=0);calc();say('Pedido vaciado')};
+document.getElementById('new').onclick=()=>{if(confirm('¿Empezar una nueva venta y borrar las cantidades actuales?')){inputs.forEach(i=>i.value=0);lastReceipt='';calc();say('Nueva venta preparada')}};
+document.getElementById('finish').onclick=()=>{lastReceipt=receipt();if(!lastReceipt) return say('Añade algún producto primero');say('Venta finalizada · comprobante preparado')};
+document.getElementById('copy').onclick=async()=>{
+ const t=lastReceipt||receipt(); if(!t)return say('Añade algún producto primero');
+ try{await navigator.clipboard.writeText(t);say('Venta copiada para Discord')}catch(e){prompt('Copia este texto:',t)}
+};
+document.getElementById('download').onclick=()=>{
+ const t=lastReceipt||receipt(); if(!t)return say('Añade algún producto primero');
+ const blob=new Blob([t],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);a.download='Harrington_Venta_'+new Date().toISOString().slice(0,10)+'.txt';a.click();URL.revokeObjectURL(a.href);say('Comprobante descargado');
+};
+let cat='todos';
+function filter(){
+ const q=document.getElementById('search').value.toLowerCase().trim();
+ document.querySelectorAll('.product').forEach(p=>p.style.display=((cat==='todos'||p.dataset.cat===cat)&&p.dataset.name.includes(q))?'grid':'none');
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');cat=b.dataset.cat;filter()});
+document.getElementById('search').oninput=filter;
+calc();
+</script>
+</body></html>
