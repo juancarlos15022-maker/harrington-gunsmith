@@ -14,8 +14,16 @@ repeating-linear-gradient(90deg,#24160f 0 2px,#170f0a 2px 7px);min-height:100vh}
 body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;background-image:
 repeating-linear-gradient(0deg,transparent 0 3px,#fff 4px,transparent 5px);mix-blend-mode:soft-light}
 .wrap{max-width:1500px;margin:auto;padding:14px}
-.hero{position:relative;overflow:hidden;text-align:center;border:2px solid #8b6a2e;border-radius:10px;padding:26px 12px 20px;
-background:linear-gradient(135deg,#07150f,#0b251a 50%,#07130e);box-shadow:0 10px 35px #0009,inset 0 0 45px #000}
+.hero{position:relative;overflow:hidden;text-align:center;border:2px solid #8b6a2e;border-radius:10px;padding:90px 12px 28px;
+background:
+linear-gradient(to bottom,#07150f22,#07150f99 48%,#07130ef5),
+url("cabecera-harrington.png") center/cover no-repeat;
+box-shadow:0 10px 35px #0009,inset 0 0 45px #000}
+.category-visual{position:relative;overflow:hidden;height:210px;border:1px solid #72572b;border-radius:8px;margin:0 0 12px;background:#07120e;box-shadow:0 10px 30px #0008}
+.category-visual img{width:100%;height:100%;object-fit:cover;display:block}
+.category-visual:after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 30%,#06110de8)}
+.category-visual .visual-title{position:absolute;z-index:2;left:20px;bottom:15px;color:#f3d47c;font-size:30px;font-weight:bold;text-shadow:0 2px 8px #000}
+@media(max-width:650px){.category-visual{height:155px}.category-visual .visual-title{font-size:23px;left:14px;bottom:11px}}
 .hero:before,.hero:after{content:"✦ ─────── ✦";position:absolute;color:#8f6b2d;top:12px;font-size:13px;letter-spacing:4px}
 .hero:before{left:18px}.hero:after{right:18px}
 h1{margin:4px 0 2px;color:var(--gold2);font-size:clamp(31px,7vw,67px);letter-spacing:.07em;text-shadow:0 2px #000,0 0 16px #d7ae5430}
@@ -71,6 +79,11 @@ footer{text-align:center;color:#746a58;padding:18px;font-size:12px}
 <button data-cat="municion">▥ Munición</button>
 <button data-cat="suministros">◈ Suministros</button>
 </nav>
+
+<div class="category-visual" id="categoryVisual">
+  <img id="categoryImage" src="cabecera-harrington.png" alt="Catálogo Harrington Gunsmith">
+  <div class="visual-title" id="categoryTitle">Catálogo Harrington</div>
+</div>
 
 <div class="grid">
 <section class="panel">
@@ -392,11 +405,28 @@ document.getElementById('download').onclick=()=>{
  a.href=URL.createObjectURL(blob);a.download='Harrington_Venta_'+new Date().toISOString().slice(0,10)+'.txt';a.click();URL.revokeObjectURL(a.href);say('Comprobante descargado');
 };
 let cat='todos';
+const categoryVisuals={
+ todos:{image:'cabecera-harrington.png',title:'Catálogo Harrington'},
+ revolveres:{image:'revolveres.png',title:'Revólveres'},
+ pistolas:{image:'pistolas.png',title:'Pistolas'},
+ repetidoras:{image:'repetidoras.png',title:'Repetidoras'},
+ rifles:{image:'rifles.png',title:'Rifles'},
+ escopetas:{image:'escopetas.png',title:'Escopetas'},
+ blancas:{image:'armas-blancas.png',title:'Armas blancas'},
+ municion:{image:'municion.png',title:'Munición'},
+ suministros:{image:'suministros.png',title:'Suministros'}
+};
+function updateCategoryVisual(){
+ const v=categoryVisuals[cat]||categoryVisuals.todos;
+ document.getElementById('categoryImage').src=v.image;
+ document.getElementById('categoryImage').alt=v.title+' · Harrington Gunsmith';
+ document.getElementById('categoryTitle').textContent=v.title;
+}
 function filter(){
  const q=document.getElementById('search').value.toLowerCase().trim();
  document.querySelectorAll('.product').forEach(p=>p.style.display=((cat==='todos'||p.dataset.cat===cat)&&p.dataset.name.includes(q))?'grid':'none');
 }
-document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');cat=b.dataset.cat;filter()});
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');cat=b.dataset.cat;updateCategoryVisual();filter()});
 document.getElementById('search').oninput=filter;
 calc();
 </script>
