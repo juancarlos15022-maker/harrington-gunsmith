@@ -681,6 +681,10 @@ details.tut[open]>summary{border-bottom:1px solid #5b4521}
 .tut-c .tag{display:inline-block;padding:0 7px;border:1px solid #3f7a52;border-radius:8px;color:#a7e3b6;font-size:11px;letter-spacing:.08em}
 .tut-c .tag.boss{border-color:#a8742f;color:#f0c27a}
 @media(max-width:650px){.tut-btn{top:16px;right:16px;min-height:34px;padding:0 11px;font-size:12px}}
+
+/* Discord: un canal propio opcional por cada tipo de aviso */
+.wh-row{margin-bottom:10px}
+.wh-row .wh-own{display:block;width:100%;min-height:40px;margin:2px 0 0;font-size:14px}
 </style>
 </head>
 <body>
@@ -1135,13 +1139,6 @@ details.tut[open]>summary{border-bottom:1px solid #5b4521}
     <div id="encBody"></div>
   </div>
 </div>
-
-<!-- Fichaje: entrada -->
-<div class="modal-overlay confirm" id="entryModal" hidden>
-  <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="entryTitle">
-    <div class="confirm-title" id="entryTitle">Fichar entrada</div>
-    <p>Selecciona el empleado.</p>
-    <select class="name-input" id="employeeName"></select>
     <div class="confirm-actions">
       <button type="button" id="entryCancel">Cancelar</button>
       <button type="button" class="ok" id="entryOk">Aceptar</button>
@@ -1907,7 +1904,7 @@ async function cancelEncargo(id){
  if(e.depositCents>0)refund=await askConfirm('Adelanto de '+money(e.depositCents),'¿Se devuelve el adelanto al cliente? Si no, la casa se lo queda.','Devolver');
  e.finished=true;e.cancelled=true;e.refunded=refund;e.finishedAt=Date.now();saveEncs();updateEncBtn();
  if(refund){const now=Date.now(),m=madridParts(now);gastos.push({id:'g'+now.toString(36)+'r',cat:'otros',concepto:'Devolución del adelanto · encargo '+e.id,cents:e.depositCents,day:dayNum(+m.year,+m.month,+m.day),date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`});saveGastos()}
- discordSend('anulaciones','ENCARGO CANCELADO\n'+e.id+' · '+e.client+(e.depositCents?'\nAdelanto '+money(e.depositCents)+(refund?' devuelto':' retenido'):''));
+ discordSend('encargos','ENCARGO CANCELADO\n'+e.id+' · '+e.client+(e.depositCents?'\nAdelanto '+money(e.depositCents)+(refund?' devuelto':' retenido'):''));
  renderCustomer();renderEnc();say('Encargo cancelado');
 }
 async function finishFromCard(id){
@@ -2253,8 +2250,7 @@ function renderModSemanales(){
   const body=ven?e.sales.map(r=>`<div class="dir-log"><b>${esc(r.id)}</b> · ${esc(r.date)} ${esc(r.time)}${r.op==='encargo'?' · ENCARGO':''}${r.fromEncargo?' · ENTREGA':''}<br>Cliente: ${esc(r.client||'—')}<br>${r.items?r.items.map(x=>`${x.qty} × ${esc(x.name)}`).join(', '):summaryText(r.products,r.units)}${r.convenio?'<br>Convenio: '+esc(r.convenio):''}<br>Total: ${money(r.totalCents)} · Cobrado: ${money(collected(r))}</div>`).join(''):
    e.shifts.map(r=>`<div class="dir-log">${fmtDate(r.start)} ${fmtTime(r.start)} → ${fmtDate(r.end)} ${fmtTime(r.end)}<br><b>${fmtDuration(r.start,r.end)}</b></div>`).join('');
   const sum=ven?(t=>`Operaciones: ${t.ops} · Unidades entregadas: ${t.units}<br><b>Total cobrado: ${money(t.cash)}</b>`)(salesSum(e)):(t=>`Fichajes: ${t.n}<br><b>Tiempo total: ${fmtDuration(0,t.ms)}</b>`)(shiftsSum(e));
-  return `${nav}${head}<div class="enc-card dir-item"><div class="t">${esc(e.name)}</div><div class="it">${sum}</div></div>${has?body:'<div class="enc-empty">Sin actividad esta semana.</div>'}<div class="enc-actions" 
-  style="margin-top:10px"><button type="button" class="primary" data-dir="wk-dl:${encodeURIComponent(e.name)}">DESCARGAR DOCUMENTO</button></div>`;
+  return `${nav}${head}<div class="enc-card dir-item"><div class="t">${esc(e.name)}</div><div class="it">${sum}</div></div>${has?body:'<div class="enc-empty">Sin actividad esta semana.</div>'}<div class="enc-actions" style="margin-top:10px"><button type="button" class="primary" data-dir="wk-dl:${encodeURIComponent(e.name)}">DESCARGAR DOCUMENTO</button></div>`;
  }
  const cards=wd.list.map(e=>{
   const has=ven?e.sales.length:e.shifts.length;
@@ -2530,19 +2526,28 @@ function saveCierre(){
 }
 /* --- Discord --- */
 function renderModDiscord(){
- const E=[['ventas','Ventas y encargos (con el ticket como imagen)'],['fichajes','Fichajes de entrada y salida'],['gastos','Gastos nuevos'],['anulaciones','Anulaciones y cancelaciones'],['cierres','Cierres de caja']];
- return `<p class="bk-note">Pega aquí el enlace del webhook de tu canal de Discord. Desde ese momento, cada operación se enviará sola a ese canal. Se configura una vez en cada dispositivo (o importa la «configuración» desde Copia de seguridad).</p>
-  <div class="dir-form enc-sec"><label>ENLACE DEL WEBHOOK<input id="whUrl" type="text" autocomplete="off" spellcheck="false" placeholder="https://discord.com/api/webhooks/..." value="${esc(webhook.url)}"></label>
-  ${E.map(([k,l])=>`<label class="chk"><input type="checkbox" data-ev="${k}"${webhook.ev[k]?' checked':''}>${l}</label>`).join('')}
+ const E=[['ventas','Ventas (con el ticket como imagen)'],['encargos','Encargos: creación, entrega y cancelación (con el ticket)'],['fichajes','Fichajes de entrada y salida'],['gastos','Gastos nuevos'],['anulaciones','Anulaciones de ventas'],['cierres','Cierres de caja']];
+ return `<p class="bk-note">Cada tipo de aviso puede ir a su <b>propio canal</b>: crea un webhook por canal y pégalo en «canal propio». Los que dejes vacíos usan el <b>canal general</b>. Se configura una vez en cada dispositivo (o importa la «configuración» desde Copia de seguridad).</p>
+  <div class="dir-form enc-sec"><label>CANAL GENERAL (POR DEFECTO)<input id="whUrl" type="text" autocomplete="off" spellcheck="false" placeholder="https://discord.com/api/webhooks/..." value="${esc(webhook.url)}"></label>
+  ${E.map(([k,l])=>`<div class="wh-row"><label class="chk"><input type="checkbox" data-ev="${k}"${webhook.ev[k]?' checked':''}>${l}</label><input class="wh-own" type="text" data-whu="${k}" autocomplete="off" spellcheck="false" placeholder="Canal propio (opcional): https://discord.com/api/webhooks/..." value="${esc(webhook.urls[k]||'')}"></div>`).join('')}
   <div class="pay-err" id="whErr" hidden></div>
   <div class="enc-actions two" style="margin-top:8px"><button type="button" class="primary" data-dir="wh-save">GUARDAR</button><button type="button" data-dir="wh-test">PROBAR ENVÍO</button></div></div>
-  <p class="bk-note">Estado: ${webhook.url?'conectado a un canal':'sin configurar (no se envía nada)'}.</p>`;
+  <p class="bk-note">Estado: ${webhook.url||Object.keys(webhook.urls).some(k=>webhook.urls[k])?'configurado':'sin configurar (no se envía nada)'}. «Probar envío» manda un mensaje de prueba a cada canal distinto.</p>`;
 }
 function saveWebhookForm(silent){
- const url=document.getElementById('whUrl').value.trim(), err=document.getElementById('whErr');
- if(url&&!WH_RE.test(url)){err.textContent='El enlace no parece un webhook de Discord';err.hidden=false;return false}
- webhook.url=url;document.querySelectorAll('[data-ev]').forEach(c=>{webhook.ev[c.dataset.ev]=c.checked});
- store.set(KEY_WEBHOOK,JSON.stringify(webhook));if(!silent)say(url?'Discord configurado':'Discord desactivado');return true;
+ const url=document.getElementById('whUrl').value.trim(), err=document.getElementById('whErr'), own={};
+ if(url&&!WH_RE.test(url)){err.textContent='El canal general no parece un webhook de Discord';err.hidden=false;return false}
+ for(const i of document.querySelectorAll('[data-whu]')){const v=i.value.trim();if(v&&!WH_RE.test(v)){err.textContent='El canal propio de «'+i.dataset.whu+'» no parece un webhook de Discord';err.hidden=false;return false}if(v)own[i.dataset.whu]=v}
+ webhook.url=url;webhook.urls=own;document.querySelectorAll('[data-ev]').forEach(c=>{webhook.ev[c.dataset.ev]=c.checked});
+ store.set(KEY_WEBHOOK,JSON.stringify(webhook));if(!silent)say(url||Object.keys(own).length?'Discord configurado':'Discord desactivado');return true;
+}
+function testWebhooks(){
+ if(!saveWebhookForm(true))return;
+ const NAMES={ventas:'ventas',encargos:'encargos',fichajes:'fichajes',gastos:'gastos',anulaciones:'anulaciones',cierres:'cierres'}, dest={};
+ if(webhook.url)dest[webhook.url]=['canal general'];
+ Object.keys(webhook.urls).forEach(k=>{(dest[webhook.urls[k]]=dest[webhook.urls[k]]||[]).push(NAMES[k])});
+ const urls=Object.keys(dest); if(!urls.length)return say('Pega primero un enlace de webhook');
+ urls.forEach(u=>discordSend('ventas','Prueba de conexión desde Harrington Gunsmith ✔\nAvisos de este canal: '+dest[u].join(', '),null,null,true,u));
 }
 /* --- Copia de seguridad --- */
 function renderModCopia(){
@@ -2596,16 +2601,17 @@ function renderDashboard(){
 /* ===== Discord (webhook), registro de movimientos de stock, copia de seguridad ===== */
 const KEY_WEBHOOK='harrington_webhook_v1', KEY_STOCKLOG='harrington_stocklog_v1', KEY_CIERRES='harrington_cierres_v1', KEY_PRICES='harrington_prices_v1', KEY_CUSTPROD='harrington_custprod_v1';
 let webhook=loadObj(KEY_WEBHOOK,{});
-webhook=Object.assign({url:''},webhook,{ev:Object.assign({ventas:true,fichajes:true,gastos:true,anulaciones:true,cierres:true},webhook.ev||{})});
+webhook=Object.assign({url:''},webhook,{ev:Object.assign({ventas:true,encargos:true,fichajes:true,gastos:true,anulaciones:true,cierres:true},webhook.ev||{}),urls:Object.assign({},webhook.urls||{})});
 const WH_RE=/^https:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+/;
-async function discordSend(kind,text,blob,fname,force){
- if(!webhook.url||(!force&&!webhook.ev[kind]))return;
+async function discordSend(kind,text,blob,fname,force,urlOverride){
+ const url=urlOverride||webhook.urls[kind]||webhook.url;
+ if(!url||(!force&&!webhook.ev[kind]))return;
  try{
   const body=String(text).length>1880?String(text).slice(0,1870)+'…':String(text), payload={username:'Harrington Gunsmith',content:'```\n'+body+'\n```'};
   let init;
   if(blob){const fd=new FormData();fd.append('payload_json',JSON.stringify(payload));fd.append('files[0]',blob,fname||'ticket.png');init={method:'POST',body:fd}}
   else init={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)};
-  const r=await fetch(webhook.url,init);
+  const r=await fetch(url,init);
   if(!r.ok)throw new Error(r.status);
   if(force)say('Enviado a Discord ✔');
  }catch(e){say('No se pudo enviar a Discord')}
@@ -2778,7 +2784,7 @@ dirModal.addEventListener('click',e=>{
  else if(act==='cc-dl'){const c=loadLog(KEY_CIERRES).find(x=>x.id===arg);if(c)saveTextFile(cierreDoc(c),`Cierre_de_caja_${c.date.replace(/\//g,'-')}.txt`)}
  else if(act==='cc-cp'){const c=loadLog(KEY_CIERRES).find(x=>x.id===arg);if(c)repCopy(cierreDoc(c))}
  else if(act==='wh-save')saveWebhookForm();
- else if(act==='wh-test'){saveWebhookForm(true);discordSend('ventas','Prueba de conexión desde Harrington Gunsmith ✔',null,null,true)}
+ else if(act==='wh-test')testWebhooks()
  else if(act==='bk-full')downloadBackup(false);
  else if(act==='bk-config')downloadBackup(true);
  else if(act==='bk-restore')document.getElementById('bkFile').click();
@@ -2948,10 +2954,11 @@ async function ticketImage(copy){
  say(copy?'No se pudo copiar: se ha descargado la imagen':'Imagen descargada');
 }
 async function notifySale(s){
- if(!webhook.url||!webhook.ev.ventas||s.sentSig===s.sig)return;
+ const kind=(s.op==='encargo'||s.fromEncargo)?'encargos':'ventas';
+ if(!(webhook.urls[kind]||webhook.url)||!webhook.ev[kind]||s.sentSig===s.sig)return;
  const upd=!!s.sentSig; s.sentSig=s.sig; store.set(KEY_SALE,JSON.stringify(s));
  let blob=null;try{blob=await ticketBlob(s)}catch(e){}
- discordSend('ventas',(upd?'ACTUALIZACIÓN\n':'')+receiptText(s),blob,'Harrington_'+s.id+'.png');
+ discordSend(kind,(upd?'ACTUALIZACIÓN\n':'')+receiptText(s),blob,'Harrington_'+s.id+'.png');
 }
 document.getElementById('rcImgDl').onclick=()=>ticketImage(false);
 document.getElementById('rcImgCp').onclick=()=>ticketImage(true);
@@ -2987,7 +2994,7 @@ const TUTORIAL=[
 ['Convenios, ofertas y precios especiales',`<ul><li><b>Convenio</b> (lo crea el jefe): para un tipo de cliente y un grupo (suministros, municiones o ambos). Puede dar un <b>porcentaje</b> a partir de X unidades (no se multiplica por bloques) o <b>unidades gratis</b> por cada X (se repiten por bloque completo; son las más baratas de las elegidas, y salen del stock igualmente).</li><li><b>Oferta</b>: un porcentaje del 1 al 5 % sobre toda la compra.</li><li>Caducan solas y en el desplegable ves «caduca en N días».</li><li><b>Precio especial</b> de un cliente: se aplica al elegirlo.</li></ul>`],
 ['Ticket, copias y Discord',`<p>Al finalizar se abre el <b>ticket</b>: número de venta (HG-fecha-contador), fecha y hora de España, empleado, cliente, productos, desglose y el sello PAGADO (o ANOTADO en un encargo).</p>
 <ul><li><b>Copiar para Discord</b>: copia el texto limpio.</li><li><b>Descargar comprobante</b>: archivo de texto.</li><li><b>Descargar imagen / Copiar imagen</b>: el ticket como imagen, para pegarlo en Discord.</li><li><b>Nueva venta</b> y <b>Cerrar</b>.</li></ul>
-<p>Si el jefe configuró Discord, las ventas, fichajes, gastos, anulaciones y cierres se envían <b>solos</b> al canal.</p>`],
+<p>Si el jefe configuró Discord, las ventas, los encargos, los fichajes, los gastos, las anulaciones y los cierres se envían <b>solos</b>, cada tipo a su propio canal si así se ha configurado.</p>`],
 ['Fichaje',`<ul><li><b>▸ Fichar entrada</b>: elige tu nombre en la lista (la crea el jefe).</li><li>Pueden estar fichados <b>varios empleados a la vez</b> en el mismo dispositivo.</li><li><b>◂ Fichar salida</b>: si hay varios, eliges quién sale. Se muestra el registro con el tiempo trabajado y puedes copiarlo o descargarlo.</li><li><b>Último registro</b> vuelve a abrir el último fichaje.</li></ul>`],
 ['Modo Jefe y Dirección <span class="tag boss">SOLO JEFE</span>',`<ul><li><b>JEFE</b>: la primera vez crea una contraseña y una <b>palabra de seguridad</b>. Si olvidas la contraseña, «Cambiar contraseña» pide la palabra y te deja poner otra. El modo se cierra solo tras 5 minutos sin tocar nada.</li></ul>
 <p><b>DIRECCIÓN</b> abre la consola: resumen de hoy, gráfico de la semana y estas herramientas:</p>
@@ -3176,3 +3183,10 @@ filter();
 </script>
 </body>
 </html>
+
+<!-- Fichaje: entrada -->
+<div class="modal-overlay confirm" id="entryModal" hidden>
+  <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="entryTitle">
+    <div class="confirm-title" id="entryTitle">Fichar entrada</div>
+    <p>Selecciona el empleado.</p>
+    <select class="name-input" id="employeeName"></select>
