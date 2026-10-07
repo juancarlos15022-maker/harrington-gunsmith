@@ -212,6 +212,20 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
 .enc-actions .primary{background:linear-gradient(#1b6c16,#0a430b);border-color:#d2a733;color:#fff7c9}
 .enc-actions .warn{background:#5b1515;border-color:#a84532;color:#f7d7c4}
 
+/* ===== MODO JEFE Y DIRECCIÓN ===== */
+.clock-link.boss-btn{min-height:38px;padding:8px 12px;font-size:12px;letter-spacing:.14em;color:#c9b27a}
+.clock-link.boss-btn.on{color:var(--gold2);border-color:var(--gold)}
+.boss-lbl{display:block;margin-bottom:4px;text-align:left;color:#c9b27a;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+#dirBody{padding:10px}
+.dir-item{cursor:default}
+.dir-item:hover{border-color:#72572b}
+.dir-sec-title{margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid #8b6a2e;color:#f0d278;font-size:13px;font-weight:bold;letter-spacing:.14em}
+.dir-form label{display:block;margin-bottom:10px;color:#f0d278;font-size:12px;font-weight:bold;letter-spacing:.1em}
+.dir-form input,.dir-form select{display:block;width:100%;min-height:44px;margin-top:4px;padding:9px 10px;font-size:16px;font-family:inherit;background:#040b08;border:1px solid #5d4928;border-radius:6px;color:#eee0bd}
+.enc-actions.two{grid-template-columns:1fr 1fr}
+.dir-log{padding:8px 4px;border-bottom:1px solid #26382d;font-size:14px;color:#d9ccaa;overflow-wrap:anywhere}
+.dir-log b{color:var(--gold2)}
+
 /* ===== FICHAJE ===== */
 .clock-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0 0;padding:10px 12px;border:1px solid #8b6a2e;border-radius:8px;background:linear-gradient(90deg,#25180e,#0d1c14);box-shadow:0 6px 20px #0008}
 .clock-info{min-width:0;color:#d9ccaa}
@@ -266,7 +280,9 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
 <section class="clock-bar" aria-label="Fichaje de empleados">
   <div class="clock-info"><b>FICHAJE</b><span class="clock-status" id="clockStatus">Sin fichar</span></div>
   <div class="clock-actions">
+    <button type="button" class="clock-link enc-btn" id="dirBtn" hidden>DIRECCIÓN</button>
     <button type="button" class="clock-link enc-btn" id="encBtn">ENCARGOS</button>
+    <button type="button" class="clock-link boss-btn" id="bossBtn">JEFE</button>
     <button type="button" class="clock-link" id="lastShiftBtn" hidden>Último registro</button>
     <button type="button" class="clock-btn" id="clockBtn">▸ Fichar entrada</button>
   </div>
@@ -559,6 +575,7 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
     <label class="fld wide" id="telegramWrap" hidden><span>Telegrama de contacto</span>
       <input id="telegram" type="text" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Ej.: JS-458"><div class="pay-err" id="telHint" hidden>Solo letras, números y guiones (máximo 10).</div></label>
     <label class="fld wide"><span>Convenio</span><select id="convenio"></select></label>
+    <label class="fld wide" id="ofertaWrap" hidden><span>Ofertas disponibles</span><select id="oferta"></select></label>
     <div class="client-note" id="clientNote" hidden></div>
   </div>
   <div class="cart" id="cart"><div class="empty">▣<br>Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div></div>
@@ -626,6 +643,32 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
       <button type="button" id="rcNew">↻ Nueva venta</button>
       <button type="button" id="rcClose">Cerrar</button>
     </div>
+  </div>
+</div>
+
+<!-- Modo Jefe: acceso -->
+<div class="modal-overlay confirm" id="bossModal" hidden>
+  <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="bossTitle">
+    <div class="confirm-title" id="bossTitle">ACCESO JEFE</div>
+    <label class="boss-lbl" id="bossLbl1" for="bossPw1">Contraseña</label>
+    <input class="name-input" id="bossPw1" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div id="bossWrap2" hidden>
+      <label class="boss-lbl" for="bossPw2">Repetir contraseña</label>
+      <input class="name-input" id="bossPw2" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
+    </div>
+    <div class="pay-err" id="bossErr" hidden style="margin:-6px 0 12px"></div>
+    <div class="confirm-actions">
+      <button type="button" id="bossCancel">Cancelar</button>
+      <button type="button" class="ok" id="bossOk">ACCEDER</button>
+    </div>
+  </div>
+</div>
+
+<!-- Consola de Dirección -->
+<div class="modal-overlay" id="dirModal" hidden>
+  <div class="enc-panel" role="dialog" aria-modal="true" aria-labelledby="dirTitle">
+    <div class="enc-head"><span id="dirTitle">CONSOLA DE DIRECCIÓN</span><button type="button" class="danger" id="dirClose">Cerrar</button></div>
+    <div id="dirBody"></div>
   </div>
 </div>
 
@@ -716,12 +759,11 @@ function readQty(i){return Math.min(MAX_QTY,Math.max(0,parseInt(i.value)||0))}
 function baseCents(i){return Math.round(parseFloat(i.dataset.price)*100)}
 /* Precio efectivo: precio especial del cliente > precio de convenio > descuento de convenio > precio base */
 function priceCents(i){
- const name=i.dataset.name, sp=specialPrices(), cv=currentConvenio();
+ const name=i.dataset.name, sp=specialPrices();
  const fz=loadedEnc&&loadedEnc.items.find(x=>x.name===name);
  if(fz)return fz.cents;
  if(sp&&sp.precios[name]!=null)return Math.round(sp.precios[name]*100);
- if(cv.precios&&cv.precios[name]!=null)return Math.round(cv.precios[name]*100);
- return Math.round(baseCents(i)*(1-(cv.descuento||0)/100));
+ return baseCents(i);
 }
 function summaryText(p,u){return `${p} ${p===1?'producto':'productos'} · ${u} ${u===1?'unidad':'unidades'}`}
 function bump(el){el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump')}
@@ -770,13 +812,13 @@ function nextSaleNumber(){
  store.set(KEY_COUNTER,String(n));
  return n;
 }
-function signature(items){return items.map(x=>x.name+':'+x.qty+':'+x.cents).join('|')+'#'+customerName()+'#'+customer.convenio+'#'+customer.op+'#'+customer.telegram.trim()+'#'+computeFin().paid+'#'+(loadedEnc?loadedEnc.id:'')}
+function signature(items){return items.map(x=>x.name+':'+x.qty+':'+x.cents).join('|')+'#'+customerName()+'#'+(currentDiscount()?currentDiscount().id+currentDiscount().pct:'')+'#'+customer.op+'#'+customer.telegram.trim()+'#'+computeFin().paid+'#'+(loadedEnc?loadedEnc.id:'')}
 function snapshot(items,now){
  const total=items.reduce((a,x)=>a+x.qty*x.cents,0), units=items.reduce((a,x)=>a+x.qty,0);
  return {
   items:items.map(x=>({name:x.name,cents:x.cents,qty:x.qty,oq:x.oq||0})),
   totalCents:total,units:units,products:items.length,sig:signature(items),
-  client:customerName(),convenio:currentConvenio().id!=='ninguno'?currentConvenio().nombre:'',
+  client:customerName(),convenio:currentDiscount()?`${currentDiscount().nombre} (${currentDiscount().pct} %)`:'',convenioKind:currentDiscount()?(currentDiscount().kind==='oferta'?'Oferta':'Convenio'):'',
   ...finToSale(computeFin()),op:loadedEnc?'venta':customer.op,fromEncargo:loadedEnc?loadedEnc.id:'',telegram:loadedEnc?loadedEnc.telegram:(customer.op==='encargo'?customer.telegram.trim():''),
   date:`${madridParts(now.getTime()).day}/${madridParts(now.getTime()).month}/${madridParts(now.getTime()).year}`,
   time:`${madridParts(now.getTime()).hour}:${madridParts(now.getTime()).minute}`
@@ -797,6 +839,7 @@ function ensureSale(){
   sale=Object.assign({id:sale.id},snapshot(items,now));
   store.set(KEY_SALE,JSON.stringify(sale));
  }
+ logSale(sale);
  if(sale.op==='encargo')saveEncargoFromSale(sale);
  return sale;
 }
@@ -810,22 +853,27 @@ function resetSale(){sale=null;store.remove(KEY_SALE)}
 /* Desglose económico: subtotal, convenio, precio final, señal / abonado */
 function parseMoney(v){const n=parseFloat(String(v||'').replace(',','.').replace(/[^0-9.]/g,''));return isFinite(n)&&n>0?Math.round(Math.min(n,99999999)*100):0}
 function computeFin(){
- let base=0,final=0;
- inputs.forEach(i=>{const q=readQty(i);if(q){base+=q*baseCents(i);final+=q*priceCents(i)}});
+ let base=0,afterPrices=0;
+ inputs.forEach(i=>{const q=readQty(i);if(q){base+=q*baseCents(i);afterPrices+=q*priceCents(i)}});
+ /* El convenio u oferta aplica su porcentaje sobre el total de la mercancía */
+ const dsc=currentDiscount(), pctCents=dsc?Math.round(afterPrices*dsc.pct/100):0;
+ const final=afterPrices-pctCents, discounts=[];
+ if(base-afterPrices>0)discounts.push({label:'Precio especial',cents:base-afterPrices});
+ if(pctCents>0)discounts.push({label:`${dsc.kind==='oferta'?'Oferta':'Convenio'} ${dsc.nombre} (${dsc.pct} %)`,cents:pctCents});
  const enc=customer.op==='encargo'&&!loadedEnc, prior=!enc&&!loadedEnc&&customer.prior;
  const raw=loadedEnc?loadedEnc.depositCents:(enc?parseMoney(customer.deposit):(prior?parseMoney(customer.priorAmt):0));
  const kind=loadedEnc?'fianza':(enc?'senal':(prior?'previo':''));
  const paid=Math.min(raw,final);
- return {base:base,final:final,discount:Math.max(0,base-final),discountLabel:specialPrices()?'Precio especial':'Convenio',raw:raw,over:raw>final,kind:kind,paid:paid,pending:final-paid,due:kind?final-paid:final};
+ return {base:base,final:final,discount:Math.max(0,base-final),discounts:discounts,discInfo:dsc,raw:raw,over:raw>final,kind:kind,paid:paid,pending:final-paid,due:kind?final-paid:final};
 }
-function finToSale(f){return {baseCents:f.base,discountCents:f.discount,discountLabel:f.discountLabel,kind:f.kind,totalCents:f.final,paidCents:f.paid,pendingCents:f.pending}}
+function finToSale(f){return {baseCents:f.base,discountCents:f.discount,discounts:f.discounts,discInfo:f.discInfo,kind:f.kind,totalCents:f.final,paidCents:f.paid,pendingCents:f.pending}}
 function finRows(s){
- const r=[], disc=s.discountCents>0;
- if(disc){r.push(['Subtotal',money(s.baseCents)]);r.push([s.discountLabel||'Convenio','−'+money(s.discountCents),'disc'])}
+ const r=[], ds=s.discounts||(s.discountCents>0?[{label:s.discountLabel||'Convenio',cents:s.discountCents}]:[]), disc=ds.length>0;
+ if(disc){r.push(['Subtotal',money(s.baseCents)]);ds.forEach(d=>r.push([d.label,'−'+money(d.cents),'disc']))}
  if(s.kind){
   r.push([s.kind==='senal'?'Precio final del encargo':(s.kind==='fianza'&&!disc?'Subtotal mercancía':'Precio final'),money(s.totalCents)]);
   r.push([s.kind==='senal'?'Señal entregada':s.kind==='fianza'?'Fianza ya pagada':'Ya abonado','−'+money(s.paidCents),'paid']);
- }else if(disc)r.push(['Precio final',money(s.totalCents)]);
+ }
  return r;
 }
 function dueLabel(s){return s.kind==='senal'?'PENDIENTE AL RECOGER':s.kind==='previo'?'TOTAL A COBRAR AHORA':s.kind==='fianza'?'TOTAL A COBRAR':'TOTAL'}
@@ -835,7 +883,7 @@ function receiptText(s){
  const out=['HARRINGTON GUNSMITH',enc?'REGISTRO DE ENCARGO':'REGISTRO DE VENTA','Saint Denis · 1880','',(enc?'Encargo: ':'Venta: ')+s.id,'Fecha: '+s.date,'Hora: '+s.time];
  if(s.client)out.push('Cliente: '+s.client);
  if(s.telegram)out.push('Telegrama: '+s.telegram);
- if(s.convenio)out.push('Convenio: '+s.convenio);
+ if(s.convenio)out.push((s.convenioKind||'Convenio')+': '+s.convenio);
  if(s.fromEncargo)out.push('Entrega del encargo: '+s.fromEncargo);
  out.push('');
  groupItems(s).forEach(g=>{if(g.title)out.push(g.title,'');g.items.forEach(x=>{out.push(x.name);out.push(`${x.qty} × ${money(x.cents)} = ${money(x.qty*x.cents)}`);out.push('')})});
@@ -861,7 +909,7 @@ function renderReceipt(s){
  $('rcTel').textContent=s.telegram||'';
  $('rcTelWrap').hidden=!s.telegram;
  $('rcConv').textContent=s.convenio||'';
- $('rcConvWrap').hidden=!s.convenio;
+ $('rcConvWrap').hidden=!s.convenio;$('rcConvWrap').firstElementChild.textContent=s.convenioKind||'Convenio';
 }
 
 /* ===== Ventanas ===== */
@@ -885,6 +933,8 @@ receiptModal.addEventListener('click',e=>{if(e.target===receiptModal)closeModal(
 document.addEventListener('keydown',e=>{
  if(e.key!=='Escape')return;
  if(!confirmModal.hidden)answerConfirm(false);
+ else if(!bossModal.hidden)closeModal(bossModal);
+ else if(!dirModal.hidden)closeModal(dirModal);
  else if(!encModal.hidden)closeModal(encModal);
  else if(!entryModal.hidden)closeModal(entryModal);
  else if(!shiftModal.hidden)closeModal(shiftModal);
@@ -989,12 +1039,10 @@ window.addEventListener('scroll',()=>{
 },{passive:true});
 toTop.onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
 
-/* ===== Cliente, convenios y precios especiales =====
-   CONVENIOS: cada convenio puede llevar un descuento general (en %) y/o precios fijos por producto.
-   PRECIOS_CLIENTE: precios especiales que se aplican solos cuando el nombre del cliente coincide.
-   Ejemplos (descomentar y editar):
-   {id:'ejemplo',nombre:'Convenio Ejemplo',descuento:10,precios:{'Cattleman Revolver':11.50}}
-   {cliente:'Nombre del cliente',precios:{'Cattleman Revolver':9.99}} */
+/* ===== Cliente, descuentos (convenios y ofertas) y precios especiales =====
+   Los convenios y ofertas los crea la Dirección desde el Modo Jefe (se guardan en este dispositivo).
+   PRECIOS_CLIENTE: precios especiales por producto que se aplican solos cuando el nombre del cliente coincide.
+   Ejemplo: {cliente:'Nombre del cliente',precios:{'Cattleman Revolver':9.99}} */
 /* Estado de encargos almacenados (se declara aquí porque el cliente depende de él) */
 const KEY_ENC='harrington_encargos_v1', KEY_LOADED='harrington_loaded_v1';
 let encargos=[];
@@ -1004,16 +1052,57 @@ let loadedEnc=encargos.find(e=>e.id===store.get(KEY_LOADED))||null;
 const bannerEl=document.getElementById('loadedBanner'), finishEncBtn=document.getElementById('finishEnc'), encBtn=document.getElementById('encBtn'), encModal=document.getElementById('encModal');
 function origQty(name){const f=loadedEnc&&loadedEnc.items.find(x=>x.name===name);return f?f.qty:0}
 function sanitizeTelegram(v){return String(v||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,10)}
+const KEY_DISC='harrington_descuentos_v1';
+let descuentos=[];
+try{descuentos=JSON.parse(store.get(KEY_DISC)||'[]')}catch(e){}
+if(!Array.isArray(descuentos))descuentos=[];
+const ofertaSel=document.getElementById('oferta'), ofertaWrap=document.getElementById('ofertaWrap');
+function saveDisc(){store.set(KEY_DISC,JSON.stringify(descuentos))}
+function isActiveDisc(d){return Date.now()<d.endMs}
+function activeDescuentos(kind){return descuentos.filter(d=>d.kind===kind&&isActiveDisc(d)&&(kind!=='convenio'||d.clientType===customer.type))}
+/* Descuento actual: el del encargo cargado, o el convenio / oferta que seleccionó el empleado (solo si sigue vigente) */
+function currentDiscount(){
+ if(loadedEnc)return loadedEnc.disc||null;
+ const id=customer.convenio!=='ninguno'?customer.convenio:(customer.oferta!=='ninguno'?customer.oferta:null);
+ if(!id)return null;
+ const d=descuentos.find(x=>x.id===id&&isActiveDisc(x)&&(x.kind!=='convenio'||x.clientType===customer.type));
+ return d?{id:d.id,kind:d.kind,nombre:d.nombre,pct:d.pct}:null;
+}
+let discSig='';
+function refreshDiscountSelects(){
+ const ld=!!loadedEnc, convs=ld?[]:activeDescuentos('convenio'), ofs=ld?[]:activeDescuentos('oferta');
+ if(!ld){
+  if(customer.convenio!=='ninguno'&&!convs.some(d=>d.id===customer.convenio))customer.convenio='ninguno';
+  if(customer.oferta!=='ninguno'&&!ofs.some(d=>d.id===customer.oferta))customer.oferta='ninguno';
+  if(customer.convenio!=='ninguno')customer.oferta='ninguno';
+ }
+ const sig=(ld?'L'+loadedEnc.id:'')+'|'+convs.map(d=>d.id).join()+'|'+ofs.map(d=>d.id).join();
+ if(sig!==discSig){
+  discSig=sig;
+  const opt=(v,t)=>`<option value="${esc(v)}">${esc(t)}</option>`;
+  if(ld){const x=loadedEnc.disc;convSel.innerHTML=opt('ninguno',x?`${x.kind==='oferta'?'Oferta':'Convenio'}: ${x.nombre} — ${x.pct} %`:'Sin convenio')}
+  else{
+   convSel.innerHTML=opt('ninguno','Sin convenio')+convs.map(d=>opt(d.id,`${d.nombre} — ${d.pct} %`)).join('');
+   ofertaSel.innerHTML=opt('ninguno','Sin oferta')+ofs.map(d=>opt(d.id,`${d.nombre} — ${d.pct} %`)).join('');
+  }
+ }
+ convSel.value=ld?'ninguno':customer.convenio;ofertaSel.value=customer.oferta;
+ convSel.disabled=ld;ofertaWrap.hidden=ld||!ofs.length;
+}
+/* Caducidad automática: si el descuento seleccionado deja de estar vigente, se retira solo */
+function tickDiscounts(){
+ if(loadedEnc)return;
+ const before=customer.convenio+'|'+customer.oferta;
+ refreshDiscountSelects();
+ if(before!==customer.convenio+'|'+customer.oferta){customerChanged();say('El descuento seleccionado ya no está disponible')}
+}
 const CLIENTE_SHERIFF='Departamento del Sheriff';
-const CONVENIOS=[
- {id:'ninguno',nombre:'Sin convenio',descuento:0,precios:{}}
-];
 const PRECIOS_CLIENTE=[
 ];
 const KEY_CUSTOMER='harrington_customer_v1';
 const typeSel=document.getElementById('clientType'), nameInput=document.getElementById('clientName'), convSel=document.getElementById('convenio');
 const nameWrap=document.getElementById('clientNameWrap'), nameLabel=document.getElementById('clientNameLabel'), noteEl=document.getElementById('clientNote');
-function defaultCustomer(){return {type:'particular',name:'',convenio:'ninguno',op:'venta',telegram:'',deposit:'',prior:false,priorAmt:''}}
+function defaultCustomer(){return {type:'particular',name:'',convenio:'ninguno',oferta:'ninguno',op:'venta',telegram:'',deposit:'',prior:false,priorAmt:''}}
 const opSel=document.getElementById('opType'), telInput=document.getElementById('telegram'), telWrap=document.getElementById('telegramWrap');
 const depositBox=document.getElementById('depositBox'), priorBox=document.getElementById('priorBox'), priorAmtWrap=document.getElementById('priorAmtWrap');
 const depositInput=document.getElementById('depositAmt'), priorInput=document.getElementById('priorAmt');
@@ -1030,7 +1119,6 @@ function renderFin(f){
 }
 let customer=defaultCustomer();
 function customerName(){return customer.type==='sheriff'?CLIENTE_SHERIFF:customer.name.trim()}
-function currentConvenio(){return CONVENIOS.find(c=>c.id===customer.convenio)||CONVENIOS[0]}
 function specialPrices(){const n=norm(customerName());return n?PRECIOS_CLIENTE.find(c=>norm(c.cliente)===n)||null:null}
 function customerOk(){
  if(!customerName()){
@@ -1049,7 +1137,7 @@ function customerOk(){
 }
 function renderCustomer(){
  const enc=customer.op==='encargo';
- opSel.value=customer.op;typeSel.value=customer.type;nameInput.value=customer.name;convSel.value=customer.convenio;
+ opSel.value=customer.op;typeSel.value=customer.type;nameInput.value=customer.name;refreshDiscountSelects();
  telInput.value=customer.telegram;depositInput.value=customer.deposit;priorInput.value=customer.priorAmt;
  nameWrap.hidden=customer.type==='sheriff';
  const ld=!!loadedEnc;
@@ -1063,16 +1151,17 @@ function renderCustomer(){
 }
 function customerChanged(){
  store.set(KEY_CUSTOMER,JSON.stringify(customer));
- const cv=currentConvenio();
- noteEl.textContent=specialPrices()?'Precios especiales del cliente aplicados':(cv.descuento?`Convenio aplicado: −${cv.descuento}%`:(cv.id!=='ninguno'?'Convenio aplicado':''));
+ const d=currentDiscount();
+ noteEl.textContent=[specialPrices()?'Precios especiales del cliente aplicados':'',d?`${d.kind==='oferta'?'Oferta':'Convenio'} aplicado: ${d.nombre} (−${d.pct} %)`:''].filter(Boolean).join(' · ');
  noteEl.hidden=!noteEl.textContent;
  calc();
 }
 function resetCustomer(){loadedEnc=null;store.remove(KEY_LOADED);customer=defaultCustomer();renderCustomer();customerChanged()}
-CONVENIOS.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nombre;convSel.appendChild(o)});
+
 typeSel.onchange=()=>{customer.type=typeSel.value;renderCustomer();customerChanged()};
 nameInput.addEventListener('input',()=>{customer.name=nameInput.value;customerChanged()});
-convSel.onchange=()=>{customer.convenio=convSel.value;customerChanged()};
+convSel.onchange=()=>{customer.convenio=convSel.value;if(customer.convenio!=='ninguno')customer.oferta='ninguno';refreshDiscountSelects();customerChanged()};
+ofertaSel.onchange=()=>{customer.oferta=ofertaSel.value;if(customer.oferta!=='ninguno')customer.convenio='ninguno';refreshDiscountSelects();customerChanged()};
 opSel.onchange=()=>{customer.op=opSel.value;renderCustomer();customerChanged()};
 const telHint=document.getElementById('telHint');
 telInput.addEventListener('input',()=>{
@@ -1090,7 +1179,7 @@ moneyField(depositInput,'deposit');moneyField(priorInput,'priorAmt');
 priorBtns.forEach(b=>b.onclick=()=>{customer.prior=b.dataset.prior==='1';renderCustomer();customerChanged();if(customer.prior)priorInput.focus()});
 try{
  const c=JSON.parse(store.get(KEY_CUSTOMER)||'null');
- if(c&&['particular','empresa','sheriff'].includes(c.type)){customer.type=c.type;customer.name=String(c.name||'').slice(0,40);if(CONVENIOS.some(v=>v.id===c.convenio))customer.convenio=c.convenio;
+ if(c&&['particular','empresa','sheriff'].includes(c.type)){customer.type=c.type;customer.name=String(c.name||'').slice(0,40);customer.convenio=String(c.convenio||'ninguno');customer.oferta=String(c.oferta||'ninguno');
   customer.op=c.op==='encargo'?'encargo':'venta';customer.telegram=sanitizeTelegram(c.telegram);
   customer.deposit=String(c.deposit||'').replace(/[^0-9.,]/g,'').slice(0,12);customer.prior=!!c.prior;customer.priorAmt=String(c.priorAmt||'').replace(/[^0-9.,]/g,'').slice(0,12)}
 }catch(e){}
@@ -1132,7 +1221,7 @@ function cartHTML(items){
 function saveEncargoFromSale(sl){
  const data={id:sl.id,date:sl.date,time:sl.time,clientType:customer.type,client:sl.client,telegram:sl.telegram,convenioId:customer.convenio,convenio:sl.convenio,
   items:sl.items.map(x=>({name:x.name,cents:x.cents,qty:x.qty})),baseCents:sl.baseCents,discountCents:sl.discountCents,
-  totalCents:sl.totalCents,depositCents:sl.paidCents,pendingCents:sl.pendingCents};
+  totalCents:sl.totalCents,depositCents:sl.paidCents,pendingCents:sl.pendingCents,discounts:sl.discounts||[],disc:sl.discInfo||null};
  const cur=encargos.find(e=>e.id===sl.id);
  if(cur)Object.assign(cur,data);
  else encargos.push(Object.assign(data,{fab:'PENDIENTE',avisado:false,finished:false}));
@@ -1156,7 +1245,7 @@ function renderEnc(){
   return;
  }
  title.textContent='FICHA DEL ENCARGO';
- const rows=finRows({baseCents:e.baseCents,discountCents:e.discountCents,discountLabel:'Convenio',kind:'senal',totalCents:e.totalCents,paidCents:e.depositCents}).map(r=>[r[0]==='Señal entregada'?'Fianza pagada':r[0],r[1],r[2]]);
+ const rows=finRows({baseCents:e.baseCents,discountCents:e.discountCents,discounts:e.discounts,discountLabel:'Convenio',kind:'senal',totalCents:e.totalCents,paidCents:e.depositCents}).map(r=>[r[0]==='Señal entregada'?'Fianza pagada':r[0],r[1],r[2]]);
  body.innerHTML=`<button type="button" class="enc-back" data-act="back">◂ Volver a la lista</button>
   <div class="enc-id">${esc(e.id)} · ${esc(e.date)} ${esc(e.time)}</div>
   <div class="enc-kv"><div class="full"><span>Cliente</span><b>${esc(e.client)}</b></div><div><span>Tipo</span><b>${esc(TYPE_NAMES[e.clientType]||'')}</b></div><div><span>Telegrama</span><b>${esc(e.telegram)}</b></div>${e.convenio?`<div class="full"><span>Convenio</span><b>${esc(e.convenio)}</b></div>`:''}</div>
@@ -1176,7 +1265,7 @@ async function loadEncargo(id){
  clearQuantities();resetSale();
  e.items.forEach(x=>{const i=inputs.find(n=>n.dataset.name===x.name);if(i)i.value=x.qty});
  loadedEnc=e;store.set(KEY_LOADED,e.id);
- customer=Object.assign(defaultCustomer(),{type:e.clientType||'particular',name:e.clientType==='sheriff'?'':e.client,convenio:CONVENIOS.some(v=>v.id===e.convenioId)?e.convenioId:'ninguno',telegram:e.telegram});
+ customer=Object.assign(defaultCustomer(),{type:e.clientType||'particular',name:e.clientType==='sheriff'?'':e.client,convenio:'ninguno',telegram:e.telegram});
  renderCustomer();customerChanged();closeModal(encModal);
  if(window.innerWidth<=900)document.querySelector('.order').scrollIntoView({behavior:'smooth',block:'start'});
  say('Encargo cargado · '+e.id);
@@ -1218,6 +1307,143 @@ finishEncBtn.onclick=async()=>{
 };
 updateEncBtn();
 
+/* ===== Registros (historial de fichajes y ventas para Dirección) ===== */
+const KEY_SHIFTLOG='harrington_shiftlog_v1', KEY_SALELOG='harrington_salelog_v1';
+function loadLog(k){try{const a=JSON.parse(store.get(k)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
+function logShift(r){const a=loadLog(KEY_SHIFTLOG);a.push({name:r.name,start:r.start,end:r.end});store.set(KEY_SHIFTLOG,JSON.stringify(a.slice(-500)))}
+function logSale(sl){
+ const a=loadLog(KEY_SALELOG), e={id:sl.id,date:sl.date,time:sl.time,op:sl.op,client:sl.client,products:sl.products,units:sl.units,dueCents:dueCents(sl),totalCents:sl.totalCents,convenio:sl.convenio||'',fromEncargo:sl.fromEncargo||''};
+ const k=a.findIndex(x=>x.id===sl.id);
+ if(k>=0)a[k]=e;else a.push(e);
+ store.set(KEY_SALELOG,JSON.stringify(a.slice(-500)));
+}
+
+/* ===== Modo Jefe ===== */
+const KEY_BOSS_PW='harrington_boss_pw_v1', KEY_BOSS_ACTIVE='harrington_boss_active_v1';
+const bossBtn=document.getElementById('bossBtn'), dirBtn=document.getElementById('dirBtn'), bossModal=document.getElementById('bossModal'), dirModal=document.getElementById('dirModal');
+const bossPw1=document.getElementById('bossPw1'), bossPw2=document.getElementById('bossPw2'), bossErr=document.getElementById('bossErr');
+let bossActive=false, bossMode='login';
+try{bossActive=sessionStorage.getItem(KEY_BOSS_ACTIVE)==='1'}catch(e){}
+function setBoss(v){
+ bossActive=v;
+ try{if(v)sessionStorage.setItem(KEY_BOSS_ACTIVE,'1');else sessionStorage.removeItem(KEY_BOSS_ACTIVE)}catch(e){}
+ dirBtn.hidden=!v;bossBtn.classList.toggle('on',v);bossBtn.textContent=v?'JEFE ✓':'JEFE';
+}
+function bossError(t){bossErr.textContent=t;bossErr.hidden=!t}
+function openBoss(){
+ bossMode=store.get(KEY_BOSS_PW)?'login':'setup';
+ const setup=bossMode==='setup';
+ document.getElementById('bossTitle').textContent=setup?'CONFIGURAR ACCESO JEFE':'ACCESO JEFE';
+ document.getElementById('bossLbl1').textContent=setup?'Nueva contraseña':'Contraseña';
+ document.getElementById('bossWrap2').hidden=!setup;
+ document.getElementById('bossOk').textContent=setup?'GUARDAR':'ACCEDER';
+ bossPw1.value='';bossPw2.value='';bossError('');
+ openModal(bossModal);setTimeout(()=>bossPw1.focus(),60);
+}
+function submitBoss(){
+ if(bossMode==='setup'){
+  if(!bossPw1.value)return bossError('Escribe una contraseña');
+  if(bossPw1.value!==bossPw2.value)return bossError('Las contraseñas no coinciden');
+  store.set(KEY_BOSS_PW,bossPw1.value);
+ }else if(bossPw1.value!==store.get(KEY_BOSS_PW))return bossError('Contraseña incorrecta');
+ closeModal(bossModal);setBoss(true);say('MODO JEFE ACTIVADO');
+}
+bossBtn.onclick=()=>{if(bossActive){setBoss(false);closeModal(dirModal);say('Modo Jefe desactivado')}else openBoss()};
+document.getElementById('bossOk').onclick=submitBoss;
+document.getElementById('bossCancel').onclick=()=>closeModal(bossModal);
+[bossPw1,bossPw2].forEach(i=>i.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submitBoss()}}));
+bossModal.addEventListener('click',e=>{if(e.target===bossModal)closeModal(bossModal)});
+setBoss(bossActive);
+
+/* ===== Consola de Dirección (modular: para añadir un módulo basta con añadirlo a esta lista) ===== */
+const DIRECCION_MODULOS=[
+ {id:'convenios',titulo:'CONVENIOS Y OFERTAS',desc:'Crear, consultar y eliminar convenios y ofertas.',render:()=>renderModConvenios()},
+ {id:'horarios',titulo:'REGISTROS HORARIOS',desc:'Consultar el historial de fichajes de los empleados.',render:()=>renderModHorarios()},
+ {id:'ventas',titulo:'REGISTROS DE VENTAS',desc:'Consultar las ventas realizadas.',render:()=>renderModVentas()}
+];
+let dirMod=null, dirForm=null;
+function fmtLong(ms){return new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',day:'numeric',month:'long'}).format(ms)}
+function plural(n,a,b){return n===1?a:b}
+function descItemHTML(d){
+ const act=isActiveDisc(d), conv=d.kind==='convenio';
+ return `<div class="enc-card dir-item"><div class="t">${esc(d.nombre.toUpperCase())}</div>`+
+  (conv?`<div class="it">Tipo: ${esc((TYPE_NAMES[d.clientType]||'').toUpperCase())}</div>`:'')+
+  `<div class="enc-money"><span>Descuento: ${d.pct} %</span><span>Duración: ${d.days} ${plural(d.days,'día','días')}</span></div>`+
+  `<div class="enc-money"><span>Inicio: ${fmtLong(d.startMs)}</span><span>${conv?'Caduca':'Finalización'}: ${fmtLong(d.endMs)}</span></div>`+
+  `<div class="badges"><span class="badge ${act?'fab':'no'}">Estado: ${act?(conv?'ACTIVO':'ACTIVA'):(conv?'CADUCADO':'CADUCADA')}</span></div>`+
+  `<div class="enc-actions" style="margin-top:8px"><button type="button" class="warn" data-dir="del:${esc(d.id)}">ELIMINAR</button></div></div>`;
+}
+function renderModConvenios(){
+ if(dirForm){
+  const conv=dirForm==='convenio';
+  return `<div class="dir-form enc-sec"><div class="dir-sec-title" style="margin-top:0">${conv?'AÑADIR CONVENIO':'AÑADIR OFERTA'}</div>
+   <label>${conv?'NOMBRE DEL CONVENIO':'NOMBRE DE LA OFERTA'}<input id="dfName" type="text" maxlength="40" autocomplete="off" placeholder="${conv?'Ej.: Blackwater Transport':'Ej.: Semana Harrington'}"></label>`+
+   (conv?`<label>TIPO DE CLIENTE<select id="dfType"><option value="">Seleccionar…</option><option value="particular">PARTICULAR</option><option value="empresa">EMPRESA</option><option value="sheriff">DEPARTAMENTO DEL SHERIFF</option></select></label>`:'')+
+   `<label>PORCENTAJE DE DESCUENTO<select id="dfPct"><option value="">Seleccionar…</option>${[1,2,3,4,5].map(n=>`<option value="${n}">${n} %</option>`).join('')}</select></label>
+   <label>DURACIÓN (DÍAS)<input id="dfDays" type="number" inputmode="numeric" min="1" max="365" placeholder="Ej.: 7"></label>
+   <div class="pay-err" id="dfErr" hidden></div>
+   <div class="enc-actions two" style="margin-top:10px"><button type="button" data-dir="cancel-form">Cancelar</button><button type="button" class="primary" data-dir="save-form">${conv?'GUARDAR CONVENIO':'ACTIVAR OFERTA'}</button></div></div>`;
+ }
+ const cs=descuentos.filter(d=>d.kind==='convenio'), os=descuentos.filter(d=>d.kind==='oferta');
+ return `<div class="enc-actions two"><button type="button" class="primary" data-dir="form:convenio">AÑADIR CONVENIO</button><button type="button" class="primary" data-dir="form:oferta">AÑADIR OFERTA</button></div>
+  <div class="dir-sec-title">CONVENIOS (${cs.length})</div>${cs.length?cs.slice().reverse().map(descItemHTML).join(''):'<div class="enc-empty">No hay convenios.</div>'}
+  <div class="dir-sec-title">OFERTAS (${os.length})</div>${os.length?os.slice().reverse().map(descItemHTML).join(''):'<div class="enc-empty">No hay ofertas.</div>'}`;
+}
+function renderModHorarios(){
+ const a=loadLog(KEY_SHIFTLOG).slice().reverse().slice(0,100);
+ return `<div class="dir-sec-title">HISTORIAL DE FICHAJES (${a.length})</div>`+(a.length?a.map(r=>`<div class="dir-log"><b>${esc(r.name)}</b><br>${fmtDate(r.start)} ${fmtTime(r.start)} → ${fmtDate(r.end)} ${fmtTime(r.end)} · ${fmtDuration(r.start,r.end)}</div>`).join(''):'<div class="enc-empty">Todavía no hay fichajes registrados.<br>Se guardan a partir de ahora al fichar la salida.</div>');
+}
+function renderModVentas(){
+ const a=loadLog(KEY_SALELOG).slice().reverse().slice(0,100);
+ return `<div class="dir-sec-title">VENTAS REGISTRADAS (${a.length})</div>`+(a.length?a.map(r=>`<div class="dir-log"><b>${esc(r.id)}</b> · ${esc(r.date)} ${esc(r.time)}${r.op==='encargo'?' · ENCARGO':''}<br>${esc(r.client||'—')} · ${summaryText(r.products,r.units)}${r.convenio?' · '+esc(r.convenio):''}<br>Total: ${money(r.totalCents)}${r.dueCents!==r.totalCents?' · A cobrar: '+money(r.dueCents):''}</div>`).join(''):'<div class="enc-empty">Todavía no hay ventas registradas.<br>Se guardan a partir de ahora al finalizar cada venta.</div>');
+}
+function renderDir(){
+ const body=document.getElementById('dirBody'), title=document.getElementById('dirTitle');
+ if(!dirMod){
+  title.textContent='CONSOLA DE DIRECCIÓN';
+  body.innerHTML=DIRECCION_MODULOS.map(m=>`<button type="button" class="enc-card" data-dir="open:${m.id}"><div class="t">${m.titulo}</div><div class="it">${m.desc}</div></button>`).join('')+
+   '<div class="enc-actions" style="margin-top:6px"><button type="button" class="warn" data-dir="exit-boss">Salir del Modo Jefe</button></div>';
+  return;
+ }
+ const m=DIRECCION_MODULOS.find(x=>x.id===dirMod);
+ title.textContent=m.titulo;
+ body.innerHTML='<button type="button" class="enc-back" data-dir="back">◂ Consola de Dirección</button>'+m.render();
+}
+function saveDiscForm(){
+ const conv=dirForm==='convenio', err=t=>{const e=document.getElementById('dfErr');e.textContent=t;e.hidden=false};
+ const nombre=document.getElementById('dfName').value.trim().replace(/\s+/g,' ');
+ const type=conv?document.getElementById('dfType').value:'';
+ const pct=parseInt(document.getElementById('dfPct').value), days=parseInt(document.getElementById('dfDays').value);
+ if(!nombre)return err(conv?'Escribe el nombre del convenio':'Escribe el nombre de la oferta');
+ if(conv&&!type)return err('Selecciona el tipo de cliente');
+ if(!(pct>=1&&pct<=5))return err('Selecciona el porcentaje de descuento');
+ if(!(days>=1&&days<=365))return err('La duración debe ser de 1 a 365 días');
+ const start=Date.now();
+ descuentos.push({id:'d'+start.toString(36)+Math.random().toString(36).slice(2,6),kind:dirForm,nombre:nombre,clientType:conv?type:'',pct:pct,days:days,startMs:start,endMs:start+days*86400000});
+ saveDisc();dirForm=null;renderDir();renderCustomer();say(conv?'Convenio guardado':'Oferta activada');
+}
+async function deleteDisc(id){
+ const d=descuentos.find(x=>x.id===id); if(!d)return;
+ if(!await askConfirm(d.kind==='convenio'?'Eliminar convenio':'Eliminar oferta',`«${d.nombre}» dejará de estar disponible de inmediato.`,'Eliminar'))return;
+ descuentos=descuentos.filter(x=>x.id!==id);saveDisc();
+ renderDir();tickDiscounts();say('Eliminado');
+}
+dirBtn.onclick=()=>{dirMod=null;dirForm=null;renderDir();openModal(dirModal);dirModal.scrollTop=0};
+document.getElementById('dirClose').onclick=()=>closeModal(dirModal);
+dirModal.addEventListener('click',e=>{
+ if(e.target===dirModal)return closeModal(dirModal);
+ const b=e.target.closest('[data-dir]'); if(!b)return;
+ const [act,arg]=b.dataset.dir.split(':');
+ if(act==='open'){dirMod=arg;dirForm=null;renderDir();dirModal.scrollTop=0}
+ else if(act==='back'){if(dirForm)dirForm=null;else dirMod=null;renderDir()}
+ else if(act==='form'){dirForm=arg;renderDir();dirModal.scrollTop=0}
+ else if(act==='cancel-form'){dirForm=null;renderDir()}
+ else if(act==='save-form')saveDiscForm();
+ else if(act==='del')deleteDisc(arg);
+ else if(act==='exit-boss'){setBoss(false);closeModal(dirModal);say('Modo Jefe desactivado')}
+});
+setInterval(tickDiscounts,30000);
+
 /* ===== Fichaje de empleados ===== */
 const KEY_SHIFT='harrington_shift_v1', KEY_LASTSHIFT='harrington_lastshift_v1', KEY_EMPLOYEE='harrington_employee_v1';
 const entryModal=document.getElementById('entryModal'), shiftModal=document.getElementById('shiftModal');
@@ -1257,7 +1483,7 @@ function showShift(r){
 function doExit(){
  if(!shift)return;
  lastShift={name:shift.name,start:shift.start,end:Date.now()};
- store.set(KEY_LASTSHIFT,JSON.stringify(lastShift));
+ store.set(KEY_LASTSHIFT,JSON.stringify(lastShift));logShift(lastShift);
  shift=null;store.remove(KEY_SHIFT);
  renderClock();showShift(lastShift);
 }
