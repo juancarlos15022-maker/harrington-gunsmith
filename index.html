@@ -134,11 +134,25 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
 .receipt-actions button{padding:13px 8px;border-radius:6px;border:1px solid #b88931;background:linear-gradient(#1b2a1a,#0a1812);color:#f3e2b0;font-weight:bold;cursor:pointer;touch-action:manipulation}
 .receipt-actions .primary{background:linear-gradient(#1b6c16,#0a430b);border-color:#d2a733;color:#fff7c9}
 
+/* ===== FICHAJE ===== */
+.clock-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0 0;padding:10px 12px;border:1px solid #8b6a2e;border-radius:8px;background:linear-gradient(90deg,#25180e,#0d1c14);box-shadow:0 6px 20px #0008}
+.clock-info{min-width:0;color:#d9ccaa}
+.clock-info b{display:block;color:var(--gold2);letter-spacing:.14em;font-size:13px}
+.clock-status{font-size:15px;overflow-wrap:anywhere}
+.clock-actions{display:flex;gap:8px;flex-wrap:wrap}
+.clock-btn,.clock-link{padding:11px 16px;min-height:44px;border-radius:6px;border:1px solid #d2a733;background:linear-gradient(#1b6c16,#0a430b);color:#fff7c9;font-weight:bold;cursor:pointer;touch-action:manipulation}
+.clock-btn.out{background:linear-gradient(#7a2a14,#4a1608);border-color:#c98a3f}
+.clock-link{background:#242522;border-color:#76633e;color:#eee1c6;font-weight:normal}
+.name-input{display:block;width:100%;margin:0 0 16px;padding:12px;font-size:16px;font-family:inherit;text-align:center;background:#040b08;border:1px solid #8b6a2e;border-radius:6px;color:#eee0bd}
+.confirm-actions .ok{background:linear-gradient(#1b6c16,#0a430b);border-color:#d2a733;color:#fff7c9}
+.receipt-actions .span2{grid-column:1/-1}
+
 /* ===== RESPONSIVE ===== */
 @media(min-width:901px){.order{max-height:calc(100vh - 16px);overflow-y:auto}}
 @media(max-width:999px){.cat-nav{grid-template-columns:repeat(3,minmax(0,1fr));max-width:600px;margin:12px auto}}
 @media(max-width:900px){.grid{grid-template-columns:1fr}.order{position:relative;top:0}.cart{max-height:390px}}
 @media(max-width:650px){
+.clock-actions{width:100%}.clock-btn{flex:1}
 .wrap{padding:7px}
 .hero-banner img{aspect-ratio:5/2;max-height:none}
 .cat-nav{gap:6px;padding:7px}
@@ -168,6 +182,14 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
   <h1 class="sr-only">Harrington Gunsmith · Saint Denis 1880 · El precio de un apellido</h1>
   <img src="cabecera-web.png" alt="Harrington Gunsmith · Saint Denis 1880 · El precio de un apellido.">
 </header>
+
+<section class="clock-bar" aria-label="Fichaje de empleados">
+  <div class="clock-info"><b>FICHAJE</b><span class="clock-status" id="clockStatus">Sin fichar</span></div>
+  <div class="clock-actions">
+    <button type="button" class="clock-link" id="lastShiftBtn" hidden>Último registro</button>
+    <button type="button" class="clock-btn" id="clockBtn">▸ Fichar entrada</button>
+  </div>
+</section>
 
 <nav class="cat-nav" aria-label="Categorías">
   <button type="button" class="cat-btn active" data-cat="todos" aria-pressed="true" title="Todos"><img src="boton-todos.png" alt="Todos"></button>
@@ -492,6 +514,47 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
   </div>
 </div>
 
+<!-- Fichaje: entrada -->
+<div class="modal-overlay confirm" id="entryModal" hidden>
+  <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="entryTitle">
+    <div class="confirm-title" id="entryTitle">Fichar entrada</div>
+    <p>Indica el nombre del empleado.</p>
+    <input class="name-input" id="employeeName" type="text" maxlength="40" placeholder="Nombre de empleado" autocomplete="off">
+    <div class="confirm-actions">
+      <button type="button" id="entryCancel">Cancelar</button>
+      <button type="button" class="ok" id="entryOk">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fichaje: registro de salida -->
+<div class="modal-overlay" id="shiftModal" hidden>
+  <div class="receipt-wrap" role="dialog" aria-modal="true" aria-labelledby="shiftTitle">
+    <div class="receipt-paper">
+      <div class="receipt-frame">
+        <span class="corner tl">✦</span><span class="corner tr">✦</span><span class="corner bl">✦</span><span class="corner br">✦</span>
+        <img class="receipt-emblem" src="emblema-harrington.png" alt="Emblema Harrington Gunsmith">
+        <div class="receipt-name" id="shiftTitle">HARRINGTON GUNSMITH</div>
+        <div class="receipt-place">Saint Denis · 1880</div>
+        <div class="receipt-orn">◆ ─── ✦ ─── ◆</div>
+        <div class="receipt-title">REGISTRO DE FICHAJE</div>
+        <div class="receipt-meta">
+          <div class="full"><span>Empleado</span><b id="shName"></b></div>
+          <div><span>Entrada</span><b id="shIn"></b></div>
+          <div><span>Salida</span><b id="shOut"></b></div>
+          <div class="full"><span>Tiempo de jornada</span><b id="shTime"></b></div>
+        </div>
+        <div class="receipt-motto">El precio de un apellido.</div>
+      </div>
+    </div>
+    <div class="receipt-actions">
+      <button type="button" class="primary" id="shCopy">▤ Copiar para Discord</button>
+      <button type="button" id="shDownload">⇩ Descargar</button>
+      <button type="button" class="span2" id="shClose">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Confirmación -->
 <div class="modal-overlay confirm" id="confirmModal" hidden>
   <div class="confirm-box" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
@@ -619,7 +682,7 @@ function renderReceipt(s){
 
 /* ===== Ventanas ===== */
 function openModal(el){el.hidden=false;document.body.classList.add('modal-open')}
-function closeModal(el){el.hidden=true;if(document.getElementById('receiptModal').hidden&&document.getElementById('confirmModal').hidden)document.body.classList.remove('modal-open')}
+function closeModal(el){el.hidden=true;if(!document.querySelector('.modal-overlay:not([hidden])'))document.body.classList.remove('modal-open')}
 const receiptModal=document.getElementById('receiptModal'), confirmModal=document.getElementById('confirmModal');
 let confirmResolve=null;
 function askConfirm(title,text,yes){
@@ -638,6 +701,8 @@ receiptModal.addEventListener('click',e=>{if(e.target===receiptModal)closeModal(
 document.addEventListener('keydown',e=>{
  if(e.key!=='Escape')return;
  if(!confirmModal.hidden)answerConfirm(false);
+ else if(!entryModal.hidden)closeModal(entryModal);
+ else if(!shiftModal.hidden)closeModal(shiftModal);
  else if(!receiptModal.hidden)closeModal(receiptModal);
 });
 
@@ -738,6 +803,86 @@ window.addEventListener('scroll',()=>{
  requestAnimationFrame(()=>{toTop.classList.toggle('show',window.scrollY>600);scrollTick=false});
 },{passive:true});
 toTop.onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
+
+/* ===== Fichaje de empleados ===== */
+const KEY_SHIFT='harrington_shift_v1', KEY_LASTSHIFT='harrington_lastshift_v1', KEY_EMPLOYEE='harrington_employee_v1';
+const entryModal=document.getElementById('entryModal'), shiftModal=document.getElementById('shiftModal');
+const clockStatus=document.getElementById('clockStatus'), clockBtn=document.getElementById('clockBtn'), lastShiftBtn=document.getElementById('lastShiftBtn');
+const employeeInput=document.getElementById('employeeName');
+let shift=null, lastShift=null;
+function loadJSON(k){try{return JSON.parse(store.get(k)||'null')}catch(e){return null}}
+function fmtDate(ms){const d=new Date(ms);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`}
+function fmtTime(ms){const d=new Date(ms);return `${pad(d.getHours())}:${pad(d.getMinutes())}`}
+function fmtStamp(ms){return `${fmtDate(ms)} ${fmtTime(ms)}`}
+function fmtDuration(a,b){const m=Math.max(0,Math.round((b-a)/60000));return `${Math.floor(m/60)} h ${pad(m%60)} min`}
+function renderClock(){
+ if(shift){clockStatus.textContent=`En servicio: ${shift.name} · entrada ${fmtTime(shift.start)}`;clockBtn.textContent='◂ Fichar salida';clockBtn.classList.add('out')}
+ else{clockStatus.textContent='Sin fichar';clockBtn.textContent='▸ Fichar entrada';clockBtn.classList.remove('out')}
+ lastShiftBtn.hidden=!lastShift;
+}
+function openEntry(){
+ employeeInput.value=store.get(KEY_EMPLOYEE)||'';
+ openModal(entryModal);
+ setTimeout(()=>{employeeInput.focus();employeeInput.select()},60);
+}
+function acceptEntry(){
+ const name=employeeInput.value.trim().replace(/\s+/g,' ').slice(0,40);
+ if(!name)return say('Escribe el nombre del empleado');
+ shift={name:name,start:Date.now()};
+ store.set(KEY_SHIFT,JSON.stringify(shift));store.set(KEY_EMPLOYEE,name);
+ closeModal(entryModal);renderClock();say('Entrada registrada · '+fmtTime(shift.start));
+}
+function showShift(r){
+ const same=fmtDate(r.start)===fmtDate(r.end);
+ document.getElementById('shName').textContent=r.name;
+ document.getElementById('shIn').textContent=same?fmtTime(r.start):fmtStamp(r.start);
+ document.getElementById('shOut').textContent=same?fmtTime(r.end):fmtStamp(r.end);
+ document.getElementById('shTime').textContent=(same?fmtDate(r.start)+' · ':'')+fmtDuration(r.start,r.end);
+ openModal(shiftModal);shiftModal.scrollTop=0;
+}
+function doExit(){
+ if(!shift)return;
+ lastShift={name:shift.name,start:shift.start,end:Date.now()};
+ store.set(KEY_LASTSHIFT,JSON.stringify(lastShift));
+ shift=null;store.remove(KEY_SHIFT);
+ renderClock();showShift(lastShift);
+}
+function shiftText(r){
+ const same=fmtDate(r.start)===fmtDate(r.end), line='────────────────────';
+ const out=['HARRINGTON GUNSMITH','REGISTRO DE FICHAJE','Saint Denis · 1880','','Empleado: '+r.name];
+ if(same)out.push('Fecha: '+fmtDate(r.start),'Entrada: '+fmtTime(r.start),'Salida: '+fmtTime(r.end));
+ else out.push('Entrada: '+fmtStamp(r.start),'Salida: '+fmtStamp(r.end));
+ out.push('Tiempo: '+fmtDuration(r.start,r.end),'',line,'El precio de un apellido.');
+ return out.join('\n');
+}
+async function copyShift(){
+ if(!lastShift)return;
+ const t=shiftText(lastShift);
+ if(await copyText(t))say('Fichaje copiado para Discord');else prompt('Copia este texto:',t);
+}
+function downloadShift(){
+ if(!lastShift)return;
+ const safe=lastShift.name.replace(/[^A-Za-z0-9áéíóúüñÁÉÍÓÚÜÑ_-]+/g,'_');
+ const d=new Date(lastShift.end), code=pad(d.getDate())+pad(d.getMonth()+1)+String(d.getFullYear()).slice(-2)+'-'+pad(d.getHours())+pad(d.getMinutes());
+ const blob=new Blob(['\ufeff'+shiftText(lastShift)],{type:'text/plain;charset=utf-8'}), a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);a.download=`Fichaje_${safe}_${code}.txt`;
+ document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+ say('Fichaje descargado');
+}
+clockBtn.onclick=()=>shift?doExit():openEntry();
+lastShiftBtn.onclick=()=>{if(lastShift)showShift(lastShift)};
+document.getElementById('entryOk').onclick=acceptEntry;
+document.getElementById('entryCancel').onclick=()=>closeModal(entryModal);
+employeeInput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();acceptEntry()}});
+entryModal.addEventListener('click',e=>{if(e.target===entryModal)closeModal(entryModal)});
+shiftModal.addEventListener('click',e=>{if(e.target===shiftModal)closeModal(shiftModal)});
+document.getElementById('shCopy').onclick=copyShift;
+document.getElementById('shDownload').onclick=downloadShift;
+document.getElementById('shClose').onclick=()=>closeModal(shiftModal);
+shift=loadJSON(KEY_SHIFT);if(shift&&!(shift.name&&shift.start))shift=null;
+lastShift=loadJSON(KEY_LASTSHIFT);if(lastShift&&!(lastShift.name&&lastShift.start&&lastShift.end))lastShift=null;
+renderClock();
 
 /* ===== Respaldo de imágenes =====
    Si una imagen no carga como "nombre.png", prueba "nombre.png.png"
