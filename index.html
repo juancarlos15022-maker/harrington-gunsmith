@@ -1326,7 +1326,7 @@ function restoreOrder(){
  }catch(e){}
 }
 function calc(animate=true){
- applyStockLimits(animate)
+ applyStockLimits(animate);
  let totalCents=0,units=0,products=0;
  inputs.forEach(i=>{
   const q=readQty(i), sub=q*priceCents(i), row=i.closest('.product'), subEl=row.querySelector('.subtotal'), txt=money(sub);
@@ -2644,8 +2644,7 @@ function renderModDiscord(){
  const E=[['ventas','Ventas: ticket al finalizar (y registro semanal al pulsar «Enviar a Discord»)'],['encargos','Encargos: creación, entrega y cancelación (con el ticket)'],['fichajes','Fichajes de entrada y salida'],['gastos','Gastos: al guardarlos (y registro semanal al pulsar «Enviar a Discord»)'],['balance','Balance de cuentas (solo al pulsar «Enviar a Discord»)'],['pedidos','Pedidos a proveedores: al emitirlos, completarlos o cancelarlos'],['anulaciones','Anulaciones de ventas'],['cierres','Cierres de caja']];
  return `<p class="bk-note">Cada tipo de aviso puede ir a su <b>propio canal</b>: crea un webhook por canal y pégalo en «canal propio». Los que dejes vacíos usan el <b>canal general</b>. Se configura una vez en cada dispositivo (o importa la «configuración» desde Copia de seguridad).</p>
   <div class="dir-form enc-sec"><label>CANAL GENERAL (POR DEFECTO)<input id="whUrl" type="text" autocomplete="off" spellcheck="false" placeholder="https://discord.com/api/webhooks/..." value="${esc(webhook.url)}"></label>
-  ${E.map(([k,l])=>`<div class="wh-row"><label class="chk"><input type="checkbox" data-ev="${k}"${webhook.ev[k]?' 
-  checked':''}>${l}</label><input class="wh-own" type="text" data-whu="${k}" autocomplete="off" spellcheck="false" placeholder="Canal propio (opcional): https://discord.com/api/webhooks/..." value="${esc(webhook.urls[k]||'')}"></div>`).join('')}
+  ${E.map(([k,l])=>`<div class="wh-row"><label class="chk"><input type="checkbox" data-ev="${k}"${webhook.ev[k]?' checked':''}>${l}</label><input class="wh-own" type="text" data-whu="${k}" autocomplete="off" spellcheck="false" placeholder="Canal propio (opcional): https://discord.com/api/webhooks/..." value="${esc(webhook.urls[k]||'')}"></div>`).join('')}
   <div class="pay-err" id="whErr" hidden></div>
   <div class="enc-actions two" style="margin-top:8px"><button type="button" class="primary" data-dir="wh-save">GUARDAR</button><button type="button" data-dir="wh-test">PROBAR ENVÍO</button></div></div>
   <p class="bk-note">Estado: ${webhook.url||Object.keys(webhook.urls).some(k=>webhook.urls[k])?'configurado':'sin configurar (no se envía nada)'}. «Probar envío» manda un mensaje de prueba a cada canal distinto.</p>`;
@@ -3836,4 +3835,3 @@ filter();
 </script>
 </body>
 </html>
-                                                                                                
