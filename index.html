@@ -739,6 +739,19 @@ window.addEventListener('scroll',()=>{
 },{passive:true});
 toTop.onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
 
+/* ===== Respaldo de imágenes =====
+   Si una imagen no carga como "nombre.png", prueba "nombre.png.png"
+   (por si el archivo se subió con la extensión duplicada). */
+function imgFallback(img){
+ if(img.dataset.retried||/\.png\.png$/i.test(img.getAttribute('src')||''))return;
+ img.dataset.retried='1';
+ img.src=img.getAttribute('src')+'.png';
+}
+document.querySelectorAll('img').forEach(img=>{
+ img.addEventListener('error',()=>imgFallback(img));
+ if(img.complete&&img.naturalWidth===0)imgFallback(img);
+});
+
 /* ===== Inicio ===== */
 restoreOrder();
 restoreSale();
