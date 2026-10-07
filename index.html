@@ -685,6 +685,53 @@ details.tut[open]>summary{border-bottom:1px solid #5b4521}
 /* Discord: un canal propio opcional por cada tipo de aviso */
 .wh-row{margin-bottom:10px}
 .wh-row .wh-own{display:block;width:100%;min-height:40px;margin:2px 0 0;font-size:14px}
+
+/* ===== TEXTURAS VISIBLES: marcos de madera, cuero a la vista y velos mucho más suaves ===== */
+html{background:#1b100a}
+body{background:radial-gradient(ellipse at 50% -8%,#8a4f2133,transparent 44%),radial-gradient(ellipse at 50% 120%,#00000080,transparent 55%),linear-gradient(rgba(10,6,4,.1),rgba(4,8,6,.26)),url(textura-madera.jpg) 0 0/600px,linear-gradient(#2a190f,#1b100a)}
+/* Marcos de madera (si la imagen falta, queda un marco liso de color nogal) */
+.panel,.enc-panel,.confirm-box,.clock-bar,.category-visual{border:10px solid #4a2c17;border-image:url(textura-madera.jpg) 90/10px round}
+.panel,.enc-panel,.confirm-box,.clock-bar{box-shadow:0 12px 34px #000a,inset 0 0 0 2px #b88931aa,inset 0 0 0 3px #000}
+.category-visual{box-shadow:0 10px 30px #0008,inset 0 0 0 2px #b88931aa,inset 0 0 0 3px #000}
+.hero-banner{padding:12px;background:linear-gradient(rgba(0,0,0,.04),rgba(0,0,0,.2)),url(textura-madera.jpg) 0 0/380px,#3a2414}
+.cat-nav{padding:12px;background:linear-gradient(rgba(0,0,0,.04),rgba(0,0,0,.2)),url(textura-madera.jpg) 0 0/380px,linear-gradient(#2a190f,#1b100a)}
+.mode-tab{background:linear-gradient(rgba(0,0,0,.18),rgba(0,0,0,.4)),url(textura-madera.jpg) center/300px,linear-gradient(#150f09,#0a1812)}
+.order-bar{background:linear-gradient(rgba(8,16,11,.3),rgba(4,10,7,.5)),url(textura-madera.jpg) 0 0/360px,linear-gradient(#10261aF2,#07120eF8)}
+.order-title,.enc-head,.table-head{background:linear-gradient(rgba(0,0,0,.16),rgba(0,0,0,.36)),url(textura-madera.jpg) 0 0/380px,linear-gradient(90deg,#2b1c0f,#0f2218 60%,#2b1c0f)}
+.order-title,.enc-head{text-shadow:0 1px 3px #000}
+#receiptModal.modal-overlay{background:radial-gradient(circle at 50% 25%,rgba(10,23,17,.25),rgba(2,6,4,.7)),linear-gradient(rgba(2,6,4,.35),rgba(2,6,4,.55)),url(textura-madera.jpg) 0 0/520px,#1b100a}
+/* Cuero a la vista: los velos oscuros son ligeros y las filas dejan pasar la textura */
+.panel,.enc-panel{background:linear-gradient(rgba(5,12,9,.16),rgba(4,10,7,.3)),url(textura-cuero.jpg) 0 0/280px,linear-gradient(#0a1811,#060f0b)}
+.confirm-box{background:linear-gradient(rgba(10,8,5,.2),rgba(5,12,9,.35)),url(textura-cuero.jpg) 0 0/280px,linear-gradient(#1a120a,#0a1812)}
+.clock-bar{background:linear-gradient(rgba(5,12,9,.22),rgba(5,12,9,.4)),url(textura-cuero.jpg) 0 0/280px,linear-gradient(90deg,#25180e,#0d1c14)}
+.client-box{background:linear-gradient(rgba(6,12,9,.12),rgba(6,12,9,.3)),url(textura-cuero.jpg) 0 0/260px,linear-gradient(#0c1a13,#08130e)}
+.cart{background:linear-gradient(rgba(5,12,9,.1),rgba(5,12,9,.28)),url(textura-cuero.jpg) 0 0/260px,repeating-linear-gradient(0deg,#ffffff02 0 23px,#ffffff07 23px 24px)}
+.search{background:rgba(9,23,17,.55)}
+.product{background:linear-gradient(90deg,rgba(10,22,16,.42),rgba(8,16,12,.34))}
+.product:nth-child(even):not(.has-qty){background:linear-gradient(90deg,rgba(14,29,22,.52),rgba(10,20,15,.44))}
+.product:hover:not(.has-qty){background:rgba(20,42,28,.68)}
+.product.has-qty{background:linear-gradient(90deg,rgba(44,60,22,.8),rgba(13,31,22,.62) 70%)}
+@media(max-width:650px){
+ .panel,.enc-panel,.confirm-box,.clock-bar,.category-visual{border-width:7px;border-image-width:7px}
+ .hero-banner{padding:8px}
+ .cat-nav{padding:9px}
+}
+
+/* Estado de la nube */
+.cloud-st{margin-left:8px;font-size:11px;letter-spacing:.06em;color:#a99a7d;text-transform:none}
+.cloud-st.ok{color:#7fd39a}
+.cloud-st.off{color:#f0a58f}
+
+.wrap{overflow-x:clip}
+
+/* ===== Pedidos a proveedores ===== */
+#pedBody{padding:10px}
+.np-row{display:grid;grid-template-columns:minmax(0,1fr) 72px 104px 40px;gap:6px;align-items:end;margin-bottom:8px}
+.np-row input{margin:0}
+.np-row .money{margin:0}
+.np-row .emp-btns button{min-height:44px;padding:0 10px}
+.np-sub{grid-column:1/-1;margin:-4px 0 4px;color:#c9b27a;font-size:13px;text-align:right}
+@media(max-width:650px){.np-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px}.np-row .np-mat{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -697,10 +744,11 @@ details.tut[open]>summary{border-bottom:1px solid #5b4521}
 </header>
 
 <section class="clock-bar" aria-label="Fichaje de empleados">
-  <div class="clock-info"><b>FICHAJE</b><span class="clock-status" id="clockStatus">Sin fichar</span></div>
+  <div class="clock-info"><b>FICHAJE <span id="cloudSt" class="cloud-st">☁ …</span></b><span class="clock-status" id="clockStatus">Sin fichar</span></div>
   <div class="clock-actions">
     <button type="button" class="clock-link enc-btn" id="dirBtn" hidden>DIRECCIÓN</button>
     <button type="button" class="clock-link enc-btn only-venta" id="encBtn">ENCARGOS</button>
+    <button type="button" class="clock-link enc-btn only-venta" id="pedBtn">PEDIDOS</button>
     <button type="button" class="clock-link boss-btn" id="bossBtn">JEFE</button>
     <button type="button" class="clock-link boss-btn" id="soundBtn" aria-label="Activar o silenciar sonidos" title="Sonidos">♪ SÍ</button>
     <button type="button" class="clock-link boss-btn" id="fsDown" aria-label="Texto más pequeño" title="Texto más pequeño">A−</button><button type="button" class="clock-link boss-btn" id="hcBtn" aria-label="Alto contraste" title="Alto contraste">◐</button><button type="button" class="clock-link boss-btn" id="fsUp" aria-label="Texto más grande" title="Texto más grande">A+</button>
@@ -1124,6 +1172,14 @@ details.tut[open]>summary{border-bottom:1px solid #5b4521}
   </div>
 </div>
 
+<!-- Pedidos a proveedores -->
+<div class="modal-overlay" id="pedModal" hidden>
+  <div class="enc-panel" role="dialog" aria-modal="true" aria-labelledby="pedTitle">
+    <div class="enc-head"><span id="pedTitle">PEDIDOS PENDIENTES</span><button type="button" class="danger" id="pedClose">Cerrar</button></div>
+    <div id="pedBody"></div>
+  </div>
+</div>
+
 <!-- Ficha de producto -->
 <div class="modal-overlay" id="prodModal" hidden>
   <div class="enc-panel" role="dialog" aria-modal="true" aria-labelledby="prodTitle">
@@ -1139,6 +1195,13 @@ details.tut[open]>summary{border-bottom:1px solid #5b4521}
     <div id="encBody"></div>
   </div>
 </div>
+
+<!-- Fichaje: entrada -->
+<div class="modal-overlay confirm" id="entryModal" hidden>
+  <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="entryTitle">
+    <div class="confirm-title" id="entryTitle">Fichar entrada</div>
+    <p>Selecciona el empleado.</p>
+    <select class="name-input" id="employeeName"></select>
     <div class="confirm-actions">
       <button type="button" id="entryCancel">Cancelar</button>
       <button type="button" class="ok" id="entryOk">Aceptar</button>
@@ -1214,9 +1277,15 @@ const KEY_ORDER='harrington_order_v1', KEY_SALE='harrington_sale_v1', KEY_COUNTE
 let sale=null; /* venta finalizada en curso (con su número) */
 
 /* ===== Utilidades ===== */
+/* Configuración compartida entre dispositivos (se sincroniza con Supabase) */
+var CLOUD_MAP={'harrington_empleados_v1':'empleados','harrington_clientes_v1':'clientes','harrington_descuentos_v1':'descuentos','harrington_prices_v1':'precios','harrington_custprod_v1':'productos','harrington_webhook_v1':'discord','harrington_stockmin_v1':'stockmin','harrington_proveedores_v1':'proveedores','harrington_boss_cred_v1':'jefe'};
+var CLOUD_REV={};Object.keys(CLOUD_MAP).forEach(function(k){CLOUD_REV[CLOUD_MAP[k]]=k});
+var cloud={ok:null,last:0,dirty:{},stamps:{},applying:false,timers:{},reloading:false,outbox:[],sig:{},since:'',revSeen:0,resetSeen:0,flushing:false,skipStockOk:false,num:0,joined:false};
+try{cloud.outbox=JSON.parse(localStorage.getItem('harrington_cloud_outbox')||'[]')||[];cloud.since=localStorage.getItem('harrington_cloud_since')||'';cloud.resetSeen=Number(localStorage.getItem('harrington_reset_seen')||0);cloud.joined=localStorage.getItem('harrington_cloud_joined')==='1'}catch(e){}
+try{cloud.dirty=JSON.parse(localStorage.getItem('harrington_cloud_dirty')||'{}')||{}}catch(e){}
 const store={
  get(k){try{return localStorage.getItem(k)}catch(e){return null}},
- set(k,v){try{localStorage.setItem(k,v)}catch(e){}},
+ set(k,v){try{localStorage.setItem(k,v)}catch(e){}if(CLOUD_MAP[k]&&!cloud.applying)cloudPush(CLOUD_MAP[k])},
  remove(k){try{localStorage.removeItem(k)}catch(e){}}
 };
 function money(cents){return '$'+(cents/100).toFixed(2)}
@@ -1257,7 +1326,7 @@ function restoreOrder(){
  }catch(e){}
 }
 function calc(animate=true){
- applyStockLimits(animate);
+ applyStockLimits(animate)
  let totalCents=0,units=0,products=0;
  inputs.forEach(i=>{
   const q=readQty(i), sub=q*priceCents(i), row=i.closest('.product'), subEl=row.querySelector('.subtotal'), txt=money(sub);
@@ -1310,7 +1379,7 @@ function ensureSale(){
  const now=new Date();
  if(!sale){
   const mp=madridParts(now.getTime());
-  const id=`HG-${mp.day}${mp.month}${mp.year.slice(-2)}-${pad(nextSaleNumber(),3)}`;
+  const id=`HG-${mp.day}${mp.month}${mp.year.slice(-2)}-${pad(cloud.num||nextSaleNumber(),3)}`;cloud.num=0;
   sale=Object.assign({id:id},snapshot(items,now));
   store.set(KEY_SALE,JSON.stringify(sale));
  }else if(sale.sig!==signature(items)){
@@ -1421,6 +1490,7 @@ receiptModal.addEventListener('click',e=>{if(e.target===receiptModal)closeModal(
 document.addEventListener('keydown',e=>{
  if(e.key!=='Escape')return;
  if(!confirmModal.hidden)answerConfirm(false);
+ else if(!pedModal.hidden)closeModal(pedModal);
  else if(!tutModal.hidden)closeModal(tutModal);
  else if(!prodModal.hidden)closeModal(prodModal);
  else if(!bossModal.hidden)closeModal(bossModal);
@@ -1442,13 +1512,13 @@ async function copyText(t){
  }catch(e){return false}
 }
 async function doCopy(){
- const s=ensureSale(); if(!s)return;
+ const s=await ensureSaleCloud(); if(!s)return;
  const t=receiptText(s);
  if(await copyText(t))say('Venta copiada para Discord');
  else prompt('Copia este texto:',t);
 }
-function doDownload(){
- const s=ensureSale(); if(!s)return;
+async function doDownload(){
+ const s=await ensureSaleCloud(); if(!s)return;
  const blob=new Blob(['\ufeff'+receiptText(s)],{type:'text/plain;charset=utf-8'}), a=document.createElement('a');
  a.href=URL.createObjectURL(blob);a.download='Harrington_'+s.id+'.txt';
  document.body.appendChild(a);a.click();a.remove();
@@ -1474,8 +1544,8 @@ document.getElementById('clear').onclick=async()=>{
  clearQuantities();if(appMode==='venta'){resetSale();releaseEncargo()}calc(false);say('Pedido vaciado');
 };
 document.getElementById('new').onclick=doNew;
-document.getElementById('finish').onclick=()=>{
- const s=ensureSale(); if(!s)return;
+document.getElementById('finish').onclick=async()=>{
+ const s=await ensureSaleCloud(); if(!s)return;
  renderReceipt(s);openModal(receiptModal);receiptModal.scrollTop=0;if(s.op==='encargo')playPencil();else playRegister();notifySale(s);setTimeout(playThump,s.op==='encargo'?1250:650);say((s.op==='encargo'?'Encargo guardado · ':'Venta finalizada · ')+s.id);
 };
 
@@ -1558,16 +1628,25 @@ const KEY_CLIENTES='harrington_clientes_v1';
 let clientes=loadObj(KEY_CLIENTES,[]);
 if(!Array.isArray(clientes))clientes=[];
 function saveClientes(){store.set(KEY_CLIENTES,JSON.stringify(clientes))}
+const KEY_PROVEEDORES='harrington_proveedores_v1', KEY_PEDIDOS='harrington_pedidos_v1';
+let proveedores=loadObj(KEY_PROVEEDORES,[]);
+if(!Array.isArray(proveedores))proveedores=[];
+let pedidos=loadObj(KEY_PEDIDOS,[]);
+if(!Array.isArray(pedidos))pedidos=[];
+function saveProveedores(){store.set(KEY_PROVEEDORES,JSON.stringify(proveedores))}
 function refreshClientList(){clientList.innerHTML=clientes.map(c=>`<option value="${esc(c.name)}"></option>`).join('')}
 function fmtISO(v){const t=String(v||'').split('-');return t.length===3?`${t[2]}/${t[1]}/${t[0]}`:String(v||'')}
 function todayISO(){const m=madridParts(Date.now());return `${m.year}-${m.month}-${m.day}`}
 /* Clientes: se guardan solos al finalizar una venta y se pueden elegir al escribir el nombre */
-function rememberClient(sl){
+async function rememberClient(sl){
  if(!sl.client||customer.type==='sheriff')return;
- let c=clientes.find(x=>norm(x.name)===norm(sl.client));
- if(!c){c={id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:sl.client,type:customer.type,telegram:'',precios:{}};clientes.push(c)}
- if(sl.telegram&&!c.telegram)c.telegram=sl.telegram;
- saveClientes();refreshClientList();
+ let base=clientes;
+ try{const r=await sbFetch('/rest/v1/datos?select=valor&clave=eq.clientes');const rows=r.ok?await r.json():[];if(rows[0]&&Array.isArray(rows[0].valor))base=rows[0].valor}catch(e){}
+ const merged=base.map(x=>Object.assign({},x));
+ let c=merged.find(x=>norm(x.name)===norm(sl.client)), changed=false;
+ if(!c){c={id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:sl.client,type:customer.type,telegram:'',precios:{}};merged.push(c);changed=true}
+ if(sl.telegram&&!c.telegram){c.telegram=sl.telegram;changed=true}
+ if(changed){clientes=merged;saveClientes();refreshClientList()}
 }
 function applyClient(c){
  customer.name=c.name;customer.type=c.type||'particular';
@@ -1604,16 +1683,13 @@ function applyStockLimits(animate){
 }
 /* Descuenta el stock una sola vez por venta real (y ajusta si la venta se edita antes de cerrarla) */
 function applyStock(sl){
+ /* El stock ya se ha movido en la nube (stockPrepare); aquí solo se anota lo aplicado y el movimiento */
  if(sl.op==='encargo')return;
  const want={};
  sl.items.forEach(x=>{const q=x.qty-(x.oq||0);if(q>0)want[x.name]=q});
- const prev=sl.stockApplied||{};let ch=false;
- new Set(Object.keys(want).concat(Object.keys(prev))).forEach(n=>{
-  const d=(want[n]||0)-(prev[n]||0);
-  if(d){stockMap[n]=Math.max(0,(stockMap[n]||0)-d);ch=true;logStock(n,-d,'Venta '+sl.id)}
- });
+ const prev=sl.stockApplied||{};
+ new Set(Object.keys(want).concat(Object.keys(prev))).forEach(n=>{const d=(want[n]||0)-(prev[n]||0);if(d)logStock(n,-d,'Venta '+sl.id)});
  sl.stockApplied=want;
- if(ch)saveStock();
  store.set(KEY_SALE,JSON.stringify(sl));
 }
 const GROUPS={suministros:['suministros'],municiones:['municion'],ambos:['suministros','municion']};
@@ -1640,7 +1716,7 @@ function benefitFor(d,total){
 }
 /* Segunda comprobación de stock al finalizar: nunca se permite stock negativo */
 function stockOk(items){
- if(customer.op==='encargo'&&!loadedEnc)return true;
+ if(cloud.skipStockOk||(customer.op==='encargo'&&!loadedEnc))return true;
  for(const x of items){
   const avail=(stockMap[x.name]||0)+((sale&&sale.stockApplied&&sale.stockApplied[x.name])||0), need=x.qty-(x.oq||0);
   if(need>avail){say('No hay stock suficiente de '+x.name);return false}
@@ -1799,7 +1875,7 @@ document.querySelectorAll('.product[data-cat="municion"] .qty').forEach(q=>{
 });
 
 /* ===== Encargos almacenados ===== */
-function saveEncs(){store.set(KEY_ENC,JSON.stringify(encargos))}
+function saveEncs(){store.set(KEY_ENC,JSON.stringify(encargos));encargos.forEach(e=>{const sg=JSON.stringify(e),k='encargo:'+e.id;if(cloud.sig[k]!==sg){cloud.sig[k]=sg;cloudPut(k,e)}})}
 function pendingEncs(){return encargos.filter(e=>!e.finished)}
 function updateEncBtn(){const n=pendingEncs().length;encBtn.textContent=n?`ENCARGOS (${n})`:'ENCARGOS'}
 function releaseEncargo(){if(!loadedEnc)return;loadedEnc=null;store.remove(KEY_LOADED);renderCustomer()}
@@ -1826,7 +1902,7 @@ function saveEncargoFromSale(sl){
   employee:sl.employee||'',note:sl.note||'',promise:sl.promise||'',totalCents:sl.totalCents,depositCents:sl.paidCents,pendingCents:sl.pendingCents,discounts:sl.discounts||[],disc:sl.discInfo||null};
  const cur=encargos.find(e=>e.id===sl.id);
  if(cur)Object.assign(cur,data);
- else encargos.push(Object.assign(data,{fab:'PENDIENTE',avisado:false,finished:false}));
+ else encargos.push(Object.assign(data,{fab:'PENDIENTE',avisado:false,finished:false,ts:Date.now()}));
  saveEncs();updateEncBtn();
 }
 const TYPE_NAMES={particular:'Cliente particular',empresa:'Empresa',sheriff:'Departamento del Sheriff'};
@@ -1903,7 +1979,7 @@ async function cancelEncargo(id){
  let refund=false;
  if(e.depositCents>0)refund=await askConfirm('Adelanto de '+money(e.depositCents),'¿Se devuelve el adelanto al cliente? Si no, la casa se lo queda.','Devolver');
  e.finished=true;e.cancelled=true;e.refunded=refund;e.finishedAt=Date.now();saveEncs();updateEncBtn();
- if(refund){const now=Date.now(),m=madridParts(now);gastos.push({id:'g'+now.toString(36)+'r',cat:'otros',concepto:'Devolución del adelanto · encargo '+e.id,cents:e.depositCents,day:dayNum(+m.year,+m.month,+m.day),date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`});saveGastos()}
+ if(refund){const now=Date.now(),m=madridParts(now);gastos.push({id:'g'+now.toString(36)+'r',cat:'otros',concepto:'Devolución del adelanto · encargo '+e.id,cents:e.depositCents,day:dayNum(+m.year,+m.month,+m.day),date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`});saveGastos();cloudPut('gasto:'+gastos[gastos.length-1].id,gastos[gastos.length-1])}
  discordSend('encargos','ENCARGO CANCELADO\n'+e.id+' · '+e.client+(e.depositCents?'\nAdelanto '+money(e.depositCents)+(refund?' devuelto':' retenido'):''));
  renderCustomer();renderEnc();say('Encargo cancelado');
 }
@@ -1936,7 +2012,7 @@ encModal.addEventListener('change',e=>{
 });
 finishEncBtn.onclick=async()=>{
  if(!loadedEnc||loadedEnc.finished)return;
- const sl=ensureSale(); if(!sl)return;
+ const sl=await ensureSaleCloud(); if(!sl)return;
  if(!await askConfirm('Finalizar encargo','Se marcará el encargo '+loadedEnc.id+' como entregado y cobrado. Dejará de aparecer en pendientes.','Finalizar'))return;
  loadedEnc.finished=true;loadedEnc.finishedAt=Date.now();loadedEnc.deliverySale=sl.id;
  saveEncs();updateEncBtn();renderCustomer();
@@ -2024,12 +2100,14 @@ renderSound();
 /* ===== Registros (historial de fichajes y ventas para Dirección) ===== */
 const KEY_SHIFTLOG='harrington_shiftlog_v1', KEY_SALELOG='harrington_salelog_v1';
 function loadLog(k){try{const a=JSON.parse(store.get(k)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
-function logShift(r){const a=loadLog(KEY_SHIFTLOG);a.push({name:r.name,start:r.start,end:r.end});store.set(KEY_SHIFTLOG,JSON.stringify(a.slice(-5000)))}
+function logShift(r){const a=loadLog(KEY_SHIFTLOG), rec={uid:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:r.name,start:r.start,end:r.end};a.push(rec);store.set(KEY_SHIFTLOG,JSON.stringify(a.slice(-5000)));cloudPut('turno:'+rec.uid,rec)}
 function logSale(sl){
  const a=loadLog(KEY_SALELOG), e={items:sl.items.map(x=>({name:x.name,qty:x.qty,cents:x.cents,oq:x.oq||0})),stock:sl.stockApplied||{},note:sl.note||'',id:sl.id,date:sl.date,time:sl.time,op:sl.op,client:sl.client,employee:sl.employee||'',products:sl.products,units:sl.units,dueCents:dueCents(sl),totalCents:sl.totalCents,convenio:sl.convenio||'',fromEncargo:sl.fromEncargo||''};
  const k=a.findIndex(x=>x.id===sl.id);
  if(k>=0){e.voided=a[k].voided;e.voidedAt=a[k].voidedAt;a[k]=e}else a.push(e);
+ e.ts=new Date().toISOString();
  store.set(KEY_SALELOG,JSON.stringify(a.slice(-5000)));
+ cloudPut('venta:'+e.id,e);
 }
 
 /* ===== Modo Jefe ===== */
@@ -2048,7 +2126,7 @@ function bossError(t){bossErr.textContent=t;bossErr.hidden=!t}
 const wnorm=v=>norm(String(v||'').trim());
 /* Modos: setup (primer acceso) · login · word (añadir palabra a una contraseña antigua) · resetword → resetpw (cambiar contraseña) */
 function openBoss(mode){
- bossMode=mode||(store.get(KEY_BOSS_PW)?'login':'setup');
+ bossMode=mode||(bossCreds()?'login':'setup');
  const M={
   setup:{t:'CONFIGURAR ACCESO JEFE',l1:'Nueva contraseña',w1:1,w2:1,ww:1,hint:'Te servirá para cambiar la contraseña si la olvidas.',ok:'GUARDAR'},
   login:{t:'ACCESO JEFE',l1:'Contraseña',w1:1,w2:0,ww:0,hint:'',ok:'ACCEDER'},
@@ -2063,7 +2141,7 @@ function openBoss(mode){
  document.getElementById('bossWrapWord').hidden=!M.ww;
  document.getElementById('bossHint').textContent=M.hint;
  document.getElementById('bossOk').textContent=M.ok;
- document.getElementById('bossChange').hidden=!(bossMode==='login'&&store.get(KEY_BOSS_WORD));
+ document.getElementById('bossChange').hidden=!(bossMode==='login'&&bossCreds()&&bossCreds().word);
  bossPw1.value='';bossPw2.value='';bossWord.value='';bossError('');
  openModal(bossModal);setTimeout(()=>(M.w1?bossPw1:bossWord).focus(),60);
 }
@@ -2073,32 +2151,50 @@ function checkNewWord(word,pw){
  if(wnorm(word)===wnorm(pw))return 'La palabra de seguridad debe ser distinta de la contraseña';
  return '';
 }
-function submitBoss(){
+const KEY_BOSS_CRED='harrington_boss_cred_v1';
+let bossTyped='';
+function bossCreds(){
+ const c=loadObj(KEY_BOSS_CRED,null);
+ if(c&&c.pw)return {pw:c.pw,word:c.word||'',hashed:true};
+ const pw=store.get(KEY_BOSS_PW);
+ return pw?{pw:pw,word:store.get(KEY_BOSS_WORD)||'',hashed:false}:null;
+}
+async function hashStr(t){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('harrington|'+t));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return 'plain:'+t}}
+async function checkPw(v){const c=bossCreds();return !!c&&(c.hashed?(await hashStr(v))===c.pw:v===c.pw)}
+async function checkWord(v){const c=bossCreds();return !!c&&!!c.word&&(c.hashed?(await hashStr(wnorm(v)))===c.word:wnorm(v)===wnorm(c.word))}
+async function saveCreds(pw,word,wordIsHash){
+ store.set(KEY_BOSS_CRED,JSON.stringify({pw:await hashStr(pw),word:wordIsHash?word:await hashStr(wnorm(word))}));
+ store.remove(KEY_BOSS_PW);store.remove(KEY_BOSS_WORD);
+}
+async function submitBoss(){
  const word=bossWord.value.trim();
  if(bossMode==='setup'){
   if(!bossPw1.value)return bossError('Escribe una contraseña');
   if(bossPw1.value!==bossPw2.value)return bossError('Las contraseñas no coinciden');
   const e=checkNewWord(word,bossPw1.value); if(e)return bossError(e);
-  store.set(KEY_BOSS_PW,bossPw1.value);store.set(KEY_BOSS_WORD,word);return finishBoss();
+  await saveCreds(bossPw1.value,word);return finishBoss();
  }
  if(bossMode==='login'){
-  if(bossPw1.value!==store.get(KEY_BOSS_PW))return bossError('Contraseña incorrecta');
-  if(!store.get(KEY_BOSS_WORD))return openBoss('word'); /* contraseña creada antes de existir la palabra de seguridad */
+  if(!await checkPw(bossPw1.value))return bossError('Contraseña incorrecta');
+  const c=bossCreds();
+  if(!c.word){bossTyped=bossPw1.value;return openBoss('word')} /* contraseña creada antes de existir la palabra de seguridad */
+  if(!c.hashed)await saveCreds(bossPw1.value,c.word); /* una contraseña antigua pasa a la nube, cifrada */
   return finishBoss();
  }
  if(bossMode==='word'){
-  const e=checkNewWord(word,store.get(KEY_BOSS_PW)); if(e)return bossError(e);
-  store.set(KEY_BOSS_WORD,word);return finishBoss();
+  const e=checkNewWord(word,bossTyped); if(e)return bossError(e);
+  await saveCreds(bossTyped,word);bossTyped='';return finishBoss();
  }
  if(bossMode==='resetword'){
-  if(wnorm(word)!==wnorm(store.get(KEY_BOSS_WORD)))return bossError('Palabra de seguridad incorrecta');
+  if(!await checkWord(word))return bossError('Palabra de seguridad incorrecta');
   return openBoss('resetpw');
  }
  if(bossMode==='resetpw'){
   if(!bossPw1.value)return bossError('Escribe una contraseña');
   if(bossPw1.value!==bossPw2.value)return bossError('Las contraseñas no coinciden');
-  if(wnorm(bossPw1.value)===wnorm(store.get(KEY_BOSS_WORD)))return bossError('La contraseña debe ser distinta de la palabra de seguridad');
-  store.set(KEY_BOSS_PW,bossPw1.value);return finishBoss('Contraseña cambiada · MODO JEFE ACTIVADO');
+  const c=bossCreds(), same=c.hashed?(await hashStr(wnorm(bossPw1.value)))===c.word:wnorm(bossPw1.value)===wnorm(c.word);
+  if(same)return bossError('La contraseña debe ser distinta de la palabra de seguridad');
+  await saveCreds(bossPw1.value,c.hashed?c.word:await hashStr(wnorm(c.word)),true);return finishBoss('Contraseña cambiada · MODO JEFE ACTIVADO');
  }
 }
 bossBtn.onclick=()=>{if(bossActive){setBoss(false);closeModal(dirModal);say('Modo Jefe desactivado')}else openBoss()};
@@ -2123,7 +2219,12 @@ const DIRECCION_MODULOS=[
  {id:'gastos',titulo:'GASTOS',desc:'Registrar gastos y descargar el registro.',render:()=>renderModGastos()},
  {id:'balance',titulo:'BALANCE DE CUENTAS',desc:'Ingresos, gastos y beneficios.',render:()=>renderModBalance()},
  {id:'cierre',titulo:'CIERRE DE CAJA',desc:'Contar la caja del día y ver la diferencia.',render:()=>renderModCierre()},
+ {id:'proveedores',titulo:'PROVEEDORES',desc:'Crear y gestionar tus proveedores (herrerías, minas, talas…).',render:()=>renderModProveedores()},
+ {id:'nuevopedido',titulo:'REALIZAR NUEVO PEDIDO',desc:'Pedir materiales a un proveedor.',render:()=>renderModNuevoPedido()},
+ {id:'regpedidos',titulo:'REGISTRO DE PEDIDOS',desc:'Pedidos completados, diarios y semanales.',render:()=>renderModRegPedidos()},
  {id:'discord',titulo:'DISCORD',desc:'Enviar las operaciones a un canal automáticamente.',render:()=>renderModDiscord()},
+ {id:'nube',titulo:'NUBE (SUPABASE)',desc:'Estado de la sincronización entre dispositivos.',render:()=>renderModNube()},
+ {id:'reset',titulo:'RESETEAR DATOS',desc:'Borrar ventas, gastos, encargos y demás datos de operación.',render:()=>renderModReset()},
  {id:'copia',titulo:'COPIA DE SEGURIDAD',desc:'Guardar y restaurar todos los datos.',render:()=>renderModCopia()}
 ];
 let dirMod=null, dirForm=null;
@@ -2175,9 +2276,9 @@ async function voidSale(id){
  const hasStock=r.stock&&Object.keys(r.stock).length;
  if(!await askConfirm('Anular venta',`Se anulará ${r.id} y dejará de contar en los balances.${hasStock?' El stock vendido se devolverá.':''}`,'Anular'))return;
  buzz(90);
- Object.keys(r.stock||{}).forEach(n=>{stockMap[n]=(stockMap[n]||0)+r.stock[n];logStock(n,r.stock[n],'Anulación '+r.id)});
- saveStock();
- r.voided=true;r.voidedAt=Date.now();store.set(KEY_SALELOG,JSON.stringify(a));
+ const back=Object.keys(r.stock||{}).map(n=>({producto:n,delta:r.stock[n]}));
+ if(back.length){try{await moverStock(back);back.forEach(x=>logStock(x.producto,x.delta,'Anulación '+r.id))}catch(e){return say('Sin conexión: no se puede anular ahora')}}
+ r.voided=true;r.voidedAt=Date.now();r.ts=new Date().toISOString();store.set(KEY_SALELOG,JSON.stringify(a));cloudPut('venta:'+r.id,r);
  const enc=encargos.find(e=>e.id===r.id); if(enc){enc.finished=true;enc.cancelled=true;saveEncs();updateEncBtn()}
  if(r.fromEncargo){const o=encargos.find(e=>e.id===r.fromEncargo);if(o){o.finished=false;saveEncs();updateEncBtn()}}
  if(sale&&sale.id===r.id){sale.stockApplied={};resetSale()}
@@ -2258,7 +2359,7 @@ function renderModSemanales(){
   return `<div class="enc-card dir-item"><div class="t">${esc(e.name)}</div><div class="it">${has?sum:'Sin actividad esta semana'}</div><div class="enc-actions two"><button type="button" data-dir="wk-emp:${encodeURIComponent(e.name)}">VER</button><button type="button" class="primary" data-dir="wk-dl:${encodeURIComponent(e.name)}"${has?'':' disabled'}>DESCARGAR</button></div></div>`;
  }).join('');
  const any=wd.list.some(e=>ven?e.sales.length:e.shifts.length);
- return `${nav}${head}${ven?rankingHTML(wd.list):''}${cards||'<div class="enc-empty">No hay empleados ni registros.</div>'}<div class="enc-actions" style="margin-top:6px"><button type="button" class="gold" data-dir="wk-dlall"${any?'':' disabled'}>DESCARGAR TODOS LOS EMPLEADOS</button></div>`;
+ return `${nav}${head}${ven?rankingHTML(wd.list):''}${cards||'<div class="enc-empty">No hay empleados ni registros.</div>'}<div class="enc-actions" style="margin-top:6px"><button type="button" class="gold" data-dir="wk-dlall"${any?'':' disabled'}>DESCARGAR TODOS LOS EMPLEADOS</button>${ven?`<button type="button" data-dir="wk-dc"${any?'':' disabled'}>ENVIAR A DISCORD</button>`:''}</div>`;
 }
 /* ===== Gastos y balance de cuentas ===== */
 const KEY_GASTOS='harrington_gastos_v1';
@@ -2286,7 +2387,21 @@ function periodBar(k){
  return `<div class="seg" style="margin-bottom:8px"><button type="button" class="${p.mode==='dia'?'on':''}" data-dir="pm:${k}dia">DIARIO</button><button type="button" class="${p.mode==='sem'?'on':''}" data-dir="pm:${k}sem">SEMANAL</button></div>
  <div class="enc-actions" style="grid-template-columns:48px 1fr 48px;margin-bottom:10px"><button type="button" data-dir="pp:${k}" aria-label="Anterior">◂</button><button type="button" data-dir="pw:${k}" style="font-size:13px">${pi.label}${p.off===0?'<br>('+(pi.sem?'esta semana':'hoy')+')':''}</button><button type="button" data-dir="pn:${k}" aria-label="Siguiente"${p.off>=0?' disabled':''}>▸</button></div>`;
 }
-function repButtons(k){return `<div class="enc-actions two" style="margin-top:10px"><button type="button" class="primary" data-dir="rep-dl:${k}">DESCARGAR ${per[k].mode==='sem'?'SEMANAL':'DIARIO'}</button><button type="button" data-dir="rep-cp:${k}">COPIAR PARA DISCORD</button></div>`}
+function repButtons(k){return `<div class="enc-actions" style="margin-top:10px"><button type="button" class="primary" data-dir="rep-dl:${k}">DESCARGAR ${per[k].mode==='sem'?'SEMANAL':'DIARIO'}</button><button type="button" class="gold" data-dir="rep-dc:${k}">ENVIAR A DISCORD</button><button type="button" data-dir="rep-cp:${k}">COPIAR PARA DISCORD</button></div>`}
+const REPORTS={g:{doc:()=>gastosDoc(),name:'Gastos',kind:'gastos'},b:{doc:()=>balanceDoc(),name:'Balance',kind:'balance'},p:{doc:()=>pedidosDoc(),name:'Pedidos',kind:'pedidos'}};
+function docSummary(doc){const L=doc.split('\n');return L.slice(0,5).concat(L.filter(l=>/TOTAL|BENEFICIO|INGRESOS|GASTOS|Proveedor:|Sueldos:|Otros gastos:|Pedidos:/.test(l))).join('\n')+'\n(documento completo adjunto)'}
+async function reportSend(kind,doc,fname){
+ if(!(webhook.urls[kind]||webhook.url))return say('Configura primero el canal en Dirección → Discord');
+ const blob=new Blob(['\ufeff'+doc],{type:'text/plain;charset=utf-8'});
+ await discordSend(kind,docSummary(doc),blob,fname,true);
+}
+function sendWeekSales(){
+ const wd=weekData(), list=wd.list.filter(e=>e.sales.length);
+ if(!list.length)return say('No hay ventas esta semana');
+ const doc=weekDoc(list,'ventas',wd.ws), sum=['HARRINGTON GUNSMITH','REGISTRO SEMANAL DE VENTAS','Semana: '+dayStr(wd.ws)+' – '+dayStr(wd.ws+6),''].concat(list.map(e=>{const t=salesSum(e);return e.name+': '+t.ops+' operaciones · cobrado '+money(t.cash)}),['(documento completo adjunto)']).join('\n');
+ if(!(webhook.urls.ventas||webhook.url))return say('Configura primero el canal en Dirección → Discord');
+ discordSend('ventas',sum,new Blob(['\ufeff'+doc],{type:'text/plain;charset=utf-8'}),'Semana_'+dayStr(wd.ws).replace(/\//g,'-')+'_Ventas_TODOS.txt',true);
+}
 async function repCopy(text){if(await copyText(text))say('Copiado para Discord');else prompt('Copia este texto:',text)}
 function renderModGastos(){
  const pi=periodInfo('g'), a=accounts(pi.r);
@@ -2309,12 +2424,12 @@ function saveGasto(){
  const now=Date.now(), m=madridParts(now);
  gastos.push({id:'g'+now.toString(36)+Math.random().toString(36).slice(2,5),cat:gxDraft.cat,concepto:concepto,cents:cents,day:dayNum(+m.year,+m.month,+m.day),date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`});
  discordSend('gastos','GASTO · '+CAT_NAMES[gxDraft.cat]+'\n'+concepto+'\nImporte: '+money(cents));
- saveGastos();gxDraft={cat:'',concepto:'',amt:''};per.g={mode:'dia',off:0};renderDir();say('Gasto guardado');
+ saveGastos();cloudPut('gasto:'+gastos[gastos.length-1].id,gastos[gastos.length-1]);gxDraft={cat:'',concepto:'',amt:''};per.g={mode:'dia',off:0};renderDir();say('Gasto guardado');
 }
 async function deleteGasto(id){
  const x=gastos.find(g=>g.id===id); if(!x)return;
  if(!await askConfirm('Eliminar gasto',`«${x.concepto}» (${money(x.cents)}) se borrará del registro.`,'Eliminar'))return;
- gastos=gastos.filter(g=>g.id!==id);saveGastos();renderDir();say('Gasto eliminado');
+ gastos=gastos.filter(g=>g.id!==id);saveGastos();cloudDel('gasto:'+id);renderDir();say('Gasto eliminado');
 }
 function gastosDoc(){
  const pi=periodInfo('g'), a=accounts(pi.r), line='────────────────────', now=Date.now();
@@ -2521,15 +2636,16 @@ function saveCierre(){
  if(!ccCount)return say('Escribe el dinero contado');
  const t=todayNum(), a=accounts({s:t,e:t}), exp=a.ing-a.gas, cnt=parseMoney(ccCount), now=Date.now();
  const c={id:'k'+now.toString(36),day:t,date:fmtDate(now),time:fmtTime(now),ing:a.ing,gas:a.gas,exp:exp,count:cnt,diff:cnt-exp};
- const arr=loadLog(KEY_CIERRES);arr.push(c);store.set(KEY_CIERRES,JSON.stringify(arr.slice(-400)));
+ const arr=loadLog(KEY_CIERRES);arr.push(c);store.set(KEY_CIERRES,JSON.stringify(arr.slice(-400)));cloudPut('cierre:'+c.id,c);
  ccCount='';renderDir();say('Cierre guardado');discordSend('cierres',cierreDoc(c));
 }
 /* --- Discord --- */
 function renderModDiscord(){
- const E=[['ventas','Ventas (con el ticket como imagen)'],['encargos','Encargos: creación, entrega y cancelación (con el ticket)'],['fichajes','Fichajes de entrada y salida'],['gastos','Gastos nuevos'],['anulaciones','Anulaciones de ventas'],['cierres','Cierres de caja']];
+ const E=[['ventas','Ventas: ticket al finalizar (y registro semanal al pulsar «Enviar a Discord»)'],['encargos','Encargos: creación, entrega y cancelación (con el ticket)'],['fichajes','Fichajes de entrada y salida'],['gastos','Gastos: al guardarlos (y registro semanal al pulsar «Enviar a Discord»)'],['balance','Balance de cuentas (solo al pulsar «Enviar a Discord»)'],['pedidos','Pedidos a proveedores: al emitirlos, completarlos o cancelarlos'],['anulaciones','Anulaciones de ventas'],['cierres','Cierres de caja']];
  return `<p class="bk-note">Cada tipo de aviso puede ir a su <b>propio canal</b>: crea un webhook por canal y pégalo en «canal propio». Los que dejes vacíos usan el <b>canal general</b>. Se configura una vez en cada dispositivo (o importa la «configuración» desde Copia de seguridad).</p>
   <div class="dir-form enc-sec"><label>CANAL GENERAL (POR DEFECTO)<input id="whUrl" type="text" autocomplete="off" spellcheck="false" placeholder="https://discord.com/api/webhooks/..." value="${esc(webhook.url)}"></label>
-  ${E.map(([k,l])=>`<div class="wh-row"><label class="chk"><input type="checkbox" data-ev="${k}"${webhook.ev[k]?' checked':''}>${l}</label><input class="wh-own" type="text" data-whu="${k}" autocomplete="off" spellcheck="false" placeholder="Canal propio (opcional): https://discord.com/api/webhooks/..." value="${esc(webhook.urls[k]||'')}"></div>`).join('')}
+  ${E.map(([k,l])=>`<div class="wh-row"><label class="chk"><input type="checkbox" data-ev="${k}"${webhook.ev[k]?' 
+  checked':''}>${l}</label><input class="wh-own" type="text" data-whu="${k}" autocomplete="off" spellcheck="false" placeholder="Canal propio (opcional): https://discord.com/api/webhooks/..." value="${esc(webhook.urls[k]||'')}"></div>`).join('')}
   <div class="pay-err" id="whErr" hidden></div>
   <div class="enc-actions two" style="margin-top:8px"><button type="button" class="primary" data-dir="wh-save">GUARDAR</button><button type="button" data-dir="wh-test">PROBAR ENVÍO</button></div></div>
   <p class="bk-note">Estado: ${webhook.url||Object.keys(webhook.urls).some(k=>webhook.urls[k])?'configurado':'sin configurar (no se envía nada)'}. «Probar envío» manda un mensaje de prueba a cada canal distinto.</p>`;
@@ -2548,6 +2664,77 @@ function testWebhooks(){
  Object.keys(webhook.urls).forEach(k=>{(dest[webhook.urls[k]]=dest[webhook.urls[k]]||[]).push(NAMES[k])});
  const urls=Object.keys(dest); if(!urls.length)return say('Pega primero un enlace de webhook');
  urls.forEach(u=>discordSend('ventas','Prueba de conexión desde Harrington Gunsmith ✔\nAvisos de este canal: '+dest[u].join(', '),null,null,true,u));
+}
+/* --- Resetear datos de operación --- */
+const RESET_OPTS=[['ventas','Ventas (registro de ventas, balance y numeración de tickets)',1],['encargos','Encargos (pendientes y entregados)',1],['gastos','Gastos',1],['pedidos','Pedidos a proveedores (pendientes y completados)',1],['cierres','Cierres de caja',1],['fichajes','Fichajes (registros horarios y fichados ahora)',1],['movimientos','Historial de movimientos de stock',1],['stock','Existencias de stock (poner todo a 0)',0]];
+function renderModReset(){
+ return `<p class="bk-note">Borra para siempre, en <b>todos los dispositivos</b>, los datos de operación que marques. <b>No se toca</b>: empleados, clientes, convenios y ofertas, precios y productos, Discord, mínimos de stock ni las contraseñas. El balance de cuentas queda a cero al borrar las ventas y los gastos.</p>
+  <div class="dir-form enc-sec">${RESET_OPTS.map(o=>`<label class="chk"><input type="checkbox" data-rs="${o[0]}"${o[2]?' checked':''}>${o[1]}</label>`).join('')}
+  <label class="chk"><input type="checkbox" id="rsBackup" checked>Descargar antes una copia de seguridad de este dispositivo</label>
+  <label>ESCRIBE «RESETEAR» PARA CONFIRMAR<input id="rsWord" type="text" autocomplete="off" autocapitalize="characters" placeholder="RESETEAR"></label>
+  <div class="enc-actions"><button type="button" class="warn" data-dir="rs-do">RESETEAR DATOS</button></div></div>`;
+}
+async function doReset(){
+ const what=Array.prototype.map.call(dirModal.querySelectorAll('[data-rs]:checked'),c=>c.dataset.rs);
+ if(!what.length)return say('Marca qué quieres resetear');
+ if((document.getElementById('rsWord').value||'').trim().toUpperCase()!=='RESETEAR')return say('Escribe RESETEAR para confirmar');
+ const names=RESET_OPTS.filter(o=>what.indexOf(o[0])>=0).map(o=>o[1].split(' (')[0].toLowerCase());
+ if(!await askConfirm('Resetear datos','Se borrarán para siempre en TODOS los dispositivos: '+names.join(', ')+'.','Resetear'))return;
+ if(document.getElementById('rsBackup').checked)downloadBackup(false);
+ try{
+  const prefixes=[];what.forEach(w=>(RESET_TYPES[w]||[]).forEach(x=>prefixes.push(x)));
+  for(const pf of prefixes){const r=await sbFetch('/rest/v1/datos?clave=like.'+encodeURIComponent(pf+'*'),{method:'DELETE'});if(!r.ok)throw new Error(r.status)}
+  if(what.indexOf('ventas')>=0){const r=await sbFetch('/rest/v1/contador?id=eq.1',{method:'PATCH',body:JSON.stringify({valor:0})});if(!r.ok)throw new Error(r.status)}
+  if(what.indexOf('stock')>=0){const r=await sbFetch('/rest/v1/stock?producto=neq.__ninguno__',{method:'PATCH',body:JSON.stringify({cantidad:0})});if(!r.ok)throw new Error(r.status)}
+  const stamp=new Date().toISOString();
+  const r=await sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify([{clave:'reset',valor:{what:what,n:Date.now()},actualizado:stamp},{clave:'rev',valor:{n:Date.now()+'-r'},actualizado:stamp}])});
+  if(!r.ok)throw new Error(r.status);
+  cloud.resetSeen=Date.parse(stamp);try{localStorage.setItem('harrington_reset_seen',String(cloud.resetSeen))}catch(e){}
+ }catch(e){return say('No se pudo completar el reseteo: sin conexión con la nube. Vuelve a intentarlo.')}
+ wipeLocal(what);
+ if(what.indexOf('stock')>=0){stockMap={};try{await refreshStock()}catch(e){}}
+ cloud.since='';try{localStorage.removeItem('harrington_cloud_since')}catch(e){}
+ say('Datos reseteados');renderDir();
+}
+/* --- Nube (Supabase) --- */
+const CLOUD_LABELS={empleados:'Empleados',clientes:'Clientes',descuentos:'Convenios y ofertas',precios:'Precios editados',productos:'Productos nuevos',discord:'Discord',stockmin:'Mínimos de stock',proveedores:'Proveedores',jefe:'Contraseña del jefe'};
+function renderModNube(){
+ const st=cloud.ok===null?'comprobando…':cloud.ok?'conectado':'sin conexión', last=cloud.last?fmtTime(cloud.last):'—';
+ const rows=Object.keys(CLOUD_LABELS).map(c=>`<div class="reg-line"><span>${CLOUD_LABELS[c]}</span><b class="${cloud.dirty[c]?'zero':''}">${cloud.dirty[c]?'pendiente de subir':(cloud.stamps[c]?'sincronizado':'solo en este dispositivo')}</b></div>`).join('');
+ return `<p class="bk-note">Todo se comparte entre los dispositivos: la configuración (lo de abajo), el stock, las ventas, los encargos, los fichajes, los gastos y los cierres. Lo que cambie un móvil aparece en los demás en pocos segundos.</p>
+  <div class="enc-card dir-item"><div class="enc-money"><span>Estado: <b class="${cloud.ok?'':'neg'}">${st}</b></span><span>Última comprobación: ${last}</span></div></div>
+  <div class="dir-sec-title">DATOS COMPARTIDOS</div>${rows}
+  <div class="enc-actions" style="margin-top:12px"><button type="button" class="primary" data-dir="nb-up">SUBIR MIS DATOS A LA NUBE</button><button type="button" data-dir="nb-sync">SINCRONIZAR AHORA</button><button type="button" class="warn" data-dir="nb-down">BAJAR LA NUBE A ESTE DISPOSITIVO</button></div>
+  <p class="bk-note" style="margin-top:10px">«Subir» envía a la nube lo que hay en este dispositivo y sustituye lo que hubiera allí. Hazlo una sola vez desde el dispositivo que tiene los datos buenos. Las ventas, el stock, los encargos, los fichajes, los gastos y los cierres también están en la nube y se comparten solos.</p>`;
+}
+async function nubeUp(){
+ if(!await askConfirm('Subir a la nube','Los datos de este dispositivo sustituirán a la configuración y al stock de la nube, y se añadirán sus ventas, encargos, gastos y fichajes.','Subir'))return;
+ say('Subiendo a la nube…');
+ cloud.joined=true;try{localStorage.setItem('harrington_cloud_joined','1')}catch(e){}
+ try{
+  await cloudUploadAll();
+  const isoOf=e=>/^\d\d\/\d\d\/\d{4}$/.test(e.date||'')?`${e.date.slice(6)}-${e.date.slice(3,5)}-${e.date.slice(0,2)}T${e.time||'00:00'}:00.000Z`:new Date(0).toISOString();
+  const sales=loadLog(KEY_SALELOG).map(e=>Object.assign(e,{ts:e.ts||isoOf(e)}));store.set(KEY_SALELOG,JSON.stringify(sales));sales.forEach(e=>cloudPut('venta:'+e.id,e));
+  const tu=loadLog(KEY_SHIFTLOG).map(e=>Object.assign(e,{uid:e.uid||'t'+(e.start||0).toString(36)+'-'+String(e.name||'').slice(0,4)}));store.set(KEY_SHIFTLOG,JSON.stringify(tu));tu.forEach(e=>cloudPut('turno:'+e.uid,e));
+  const mv=loadLog(KEY_STOCKLOG).map((e,i)=>Object.assign(e,{uid:e.uid||'m'+(e.ts||0).toString(36)+'-'+i}));store.set(KEY_STOCKLOG,JSON.stringify(mv));mv.forEach(e=>cloudPut('mov:'+e.uid,e));
+  loadLog(KEY_CIERRES).forEach(e=>cloudPut('cierre:'+e.id,e));
+  gastos.forEach(e=>cloudPut('gasto:'+e.id,e));
+  encargos.forEach(e=>{cloud.sig['encargo:'+e.id]=JSON.stringify(e);cloudPut('encargo:'+e.id,e)});
+  shifts.forEach(e=>cloudPut('fichaje:'+e.empId,e));
+  pedidos.forEach(e=>cloudPut('pedido:'+e.id,e));
+  const rows=Object.keys(stockMap).map(k=>({producto:k,cantidad:Math.max(0,stockMap[k]|0)}));
+  if(rows.length){const r=await sbFetch('/rest/v1/stock?on_conflict=producto',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(rows)});if(!r.ok)throw new Error(r.status)}
+  const lc=parseInt(store.get(KEY_COUNTER))||0;
+  if(lc>0){const r=await sbFetch('/rest/v1/contador?select=valor&id=eq.1'), cur=r.ok?((await r.json())[0]||{}).valor||0:0;if(lc>cur)await sbFetch('/rest/v1/contador?id=eq.1',{method:'PATCH',body:JSON.stringify({valor:lc})})}
+  cloudFlushOutbox();cloudRev();
+  say('Datos subidos a la nube');
+ }catch(e){say('No se pudo subir: sin conexión')}
+ setTimeout(()=>renderDir(),1500);
+}
+async function nubeDown(){
+ if(!await askConfirm('Bajar de la nube','Este dispositivo olvidará sus datos propios y se quedará con los de la nube (configuración, ventas, encargos, stock, fichajes…).','Bajar'))return;
+ cloud.dirty={};saveDirty();wipeOps();cloud.joined=true;try{localStorage.setItem('harrington_cloud_joined','1')}catch(e){}
+ await cloudPoll(true);renderDir();renderClock();updateEncBtn();say('Datos descargados de la nube');
 }
 /* --- Copia de seguridad --- */
 function renderModCopia(){
@@ -2582,6 +2769,11 @@ const MOD_ICONS={
  productos:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12L4 7.5M12 12v9"/>',
  cierre:'<rect x="3" y="6" width="18" height="12" rx="1.5"/><circle cx="12" cy="12" r="2.8"/><path d="M6 9v0M18 15v0"/>',
  discord:'<path d="M21 4L3 11l6 2.5L11 20l3-4 4 3z"/><path d="M9 13.5L21 4"/>',
+ reset:'<path d="M20 11a8 8 0 10-2.3 6M20 5v6h-6"/>',
+ proveedores:'<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/>',
+ nuevopedido:'<path d="M4 8l8-4 8 4v9l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v9"/>',
+ regpedidos:'<rect x="5" y="4" width="14" height="17" rx="1.5"/><path d="M8.5 9h7M8.5 13h7M8.5 17h4M9 4V3h6v1"/>',
+ nube:'<path d="M7 18h10a4 4 0 000-8 6 6 0 00-11.5-1A4.5 4.5 0 007 18z"/>',
  copia:'<path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/>',
  balance:'<path d="M12 4v16M7 20h10M5 8h14"/><path d="M5 8l-3 6c0 1.7 6 1.7 6 0zM19 8l-3 6c0 1.7 6 1.7 6 0z"/>'
 };
@@ -2601,7 +2793,7 @@ function renderDashboard(){
 /* ===== Discord (webhook), registro de movimientos de stock, copia de seguridad ===== */
 const KEY_WEBHOOK='harrington_webhook_v1', KEY_STOCKLOG='harrington_stocklog_v1', KEY_CIERRES='harrington_cierres_v1', KEY_PRICES='harrington_prices_v1', KEY_CUSTPROD='harrington_custprod_v1';
 let webhook=loadObj(KEY_WEBHOOK,{});
-webhook=Object.assign({url:''},webhook,{ev:Object.assign({ventas:true,encargos:true,fichajes:true,gastos:true,anulaciones:true,cierres:true},webhook.ev||{}),urls:Object.assign({},webhook.urls||{})});
+webhook=Object.assign({url:''},webhook,{ev:Object.assign({ventas:true,encargos:true,fichajes:true,gastos:true,anulaciones:true,cierres:true,balance:true,pedidos:true},webhook.ev||{}),urls:Object.assign({},webhook.urls||{})});
 const WH_RE=/^https:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+/;
 async function discordSend(kind,text,blob,fname,force,urlOverride){
  const url=urlOverride||webhook.urls[kind]||webhook.url;
@@ -2619,13 +2811,13 @@ async function discordSend(kind,text,blob,fname,force,urlOverride){
 function logStock(name,delta,why){
  if(!delta)return;
  const a=loadLog(KEY_STOCKLOG), now=Date.now();
- a.push({ts:now,name:name,delta:delta,why:why,date:fmtDate(now),time:fmtTime(now)});
- store.set(KEY_STOCKLOG,JSON.stringify(a.slice(-800)));
+ const rec={uid:'m'+now.toString(36)+Math.random().toString(36).slice(2,5),ts:now,name:name,delta:delta,why:why,date:fmtDate(now),time:fmtTime(now)};a.push(rec);
+ store.set(KEY_STOCKLOG,JSON.stringify(a.slice(-800)));cloudPut('mov:'+rec.uid,rec);
 }
 var bossTimer=null;
 function bumpBoss(){clearTimeout(bossTimer);if(bossActive)bossTimer=setTimeout(()=>{setBoss(false);closeModal(dirModal);say('Modo Jefe cerrado por inactividad')},300000)}
 ['click','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{if(bossActive)bumpBoss()},{passive:true}));
-function allHKeys(){const k=[];for(let i=0;i<localStorage.length;i++){const n=localStorage.key(i);if(n&&n.indexOf('harrington_')===0&&n!==KEY_BOSS_ACTIVE)k.push(n)}return k}
+function allHKeys(){const k=[];for(let i=0;i<localStorage.length;i++){const n=localStorage.key(i);if(n&&n.indexOf('harrington_')===0&&n!==KEY_BOSS_ACTIVE&&n!=='harrington_cloud_dirty'&&n!=='harrington_cloud_outbox'&&n!=='harrington_cloud_since'&&n!=='harrington_reset_seen'&&n!=='harrington_cloud_joined'&&n!=='harrington_prejoin_backup')k.push(n)}return k}
 const CONFIG_KEYS=[KEY_EMP,KEY_DISC,KEY_CUSTPROD,KEY_PRICES,KEY_CLIENTES,KEY_WEBHOOK,KEY_STOCKMIN];
 function downloadBackup(onlyConfig){
  const o={};(onlyConfig?CONFIG_KEYS:allHKeys()).forEach(k=>{const v=store.get(k);if(v!=null)o[k]=v});
@@ -2647,6 +2839,201 @@ async function restoreBackup(file){
   say('Datos restaurados · recargando…');setTimeout(()=>location.reload(),800);
  }catch(e){say('El archivo no es una copia válida')}
 }
+/* ===== Pedidos a proveedores ===== */
+per.p={mode:'dia',off:0};
+let pvEdit=null, pvDraft={name:'',tel:'',tipo:''}, npDraft={prov:'',rows:[{m:'',q:'',p:''}],paid:'0'};
+const pedBtn=document.getElementById('pedBtn'), pedModal=document.getElementById('pedModal');
+let pedView=null, pedDraft=null;
+function pendingPed(){return pedidos.filter(x=>!x.completedAt&&!x.cancelled)}
+function updatePedBtn(){const n=pendingPed().length;pedBtn.textContent=n?`PEDIDOS (${n})`:'PEDIDOS'}
+function savePed(rec){
+ const k=pedidos.findIndex(x=>x.id===rec.id);
+ if(k>=0)pedidos[k]=rec;else pedidos.push(rec);
+ pedidos.sort((a,b)=>(a.ts||0)-(b.ts||0));
+ store.set(KEY_PEDIDOS,JSON.stringify(pedidos));cloudPut('pedido:'+rec.id,rec);updatePedBtn();
+}
+function pedidoText(r,title){
+ const L=[title,'Pedido: '+r.code,'Proveedor: '+r.proveedor+(r.proveedorTipo?' ('+r.proveedorTipo+')':'')];
+ if(r.proveedorTel)L.push('Telegrama: '+r.proveedorTel);
+ L.push('Fecha: '+r.date+' '+r.time,'','Materiales:');
+ r.items.forEach(x=>L.push(`  ${x.qty} × ${x.material} · ${money(x.price)} = ${money(x.qty*x.price)}`));
+ L.push('','TOTAL: '+money(r.totalCents),'Pagado: '+(r.paid?'SÍ':'NO')+(r.paidBy?' ('+r.paidBy+')':'')+' · Recibido: '+(r.received?'SÍ':'NO')+(r.receivedBy?' ('+r.receivedBy+')':''));
+ return L.join('\n');
+}
+function pedBadges(x){return `<span class="badge ${x.received?'fab':'pend'}">${x.received?'RECIBIDO':'POR RECIBIR'}</span><span class="badge ${x.paid?'si':'no'}">${x.paid?'PAGADO':'NO PAGADO'}</span>`}
+function renderPed(){
+ const body=document.getElementById('pedBody'), title=document.getElementById('pedTitle');
+ const x=pedView?pendingPed().find(p=>p.id===pedView):null;
+ if(!x){
+  pedView=null;pedDraft=null;
+  const list=pendingPed().slice().reverse();
+  title.textContent=`PEDIDOS PENDIENTES (${list.length})`;
+  body.innerHTML=list.length?list.map(p=>`<button type="button" class="enc-card" data-popen="${esc(p.id)}"><div class="t">${esc(p.proveedor)}${p.proveedorTipo?' · '+esc(p.proveedorTipo):''}</div><div class="it">${p.items.slice(0,3).map(i=>`${esc(i.material)} ×${i.qty}`).join(', ')}${p.items.length>3?' y '+(p.items.length-3)+' más':''}</div><div class="enc-money"><span>${esc(p.code)}</span><span>Total: ${money(p.totalCents)}</span></div><div class="badges">${pedBadges(p)}</div></button>`).join(''):'<div class="enc-empty">▣<br>No hay pedidos pendientes.<br>Los pedidos a proveedores que emita el jefe aparecen aquí.</div>';
+  return;
+ }
+ title.textContent='PEDIDO A PROVEEDOR';
+ if(!pedDraft||pedDraft.id!==x.id)pedDraft={id:x.id,received:!!x.received,paid:!!x.paid,oRec:!!x.received,oPaid:!!x.paid,emp:empleados.some(e=>e.id===store.get(KEY_EMPLOYEE))?store.get(KEY_EMPLOYEE):''};
+ body.innerHTML=`<button type="button" class="enc-back" data-pact="back">◂ Volver a la lista</button>
+  <div class="enc-id">${esc(x.code)} · ${esc(x.date)} ${esc(x.time)}</div>
+  <div class="enc-kv"><div class="full"><span>Proveedor</span><b>${esc(x.proveedor)}</b></div><div><span>Se dedica a</span><b>${esc(x.proveedorTipo||'—')}</b></div><div><span>Telegrama</span><b>${esc(x.proveedorTel||'—')}</b></div></div>
+  <div class="cartrow carthead"><span>Material</span><span>Cant.</span><span>P. unit.</span><span>Subtotal</span></div>${x.items.map(i=>cartRow({name:i.material,qty:i.qty,cents:i.price})).join('')}
+  <div class="brow due" style="margin-top:8px"><span>TOTAL</span><span>${money(x.totalCents)}</span></div>
+  <div class="badges" style="margin:8px 0">${pedBadges(x)}</div>
+  <div class="enc-sec">
+   <label>EMPLEADO QUE LO REGISTRA<select id="pdEmp"><option value="">Seleccionar empleado</option>${empleados.map(e=>`<option value="${esc(e.id)}"${pedDraft.emp===e.id?' selected':''}>${esc(e.name)}</option>`).join('')}</select></label>
+   <label>¿RECIBIDO?<select id="pdRec"><option value="0"${!pedDraft.received?' selected':''}>NO</option><option value="1"${pedDraft.received?' selected':''}>SÍ</option></select></label>
+   <label>¿PAGADO?<select id="pdPaid"${x.paidInitial?' disabled':''}><option value="0"${!pedDraft.paid?' selected':''}>NO</option><option value="1"${pedDraft.paid?' selected':''}>SÍ</option></select></label>
+   ${x.paidInitial?'<div class="enc-note">Este pedido ya se dejó pagado: no se puede cambiar.</div>':''}
+   <div class="enc-note">Cuando esté recibido y pagado, el pedido sale de la lista y pasa a la contabilidad.</div>
+  </div>
+  <div class="enc-actions"><button type="button" class="gold" data-pact="save">GUARDAR CAMBIOS</button>${bossActive?'<button type="button" class="warn" data-pact="cancel">CANCELAR PEDIDO</button>':''}</div>`;
+}
+async function savePedido(){
+ const x=pendingPed().find(p=>p.id===pedView); if(!x||!pedDraft)return;
+ if(!pedDraft.emp)return say('Selecciona el empleado que lo registra');
+ if(pedDraft.received===pedDraft.oRec&&pedDraft.paid===pedDraft.oPaid)return say('No hay cambios que guardar');
+ let base=x;
+ try{ /* se parte de lo último de la nube para no pisar a otro empleado */
+  const r=await sbFetch('/rest/v1/datos?select=valor&clave=eq.'+encodeURIComponent('pedido:'+x.id));
+  if(!r.ok)throw new Error(r.status);
+  const rows=await r.json();if(rows[0]&&rows[0].valor&&!rows[0].valor.deleted)base=rows[0].valor;
+ }catch(e){return say('Sin conexión: no se puede actualizar el pedido ahora')}
+ if(base.completedAt||base.cancelled){savePed(base);pedView=null;renderPed();return say('Este pedido ya estaba cerrado')}
+ const emp=(empleados.find(e=>e.id===pedDraft.emp)||{}).name||'', now=Date.now(), rec=Object.assign({},base);
+ if(pedDraft.received!==pedDraft.oRec&&pedDraft.received!==!!base.received){rec.received=pedDraft.received;rec.receivedBy=pedDraft.received?emp:'';rec.receivedAt=pedDraft.received?now:0}
+ if(!base.paidInitial&&pedDraft.paid!==pedDraft.oPaid&&pedDraft.paid!==!!base.paid){rec.paid=pedDraft.paid;rec.paidBy=pedDraft.paid?emp:'';rec.paidAt=pedDraft.paid?now:0}
+ let done=false;
+ if(rec.received&&rec.paid){rec.completedAt=now;done=true}
+ savePed(rec);
+ if(done){
+  const m=madridParts(now), g={id:'gp'+rec.id,cat:'proveedor',concepto:`Pedido ${rec.code} · ${rec.proveedor}`,cents:rec.totalCents,day:dayNum(+m.year,+m.month,+m.day),date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`,pedido:rec.id};
+  if(!gastos.some(y=>y.id===g.id)){gastos.push(g);saveGastos();cloudPut('gasto:'+g.id,g)}
+  discordSend('pedidos',pedidoText(rec,'PEDIDO COMPLETADO'));
+  pedView=null;say('Pedido completado: pasa a la contabilidad');
+ }else say('Pedido actualizado');
+ renderPed();
+}
+async function cancelPedido(id){
+ const x=pendingPed().find(p=>p.id===id); if(!x)return;
+ if(!await askConfirm('Cancelar pedido','El pedido '+x.code+' a '+x.proveedor+' se cancelará y dejará de estar pendiente.','Cancelar pedido'))return;
+ const rec=Object.assign({},x,{cancelled:true,cancelledAt:Date.now()});
+ savePed(rec);discordSend('pedidos',pedidoText(rec,'PEDIDO CANCELADO'));
+ pedView=null;renderPed();say('Pedido cancelado');
+}
+pedBtn.onclick=()=>{pedView=null;pedDraft=null;renderPed();openModal(pedModal);pedModal.scrollTop=0};
+document.getElementById('pedClose').onclick=()=>closeModal(pedModal);
+pedModal.addEventListener('click',e=>{
+ if(e.target===pedModal)return closeModal(pedModal);
+ const c=e.target.closest('[data-popen]');
+ if(c){pedView=c.dataset.popen;pedDraft=null;renderPed();pedModal.scrollTop=0;return}
+ const a=e.target.closest('[data-pact]'); if(!a)return;
+ if(a.dataset.pact==='back'){pedView=null;pedDraft=null;renderPed()}
+ else if(a.dataset.pact==='save')savePedido();
+ else if(a.dataset.pact==='cancel')cancelPedido(pedView);
+});
+pedModal.addEventListener('change',e=>{
+ if(!pedDraft)return;
+ if(e.target.id==='pdEmp'){pedDraft.emp=e.target.value;if(e.target.value)store.set(KEY_EMPLOYEE,e.target.value)}
+ else if(e.target.id==='pdRec')pedDraft.received=e.target.value==='1';
+ else if(e.target.id==='pdPaid')pedDraft.paid=e.target.value==='1';
+});
+updatePedBtn();
+/* --- Proveedores (jefe) --- */
+const TIPOS_PROV=['Herrería','Mina','Tala','Aserradero','Ganadería','Granja','Otro'];
+function renderModProveedores(){
+ const list=proveedores.slice().sort((a,b)=>a.name.localeCompare(b.name,'es'));
+ return `<div class="dir-form enc-sec"><div class="dir-sec-title" style="margin-top:0">${pvEdit?'EDITAR PROVEEDOR':'NUEVO PROVEEDOR'}</div>
+  <label>NOMBRE DE LA EMPRESA<input id="pvName" type="text" maxlength="40" autocomplete="off" value="${esc(pvDraft.name)}" placeholder="Ej.: Herrería del Valle"></label>
+  <label>TELEGRAMA<input id="pvTel" type="text" maxlength="10" autocomplete="off" value="${esc(pvDraft.tel)}" placeholder="Ej.: HV-12"></label>
+  <label>A QUÉ SE DEDICA<input id="pvTipo" type="text" maxlength="30" list="tipoList" autocomplete="off" value="${esc(pvDraft.tipo)}" placeholder="Herrería, mina, tala…"><datalist id="tipoList">${TIPOS_PROV.map(t=>`<option value="${t}"></option>`).join('')}</datalist></label>
+  <div class="pay-err" id="pvErr" hidden></div>
+  <div class="enc-actions ${pvEdit?'two':''}">${pvEdit?'<button type="button" data-dir="pv-cancel">Cancelar</button>':''}<button type="button" class="primary" data-dir="pv-save">${pvEdit?'GUARDAR CAMBIOS':'CREAR NUEVO PROVEEDOR'}</button></div></div>
+  <div class="dir-sec-title">LISTA DE PROVEEDORES (${list.length})</div>`+(list.length?list.map(v=>`<div class="enc-card dir-item"><div class="t">${esc(v.name)}</div><div class="it">${esc(v.tipo||'—')}${v.tel?' · Telegrama '+esc(v.tel):''}</div><div class="enc-actions two"><button type="button" data-dir="pv-edit:${esc(v.id)}">EDITAR</button><button type="button" class="warn" data-dir="pv-del:${esc(v.id)}">ELIMINAR</button></div></div>`).join(''):'<div class="enc-empty">Todavía no hay proveedores.<br>Crea el primero para poder hacerle pedidos.</div>');
+}
+function saveProveedor(){
+ const err=t=>{const e=document.getElementById('pvErr');e.textContent=t;e.hidden=false}, name=pvDraft.name.trim().replace(/\s+/g,' ');
+ if(!name)return err('Escribe el nombre de la empresa');
+ if(proveedores.some(x=>x.id!==pvEdit&&norm(x.name)===norm(name)))return err('Ya existe un proveedor con ese nombre');
+ const data={name:name,tel:pvDraft.tel.trim(),tipo:pvDraft.tipo.trim()};
+ if(pvEdit){const k=proveedores.findIndex(x=>x.id===pvEdit);if(k>=0)proveedores[k]=Object.assign({},proveedores[k],data)}
+ else proveedores.push(Object.assign({id:'v'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)},data));
+ saveProveedores();pvEdit=null;pvDraft={name:'',tel:'',tipo:''};renderDir();say('Proveedor guardado');
+}
+async function delProveedor(id){
+ const v=proveedores.find(x=>x.id===id); if(!v)return;
+ if(!await askConfirm('Eliminar proveedor',`«${v.name}» desaparecerá de la lista. Sus pedidos ya hechos no cambian.`,'Eliminar'))return;
+ proveedores=proveedores.filter(x=>x.id!==id);saveProveedores();if(npDraft.prov===id)npDraft.prov='';renderDir();say('Proveedor eliminado');
+}
+/* --- Realizar nuevo pedido (jefe) --- */
+function npTotal(){return npDraft.rows.reduce((a,r)=>{const q=parseInt(r.q)||0,p=Math.round((parsePrice(r.p)||0)*100);return a+q*p},0)}
+function renderModNuevoPedido(){
+ if(!proveedores.length)return '<div class="enc-empty">Primero crea al menos un proveedor en <b>PROVEEDORES</b>.</div>';
+ const mats=Array.from(new Set(pedidos.flatMap(p=>p.items.map(i=>i.material)))).sort((a,b)=>a.localeCompare(b,'es'));
+ return `<div class="dir-form enc-sec"><div class="dir-sec-title" style="margin-top:0">NUEVO PEDIDO</div>
+  <label>PROVEEDOR<select id="npProv"><option value="">Seleccionar proveedor</option>${proveedores.slice().sort((a,b)=>a.name.localeCompare(b.name,'es')).map(v=>`<option value="${esc(v.id)}"${npDraft.prov===v.id?' selected':''}>${esc(v.name)}${v.tipo?' · '+esc(v.tipo):''}</option>`).join('')}</select></label>
+  <div class="dir-sec-title">MATERIALES</div><datalist id="matList">${mats.map(m=>`<option value="${esc(m)}"></option>`).join('')}</datalist>
+  ${npDraft.rows.map((r,i)=>`<div class="np-row"><input class="np-mat" data-np="m" data-i="${i}" list="matList" type="text" maxlength="40" autocomplete="off" placeholder="Material" value="${esc(r.m)}"><input data-np="q" data-i="${i}" inputmode="numeric" placeholder="Cantidad" value="${esc(r.q)}"><div class="money"><i>$</i><input data-np="p" data-i="${i}" inputmode="decimal" placeholder="Precio" value="${esc(r.p)}"></div><div class="emp-btns"><button type="button" class="warn" data-dir="np-delrow:${i}" aria-label="Quitar">✕</button></div><div class="np-sub" id="npSub${i}">${money((parseInt(r.q)||0)*Math.round((parsePrice(r.p)||0)*100))}</div></div>`).join('')}
+  <div class="enc-actions"><button type="button" data-dir="np-addrow">+ AÑADIR MATERIAL</button></div>
+  <div class="brow due" style="margin-top:8px"><span>TOTAL DEL PEDIDO</span><span id="npTotal">${money(npTotal())}</span></div>
+  <label>¿YA ESTÁ PAGADO?<select id="npPaid"><option value="0"${npDraft.paid==='0'?' selected':''}>NO PAGADO</option><option value="1"${npDraft.paid==='1'?' selected':''}>PAGADO</option></select></label>
+  <div class="pay-err" id="npErr" hidden></div>
+  <div class="enc-actions"><button type="button" class="primary" data-dir="np-emit">EMITIR PEDIDO</button></div></div>
+  <p class="bk-note">Al emitirlo queda pendiente de recibir y aparece en el botón PEDIDOS de todos los empleados. Si lo dejas «no pagado», quien lo reciba lo marcará como pagado.</p>`;
+}
+function emitPedido(){
+ const err=t=>{const e=document.getElementById('npErr');e.textContent=t;e.hidden=false}, prov=proveedores.find(x=>x.id===npDraft.prov);
+ if(!prov)return err('Selecciona el proveedor');
+ const items=[];
+ for(const r of npDraft.rows){
+  if(!r.m.trim()&&!r.q&&!r.p)continue;
+  const q=Number(r.q), pr=parsePrice(r.p);
+  if(!r.m.trim())return err('Cada línea necesita el nombre del material');
+  if(!(Number.isInteger(q)&&q>0))return err('La cantidad de «'+r.m.trim()+'» debe ser un número entero mayor que 0');
+  if(pr===null||pr<=0)return err('El precio de «'+r.m.trim()+'» debe ser mayor que 0');
+  items.push({material:r.m.trim().replace(/\s+/g,' '),qty:q,price:Math.round(pr*100)});
+ }
+ if(!items.length)return err('Añade al menos un material');
+ const total=items.reduce((a,x)=>a+x.qty*x.price,0), now=Date.now(), m=madridParts(now), paid=npDraft.paid==='1';
+ const rec={id:'p'+now.toString(36)+Math.random().toString(36).slice(2,5),code:`PED-${m.day}${m.month}${m.year.slice(-2)}-${m.hour}${m.minute}`,ts:now,date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`,proveedorId:prov.id,proveedor:prov.name,proveedorTel:prov.tel||'',proveedorTipo:prov.tipo||'',items:items,totalCents:total,paid:paid,paidInitial:paid,paidBy:paid?'Jefe':'',paidAt:paid?now:0,received:false,receivedBy:'',receivedAt:0,completedAt:0,cancelled:false};
+ savePed(rec);discordSend('pedidos',pedidoText(rec,'NUEVO PEDIDO A PROVEEDOR'));
+ npDraft={prov:'',rows:[{m:'',q:'',p:''}],paid:'0'};renderDir();say('Pedido emitido: '+rec.code);
+}
+/* --- Registro de pedidos completados --- */
+function pedidosIn(r){return pedidos.filter(x=>{if(!x.completedAt)return false;const m=madridParts(x.completedAt),d=dayNum(+m.year,+m.month,+m.day);return d>=r.s&&d<=r.e})}
+function pedidosDoc(){
+ const pi=periodInfo('p'), L=pedidosIn(pi.r), line='────────────────────', now=Date.now();
+ const o=['HARRINGTON GUNSMITH','REGISTRO DE PEDIDOS A PROVEEDORES · '+pi.kind,'Saint Denis · 1880','',(pi.sem?'Semana: ':'Día: ')+pi.label,'Generado: '+fmtDate(now)+' '+fmtTime(now),''];
+ L.forEach(r=>{
+  o.push(`${r.code} · ${r.proveedor}${r.proveedorTipo?' ('+r.proveedorTipo+')':''}`,'Completado: '+fmtDate(r.completedAt)+' '+fmtTime(r.completedAt));
+  r.items.forEach(x=>o.push(`  ${x.qty} × ${x.material} · ${money(x.price)} = ${money(x.qty*x.price)}`));
+  o.push('Total: '+money(r.totalCents),'Recibido por: '+(r.receivedBy||'—')+' · Pagado por: '+(r.paidBy||'—'),'');
+ });
+ if(!L.length)o.push('Sin pedidos completados en este periodo.','');
+ o.push(line,'Pedidos: '+L.length,'TOTAL EN PEDIDOS: '+money(L.reduce((a,x)=>a+x.totalCents,0)),line,'','El precio de un apellido.');
+ return o.join('\n');
+}
+function renderModRegPedidos(){
+ const pi=periodInfo('p'), L=pedidosIn(pi.r), pend=pendingPed();
+ return `${periodBar('p')}<div class="dir-sec-title" style="margin-top:0">PEDIDOS COMPLETADOS (${L.length})</div>`+
+  (L.length?L.slice().reverse().map(r=>`<div class="enc-card dir-item"><div class="t">${esc(r.proveedor)}</div><div class="it">${esc(r.code)} · completado ${esc(fmtDate(r.completedAt))} ${esc(fmtTime(r.completedAt))}<br>${r.items.map(x=>`${x.qty} × ${esc(x.material)}`).join(', ')}</div><div class="enc-money"><span>Total: <b>${money(r.totalCents)}</b></span><span>Recibido: ${esc(r.receivedBy||'—')}</span><span>Pagado: ${esc(r.paidBy||'—')}</span></div></div>`).join(''):'<div class="enc-empty">No hay pedidos completados en este periodo.</div>')+
+  `<div class="brow due"><span>TOTAL EN PEDIDOS</span><span>${money(L.reduce((a,x)=>a+x.totalCents,0))}</span></div>
+  <p class="bk-note">Hay ${pend.length} ${pend.length===1?'pedido pendiente':'pedidos pendientes'} de recibir o pagar. Al completarse, cada pedido entra también en el registro y el balance de gastos como «Proveedor».</p>${repButtons('p')}`;
+}
+dirModal.addEventListener('input',e=>{
+ const t=e.target, id=t.id, d=t.dataset||{};
+ if(id==='pvName')pvDraft.name=t.value;
+ else if(id==='pvTel'){const v=sanitizeTelegram(t.value);t.value=v;pvDraft.tel=v}
+ else if(id==='pvTipo')pvDraft.tipo=t.value;
+ else if(d.np){
+  const r=npDraft.rows[+d.i]; if(!r)return;
+  if(d.np==='m')r.m=t.value;
+  else if(d.np==='q'){const v=t.value.replace(/[^0-9]/g,'').slice(0,6);t.value=v;r.q=v}
+  else{const v=t.value.replace(/[^0-9.,]/g,'');t.value=v;r.p=v}
+  const sub=document.getElementById('npSub'+d.i);if(sub)sub.textContent=money((parseInt(r.q)||0)*Math.round((parsePrice(r.p)||0)*100));
+  const tot=document.getElementById('npTotal');if(tot)tot.textContent=money(npTotal());
+ }
+});
+dirModal.addEventListener('change',e=>{if(e.target.id==='npProv')npDraft.prov=e.target.value;else if(e.target.id==='npPaid')npDraft.paid=e.target.value});
 let empEdit=null, empErr='', stockCat='todos', stockDraft={};
 function renderModEmpleados(){
  return `<div class="dir-form enc-sec"><label>NOMBRE DEL EMPLEADO<input id="empNew" type="text" maxlength="40" autocomplete="off" placeholder="Nombre del empleado"></label>
@@ -2694,11 +3081,15 @@ function renderModRegistroStock(){
   return `<div class="reg-line"><span>${esc(n)}${isLow?' <span class="lowtag">BAJO</span>':''}</span><b class="${v?'':'zero'}">${v} ${v===1?'unidad':'unidades'}</b></div>`;
  }).join('')).join('')+`<div class="dir-sec-title">ÚLTIMOS MOVIMIENTOS</div><div class="ledger">`+(mv.length?mv.map(x=>`<div class="dir-log"><b>${x.delta>0?'+':'−'}${Math.abs(x.delta)}</b> ${esc(x.name)}<br>${esc(x.why)} · ${esc(x.date)} ${esc(x.time)}</div>`).join(''):'<div class="enc-empty">Todavía no hay movimientos.</div>')+'</div>';
 }
-function saveStockDraft(){
- let n=0,m=0;
- Object.keys(stockDraft).forEach(name=>{const q=parseInt(stockDraft[name])||0;if(q>0){stockMap[name]=(stockMap[name]||0)+q;n++;logStock(name,q,'Entrada de stock')}});
+async function saveStockDraft(){
+ const items=[];let n=0,m=0;
+ Object.keys(stockDraft).forEach(name=>{const q=parseInt(stockDraft[name])||0;if(q>0)items.push({producto:name,delta:q})});
+ if(items.length){
+  try{await moverStock(items);items.forEach(x=>logStock(x.producto,x.delta,'Entrada de stock'));n=items.length}
+  catch(e){return say('Sin conexión: no se puede guardar el stock ahora')}
+ }
  Object.keys(minDraft).forEach(name=>{const v=parseInt(minDraft[name])||0;if((stockMin[name]||0)!==v){stockMin[name]=v;m++}});
- stockDraft={};minDraft={};saveStock();saveStockMin();renderDir();calc(false);
+ stockDraft={};minDraft={};saveStockMin();renderDir();calc(false);
  say(n||m?'Stock guardado':'No hay cambios que guardar');
 }
 function renderDir(){
@@ -2785,6 +3176,17 @@ dirModal.addEventListener('click',e=>{
  else if(act==='cc-cp'){const c=loadLog(KEY_CIERRES).find(x=>x.id===arg);if(c)repCopy(cierreDoc(c))}
  else if(act==='wh-save')saveWebhookForm();
  else if(act==='wh-test')testWebhooks()
+ else if(act==='rs-do')doReset();
+ else if(act==='pv-save')saveProveedor();
+ else if(act==='pv-edit'){const v=proveedores.find(x=>x.id===arg);if(v){pvEdit=arg;pvDraft={name:v.name,tel:v.tel||'',tipo:v.tipo||''};renderDir()}}
+ else if(act==='pv-cancel'){pvEdit=null;pvDraft={name:'',tel:'',tipo:''};renderDir()}
+ else if(act==='pv-del')delProveedor(arg);
+ else if(act==='np-addrow'){npDraft.rows.push({m:'',q:'',p:''});renderDir()}
+ else if(act==='np-delrow'){npDraft.rows.splice(+arg,1);if(!npDraft.rows.length)npDraft.rows.push({m:'',q:'',p:''});renderDir()}
+ else if(act==='np-emit')emitPedido();
+ else if(act==='nb-up')nubeUp();
+ else if(act==='nb-down')nubeDown();
+ else if(act==='nb-sync'){cloudPoll(true).then(()=>renderDir());say('Sincronizando…')}
  else if(act==='bk-full')downloadBackup(false);
  else if(act==='bk-config')downloadBackup(true);
  else if(act==='bk-restore')document.getElementById('bkFile').click();
@@ -2795,11 +3197,13 @@ dirModal.addEventListener('click',e=>{
  else if(act==='pn'){if(per[arg].off<0)per[arg].off++;renderDir()}
  else if(act==='pw'){per[arg].off=0;renderDir()}
  else if(act==='rep-dl'){
-  const g=arg==='g';
-  saveTextFile(g?gastosDoc():balanceDoc(),`${g?'Gastos':'Balance'}_${per[arg].mode==='sem'?'Semanal':'Diario'}_${dayStr(periodRange(arg).s).replace(/\//g,'-')}.txt`);
+  const R=REPORTS[arg];
+  saveTextFile(R.doc(),`${R.name}_${per[arg].mode==='sem'?'Semanal':'Diario'}_${dayStr(periodRange(arg).s).replace(/\//g,'-')}.txt`);
   say('Documento descargado');
  }
- else if(act==='rep-cp')repCopy(arg==='g'?gastosDoc():balanceDoc());
+ else if(act==='rep-cp')repCopy(REPORTS[arg].doc());
+ else if(act==='rep-dc'){const R=REPORTS[arg];reportSend(R.kind,R.doc(),`${R.name}_${per[arg].mode==='sem'?'Semanal':'Diario'}_${dayStr(periodRange(arg).s).replace(/\//g,'-')}.txt`)}
+ else if(act==='wk-dc')sendWeekSales();
  else if(act==='wk-type'){wkType=arg;wkEmp=null;renderDir()}
  else if(act==='wk-prev'){wkOffset--;wkEmp=null;renderDir()}
  else if(act==='wk-next'){if(wkOffset<0)wkOffset++;wkEmp=null;renderDir()}
@@ -2947,7 +3351,7 @@ async function ticketBlob(s){
  }catch(e){return null}
 }
 async function ticketImage(copy){
- const s=ensureSale(); if(!s)return;
+ const s=await ensureSaleCloud(); if(!s)return;
  const blob=await ticketBlob(s); if(!blob)return say('No se pudo crear la imagen');
  if(copy&&navigator.clipboard&&window.ClipboardItem){try{await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);return say('Imagen copiada · pégala en Discord')}catch(e){}}
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Harrington_'+s.id+'.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
@@ -2993,14 +3397,22 @@ const TUTORIAL=[
 <p><b>Entregarlo</b>: en la ficha, <b>CARGAR ENCARGO</b>. Se cargan productos, precios, convenio y adelanto. Puedes añadir más cosas. El adelanto se descuenta <b>una sola vez</b> y no es un descuento. Al terminar, <b>FINALIZAR ENCARGO</b>.</p>`],
 ['Convenios, ofertas y precios especiales',`<ul><li><b>Convenio</b> (lo crea el jefe): para un tipo de cliente y un grupo (suministros, municiones o ambos). Puede dar un <b>porcentaje</b> a partir de X unidades (no se multiplica por bloques) o <b>unidades gratis</b> por cada X (se repiten por bloque completo; son las más baratas de las elegidas, y salen del stock igualmente).</li><li><b>Oferta</b>: un porcentaje del 1 al 5 % sobre toda la compra.</li><li>Caducan solas y en el desplegable ves «caduca en N días».</li><li><b>Precio especial</b> de un cliente: se aplica al elegirlo.</li></ul>`],
 ['Ticket, copias y Discord',`<p>Al finalizar se abre el <b>ticket</b>: número de venta (HG-fecha-contador), fecha y hora de España, empleado, cliente, productos, desglose y el sello PAGADO (o ANOTADO en un encargo).</p>
-<ul><li><b>Copiar para Discord</b>: copia el texto limpio.</li><li><b>Descargar comprobante</b>: archivo de texto.</li><li><b>Descargar imagen / Copiar imagen</b>: el ticket como imagen, para pegarlo en Discord.</li><li><b>Nueva venta</b> y <b>Cerrar</b>.</li></ul>
-<p>Si el jefe configuró Discord, las ventas, los encargos, los fichajes, los gastos, las anulaciones y los cierres se envían <b>solos</b>, cada tipo a su propio canal si así se ha configurado.</p>`],
+<ul><li><b>Copiar para Discord</b>: copia el texto limpio.</li><li><b>Descargar comprobante</b>: archivo de texto.</li><li><b>Descargar imagen / Copiar imagen</b>: el ticket como imagen.</li><li><b>Nueva venta</b> y <b>Cerrar</b>.</li></ul>
+<p><b>Discord automático</b> (si el jefe lo configuró en Dirección → Discord, cada tipo a su propio canal):</p>
+<ul><li>Cada <b>venta</b> publica su ticket al finalizar, y cada <b>encargo</b> se publica al crearlo con todos sus datos (telegrama, adelanto, pendiente…).</li><li>Cada <b>gasto</b> se publica al guardarlo. También fichajes, anulaciones, cierres de caja y pedidos a proveedores.</li></ul>
+<p><b>Solo al pulsar «ENVIAR A DISCORD»</b> (el jefe, en Dirección): el registro semanal de ventas, el registro semanal de gastos, el balance de cuentas y el registro de pedidos. Se publica un resumen y el documento completo adjunto. Balance de cuentas tiene su propio canal.</p>`],
+['Pedidos a proveedores',`<p>El botón <b>PEDIDOS</b> (arriba, junto a Encargos) muestra los <b>pedidos pendientes</b> que el jefe ha hecho a sus proveedores: herrerías, minas, talas…</p>
+<ul><li>Cada pedido indica el proveedor, a qué se dedica, su telegrama, los materiales y cantidades que tienen que llegar, el total y si está <b>pagado</b>.</li><li>Elige tu nombre en <b>Empleado que lo registra</b>.</li><li><b>¿Recibido?</b>: márcalo en SÍ cuando llegue la mercancía.</li><li><b>¿Pagado?</b>: solo se puede cambiar si el pedido <b>no estaba ya pagado</b>. Si el jefe lo dejó pagado al emitirlo, aparece bloqueado. Si estaba «no pagado», quien lo recibe lo paga y lo marca.</li><li>Pulsa <b>GUARDAR CAMBIOS</b>. Cuando el pedido está <b>recibido y pagado</b>, sale de la lista y se guarda en la contabilidad: en el registro de pedidos y en los gastos de la semana (categoría Proveedor), y por tanto en el balance.</li></ul>
+<p>Si dos empleados lo tocan a la vez, el sistema parte siempre de lo último guardado, para que no se pisen. Para actualizar un pedido hace falta conexión.</p>`],
+['Proveedores y pedidos <span class="tag boss">SOLO JEFE</span>',`<ul><li><b>Dirección → PROVEEDORES</b>: crea cada proveedor con el <b>nombre de la empresa</b>, su <b>telegrama</b> y <b>a qué se dedica</b> (herrería, mina, tala…). «Crear nuevo proveedor» lo añade a la lista; también puedes editarlo o eliminarlo.</li><li><b>Dirección → REALIZAR NUEVO PEDIDO</b>: elige el proveedor, añade cada <b>material</b> con su cantidad y su <b>precio por unidad</b> (el total se calcula solo), indica si ya está <b>pagado</b> y pulsa <b>EMITIR PEDIDO</b>. Queda pendiente de recibir y aparece a todos los empleados en PEDIDOS.</li><li><b>Dirección → REGISTRO DE PEDIDOS</b>: pedidos completados, por día o por semana, con descarga y <b>ENVIAR A DISCORD</b>.</li><li>Para <b>cancelar</b> un pedido pendiente, ábrelo en PEDIDOS estando en Modo Jefe y pulsa CANCELAR PEDIDO.</li><li>Al emitir, completar o cancelar un pedido se avisa solo al canal de Discord «Pedidos».</li></ul>`],
 ['Fichaje',`<ul><li><b>▸ Fichar entrada</b>: elige tu nombre en la lista (la crea el jefe).</li><li>Pueden estar fichados <b>varios empleados a la vez</b> en el mismo dispositivo.</li><li><b>◂ Fichar salida</b>: si hay varios, eliges quién sale. Se muestra el registro con el tiempo trabajado y puedes copiarlo o descargarlo.</li><li><b>Último registro</b> vuelve a abrir el último fichaje.</li></ul>`],
 ['Modo Jefe y Dirección <span class="tag boss">SOLO JEFE</span>',`<ul><li><b>JEFE</b>: la primera vez crea una contraseña y una <b>palabra de seguridad</b>. Si olvidas la contraseña, «Cambiar contraseña» pide la palabra y te deja poner otra. El modo se cierra solo tras 5 minutos sin tocar nada.</li></ul>
 <p><b>DIRECCIÓN</b> abre la consola: resumen de hoy, gráfico de la semana y estas herramientas:</p>
-<ul><li><b>Convenios y ofertas</b>: crear, ver y eliminar.</li><li><b>Empleados</b> y <b>Clientes</b> (con sus precios especiales).</li><li><b>Productos y precios</b>: cambiar precios y añadir productos.</li><li><b>Stock</b>: sumar existencias con − / + y fijar el mínimo (el semáforo marca verde, ámbar o rojo). <b>Registro de stock</b>: existencias y movimientos.</li><li><b>Registros horarios, de ventas</b> (buscar y <b>anular</b>) y <b>semanales</b> (con descarga).</li><li><b>Gastos</b>, <b>Balance de cuentas</b> y <b>Cierre de caja</b>.</li><li><b>Discord</b> y <b>Copia de seguridad</b>.</li></ul>`],
-['Datos y dispositivos',`<p>Los datos se guardan <b>en el dispositivo</b> donde se usan, no en internet. Por eso:</p>
-<ul><li>Las ventas, el stock y los fichajes de un móvil no aparecen en otro, salvo en el canal de Discord.</li><li>Haz una <b>copia de seguridad</b> de vez en cuando: si se borran los datos del navegador, se pierden.</li><li>Para dejar otro móvil listo, descarga la <b>configuración</b> (empleados, convenios, clientes, precios, Discord) y restáurala allí.</li></ul>`],
+<ul><li><b>Convenios y ofertas</b>: crear, ver y eliminar.</li><li><b>Empleados</b> y <b>Clientes</b> (con sus precios especiales).</li><li><b>Productos y precios</b>: cambiar precios y añadir productos.</li><li><b>Stock</b>: sumar existencias con − / + y fijar el mínimo (el semáforo marca verde, ámbar o rojo). <b>Registro de stock</b>: existencias y movimientos.</li><li><b>Registros horarios, de ventas</b> (buscar y <b>anular</b>) y <b>semanales</b> (con descarga).</li><li><b>Gastos</b>, <b>Balance de cuentas</b> y <b>Cierre de caja</b>, cada uno con descarga y «Enviar a Discord».</li><li><b>Proveedores</b>, <b>Realizar nuevo pedido</b> y <b>Registro de pedidos</b>.</li><li><b>Discord</b>, <b>Nube</b>, <b>Copia de seguridad</b> y <b>Resetear datos</b> (borra ventas, gastos, encargos y demás, sin tocar empleados ni configuración).</li></ul>`],
+['Datos y dispositivos',`<p>Todos los datos están en la <b>nube</b> y se comparten entre los móviles en pocos segundos:</p>
+<ul><li><b>Configuración</b>: empleados, clientes, proveedores, convenios y ofertas, precios, productos nuevos, Discord, mínimos de stock y la contraseña del jefe.</li><li><b>Operación</b>: stock, ventas, encargos, pedidos a proveedores, fichajes, gastos y cierres. Los números de venta y el stock los controla la nube, así que nunca se repiten ni se vende lo que ya no hay.</li></ul>
+<p>Arriba, junto a FICHAJE, ves «☁ conectado» o «☁ sin conexión». <b>Sin conexión</b> puedes mirar el catálogo y hacer presupuestos, pero no finalizar ventas ni cambiar el stock. Los cambios de configuración se suben solos al volver la conexión.</p>
+<p>Haz una <b>copia de seguridad</b> de vez en cuando desde Dirección.</p>`],
 ['Si algo no funciona',`<ul><li><b>No deja finalizar</b>: lee el aviso; suele faltar cliente, empleado, telegrama, pago adelantado o stock.</li><li><b>Producto SIN STOCK</b>: el jefe debe sumar existencias.</li><li><b>No suena</b>: comprueba que el botón ♪ diga «SÍ» y el volumen del móvil.</li><li><b>Se lee poco</b>: usa A+ o el alto contraste ◐.</li><li><b>No ves un cambio reciente</b>: abre la web en una pestaña privada.</li></ul>`]];
 const tutModal=document.getElementById('tutModal');
 function openTutorial(){
@@ -3091,7 +3503,7 @@ function acceptEntry(){
  const emp=empleados.find(e=>e.id===employeeInput.value);
  if(!emp)return say('Selecciona un empleado');
  const sh={name:emp.name,empId:emp.id,start:Date.now()};
- shifts.push(sh);store.set(KEY_SHIFT,JSON.stringify(shifts));store.set(KEY_EMPLOYEE,emp.id);
+ shifts.push(sh);store.set(KEY_SHIFT,JSON.stringify(shifts));store.set(KEY_EMPLOYEE,emp.id);cloudPut('fichaje:'+emp.id,sh);
  closeModal(entryModal);renderClock();say('Entrada registrada · '+emp.name+' · '+fmtTime(sh.start));
  discordSend('fichajes','ENTRADA · '+emp.name+'\n'+fmtDate(sh.start)+' '+fmtTime(sh.start));
 }
@@ -3107,7 +3519,7 @@ function doExit(empId){
  const sh=shifts.find(x=>x.empId===empId); if(!sh)return;
  lastShift={name:sh.name,start:sh.start,end:Date.now()};
  store.set(KEY_LASTSHIFT,JSON.stringify(lastShift));logShift(lastShift);
- shifts=shifts.filter(x=>x!==sh);if(shifts.length)store.set(KEY_SHIFT,JSON.stringify(shifts));else store.remove(KEY_SHIFT);
+ shifts=shifts.filter(x=>x!==sh);if(shifts.length)store.set(KEY_SHIFT,JSON.stringify(shifts));else store.remove(KEY_SHIFT);cloudDel('fichaje:'+empId);
  renderClock();showShift(lastShift);
  discordSend('fichajes',shiftText(lastShift));
 }
@@ -3162,6 +3574,247 @@ probeImg('esquina-ornamento.png',img=>{
  }catch(e){}
 });
 
+/* ===== Nube: sincronización de la configuración compartida con Supabase ===== */
+const SB_URL='https://mrlpvjxuifvspeaqtscm.supabase.co', SB_KEY='sb_publishable_OvDXH0UuWJMMBd6fYgOxtg_IsVBZKTz';
+function sbFetch(path,opts){
+ opts=opts||{};
+ const ctl=typeof AbortController!=='undefined'?new AbortController():null, t=ctl?setTimeout(()=>ctl.abort(),9000):null;
+ return fetch(SB_URL+path,Object.assign({},opts,{signal:ctl?ctl.signal:undefined,headers:Object.assign({apikey:SB_KEY,'Content-Type':'application/json'},opts.headers||{})})).finally(()=>{if(t)clearTimeout(t)});
+}
+function saveDirty(){try{localStorage.setItem('harrington_cloud_dirty',JSON.stringify(cloud.dirty))}catch(e){}}
+function setCloudState(ok){
+ cloud.ok=ok;
+ const el=document.getElementById('cloudSt');
+ if(el){el.textContent=ok?'☁ conectado':'☁ sin conexión';el.className='cloud-st '+(ok?'ok':'off')}
+}
+function cloudPush(clave){
+ cloud.dirty[clave]=true;saveDirty();
+ clearTimeout(cloud.timers[clave]);cloud.timers[clave]=setTimeout(()=>cloudFlush(clave),400);
+}
+async function cloudFlush(clave){
+ const key=CLOUD_REV[clave]; let val;
+ try{val=JSON.parse(localStorage.getItem(key))}catch(e){return}
+ if(val===null||val===undefined){delete cloud.dirty[clave];saveDirty();return}
+ try{
+  const stamp=new Date().toISOString();
+  const r=await sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify([{clave:clave,valor:val,actualizado:stamp}])});
+  if(!r.ok)throw new Error(r.status);
+  cloud.stamps[clave]=Date.parse(stamp);delete cloud.dirty[clave];saveDirty();setCloudState(true);
+ }catch(e){setCloudState(false)}
+}
+async function cloudUploadAll(){
+ const c=bossCreds();
+ if(c&&!c.hashed&&c.word)await saveCreds(store.get(KEY_BOSS_PW),c.word); /* una contraseña antigua se sube cifrada */
+ Object.keys(CLOUD_REV).forEach(cl=>{if(localStorage.getItem(CLOUD_REV[cl])!=null)cloud.dirty[cl]=true});
+ saveDirty();
+ await Promise.all(Object.keys(CLOUD_REV).map(cl=>cloud.dirty[cl]?cloudFlush(cl):null));
+}
+function applyPrices(pr){inputs.forEach(i=>{const v=pr&&pr[i.dataset.name];i.dataset.price=(v!=null&&Number(v)>=0)?Number(v).toFixed(2):i.dataset.price0});calc(false)}
+function cloudReloadSoon(){
+ if(cloud.reloading)return;cloud.reloading=true;say('Catálogo actualizado · recargando…');
+ const go=()=>{if(document.querySelector('.modal-overlay:not([hidden])'))setTimeout(go,2500);else location.reload()};
+ setTimeout(go,1800);
+}
+function applyRemote(clave,val,t){
+ const key=CLOUD_REV[clave];
+ let prev=null;try{prev=JSON.stringify(JSON.parse(localStorage.getItem(key)||'null'))}catch(e){}
+ cloud.applying=true;
+ try{localStorage.setItem(key,JSON.stringify(val))}catch(e){}
+ cloud.applying=false;cloud.stamps[clave]=t;
+ const same=prev===JSON.stringify(val);
+ if(same)return;
+ if(clave==='empleados'){empleados=Array.isArray(val)?val:[];renderCustomer()}
+ else if(clave==='clientes'){clientes=Array.isArray(val)?val:[];refreshClientList()}
+ else if(clave==='descuentos'){descuentos=Array.isArray(val)?val:[];renderCustomer()}
+ else if(clave==='precios'){applyPrices(val&&typeof val==='object'?val:{})}
+ else if(clave==='productos'){cloudReloadSoon()}
+ else if(clave==='discord'){webhook=Object.assign({url:''},val,{ev:Object.assign({ventas:true,encargos:true,fichajes:true,gastos:true,anulaciones:true,cierres:true,balance:true,pedidos:true},(val&&val.ev)||{}),urls:Object.assign({},(val&&val.urls)||{})})}
+ else if(clave==='stockmin'){stockMin=val&&typeof val==='object'&&!Array.isArray(val)?val:{};}
+ else if(clave==='proveedores'){proveedores=Array.isArray(val)?val:[]}
+}
+/* --- Datos de operación: ventas, encargos, fichajes, gastos, cierres y stock --- */
+function saveOutbox(){try{localStorage.setItem('harrington_cloud_outbox',JSON.stringify(cloud.outbox))}catch(e){}}
+function cloudPut(clave,valor){
+ cloud.outbox=cloud.outbox.filter(o=>o.clave!==clave);cloud.outbox.push({clave:clave,valor:valor});saveOutbox();
+ clearTimeout(cloud.timers.__out);cloud.timers.__out=setTimeout(cloudFlushOutbox,300);
+}
+function cloudDel(clave){cloudPut(clave,{deleted:true,ts:Date.now()})}
+async function cloudFlushOutbox(){
+ if(!cloud.outbox.length||cloud.flushing)return;
+ cloud.flushing=true;
+ const batch=cloud.outbox.slice(0,40), stamp=new Date().toISOString();
+ try{
+  const rows=batch.map(o=>({clave:o.clave,valor:o.valor,actualizado:stamp}));
+  rows.push({clave:'rev',valor:{n:Date.now()+'-'+Math.random().toString(36).slice(2,6)},actualizado:stamp});
+  const r=await sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(rows)});
+  if(!r.ok)throw new Error(r.status);
+  cloud.outbox=cloud.outbox.filter(o=>batch.indexOf(o)<0);saveOutbox();setCloudState(true);
+ }catch(e){setCloudState(false)}
+ cloud.flushing=false;
+ if(cloud.outbox.length&&cloud.ok)setTimeout(cloudFlushOutbox,200);
+}
+async function sbRpc(name,body){
+ const r=await sbFetch('/rest/v1/rpc/'+name,{method:'POST',body:JSON.stringify(body||{})}), t=await r.text();
+ if(!r.ok){const e=new Error(t);e.status=r.status;throw e}
+ try{return JSON.parse(t)}catch(e){return t}
+}
+function cloudRev(){return sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify([{clave:'rev',valor:{n:Date.now()+'-'+Math.random().toString(36).slice(2,6)},actualizado:new Date().toISOString()}])}).catch(()=>{})}
+function applyStockMap(m){stockMap=m&&typeof m==='object'&&!Array.isArray(m)?m:{};saveStock()}
+async function moverStock(items){const m=await sbRpc('mover_stock',{p_items:items});applyStockMap(m);cloudRev();return m}
+async function refreshStock(){
+ const r=await sbFetch('/rest/v1/stock?select=producto,cantidad');if(!r.ok)throw new Error(r.status);
+ const rows=await r.json();
+ if(rows.length){const m={};rows.forEach(x=>{m[x.producto]=x.cantidad});applyStockMap(m)}
+}
+/* Reserva el stock en la nube de forma atómica: si otro empleado se lo llevó antes, no se vende */
+async function stockPrepare(){
+ const items=selected();
+ if(customer.op==='encargo'&&!loadedEnc)return {ok:true,moved:[]};
+ const want={};items.forEach(x=>{const q=x.qty-(x.oq||0);if(q>0)want[x.name]=q});
+ const prev=(sale&&sale.stockApplied)||{}, moved=[];
+ new Set(Object.keys(want).concat(Object.keys(prev))).forEach(n=>{const d=(want[n]||0)-(prev[n]||0);if(d)moved.push({producto:n,delta:-d})});
+ if(!moved.length)return {ok:true,moved:[]};
+ try{await moverStock(moved);return {ok:true,moved:moved}}
+ catch(e){
+  if(String(e.message).indexOf('STOCK_INSUFICIENTE')>=0){try{await refreshStock()}catch(x){}calc(false);say('Otro empleado se ha llevado antes ese stock. Revisa las cantidades.')}
+  else say('Sin conexión: no se puede finalizar la venta ahora');
+  return {ok:false,moved:[]};
+ }
+}
+async function ensureSaleCloud(){
+ const items=selected();
+ if(!items.length){say('Añade algún producto primero');return null}
+ if(!customerOk())return null;
+ if(!stockOk(items))return null;
+ if(customer.op==='encargo'&&!loadedEnc&&computeFin().raw<=0){say('Para hacer un encargo es obligatorio indicar el pago por adelantado');depositInput.focus();return null}
+ const pre=await stockPrepare(); if(!pre.ok)return null;
+ if(!sale){
+  try{cloud.num=await sbRpc('siguiente_numero')}
+  catch(e){if(pre.moved.length){try{await moverStock(pre.moved.map(x=>({producto:x.producto,delta:-x.delta})))}catch(z){}}say('Sin conexión: no se puede finalizar la venta ahora');return null}
+ }
+ cloud.skipStockOk=true;
+ try{return ensureSale()}finally{cloud.skipStockOk=false}
+}
+const REC_LISTS={
+ venta:[()=>KEY_SALELOG,x=>x.id,(a,b)=>String(a.ts||'').localeCompare(String(b.ts||''))],
+ turno:[()=>KEY_SHIFTLOG,x=>x.uid,(a,b)=>(a.start||0)-(b.start||0)],
+ cierre:[()=>KEY_CIERRES,x=>x.id,(a,b)=>String(a.id).localeCompare(String(b.id))],
+ mov:[()=>KEY_STOCKLOG,x=>x.uid,(a,b)=>(a.ts||0)-(b.ts||0)]
+};
+function upsertList(type,id,val,del){
+ const L=REC_LISTS[type], key=L[0](), a=loadLog(key), k=a.findIndex(x=>L[1](x)===id);
+ if(del){if(k>=0)a.splice(k,1)}else if(k>=0)a[k]=val;else a.push(val);
+ a.sort(L[2]);try{localStorage.setItem(key,JSON.stringify(a.slice(-5000)))}catch(e){}
+}
+function applyRecord(clave,valor){
+ const i=clave.indexOf(':'), type=clave.slice(0,i), id=clave.slice(i+1), del=!!(valor&&valor.deleted);
+ if(REC_LISTS[type])upsertList(type,id,valor,del);
+ else if(type==='gasto'){
+  const k=gastos.findIndex(x=>x.id===id);
+  if(del){if(k>=0)gastos.splice(k,1)}else if(k>=0)gastos[k]=valor;else gastos.push(valor);
+  gastos.sort((a,b)=>String(a.id).localeCompare(String(b.id)));try{localStorage.setItem(KEY_GASTOS,JSON.stringify(gastos))}catch(e){}
+ }else if(type==='encargo'){
+  const k=encargos.findIndex(x=>x.id===id);
+  if(k>=0){encargos[k]=valor;if(loadedEnc&&loadedEnc.id===id)loadedEnc=valor}else encargos.push(valor);
+  encargos.sort((a,b)=>(a.ts||0)-(b.ts||0));cloud.sig[clave]=JSON.stringify(valor);
+  try{localStorage.setItem(KEY_ENC,JSON.stringify(encargos))}catch(e){}
+  updateEncBtn();
+ }else if(type==='pedido'){
+  const k=pedidos.findIndex(x=>x.id===id);
+  if(del){if(k>=0)pedidos.splice(k,1)}else if(k>=0)pedidos[k]=valor;else pedidos.push(valor);
+  pedidos.sort((a,b)=>(a.ts||0)-(b.ts||0));
+  try{localStorage.setItem(KEY_PEDIDOS,JSON.stringify(pedidos))}catch(e){}
+  updatePedBtn();
+ }else if(type==='fichaje'){
+  shifts=shifts.filter(x=>x.empId!==id);if(!del)shifts.push(valor);
+  try{localStorage.setItem(KEY_SHIFT,JSON.stringify(shifts))}catch(e){}
+  renderClock();
+ }
+}
+async function cloudPullRecords(){
+ let since=cloud.since?new Date(Date.parse(cloud.since)-120000).toISOString():'', got=0;
+ for(let page=0;page<40;page++){
+  const flt=since?'&actualizado=gt.'+encodeURIComponent(since):'';
+  const r=await sbFetch('/rest/v1/datos?select=clave,valor,actualizado&clave=like.*:*'+flt+'&order=actualizado.asc&limit=500');
+  if(!r.ok)throw new Error(r.status);
+  const rows=await r.json();
+  rows.forEach(x=>applyRecord(x.clave,x.valor));got+=rows.length;
+  if(rows.length){const last=rows[rows.length-1].actualizado;if(!cloud.since||Date.parse(last)>Date.parse(cloud.since))cloud.since=last;since=last}
+  if(rows.length<500)break;
+ }
+ try{localStorage.setItem('harrington_cloud_since',cloud.since)}catch(e){}
+ if(got&&document.getElementById('encModal')&&!encModal.hidden&&!encView)renderEnc();
+ if(got&&!pedModal.hidden&&!pedView)renderPed();
+ if(got&&!dirModal.hidden&&!document.activeElement.matches('input,select,textarea'))renderDir();
+ return got;
+}
+function wipeOps(){
+ try{const o={};[KEY_SALELOG,KEY_ENC,KEY_GASTOS,KEY_CIERRES,KEY_SHIFTLOG,KEY_STOCKLOG,KEY_SHIFT].forEach(k=>{const v=localStorage.getItem(k);if(v!=null)o[k]=v});localStorage.setItem('harrington_prejoin_backup',JSON.stringify(o))}catch(e){} /* copia de seguridad interna antes de olvidar */
+ [KEY_SALELOG,KEY_ENC,KEY_GASTOS,KEY_CIERRES,KEY_SHIFTLOG,KEY_STOCKLOG,KEY_SHIFT].forEach(k=>store.remove(k));
+ encargos=[];gastos=[];shifts=[];loadedEnc=null;store.remove(KEY_LOADED);
+ cloud.sig={};cloud.since='';cloud.revSeen=0;cloud.outbox=[];saveOutbox();
+ try{localStorage.removeItem('harrington_cloud_since')}catch(e){}
+ pedidos=[];store.remove(KEY_PEDIDOS);updatePedBtn();
+ updateEncBtn();renderClock();renderCustomer();
+}
+/* Reseteo: borra en este dispositivo los datos de operación indicados */
+const RESET_TYPES={ventas:['venta:'],pedidos:['pedido:'],encargos:['encargo:'],gastos:['gasto:'],cierres:['cierre:'],fichajes:['turno:','fichaje:'],movimientos:['mov:'],stock:[]};
+function wipeLocal(what){
+ if(what.indexOf('ventas')>=0){store.remove(KEY_SALELOG);store.remove(KEY_COUNTER);sale=null;store.remove(KEY_SALE)}
+ if(what.indexOf('encargos')>=0){encargos=[];store.remove(KEY_ENC);loadedEnc=null;store.remove(KEY_LOADED);cloud.sig={};updateEncBtn();renderCustomer()}
+ if(what.indexOf('gastos')>=0){gastos=[];store.remove(KEY_GASTOS)}
+ if(what.indexOf('pedidos')>=0){pedidos=[];store.remove(KEY_PEDIDOS);updatePedBtn()}
+ if(what.indexOf('cierres')>=0)store.remove(KEY_CIERRES);
+ if(what.indexOf('fichajes')>=0){store.remove(KEY_SHIFTLOG);store.remove(KEY_LASTSHIFT);shifts=[];lastShift=null;store.remove(KEY_SHIFT);renderClock()}
+ if(what.indexOf('movimientos')>=0)store.remove(KEY_STOCKLOG);
+ const pre=[];what.forEach(w=>(RESET_TYPES[w]||[]).forEach(x=>pre.push(x)));
+ cloud.outbox=cloud.outbox.filter(o=>!pre.some(x=>o.clave.indexOf(x)===0));saveOutbox();
+ calc(false);
+ if(!dirModal.hidden)renderDir();
+}
+async function applyResetRow(){
+ const r=await sbFetch('/rest/v1/datos?select=valor,actualizado&clave=eq.reset');if(!r.ok)throw new Error(r.status);
+ const rows=await r.json();if(!rows[0])return;
+ const t=Date.parse(rows[0].actualizado);if(t<=cloud.resetSeen)return;
+ const what=(rows[0].valor&&rows[0].valor.what)||[];
+ wipeLocal(what);
+ if(what.indexOf('stock')>=0){try{await refreshStock()}catch(e){}}
+ cloud.resetSeen=t;try{localStorage.setItem('harrington_reset_seen',String(t))}catch(e){}
+ cloud.since='';try{localStorage.removeItem('harrington_cloud_since')}catch(e){}
+ say('El jefe ha reseteado datos: '+what.join(', '));
+}
+async function cloudPoll(force){
+ try{
+  const cfg=Object.keys(CLOUD_REV).concat(['rev','reset']).join(',');
+  const r=await sbFetch('/rest/v1/datos?select=clave,actualizado&clave=in.('+cfg+')');
+  if(!r.ok)throw new Error(r.status);
+  const rows=await r.json();setCloudState(true);
+  /* Un dispositivo que se une por primera vez a una nube con datos de operación olvida los suyos antiguos */
+  if(!cloud.joined&&rows.some(x=>x.clave==='rev')){wipeOps();cloud.joined=true;try{localStorage.setItem('harrington_cloud_joined','1')}catch(e){}}
+  const need=[];
+  rows.forEach(x=>{if(!CLOUD_REV[x.clave]||cloud.dirty[x.clave])return;const t=Date.parse(x.actualizado);if(force||cloud.stamps[x.clave]!==t)need.push(x.clave)});
+  Object.keys(cloud.dirty).forEach(cl=>cloudFlush(cl));
+  if(need.length){
+   const r2=await sbFetch('/rest/v1/datos?select=clave,valor,actualizado&clave=in.('+need.join(',')+')');
+   if(!r2.ok)throw new Error(r2.status);
+   (await r2.json()).forEach(x=>applyRemote(x.clave,x.valor,Date.parse(x.actualizado)));
+  }
+  const rs=rows.find(x=>x.clave==='reset');
+  if(rs&&Date.parse(rs.actualizado)>cloud.resetSeen)await applyResetRow();
+  const rv=rows.find(x=>x.clave==='rev'), rt=rv?Date.parse(rv.actualizado):0;
+  if(force||!cloud.revSeen||rt!==cloud.revSeen){
+   await cloudPullRecords();
+   try{await refreshStock()}catch(e){}
+   cloud.revSeen=rt||1;calc(false);
+  }
+  if(cloud.outbox.length)cloudFlushOutbox();
+  cloud.last=Date.now();
+ }catch(e){setCloudState(false)}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')cloudPoll()});
+setInterval(()=>{if(document.visibilityState==='visible')cloudPoll()},6000);
+setTimeout(()=>cloudPoll(),300);
+
 /* ===== Respaldo de imágenes =====
    Si una imagen no carga como "nombre.png", prueba "nombre.png.png"
    (por si el archivo se subió con la extensión duplicada). */
@@ -3183,10 +3836,4 @@ filter();
 </script>
 </body>
 </html>
-
-<!-- Fichaje: entrada -->
-<div class="modal-overlay confirm" id="entryModal" hidden>
-  <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="entryTitle">
-    <div class="confirm-title" id="entryTitle">Fichar entrada</div>
-    <p>Selecciona el empleado.</p>
-    <select class="name-input" id="employeeName"></select>
+                                                                                                
