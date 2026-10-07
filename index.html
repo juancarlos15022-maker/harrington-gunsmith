@@ -14,16 +14,8 @@ repeating-linear-gradient(90deg,#24160f 0 2px,#170f0a 2px 7px);min-height:100vh}
 body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;background-image:
 repeating-linear-gradient(0deg,transparent 0 3px,#fff 4px,transparent 5px);mix-blend-mode:soft-light}
 .wrap{max-width:1500px;margin:auto;padding:14px}
-.hero{position:relative;overflow:hidden;text-align:center;border:2px solid #8b6a2e;border-radius:10px;padding:90px 12px 28px;
-background:
-linear-gradient(to bottom,#07150f22,#07150f99 48%,#07130ef5),
-url("cabecera-harrington.png") center/cover no-repeat;
-box-shadow:0 10px 35px #0009,inset 0 0 45px #000}
-.category-visual{position:relative;overflow:hidden;height:210px;border:1px solid #72572b;border-radius:8px;margin:0 0 12px;background:#07120e;box-shadow:0 10px 30px #0008}
-.category-visual img{width:100%;height:100%;object-fit:cover;display:block}
-.category-visual:after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 30%,#06110de8)}
-.category-visual .visual-title{position:absolute;z-index:2;left:20px;bottom:15px;color:#f3d47c;font-size:30px;font-weight:bold;text-shadow:0 2px 8px #000}
-@media(max-width:650px){.category-visual{height:155px}.category-visual .visual-title{font-size:23px;left:14px;bottom:11px}}
+.hero{position:relative;overflow:hidden;text-align:center;border:2px solid #8b6a2e;border-radius:10px;padding:26px 12px 20px;
+background:linear-gradient(135deg,#07150f,#0b251a 50%,#07130e);box-shadow:0 10px 35px #0009,inset 0 0 45px #000}
 .hero:before,.hero:after{content:"✦ ─────── ✦";position:absolute;color:#8f6b2d;top:12px;font-size:13px;letter-spacing:4px}
 .hero:before{left:18px}.hero:after{right:18px}
 h1{margin:4px 0 2px;color:var(--gold2);font-size:clamp(31px,7vw,67px);letter-spacing:.07em;text-shadow:0 2px #000,0 0 16px #d7ae5430}
@@ -57,16 +49,59 @@ h1{margin:4px 0 2px;color:var(--gold2);font-size:clamp(31px,7vw,67px);letter-spa
 footer{text-align:center;color:#746a58;padding:18px;font-size:12px}
 @media(max-width:900px){.grid{grid-template-columns:1fr}.order{position:relative;top:0}}
 @media(max-width:650px){.wrap{padding:7px}.hero{padding:22px 8px 16px}.hero:before,.hero:after{display:none}.tabs button{min-width:105px}.table-head{display:none}.product{grid-template-columns:34px 1fr 80px;gap:6px;padding:10px 7px}.product .qty{grid-column:2/3;justify-content:flex-start}.product .subtotal{grid-column:3/4;grid-row:2}.pname{font-size:15px}.price{font-size:14px}.qty button{width:36px}.qty input{width:54px}}
+
+/* ===== HARRINGTON GUNSMITH · V3 FINAL ===== */
+.hero{
+  min-height:300px;padding:0;border-color:#a98135;
+  background:#07150f url("cabecera-web.png") center/cover no-repeat;
+  box-shadow:0 12px 42px #000c,inset 0 0 55px #0005
+}
+.hero .place,.hero h1,.hero .motto,.hero .orn{display:none}
+.tabs{gap:7px;padding:7px;background:#050e0a;border-color:#8b6a2e}
+.tabs button{
+  position:relative;isolation:isolate;overflow:hidden;min-width:128px;height:70px;
+  padding:8px 9px;border:1px solid #705628!important;border-radius:7px;
+  background-position:center!important;background-size:cover!important;
+  color:#fff1bd;text-shadow:0 2px 4px #000,0 0 7px #000;font-size:13px;
+  box-shadow:inset 0 0 22px #000b;transition:.18s ease
+}
+.tabs button:before{content:"";position:absolute;z-index:-1;inset:0;background:#02070473}
+.tabs button:hover{transform:translateY(-1px);border-color:#d7ae54!important}
+.tabs button.active{border-color:#f3d47c!important;box-shadow:0 0 13px #d7ae5470,inset 0 0 16px #0008;color:#fff7d6}
+.tabs button.active:before{background:#5b431d35}
+.tabs button[data-cat="todos"]{background-image:url("boton-todos.png")}
+.tabs button[data-cat="revolveres"]{background-image:url("boton-revolveres.png")}
+.tabs button[data-cat="pistolas"]{background-image:url("boton-pistolas.png")}
+.tabs button[data-cat="repetidoras"]{background-image:url("boton-repetidoras.png")}
+.tabs button[data-cat="rifles"]{background-image:url("boton-rifles.png")}
+.tabs button[data-cat="escopetas"]{background-image:url("boton-escopetas.png")}
+.tabs button[data-cat="blancas"]{background-image:url("boton-armas-blancas.png")}
+.tabs button[data-cat="municion"]{background-image:url("boton-municion.png")}
+.tabs button[data-cat="suministros"]{background-image:url("boton-suministros.png")}
+.category-visual{position:relative;overflow:hidden;height:220px;border:1px solid #72572b;border-radius:8px;margin:0 0 12px;background:#07120e;box-shadow:0 10px 30px #0008}
+.category-visual img{width:100%;height:100%;object-fit:cover;display:block}
+.category-visual:after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 28%,#06110de8)}
+.category-visual .visual-title{position:absolute;z-index:2;left:20px;bottom:15px;color:#f3d47c;font-size:30px;font-weight:bold;text-shadow:0 2px 8px #000}
+.product.chosen{background:linear-gradient(90deg,#13291d,#0b1811);box-shadow:inset 3px 0 #d7ae54,inset 0 0 18px #d7ae5415}
+.product.flash .subtotal,.total.flash{animation:goldflash .35s ease}
+@keyframes goldflash{50%{color:#fff6c8;text-shadow:0 0 12px #f3d47c}}
+.order-summary{padding:0 12px 5px;color:#b7a681;font-size:12px;text-align:right}
+.receipt-seal{display:block;width:104px;height:104px;object-fit:contain;margin:4px auto 8px;filter:drop-shadow(0 5px 9px #0008)}
+.sale-number{text-align:center;color:#d4b969;font-size:12px;letter-spacing:.13em;margin:0 0 7px}
+.backtop{position:fixed;right:18px;bottom:20px;z-index:30;width:46px;height:46px;border-radius:50%;border:1px solid #d7ae54;background:#0a2117e8;color:#f3d47c;font-size:22px;box-shadow:0 5px 20px #000b;display:none}
+.backtop.show{display:block}
+@media(max-width:650px){
+ .hero{min-height:205px;background-size:cover}
+ .tabs button{min-width:112px;height:64px;font-size:12px}
+ .category-visual{height:155px}.category-visual .visual-title{font-size:23px;left:14px;bottom:11px}
+ .backtop{right:10px;bottom:12px}
+}
+
 </style>
 </head>
 <body>
 <div class="wrap">
-<header class="hero">
-  <div class="place">SAINT DENIS · 1880</div>
-  <h1>HARRINGTON GUNSMITH</h1>
-  <div class="motto">El precio de un apellido.</div>
-  <div class="orn">◆ ─── ✦ ─── ◆</div>
-</header>
+<header class="hero" aria-label="Harrington Gunsmith · Saint Denis · 1880"></header>
 
 <nav class="tabs">
 <button class="active" data-cat="todos">✦ Todos</button>
@@ -339,6 +374,7 @@ footer{text-align:center;color:#746a58;padding:18px;font-size:12px}
 <aside class="panel order">
   <div class="order-title"><span>PEDIDO ACTUAL</span><button class="danger" id="clear">Vaciar</button></div>
   <div class="cart" id="cart"><div class="empty">▣<br>Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div></div>
+  <div class="order-summary" id="orderSummary">0 productos · 0 unidades</div>
   <div class="total"><span>TOTAL</span><span id="grand">$0.00</span></div>
   <div class="actions">
     <button class="finish" id="finish">▣ Finalizar venta</button>
@@ -346,65 +382,20 @@ footer{text-align:center;color:#746a58;padding:18px;font-size:12px}
     <button id="download">⇩ Descargar comprobante</button>
     <button class="new" id="new">↻ Nueva venta</button>
   </div>
-  <div class="stamp">HARRINGTON GUNSMITH<br>FINE FIREARMS · AMMUNITION · REPAIRS<br>SAINT DENIS</div>
+  <div class="stamp"><img class="receipt-seal" src="emblema-harrington.png" alt="Emblema Harrington Gunsmith">HARRINGTON GUNSMITH<br>FINE FIREARMS · AMMUNITION · REPAIRS<br>SAINT DENIS</div>
 </aside>
 </div>
 <footer>Harrington Gunsmith · Saint Denis · 1880</footer>
 </div>
 <div class="toast" id="toast"></div>
+<button class="backtop" id="backtop" aria-label="Volver arriba">↑</button>
 
 <script>
 const inputs=[...document.querySelectorAll('.qty input')];
-const grand=document.getElementById('grand'), cart=document.getElementById('cart'), toast=document.getElementById('toast');
-let lastReceipt='';
-function money(n){return '$'+n.toFixed(2)}
-function selected(){
- return inputs.map(i=>({name:i.dataset.name,price:+i.dataset.price,qty:Math.max(0,parseInt(i.value)||0)})).filter(x=>x.qty>0);
-}
-function calc(){
- let total=0;
- inputs.forEach(i=>{
-   let q=Math.max(0,parseInt(i.value)||0), sub=q*(+i.dataset.price);
-   i.closest('.product').querySelector('.subtotal').textContent=money(sub); total+=sub;
- });
- grand.textContent=money(total);
- const items=selected();
- if(!items.length) cart.innerHTML='<div class="empty">▣<br>Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div>';
- else cart.innerHTML=items.map(x=>`<div class="cartrow"><span>${x.name}</span><span>${x.qty}</span><span>${money(x.price)}</span><span>${money(x.qty*x.price)}</span></div>`).join('');
- return total;
-}
-function receipt(){
- const items=selected(), total=calc(), now=new Date();
- if(!items.length) return '';
- const lines=[
- 'HARRINGTON GUNSMITH — REGISTRO DE VENTA',
- 'Saint Denis · 1880',
- '────────────────────────────',
- ...items.map(x=>`${x.name} × ${x.qty} — ${money(x.price)}/u — ${money(x.qty*x.price)}`),
- '────────────────────────────',
- `TOTAL DE LA VENTA: ${money(total)}`,
- `Registro: ${now.toLocaleDateString('es-ES')} · ${now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`,
- 'El precio de un apellido.'
- ];
- return lines.join('\n');
-}
-function say(t){toast.textContent=t;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
-document.querySelectorAll('.plus').forEach(b=>b.onclick=()=>{let i=b.parentElement.querySelector('input');i.value=(parseInt(i.value)||0)+1;calc()});
-document.querySelectorAll('.minus').forEach(b=>b.onclick=()=>{let i=b.parentElement.querySelector('input');i.value=Math.max(0,(parseInt(i.value)||0)-1);calc()});
-inputs.forEach(i=>i.oninput=calc);
-document.getElementById('clear').onclick=()=>{inputs.forEach(i=>i.value=0);calc();say('Pedido vaciado')};
-document.getElementById('new').onclick=()=>{if(confirm('¿Empezar una nueva venta y borrar las cantidades actuales?')){inputs.forEach(i=>i.value=0);lastReceipt='';calc();say('Nueva venta preparada')}};
-document.getElementById('finish').onclick=()=>{lastReceipt=receipt();if(!lastReceipt) return say('Añade algún producto primero');say('Venta finalizada · comprobante preparado')};
-document.getElementById('copy').onclick=async()=>{
- const t=lastReceipt||receipt(); if(!t)return say('Añade algún producto primero');
- try{await navigator.clipboard.writeText(t);say('Venta copiada para Discord')}catch(e){prompt('Copia este texto:',t)}
-};
-document.getElementById('download').onclick=()=>{
- const t=lastReceipt||receipt(); if(!t)return say('Añade algún producto primero');
- const blob=new Blob([t],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');
- a.href=URL.createObjectURL(blob);a.download='Harrington_Venta_'+new Date().toISOString().slice(0,10)+'.txt';a.click();URL.revokeObjectURL(a.href);say('Comprobante descargado');
-};
-let cat='todos';
+const grand=document.getElementById('grand'),cart=document.getElementById('cart'),toast=document.getElementById('toast');
+const summary=document.getElementById('orderSummary'),backtop=document.getElementById('backtop');
+let lastReceipt='',lastSaleId='',cat='todos';
+
 const categoryVisuals={
  todos:{image:'cabecera-harrington.png',title:'Catálogo Harrington'},
  revolveres:{image:'revolveres.png',title:'Revólveres'},
@@ -416,18 +407,117 @@ const categoryVisuals={
  municion:{image:'municion.png',title:'Munición'},
  suministros:{image:'suministros.png',title:'Suministros'}
 };
+
+function money(n){return '$'+n.toFixed(2)}
+function selected(){
+ return inputs.map(i=>({name:i.dataset.name,price:+i.dataset.price,qty:Math.max(0,parseInt(i.value)||0)})).filter(x=>x.qty>0);
+}
+function saveCart(){
+ const values={}; inputs.forEach(i=>values[i.dataset.name]=Math.max(0,parseInt(i.value)||0));
+ localStorage.setItem('harrington-cart',JSON.stringify(values));
+}
+function restoreCart(){
+ try{
+  const values=JSON.parse(localStorage.getItem('harrington-cart')||'{}');
+  inputs.forEach(i=>{if(values[i.dataset.name]!=null)i.value=values[i.dataset.name]});
+ }catch(e){}
+}
+function calc(flash=false){
+ let total=0;
+ inputs.forEach(i=>{
+   const q=Math.max(0,parseInt(i.value)||0),sub=q*(+i.dataset.price),row=i.closest('.product');
+   row.querySelector('.subtotal').textContent=money(sub);
+   row.classList.toggle('chosen',q>0);
+   total+=sub;
+ });
+ grand.textContent=money(total);
+ const items=selected(),units=items.reduce((s,x)=>s+x.qty,0);
+ summary.textContent=`${items.length} producto${items.length===1?'':'s'} · ${units} unidad${units===1?'':'es'}`;
+ if(!items.length)cart.innerHTML='<div class="empty">▣<br>Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div>';
+ else cart.innerHTML=items.map(x=>`<div class="cartrow"><span>${x.name}</span><span>${x.qty}</span><span>${money(x.price)}</span><span>${money(x.qty*x.price)}</span></div>`).join('');
+ if(flash){grand.parentElement.classList.remove('flash');void grand.parentElement.offsetWidth;grand.parentElement.classList.add('flash')}
+ saveCart();
+ return total;
+}
+function saleId(){
+ const d=new Date(),pad=n=>String(n).padStart(2,'0');
+ const date=`${pad(d.getDate())}${pad(d.getMonth()+1)}${String(d.getFullYear()).slice(-2)}`;
+ let seq=+(localStorage.getItem('harrington-sale-seq')||0)+1;
+ localStorage.setItem('harrington-sale-seq',seq);
+ return `HG-${date}-${String(seq).padStart(3,'0')}`;
+}
+function receipt(createId=false){
+ const items=selected(),total=calc(),now=new Date();
+ if(!items.length)return '';
+ if(createId||!lastSaleId)lastSaleId=saleId();
+ return [
+ '╔══════════════════════════════════╗',
+ '       HARRINGTON GUNSMITH',
+ '          SAINT DENIS · 1880',
+ '       El precio de un apellido.',
+ '╚══════════════════════════════════╝',
+ `VENTA: ${lastSaleId}`,
+ `FECHA: ${now.toLocaleDateString('es-ES')} · ${now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`,
+ '──────────────────────────────────',
+ ...items.map(x=>`${x.name} × ${x.qty}\n  ${money(x.price)}/u  →  ${money(x.qty*x.price)}`),
+ '──────────────────────────────────',
+ `TOTAL DE LA VENTA: ${money(total)}`,
+ '──────────────────────────────────',
+ 'HARRINGTON GUNSMITH · SAINT DENIS'
+ ].join('\n');
+}
+function say(t){toast.textContent=t;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
+function changeButton(b,delta){
+ const i=b.parentElement.querySelector('input');
+ i.value=Math.max(0,(parseInt(i.value)||0)+delta);
+ const row=i.closest('.product');row.classList.remove('flash');void row.offsetWidth;row.classList.add('flash');
+ lastReceipt='';lastSaleId='';calc(true);
+}
+document.querySelectorAll('.plus').forEach(b=>b.onclick=()=>changeButton(b,1));
+document.querySelectorAll('.minus').forEach(b=>b.onclick=()=>changeButton(b,-1));
+inputs.forEach(i=>i.oninput=()=>{i.value=Math.max(0,parseInt(i.value)||0);lastReceipt='';lastSaleId='';calc(true)});
+
+document.getElementById('clear').onclick=()=>{
+ if(!selected().length)return say('El pedido ya está vacío');
+ if(confirm('¿Vaciar todo el pedido?')){inputs.forEach(i=>i.value=0);lastReceipt='';lastSaleId='';calc();say('Pedido vaciado')}
+};
+document.getElementById('new').onclick=()=>{
+ if(confirm('¿Empezar una nueva venta y borrar las cantidades actuales?')){
+  inputs.forEach(i=>i.value=0);lastReceipt='';lastSaleId='';calc();say('Nueva venta preparada');window.scrollTo({top:0,behavior:'smooth'})
+ }
+};
+document.getElementById('finish').onclick=()=>{
+ lastReceipt=receipt(true);if(!lastReceipt)return say('Añade algún producto primero');
+ say('Venta finalizada · '+lastSaleId);
+};
+document.getElementById('copy').onclick=async()=>{
+ const t=lastReceipt||receipt(false);if(!t)return say('Añade algún producto primero');
+ try{await navigator.clipboard.writeText(t);say('Venta copiada para Discord')}catch(e){prompt('Copia este texto:',t)}
+};
+document.getElementById('download').onclick=()=>{
+ const t=lastReceipt||receipt(false);if(!t)return say('Añade algún producto primero');
+ const blob=new Blob([t],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);a.download=(lastSaleId||'Harrington_Venta')+'.txt';a.click();
+ setTimeout(()=>URL.revokeObjectURL(a.href),1000);say('Comprobante descargado');
+};
+
 function updateCategoryVisual(){
- const v=categoryVisuals[cat]||categoryVisuals.todos;
- document.getElementById('categoryImage').src=v.image;
- document.getElementById('categoryImage').alt=v.title+' · Harrington Gunsmith';
- document.getElementById('categoryTitle').textContent=v.title;
+ const v=categoryVisuals[cat]||categoryVisuals.todos,img=document.getElementById('categoryImage'),title=document.getElementById('categoryTitle');
+ if(img){img.src=v.image;img.alt=v.title+' · Harrington Gunsmith'} if(title)title.textContent=v.title;
 }
 function filter(){
  const q=document.getElementById('search').value.toLowerCase().trim();
  document.querySelectorAll('.product').forEach(p=>p.style.display=((cat==='todos'||p.dataset.cat===cat)&&p.dataset.name.includes(q))?'grid':'none');
 }
-document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');cat=b.dataset.cat;updateCategoryVisual();filter()});
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
+ b.classList.add('active');cat=b.dataset.cat;updateCategoryVisual();filter();
+});
 document.getElementById('search').oninput=filter;
-calc();
+
+window.addEventListener('scroll',()=>backtop.classList.toggle('show',window.scrollY>500));
+backtop.onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
+
+restoreCart();updateCategoryVisual();calc();
 </script>
 </body></html>
