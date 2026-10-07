@@ -173,6 +173,45 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
 .rfin.paid{margin:4px 0;padding:5px 8px;border:1px dashed #1b3022;font-weight:bold;color:#1b3022;background:#1b30221a}
 #rcFin{margin-top:10px;text-align:left}
 
+/* ===== ENCARGOS ALMACENADOS ===== */
+.clock-link.enc-btn{border-color:var(--gold);color:var(--gold2);font-weight:bold;letter-spacing:.08em;background:linear-gradient(#2a1c0d,#0d1c14)}
+.loaded-banner{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-bottom:1px solid #8b6a2e;background:#1b2a14;color:#e9dec2;font-size:14px}
+.loaded-banner[hidden]{display:none}
+.loaded-banner b{color:var(--gold2);letter-spacing:.08em}
+.cart-sub{padding:10px 5px 2px;color:#f0d278;font-size:11px;letter-spacing:.12em;font-weight:bold}
+.rc-sub{text-align:left;padding:8px 0 2px;font-size:11px;letter-spacing:.14em;font-weight:bold;color:#6b4c1d}
+.actions .finish-enc{grid-column:1/-1;background:linear-gradient(#80601f,#3a2a0c);border-color:#d2a733;color:#fff0b6;font-size:15px}
+.enc-panel{margin:auto;width:100%;max-width:640px;border:2px solid #8b6a2e;border-radius:10px;background:linear-gradient(#150f09,#0a1812);box-shadow:0 20px 60px #000;overflow:hidden}
+.enc-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:13px 14px;border-bottom:1px solid #8b6a2e;background:linear-gradient(90deg,#25180e,#0d1c14);color:#f0d278;font-size:19px;font-weight:bold}
+#encBody{padding:10px}
+.enc-empty{padding:34px 12px;text-align:center;color:#827866;line-height:1.6}
+.enc-card{display:block;width:100%;margin-bottom:10px;padding:12px;text-align:left;border:1px solid #72572b;border-radius:8px;background:#0a1711;color:#e9dec2;cursor:pointer;font-family:inherit;font-size:15px}
+.enc-card:hover{border-color:var(--gold)}
+.enc-card .t{color:var(--gold2);font-weight:bold;margin-bottom:4px;overflow-wrap:anywhere}
+.enc-card .it{color:#d9ccaa;font-size:14px;margin-bottom:6px;overflow-wrap:anywhere}
+.enc-money{display:flex;flex-wrap:wrap;gap:2px 14px;margin-bottom:8px;font-size:14px;font-variant-numeric:tabular-nums}
+.badges{display:flex;flex-wrap:wrap;gap:6px}
+.badge{padding:3px 9px;border-radius:12px;border:1px solid;font-size:12px;font-weight:bold;letter-spacing:.05em}
+.badge.pend{color:#f0c27a;border-color:#a8742f;background:#3a2a0c}
+.badge.fab,.badge.si{color:#a7e3b6;border-color:#3f7a52;background:#0d2a1a}
+.badge.no{color:#f0a58f;border-color:#a84532;background:#2a0f0b}
+.enc-back{margin-bottom:10px;padding:10px 14px;min-height:44px;border-radius:6px;border:1px solid #76633e;background:#242522;color:#eee1c6;cursor:pointer;font-family:inherit;font-weight:bold}
+.enc-id{color:#c9b27a;font-size:13px;margin-bottom:8px}
+.enc-kv{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-bottom:10px}
+.enc-kv .full{grid-column:1/-1}
+.enc-kv span{display:block;color:#c9b27a;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.enc-kv b{overflow-wrap:anywhere}
+.enc-sec{margin:12px 0;padding:10px;border:1px solid #8b6a2e;border-radius:6px;background:#0a1711}
+.enc-sec label{display:block;margin-bottom:10px;color:#f0d278;font-size:12px;font-weight:bold;letter-spacing:.1em}
+.enc-sec label:last-child{margin-bottom:0}
+.enc-sec select{display:block;width:100%;min-height:44px;margin-top:4px;padding:9px 10px;font-size:16px;font-family:inherit;background:#040b08;border:1px solid #5d4928;border-radius:6px;color:#eee0bd}
+.enc-note{margin-top:6px;color:#a99a7d;font-size:13px;font-style:italic}
+.brow.due{margin-top:4px;padding:8px 2px;border-top:2px double #8b6a2e;font-size:18px;font-weight:bold;color:var(--gold2)}
+.enc-actions{display:grid;gap:8px}
+.enc-actions button{padding:13px 8px;min-height:44px;border-radius:6px;border:1px solid #b88931;background:linear-gradient(#1b2a1a,#0a1812);color:#f3e2b0;font-weight:bold;cursor:pointer;font-family:inherit}
+.enc-actions .primary{background:linear-gradient(#1b6c16,#0a430b);border-color:#d2a733;color:#fff7c9}
+.enc-actions .warn{background:#5b1515;border-color:#a84532;color:#f7d7c4}
+
 /* ===== FICHAJE ===== */
 .clock-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0 0;padding:10px 12px;border:1px solid #8b6a2e;border-radius:8px;background:linear-gradient(90deg,#25180e,#0d1c14);box-shadow:0 6px 20px #0008}
 .clock-info{min-width:0;color:#d9ccaa}
@@ -227,6 +266,7 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
 <section class="clock-bar" aria-label="Fichaje de empleados">
   <div class="clock-info"><b>FICHAJE</b><span class="clock-status" id="clockStatus">Sin fichar</span></div>
   <div class="clock-actions">
+    <button type="button" class="clock-link enc-btn" id="encBtn">ENCARGOS</button>
     <button type="button" class="clock-link" id="lastShiftBtn" hidden>Último registro</button>
     <button type="button" class="clock-btn" id="clockBtn">▸ Fichar entrada</button>
   </div>
@@ -504,6 +544,7 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
 
 <aside class="panel order">
   <div class="order-title"><span>PEDIDO ACTUAL</span><button class="danger" id="clear">Vaciar</button></div>
+  <div class="loaded-banner" id="loadedBanner" hidden></div>
   <div class="client-box">
     <label class="fld wide"><span>Tipo de operación</span>
       <select id="opType"><option value="venta">Venta normal</option><option value="encargo">Encargo</option></select></label>
@@ -516,7 +557,7 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
     <label class="fld wide" id="clientNameWrap"><span id="clientNameLabel">Nombre del cliente</span>
       <input id="clientName" type="text" maxlength="40" autocomplete="off" placeholder="Nombre"></label>
     <label class="fld wide" id="telegramWrap" hidden><span>Telegrama de contacto</span>
-      <input id="telegram" type="text" maxlength="40" autocomplete="off" placeholder="Ej.: JS-458"></label>
+      <input id="telegram" type="text" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Ej.: JS-458"><div class="pay-err" id="telHint" hidden>Solo letras, números y guiones (máximo 10).</div></label>
     <label class="fld wide"><span>Convenio</span><select id="convenio"></select></label>
     <div class="client-note" id="clientNote" hidden></div>
   </div>
@@ -537,6 +578,7 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
   <div class="total"><span id="totalLabel">TOTAL</span><span id="grand">$0.00</span></div>
   <div class="actions">
     <button class="finish" id="finish">▣ Finalizar venta</button>
+    <button class="finish-enc" id="finishEnc" hidden>✔ Finalizar encargo</button>
     <button id="copy">▤ Copiar para Discord</button>
     <button id="download">⇩ Descargar comprobante</button>
     <button class="new" id="new">↻ Nueva venta</button>
@@ -584,6 +626,14 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
       <button type="button" id="rcNew">↻ Nueva venta</button>
       <button type="button" id="rcClose">Cerrar</button>
     </div>
+  </div>
+</div>
+
+<!-- Encargos almacenados -->
+<div class="modal-overlay" id="encModal" hidden>
+  <div class="enc-panel" role="dialog" aria-modal="true" aria-labelledby="encTitle">
+    <div class="enc-head"><span id="encTitle">ENCARGOS PENDIENTES</span><button type="button" class="danger" id="encClose">Cerrar</button></div>
+    <div id="encBody"></div>
   </div>
 </div>
 
@@ -667,6 +717,8 @@ function baseCents(i){return Math.round(parseFloat(i.dataset.price)*100)}
 /* Precio efectivo: precio especial del cliente > precio de convenio > descuento de convenio > precio base */
 function priceCents(i){
  const name=i.dataset.name, sp=specialPrices(), cv=currentConvenio();
+ const fz=loadedEnc&&loadedEnc.items.find(x=>x.name===name);
+ if(fz)return fz.cents;
  if(sp&&sp.precios[name]!=null)return Math.round(sp.precios[name]*100);
  if(cv.precios&&cv.precios[name]!=null)return Math.round(cv.precios[name]*100);
  return Math.round(baseCents(i)*(1-(cv.descuento||0)/100));
@@ -678,7 +730,7 @@ function say(t){toast.textContent=t;toast.classList.add('show');clearTimeout(toa
 
 /* ===== Pedido ===== */
 function selected(){
- return inputs.map(i=>({name:i.dataset.name,cents:priceCents(i),qty:readQty(i)})).filter(x=>x.qty>0);
+ return inputs.map(i=>({name:i.dataset.name,cents:priceCents(i),qty:readQty(i),oq:origQty(i.dataset.name)})).filter(x=>x.qty>0);
 }
 function saveOrder(items){
  if(!items.length) return store.remove(KEY_ORDER);
@@ -707,7 +759,7 @@ function calc(animate=true){
  summaryEl.textContent=summaryText(products,units);
  const items=selected();
  if(!items.length) cart.innerHTML='<div class="empty">▣<br>Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div>';
- else cart.innerHTML='<div class="cartrow carthead"><span>Producto</span><span>Cant.</span><span>P. unit.</span><span>Subtotal</span></div>'+items.map(x=>`<div class="cartrow"><span>${esc(x.name)}</span><span>${x.qty}</span><span>${money(x.cents)}</span><span>${money(x.qty*x.cents)}</span></div>`).join('');
+ else cart.innerHTML=cartHTML(items);
  saveOrder(items);
  return totalCents;
 }
@@ -718,14 +770,14 @@ function nextSaleNumber(){
  store.set(KEY_COUNTER,String(n));
  return n;
 }
-function signature(items){return items.map(x=>x.name+':'+x.qty+':'+x.cents).join('|')+'#'+customerName()+'#'+customer.convenio+'#'+customer.op+'#'+customer.telegram.trim()+'#'+computeFin().paid}
+function signature(items){return items.map(x=>x.name+':'+x.qty+':'+x.cents).join('|')+'#'+customerName()+'#'+customer.convenio+'#'+customer.op+'#'+customer.telegram.trim()+'#'+computeFin().paid+'#'+(loadedEnc?loadedEnc.id:'')}
 function snapshot(items,now){
  const total=items.reduce((a,x)=>a+x.qty*x.cents,0), units=items.reduce((a,x)=>a+x.qty,0);
  return {
-  items:items.map(x=>({name:x.name,cents:x.cents,qty:x.qty})),
+  items:items.map(x=>({name:x.name,cents:x.cents,qty:x.qty,oq:x.oq||0})),
   totalCents:total,units:units,products:items.length,sig:signature(items),
   client:customerName(),convenio:currentConvenio().id!=='ninguno'?currentConvenio().nombre:'',
-  ...finToSale(computeFin()),op:customer.op,telegram:customer.op==='encargo'?customer.telegram.trim():'',
+  ...finToSale(computeFin()),op:loadedEnc?'venta':customer.op,fromEncargo:loadedEnc?loadedEnc.id:'',telegram:loadedEnc?loadedEnc.telegram:(customer.op==='encargo'?customer.telegram.trim():''),
   date:`${madridParts(now.getTime()).day}/${madridParts(now.getTime()).month}/${madridParts(now.getTime()).year}`,
   time:`${madridParts(now.getTime()).hour}:${madridParts(now.getTime()).minute}`
  };
@@ -745,6 +797,7 @@ function ensureSale(){
   sale=Object.assign({id:sale.id},snapshot(items,now));
   store.set(KEY_SALE,JSON.stringify(sale));
  }
+ if(sale.op==='encargo')saveEncargoFromSale(sale);
  return sale;
 }
 function restoreSale(){
@@ -759,21 +812,23 @@ function parseMoney(v){const n=parseFloat(String(v||'').replace(',','.').replace
 function computeFin(){
  let base=0,final=0;
  inputs.forEach(i=>{const q=readQty(i);if(q){base+=q*baseCents(i);final+=q*priceCents(i)}});
- const enc=customer.op==='encargo', prior=!enc&&customer.prior;
- const raw=enc?parseMoney(customer.deposit):(prior?parseMoney(customer.priorAmt):0);
- const kind=enc?'senal':(prior?'previo':'');
+ const enc=customer.op==='encargo'&&!loadedEnc, prior=!enc&&!loadedEnc&&customer.prior;
+ const raw=loadedEnc?loadedEnc.depositCents:(enc?parseMoney(customer.deposit):(prior?parseMoney(customer.priorAmt):0));
+ const kind=loadedEnc?'fianza':(enc?'senal':(prior?'previo':''));
  const paid=Math.min(raw,final);
  return {base:base,final:final,discount:Math.max(0,base-final),discountLabel:specialPrices()?'Precio especial':'Convenio',raw:raw,over:raw>final,kind:kind,paid:paid,pending:final-paid,due:kind?final-paid:final};
 }
 function finToSale(f){return {baseCents:f.base,discountCents:f.discount,discountLabel:f.discountLabel,kind:f.kind,totalCents:f.final,paidCents:f.paid,pendingCents:f.pending}}
 function finRows(s){
- const r=[];
- if(s.discountCents>0){r.push(['Subtotal',money(s.baseCents)]);r.push([s.discountLabel||'Convenio','−'+money(s.discountCents),'disc'])}
- if(s.kind){r.push([s.kind==='senal'?'Precio final del encargo':'Precio final',money(s.totalCents)]);r.push([s.kind==='senal'?'Señal entregada':'Ya abonado','−'+money(s.paidCents),'paid'])}
- else if(s.discountCents>0)r.push(['Precio final',money(s.totalCents)]);
+ const r=[], disc=s.discountCents>0;
+ if(disc){r.push(['Subtotal',money(s.baseCents)]);r.push([s.discountLabel||'Convenio','−'+money(s.discountCents),'disc'])}
+ if(s.kind){
+  r.push([s.kind==='senal'?'Precio final del encargo':(s.kind==='fianza'&&!disc?'Subtotal mercancía':'Precio final'),money(s.totalCents)]);
+  r.push([s.kind==='senal'?'Señal entregada':s.kind==='fianza'?'Fianza ya pagada':'Ya abonado','−'+money(s.paidCents),'paid']);
+ }else if(disc)r.push(['Precio final',money(s.totalCents)]);
  return r;
 }
-function dueLabel(s){return s.kind==='senal'?'PENDIENTE AL RECOGER':s.kind==='previo'?'TOTAL A COBRAR AHORA':'TOTAL'}
+function dueLabel(s){return s.kind==='senal'?'PENDIENTE AL RECOGER':s.kind==='previo'?'TOTAL A COBRAR AHORA':s.kind==='fianza'?'TOTAL A COBRAR':'TOTAL'}
 function dueCents(s){return s.kind?s.pendingCents:s.totalCents}
 function receiptText(s){
  const line='────────────────────', enc=s.op==='encargo';
@@ -781,8 +836,9 @@ function receiptText(s){
  if(s.client)out.push('Cliente: '+s.client);
  if(s.telegram)out.push('Telegrama: '+s.telegram);
  if(s.convenio)out.push('Convenio: '+s.convenio);
+ if(s.fromEncargo)out.push('Entrega del encargo: '+s.fromEncargo);
  out.push('');
- s.items.forEach(x=>{out.push(x.name);out.push(`${x.qty} × ${money(x.cents)} = ${money(x.qty*x.cents)}`);out.push('')});
+ groupItems(s).forEach(g=>{if(g.title)out.push(g.title,'');g.items.forEach(x=>{out.push(x.name);out.push(`${x.qty} × ${money(x.cents)} = ${money(x.qty*x.cents)}`);out.push('')})});
  out.push(line,summaryText(s.products,s.units));
  finRows(s).forEach(r=>out.push(r[0]+': '+r[1]));
  out.push(dueLabel(s)+': '+money(dueCents(s)),line,'','El precio de un apellido.');
@@ -795,7 +851,7 @@ function renderReceipt(s){
  $('rcId').textContent=s.id;
  $('rcDate').textContent=s.date;
  $('rcTime').textContent=s.time;
- $('rcRows').innerHTML=s.items.map(x=>`<div class="rc-row"><span>${esc(x.name)}</span><span>${x.qty}</span><span>${money(x.cents)}</span><span>${money(x.qty*x.cents)}</span></div>`).join('');
+ $('rcRows').innerHTML=groupItems(s).map(g=>(g.title?`<div class="rc-sub">${g.title}</div>`:'')+g.items.map(x=>`<div class="rc-row"><span>${esc(x.name)}</span><span>${x.qty}</span><span>${money(x.cents)}</span><span>${money(x.qty*x.cents)}</span></div>`).join('')).join('');
  $('rcSummary').textContent=summaryText(s.products,s.units);
  $('rcFin').innerHTML=finRows(s).map(r=>`<div class="rfin ${r[2]||''}"><span>${esc(r[0])}</span><span>${r[1]}</span></div>`).join('');
  $('rcTotalLabel').textContent=dueLabel(s);
@@ -829,6 +885,7 @@ receiptModal.addEventListener('click',e=>{if(e.target===receiptModal)closeModal(
 document.addEventListener('keydown',e=>{
  if(e.key!=='Escape')return;
  if(!confirmModal.hidden)answerConfirm(false);
+ else if(!encModal.hidden)closeModal(encModal);
  else if(!entryModal.hidden)closeModal(entryModal);
  else if(!shiftModal.hidden)closeModal(shiftModal);
  else if(!receiptModal.hidden)closeModal(receiptModal);
@@ -874,12 +931,12 @@ inputs.forEach(i=>{
 document.getElementById('clear').onclick=async()=>{
  if(!selected().length)return say('El pedido ya está vacío');
  if(!await askConfirm('Vaciar pedido','¿Seguro que quieres borrar todos los productos del pedido actual?','Vaciar'))return;
- clearQuantities();resetSale();calc(false);say('Pedido vaciado');
+ clearQuantities();resetSale();releaseEncargo();calc(false);say('Pedido vaciado');
 };
 document.getElementById('new').onclick=doNew;
 document.getElementById('finish').onclick=()=>{
  const s=ensureSale(); if(!s)return;
- renderReceipt(s);openModal(receiptModal);receiptModal.scrollTop=0;say('Venta finalizada · '+s.id);
+ renderReceipt(s);openModal(receiptModal);receiptModal.scrollTop=0;say((s.op==='encargo'?'Encargo guardado · ':'Venta finalizada · ')+s.id);
 };
 document.getElementById('copy').onclick=doCopy;
 document.getElementById('download').onclick=doDownload;
@@ -938,6 +995,15 @@ toTop.onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
    Ejemplos (descomentar y editar):
    {id:'ejemplo',nombre:'Convenio Ejemplo',descuento:10,precios:{'Cattleman Revolver':11.50}}
    {cliente:'Nombre del cliente',precios:{'Cattleman Revolver':9.99}} */
+/* Estado de encargos almacenados (se declara aquí porque el cliente depende de él) */
+const KEY_ENC='harrington_encargos_v1', KEY_LOADED='harrington_loaded_v1';
+let encargos=[];
+try{encargos=JSON.parse(store.get(KEY_ENC)||'[]')}catch(e){}
+if(!Array.isArray(encargos))encargos=[];
+let loadedEnc=encargos.find(e=>e.id===store.get(KEY_LOADED))||null;
+const bannerEl=document.getElementById('loadedBanner'), finishEncBtn=document.getElementById('finishEnc'), encBtn=document.getElementById('encBtn'), encModal=document.getElementById('encModal');
+function origQty(name){const f=loadedEnc&&loadedEnc.items.find(x=>x.name===name);return f?f.qty:0}
+function sanitizeTelegram(v){return String(v||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,10)}
 const CLIENTE_SHERIFF='Departamento del Sheriff';
 const CONVENIOS=[
  {id:'ninguno',nombre:'Sin convenio',descuento:0,precios:{}}
@@ -971,12 +1037,12 @@ function customerOk(){
   say(customer.type==='empresa'?'Indica el nombre de la empresa':'Indica el nombre del cliente');
   nameInput.focus();return false;
  }
- if(customer.op==='encargo'&&!customer.telegram.trim()){
-  say('El telegrama de contacto es obligatorio en un encargo');
+ if(customer.op==='encargo'&&!loadedEnc&&!/^[A-Z0-9-]{1,10}$/.test(customer.telegram)){
+  say(customer.telegram?'Telegrama no válido: solo letras, números y guiones (máx. 10)':'El telegrama de contacto es obligatorio en un encargo');
   telInput.focus();return false;
  }
  if(computeFin().over){
-  say(customer.op==='encargo'?'La señal no puede superar el precio final':'La cantidad abonada no puede superar el precio final');
+  say(loadedEnc?'La fianza supera el precio final: añade productos o revisa el encargo':customer.op==='encargo'?'La señal no puede superar el precio final':'La cantidad abonada no puede superar el precio final');
   return false;
  }
  return true;
@@ -986,8 +1052,11 @@ function renderCustomer(){
  opSel.value=customer.op;typeSel.value=customer.type;nameInput.value=customer.name;convSel.value=customer.convenio;
  telInput.value=customer.telegram;depositInput.value=customer.deposit;priorInput.value=customer.priorAmt;
  nameWrap.hidden=customer.type==='sheriff';
- telWrap.hidden=!enc;depositBox.hidden=!enc;priorBox.hidden=enc;
- priorAmtWrap.hidden=!customer.prior;
+ const ld=!!loadedEnc;
+ telWrap.hidden=!enc||ld;depositBox.hidden=!enc||ld;priorBox.hidden=enc||ld;opSel.disabled=ld;
+ bannerEl.hidden=!ld;finishEncBtn.hidden=!ld||loadedEnc.finished;
+ if(ld)bannerEl.innerHTML=`<b>${loadedEnc.finished?'ENCARGO FINALIZADO':'ENCARGO CARGADO'} · ${esc(loadedEnc.id)}</b><span>${esc(loadedEnc.client)} · Telegrama ${esc(loadedEnc.telegram)}</span><span>Fianza ya pagada: ${money(loadedEnc.depositCents)}</span>`;
+ priorAmtWrap.hidden=!customer.prior||!!loadedEnc;
  priorBtns.forEach(b=>b.classList.toggle('on',(b.dataset.prior==='1')===customer.prior));
  nameLabel.textContent=customer.type==='empresa'?'Nombre de la empresa':'Nombre del cliente';
  nameInput.placeholder=customer.type==='empresa'?'Empresa':'Nombre';
@@ -999,13 +1068,17 @@ function customerChanged(){
  noteEl.hidden=!noteEl.textContent;
  calc();
 }
-function resetCustomer(){customer=defaultCustomer();renderCustomer();customerChanged()}
+function resetCustomer(){loadedEnc=null;store.remove(KEY_LOADED);customer=defaultCustomer();renderCustomer();customerChanged()}
 CONVENIOS.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nombre;convSel.appendChild(o)});
 typeSel.onchange=()=>{customer.type=typeSel.value;renderCustomer();customerChanged()};
 nameInput.addEventListener('input',()=>{customer.name=nameInput.value;customerChanged()});
 convSel.onchange=()=>{customer.convenio=convSel.value;customerChanged()};
 opSel.onchange=()=>{customer.op=opSel.value;renderCustomer();customerChanged()};
-telInput.addEventListener('input',()=>{customer.telegram=telInput.value;customerChanged()});
+const telHint=document.getElementById('telHint');
+telInput.addEventListener('input',()=>{
+ const raw=telInput.value, v=sanitizeTelegram(raw);
+ telInput.value=v;customer.telegram=v;telHint.hidden=(raw===v);customerChanged();
+});
 function moneyField(inp,key){
  inp.addEventListener('input',()=>{
   const v=inp.value.replace(/[^0-9.,]/g,'');
@@ -1018,7 +1091,7 @@ priorBtns.forEach(b=>b.onclick=()=>{customer.prior=b.dataset.prior==='1';renderC
 try{
  const c=JSON.parse(store.get(KEY_CUSTOMER)||'null');
  if(c&&['particular','empresa','sheriff'].includes(c.type)){customer.type=c.type;customer.name=String(c.name||'').slice(0,40);if(CONVENIOS.some(v=>v.id===c.convenio))customer.convenio=c.convenio;
-  customer.op=c.op==='encargo'?'encargo':'venta';customer.telegram=String(c.telegram||'').slice(0,40);
+  customer.op=c.op==='encargo'?'encargo':'venta';customer.telegram=sanitizeTelegram(c.telegram);
   customer.deposit=String(c.deposit||'').replace(/[^0-9.,]/g,'').slice(0,12);customer.prior=!!c.prior;customer.priorAmt=String(c.priorAmt||'').replace(/[^0-9.,]/g,'').slice(0,12)}
 }catch(e){}
 renderCustomer();
@@ -1033,6 +1106,117 @@ document.querySelectorAll('.product[data-cat="municion"] .qty').forEach(q=>{
  });
  q.appendChild(d);
 });
+
+/* ===== Encargos almacenados ===== */
+function saveEncs(){store.set(KEY_ENC,JSON.stringify(encargos))}
+function pendingEncs(){return encargos.filter(e=>!e.finished)}
+function updateEncBtn(){const n=pendingEncs().length;encBtn.textContent=n?`ENCARGOS (${n})`:'ENCARGOS'}
+function releaseEncargo(){if(!loadedEnc)return;loadedEnc=null;store.remove(KEY_LOADED);renderCustomer()}
+function groupItems(s){
+ if(!s.fromEncargo)return [{title:'',items:s.items}];
+ const o=[],a=[];
+ s.items.forEach(x=>{
+  const oq=Math.min(x.qty,x.oq||0), aq=x.qty-oq;
+  if(oq)o.push({name:x.name,cents:x.cents,qty:oq});
+  if(aq)a.push({name:x.name,cents:x.cents,qty:aq});
+ });
+ return [{title:'ENCARGO ORIGINAL',items:o},{title:'PRODUCTOS AÑADIDOS',items:a}].filter(g=>g.items.length);
+}
+function cartRow(x){return `<div class="cartrow"><span>${esc(x.name)}</span><span>${x.qty}</span><span>${money(x.cents)}</span><span>${money(x.qty*x.cents)}</span></div>`}
+function cartHTML(items){
+ const head='<div class="cartrow carthead"><span>Producto</span><span>Cant.</span><span>P. unit.</span><span>Subtotal</span></div>';
+ if(!loadedEnc)return head+items.map(cartRow).join('');
+ return head+groupItems({fromEncargo:true,items:items}).map(g=>`<div class="cart-sub">${g.title}</div>`+g.items.map(cartRow).join('')).join('');
+}
+/* Guarda (o actualiza) automáticamente el encargo al completarlo. Conserva sus estados si ya existía. */
+function saveEncargoFromSale(sl){
+ const data={id:sl.id,date:sl.date,time:sl.time,clientType:customer.type,client:sl.client,telegram:sl.telegram,convenioId:customer.convenio,convenio:sl.convenio,
+  items:sl.items.map(x=>({name:x.name,cents:x.cents,qty:x.qty})),baseCents:sl.baseCents,discountCents:sl.discountCents,
+  totalCents:sl.totalCents,depositCents:sl.paidCents,pendingCents:sl.pendingCents};
+ const cur=encargos.find(e=>e.id===sl.id);
+ if(cur)Object.assign(cur,data);
+ else encargos.push(Object.assign(data,{fab:'PENDIENTE',avisado:false,finished:false}));
+ saveEncs();updateEncBtn();
+}
+const TYPE_NAMES={particular:'Cliente particular',empresa:'Empresa',sheriff:'Departamento del Sheriff'};
+let encView=null;
+function badgesHTML(e){return `<span class="badge ${e.fab==='FABRICADO'?'fab':'pend'}">${e.fab}</span><span class="badge ${e.avisado?'si':'no'}">Cliente avisado: ${e.avisado?'SÍ':'NO'}</span>`}
+function renderEnc(){
+ const body=document.getElementById('encBody'), title=document.getElementById('encTitle');
+ const e=encView?pendingEncs().find(x=>x.id===encView):null;
+ if(!e){
+  encView=null;
+  const list=pendingEncs().slice().reverse();
+  title.textContent=`ENCARGOS PENDIENTES (${list.length})`;
+  body.innerHTML=list.length?list.map(x=>{
+   const its=x.items.slice(0,2).map(i=>`${esc(i.name)} ×${i.qty}`).join(', ')+(x.items.length>2?` y ${x.items.length-2} más`:'');
+   return `<button type="button" class="enc-card" data-open="${esc(x.id)}"><div class="t">${esc(x.client)} — Telegrama ${esc(x.telegram)}</div><div class="it">${its}</div>`+
+    `<div class="enc-money"><span>Total: ${money(x.totalCents)}</span><span>Fianza pagada: ${money(x.depositCents)}</span><span>Pendiente: ${money(x.pendingCents)}</span></div><div class="badges">${badgesHTML(x)}</div></button>`;
+  }).join(''):'<div class="enc-empty">▣<br>No hay encargos pendientes.<br>Los encargos nuevos se guardan aquí automáticamente.</div>';
+  return;
+ }
+ title.textContent='FICHA DEL ENCARGO';
+ const rows=finRows({baseCents:e.baseCents,discountCents:e.discountCents,discountLabel:'Convenio',kind:'senal',totalCents:e.totalCents,paidCents:e.depositCents}).map(r=>[r[0]==='Señal entregada'?'Fianza pagada':r[0],r[1],r[2]]);
+ body.innerHTML=`<button type="button" class="enc-back" data-act="back">◂ Volver a la lista</button>
+  <div class="enc-id">${esc(e.id)} · ${esc(e.date)} ${esc(e.time)}</div>
+  <div class="enc-kv"><div class="full"><span>Cliente</span><b>${esc(e.client)}</b></div><div><span>Tipo</span><b>${esc(TYPE_NAMES[e.clientType]||'')}</b></div><div><span>Telegrama</span><b>${esc(e.telegram)}</b></div>${e.convenio?`<div class="full"><span>Convenio</span><b>${esc(e.convenio)}</b></div>`:''}</div>
+  <div class="cartrow carthead"><span>Producto</span><span>Cant.</span><span>P. unit.</span><span>Subtotal</span></div>${e.items.map(cartRow).join('')}
+  <div style="margin-top:8px">${rows.map(r=>`<div class="brow ${r[2]||''}"><span>${esc(r[0])}</span><span>${r[1]}</span></div>`).join('')}<div class="brow due"><span>PENDIENTE</span><span>${money(e.pendingCents)}</span></div></div>
+  <div class="enc-sec">
+   <label>ESTADO DE FABRICACIÓN<select id="encFab"><option value="PENDIENTE"${e.fab==='PENDIENTE'?' selected':''}>PENDIENTE</option><option value="FABRICADO"${e.fab==='FABRICADO'?' selected':''}>FABRICADO</option></select></label>
+   <label>¿CLIENTE AVISADO?<select id="encAv"><option value="NO"${!e.avisado?' selected':''}>NO</option><option value="SI"${e.avisado?' selected':''}${e.fab==='PENDIENTE'?' disabled':''}>SÍ</option></select></label>
+   ${e.fab==='PENDIENTE'?'<div class="enc-note">Podrás marcar «avisado» cuando el encargo esté FABRICADO.</div>':''}
+  </div>
+  <div class="enc-actions"><button type="button" class="primary" data-act="load">CARGAR ENCARGO</button><button type="button" class="warn" data-act="finish">FINALIZAR ENCARGO</button></div>`;
+}
+function openEnc(){encView=null;renderEnc();openModal(encModal);encModal.scrollTop=0}
+async function loadEncargo(id){
+ const e=pendingEncs().find(x=>x.id===id); if(!e)return;
+ if((selected().length||sale)&&!await askConfirm('Cargar encargo','Se reemplazará el pedido actual por el encargo '+e.id+'.','Cargar'))return;
+ clearQuantities();resetSale();
+ e.items.forEach(x=>{const i=inputs.find(n=>n.dataset.name===x.name);if(i)i.value=x.qty});
+ loadedEnc=e;store.set(KEY_LOADED,e.id);
+ customer=Object.assign(defaultCustomer(),{type:e.clientType||'particular',name:e.clientType==='sheriff'?'':e.client,convenio:CONVENIOS.some(v=>v.id===e.convenioId)?e.convenioId:'ninguno',telegram:e.telegram});
+ renderCustomer();customerChanged();closeModal(encModal);
+ if(window.innerWidth<=900)document.querySelector('.order').scrollIntoView({behavior:'smooth',block:'start'});
+ say('Encargo cargado · '+e.id);
+}
+async function finishFromCard(id){
+ const e=pendingEncs().find(x=>x.id===id); if(!e)return;
+ if(!await askConfirm('Finalizar encargo','El encargo '+e.id+' dejará de aparecer en la lista de pendientes. ¿Continuar?','Finalizar'))return;
+ e.finished=true;e.finishedAt=Date.now();saveEncs();updateEncBtn();renderCustomer();renderEnc();say('Encargo finalizado');
+}
+encBtn.onclick=openEnc;
+document.getElementById('encClose').onclick=()=>closeModal(encModal);
+encModal.addEventListener('click',e=>{
+ if(e.target===encModal)return closeModal(encModal);
+ const card=e.target.closest('[data-open]');
+ if(card){encView=card.dataset.open;renderEnc();encModal.scrollTop=0;return}
+ const act=e.target.closest('[data-act]');
+ if(!act)return;
+ if(act.dataset.act==='back'){encView=null;renderEnc()}
+ else if(act.dataset.act==='load')loadEncargo(encView);
+ else if(act.dataset.act==='finish')finishFromCard(encView);
+});
+encModal.addEventListener('change',e=>{
+ const en=pendingEncs().find(x=>x.id===encView); if(!en)return;
+ if(e.target.id==='encFab'){
+  en.fab=e.target.value;
+  if(en.fab==='PENDIENTE')en.avisado=false; /* coherencia: pendiente nunca puede estar avisado */
+ }else if(e.target.id==='encAv'){
+  en.avisado=e.target.value==='SI'&&en.fab==='FABRICADO';
+ }else return;
+ saveEncs();renderEnc();say('Estado guardado');
+});
+finishEncBtn.onclick=async()=>{
+ if(!loadedEnc||loadedEnc.finished)return;
+ const sl=ensureSale(); if(!sl)return;
+ if(!await askConfirm('Finalizar encargo','Se marcará el encargo '+loadedEnc.id+' como entregado y cobrado. Dejará de aparecer en pendientes.','Finalizar'))return;
+ loadedEnc.finished=true;loadedEnc.finishedAt=Date.now();loadedEnc.deliverySale=sl.id;
+ saveEncs();updateEncBtn();renderCustomer();
+ renderReceipt(sl);openModal(receiptModal);receiptModal.scrollTop=0;say('Encargo finalizado');
+};
+updateEncBtn();
 
 /* ===== Fichaje de empleados ===== */
 const KEY_SHIFT='harrington_shift_v1', KEY_LASTSHIFT='harrington_lastshift_v1', KEY_EMPLOYEE='harrington_employee_v1';
