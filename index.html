@@ -65,7 +65,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold2);outline-
 .order{position:sticky;top:8px;align-self:start}
 .order-title{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;border-bottom:1px solid #8b6a2e;background:linear-gradient(90deg,#25180e,#0d1c14);color:#f0d278;font-size:21px;font-weight:bold}
 .danger{background:#5b1515;border:1px solid #a84532;color:#f7d7c4;border-radius:5px;padding:7px 10px;cursor:pointer}
-.cart{padding:8px;max-height:clamp(120px,calc(100vh - 720px),390px);overflow:auto;min-height:150px}
+.cart{padding:8px;max-height:clamp(100px,calc(100vh - 1000px),390px);overflow:auto;min-height:150px}
 .empty{text-align:center;color:#827866;padding:40px 20px;line-height:1.6}
 .cartrow{display:grid;grid-template-columns:1fr 45px 72px 80px;gap:5px;padding:8px 5px;border-bottom:1px solid #26382d;font-size:13px;align-items:center}
 .cartrow span:not(:first-child){text-align:right}
@@ -148,6 +148,30 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
 .qty .quick{flex-basis:100%;display:flex;gap:4px;margin-top:5px}
 .qty .quick button{flex:1;width:auto;height:28px;font-size:13px;font-weight:bold}
 .carthead{color:#e8c96f;font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-bottom-color:#72572b}
+
+/* ===== ENCARGOS, SEÑAL Y DESGLOSE ===== */
+.pay-box{margin:8px 9px 0;padding:10px;border:1px solid #8b6a2e;border-radius:6px;background:#0a1711}
+.pay-box[hidden],.pay-box [hidden]{display:none}
+.pay-title{color:#f0d278;font-size:12px;font-weight:bold;letter-spacing:.1em;margin-bottom:8px}
+.pay-box .fld{display:block;margin-top:8px}
+.pay-box .fld span{display:block;margin-bottom:3px;color:#c9b27a;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.money{display:flex;align-items:center;border:1px solid #5d4928;border-radius:6px;background:#040b08}
+.money:focus-within{border-color:var(--gold)}
+.money i{padding:0 4px 0 12px;color:#f3d47c;font-style:normal;font-weight:bold}
+.money input{flex:1;min-width:0;width:100%;min-height:42px;padding:9px 10px 9px 4px;border:0;background:transparent;color:#eee0bd;font-size:16px;font-family:inherit;outline:0}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.seg button{min-height:44px;border-radius:6px;border:1px solid #76633e;background:#242522;color:#eee1c6;font-weight:bold;cursor:pointer;touch-action:manipulation}
+.seg button.on{background:linear-gradient(#80601f,#3a2a0c);border-color:var(--gold2);color:#fff0b6;box-shadow:0 0 10px #d7ae5455}
+.pay-err{margin-top:6px;color:#f0a58f;font-size:13px}
+.breakdown{margin:6px 9px 0}
+.brow{display:flex;justify-content:space-between;gap:8px;padding:5px 2px;font-size:14px;color:#d9ccaa;font-variant-numeric:tabular-nums}
+.brow.disc{color:#e0c27a;font-style:italic}
+.brow.paid{margin:3px 0;padding:6px 8px;border:1px dashed #3f7a52;border-radius:4px;background:#0d2a1a;color:#a7e3b6;font-weight:bold}
+.total span:first-child{font-size:clamp(13px,3.6vw,17px);letter-spacing:.06em;padding-right:8px}
+.rfin{display:flex;justify-content:space-between;gap:8px;padding:5px 2px;font-size:14px;font-variant-numeric:tabular-nums}
+.rfin.disc{color:#6b4c1d;font-style:italic}
+.rfin.paid{margin:4px 0;padding:5px 8px;border:1px dashed #1b3022;font-weight:bold;color:#1b3022;background:#1b30221a}
+#rcFin{margin-top:10px;text-align:left}
 
 /* ===== FICHAJE ===== */
 .clock-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0 0;padding:10px 12px;border:1px solid #8b6a2e;border-radius:8px;background:linear-gradient(90deg,#25180e,#0d1c14);box-shadow:0 6px 20px #0008}
@@ -481,6 +505,8 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
 <aside class="panel order">
   <div class="order-title"><span>PEDIDO ACTUAL</span><button class="danger" id="clear">Vaciar</button></div>
   <div class="client-box">
+    <label class="fld wide"><span>Tipo de operación</span>
+      <select id="opType"><option value="venta">Venta normal</option><option value="encargo">Encargo</option></select></label>
     <label class="fld wide"><span>Tipo de cliente</span>
       <select id="clientType">
         <option value="particular">Cliente particular</option>
@@ -489,12 +515,26 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
       </select></label>
     <label class="fld wide" id="clientNameWrap"><span id="clientNameLabel">Nombre del cliente</span>
       <input id="clientName" type="text" maxlength="40" autocomplete="off" placeholder="Nombre"></label>
+    <label class="fld wide" id="telegramWrap" hidden><span>Telegrama de contacto</span>
+      <input id="telegram" type="text" maxlength="40" autocomplete="off" placeholder="Ej.: JS-458"></label>
     <label class="fld wide"><span>Convenio</span><select id="convenio"></select></label>
     <div class="client-note" id="clientNote" hidden></div>
   </div>
   <div class="cart" id="cart"><div class="empty">▣<br>Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div></div>
   <div class="summary" id="summary">0 productos · 0 unidades</div>
-  <div class="total"><span>TOTAL</span><span id="grand">$0.00</span></div>
+  <div class="pay-box" id="depositBox" hidden>
+    <div class="pay-title">SEÑAL DEL ENCARGO</div>
+    <label class="fld"><span>Señal entregada</span><div class="money"><i>$</i><input id="depositAmt" inputmode="decimal" placeholder="0.00" autocomplete="off"></div></label>
+    <div class="pay-err" id="depositErr" hidden></div>
+  </div>
+  <div class="pay-box" id="priorBox">
+    <div class="pay-title">¿EXISTE UNA CANTIDAD ABONADA ANTERIORMENTE?</div>
+    <div class="seg"><button type="button" class="on" data-prior="0">No</button><button type="button" data-prior="1">Sí</button></div>
+    <label class="fld" id="priorAmtWrap" hidden><span>Cantidad abonada anteriormente</span><div class="money"><i>$</i><input id="priorAmt" inputmode="decimal" placeholder="0.00" autocomplete="off"></div></label>
+    <div class="pay-err" id="priorErr" hidden></div>
+  </div>
+  <div class="breakdown" id="breakdown"></div>
+  <div class="total"><span id="totalLabel">TOTAL</span><span id="grand">$0.00</span></div>
   <div class="actions">
     <button class="finish" id="finish">▣ Finalizar venta</button>
     <button id="copy">▤ Copiar para Discord</button>
@@ -521,18 +561,20 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
         <div class="receipt-place">Saint Denis · 1880</div>
         <div class="receipt-motto">El precio de un apellido.</div>
         <div class="receipt-orn">◆ ─── ✦ ─── ◆</div>
-        <div class="receipt-title">REGISTRO DE VENTA</div>
+        <div class="receipt-title" id="rcTitle">REGISTRO DE VENTA</div>
         <div class="receipt-meta">
-          <div class="full"><span>Venta N.º</span><b id="rcId"></b></div>
+          <div class="full"><span id="rcIdLabel">Venta N.º</span><b id="rcId"></b></div>
           <div><span>Fecha</span><b id="rcDate"></b></div>
           <div><span>Hora</span><b id="rcTime"></b></div>
           <div class="full" id="rcClientWrap"><span>Cliente</span><b id="rcClient"></b></div>
+          <div class="full" id="rcTelWrap"><span>Telegrama</span><b id="rcTel"></b></div>
           <div class="full" id="rcConvWrap"><span>Convenio</span><b id="rcConv"></b></div>
         </div>
         <div class="rt-head"><span>Producto</span><span>Cant.</span><span>P. unit.</span><span>Subtotal</span></div>
         <div id="rcRows"></div>
         <div class="receipt-summary" id="rcSummary"></div>
-        <div class="receipt-total"><span>TOTAL</span><span id="rcTotal"></span></div>
+        <div id="rcFin"></div>
+        <div class="receipt-total"><span id="rcTotalLabel">TOTAL</span><span id="rcTotal"></span></div>
         <div class="receipt-foot">FINE FIREARMS · AMMUNITION · REPAIRS<br>SAINT DENIS</div>
       </div>
     </div>
@@ -659,7 +701,8 @@ function calc(animate=true){
   row.classList.toggle('has-qty',q>0);
   totalCents+=sub;units+=q;if(q>0)products++;
  });
- const gTxt=money(totalCents);
+ const fin=computeFin();renderFin(fin);
+ const gTxt=money(fin.due);
  if(grand.textContent!==gTxt){grand.textContent=gTxt;if(animate)bump(grand)}
  summaryEl.textContent=summaryText(products,units);
  const items=selected();
@@ -675,13 +718,14 @@ function nextSaleNumber(){
  store.set(KEY_COUNTER,String(n));
  return n;
 }
-function signature(items){return items.map(x=>x.name+':'+x.qty+':'+x.cents).join('|')+'#'+customerName()+'#'+customer.convenio}
+function signature(items){return items.map(x=>x.name+':'+x.qty+':'+x.cents).join('|')+'#'+customerName()+'#'+customer.convenio+'#'+customer.op+'#'+customer.telegram.trim()+'#'+computeFin().paid}
 function snapshot(items,now){
  const total=items.reduce((a,x)=>a+x.qty*x.cents,0), units=items.reduce((a,x)=>a+x.qty,0);
  return {
   items:items.map(x=>({name:x.name,cents:x.cents,qty:x.qty})),
   totalCents:total,units:units,products:items.length,sig:signature(items),
   client:customerName(),convenio:currentConvenio().id!=='ninguno'?currentConvenio().nombre:'',
+  ...finToSale(computeFin()),op:customer.op,telegram:customer.op==='encargo'?customer.telegram.trim():'',
   date:`${madridParts(now.getTime()).day}/${madridParts(now.getTime()).month}/${madridParts(now.getTime()).year}`,
   time:`${madridParts(now.getTime()).hour}:${madridParts(now.getTime()).minute}`
  };
@@ -710,24 +754,58 @@ function restoreSale(){
  }catch(e){}
 }
 function resetSale(){sale=null;store.remove(KEY_SALE)}
+/* Desglose económico: subtotal, convenio, precio final, señal / abonado */
+function parseMoney(v){const n=parseFloat(String(v||'').replace(',','.').replace(/[^0-9.]/g,''));return isFinite(n)&&n>0?Math.round(Math.min(n,99999999)*100):0}
+function computeFin(){
+ let base=0,final=0;
+ inputs.forEach(i=>{const q=readQty(i);if(q){base+=q*baseCents(i);final+=q*priceCents(i)}});
+ const enc=customer.op==='encargo', prior=!enc&&customer.prior;
+ const raw=enc?parseMoney(customer.deposit):(prior?parseMoney(customer.priorAmt):0);
+ const kind=enc?'senal':(prior?'previo':'');
+ const paid=Math.min(raw,final);
+ return {base:base,final:final,discount:Math.max(0,base-final),discountLabel:specialPrices()?'Precio especial':'Convenio',raw:raw,over:raw>final,kind:kind,paid:paid,pending:final-paid,due:kind?final-paid:final};
+}
+function finToSale(f){return {baseCents:f.base,discountCents:f.discount,discountLabel:f.discountLabel,kind:f.kind,totalCents:f.final,paidCents:f.paid,pendingCents:f.pending}}
+function finRows(s){
+ const r=[];
+ if(s.discountCents>0){r.push(['Subtotal',money(s.baseCents)]);r.push([s.discountLabel||'Convenio','−'+money(s.discountCents),'disc'])}
+ if(s.kind){r.push([s.kind==='senal'?'Precio final del encargo':'Precio final',money(s.totalCents)]);r.push([s.kind==='senal'?'Señal entregada':'Ya abonado','−'+money(s.paidCents),'paid'])}
+ else if(s.discountCents>0)r.push(['Precio final',money(s.totalCents)]);
+ return r;
+}
+function dueLabel(s){return s.kind==='senal'?'PENDIENTE AL RECOGER':s.kind==='previo'?'TOTAL A COBRAR AHORA':'TOTAL'}
+function dueCents(s){return s.kind?s.pendingCents:s.totalCents}
 function receiptText(s){
- const line='────────────────────';
- const out=['HARRINGTON GUNSMITH','REGISTRO DE VENTA','Saint Denis · 1880','','Venta: '+s.id,'Fecha: '+s.date,'Hora: '+s.time,...(s.client?['Cliente: '+s.client]:[]),...(s.convenio?['Convenio: '+s.convenio]:[]),''];
+ const line='────────────────────', enc=s.op==='encargo';
+ const out=['HARRINGTON GUNSMITH',enc?'REGISTRO DE ENCARGO':'REGISTRO DE VENTA','Saint Denis · 1880','',(enc?'Encargo: ':'Venta: ')+s.id,'Fecha: '+s.date,'Hora: '+s.time];
+ if(s.client)out.push('Cliente: '+s.client);
+ if(s.telegram)out.push('Telegrama: '+s.telegram);
+ if(s.convenio)out.push('Convenio: '+s.convenio);
+ out.push('');
  s.items.forEach(x=>{out.push(x.name);out.push(`${x.qty} × ${money(x.cents)} = ${money(x.qty*x.cents)}`);out.push('')});
- out.push(line,summaryText(s.products,s.units),'TOTAL: '+money(s.totalCents),line,'','El precio de un apellido.');
+ out.push(line,summaryText(s.products,s.units));
+ finRows(s).forEach(r=>out.push(r[0]+': '+r[1]));
+ out.push(dueLabel(s)+': '+money(dueCents(s)),line,'','El precio de un apellido.');
  return out.join('\n');
 }
 function renderReceipt(s){
- document.getElementById('rcId').textContent=s.id;
- document.getElementById('rcDate').textContent=s.date;
- document.getElementById('rcTime').textContent=s.time;
- document.getElementById('rcRows').innerHTML=s.items.map(x=>`<div class="rc-row"><span>${esc(x.name)}</span><span>${x.qty}</span><span>${money(x.cents)}</span><span>${money(x.qty*x.cents)}</span></div>`).join('');
- document.getElementById('rcSummary').textContent=summaryText(s.products,s.units);
- document.getElementById('rcTotal').textContent=money(s.totalCents);
- document.getElementById('rcClient').textContent=s.client||'';
- document.getElementById('rcClientWrap').hidden=!s.client;
- document.getElementById('rcConv').textContent=s.convenio||'';
- document.getElementById('rcConvWrap').hidden=!s.convenio;
+ const enc=s.op==='encargo', $=id=>document.getElementById(id);
+ $('rcTitle').textContent=enc?'REGISTRO DE ENCARGO':'REGISTRO DE VENTA';
+ $('rcIdLabel').textContent=enc?'Encargo N.º':'Venta N.º';
+ $('rcId').textContent=s.id;
+ $('rcDate').textContent=s.date;
+ $('rcTime').textContent=s.time;
+ $('rcRows').innerHTML=s.items.map(x=>`<div class="rc-row"><span>${esc(x.name)}</span><span>${x.qty}</span><span>${money(x.cents)}</span><span>${money(x.qty*x.cents)}</span></div>`).join('');
+ $('rcSummary').textContent=summaryText(s.products,s.units);
+ $('rcFin').innerHTML=finRows(s).map(r=>`<div class="rfin ${r[2]||''}"><span>${esc(r[0])}</span><span>${r[1]}</span></div>`).join('');
+ $('rcTotalLabel').textContent=dueLabel(s);
+ $('rcTotal').textContent=money(dueCents(s));
+ $('rcClient').textContent=s.client||'';
+ $('rcClientWrap').hidden=!s.client;
+ $('rcTel').textContent=s.telegram||'';
+ $('rcTelWrap').hidden=!s.telegram;
+ $('rcConv').textContent=s.convenio||'';
+ $('rcConvWrap').hidden=!s.convenio;
 }
 
 /* ===== Ventanas ===== */
@@ -869,18 +947,48 @@ const PRECIOS_CLIENTE=[
 const KEY_CUSTOMER='harrington_customer_v1';
 const typeSel=document.getElementById('clientType'), nameInput=document.getElementById('clientName'), convSel=document.getElementById('convenio');
 const nameWrap=document.getElementById('clientNameWrap'), nameLabel=document.getElementById('clientNameLabel'), noteEl=document.getElementById('clientNote');
-let customer={type:'particular',name:'',convenio:'ninguno'};
+function defaultCustomer(){return {type:'particular',name:'',convenio:'ninguno',op:'venta',telegram:'',deposit:'',prior:false,priorAmt:''}}
+const opSel=document.getElementById('opType'), telInput=document.getElementById('telegram'), telWrap=document.getElementById('telegramWrap');
+const depositBox=document.getElementById('depositBox'), priorBox=document.getElementById('priorBox'), priorAmtWrap=document.getElementById('priorAmtWrap');
+const depositInput=document.getElementById('depositAmt'), priorInput=document.getElementById('priorAmt');
+const priorBtns=[...document.querySelectorAll('[data-prior]')];
+const breakdownEl=document.getElementById('breakdown'), totalLabel=document.getElementById('totalLabel');
+function renderFin(f){
+ const s=finToSale(f);
+ breakdownEl.innerHTML=finRows(s).map(r=>`<div class="brow ${r[2]||''}"><span>${esc(r[0])}</span><span>${r[1]}</span></div>`).join('');
+ totalLabel.textContent=dueLabel(s);
+ [['depositErr','señal'],['priorErr','cantidad abonada']].forEach(([id,txt])=>{
+  const el=document.getElementById(id), show=f.over&&((id==='depositErr')===(f.kind==='senal'));
+  el.hidden=!show;if(show)el.textContent=`La ${txt} no puede superar el precio final (${money(f.final)}).`;
+ });
+}
+let customer=defaultCustomer();
 function customerName(){return customer.type==='sheriff'?CLIENTE_SHERIFF:customer.name.trim()}
 function currentConvenio(){return CONVENIOS.find(c=>c.id===customer.convenio)||CONVENIOS[0]}
 function specialPrices(){const n=norm(customerName());return n?PRECIOS_CLIENTE.find(c=>norm(c.cliente)===n)||null:null}
 function customerOk(){
- if(customerName())return true;
- say(customer.type==='empresa'?'Indica el nombre de la empresa':'Indica el nombre del cliente');
- nameInput.focus();return false;
+ if(!customerName()){
+  say(customer.type==='empresa'?'Indica el nombre de la empresa':'Indica el nombre del cliente');
+  nameInput.focus();return false;
+ }
+ if(customer.op==='encargo'&&!customer.telegram.trim()){
+  say('El telegrama de contacto es obligatorio en un encargo');
+  telInput.focus();return false;
+ }
+ if(computeFin().over){
+  say(customer.op==='encargo'?'La señal no puede superar el precio final':'La cantidad abonada no puede superar el precio final');
+  return false;
+ }
+ return true;
 }
 function renderCustomer(){
- typeSel.value=customer.type;nameInput.value=customer.name;convSel.value=customer.convenio;
+ const enc=customer.op==='encargo';
+ opSel.value=customer.op;typeSel.value=customer.type;nameInput.value=customer.name;convSel.value=customer.convenio;
+ telInput.value=customer.telegram;depositInput.value=customer.deposit;priorInput.value=customer.priorAmt;
  nameWrap.hidden=customer.type==='sheriff';
+ telWrap.hidden=!enc;depositBox.hidden=!enc;priorBox.hidden=enc;
+ priorAmtWrap.hidden=!customer.prior;
+ priorBtns.forEach(b=>b.classList.toggle('on',(b.dataset.prior==='1')===customer.prior));
  nameLabel.textContent=customer.type==='empresa'?'Nombre de la empresa':'Nombre del cliente';
  nameInput.placeholder=customer.type==='empresa'?'Empresa':'Nombre';
 }
@@ -891,14 +999,27 @@ function customerChanged(){
  noteEl.hidden=!noteEl.textContent;
  calc();
 }
-function resetCustomer(){customer={type:'particular',name:'',convenio:'ninguno'};renderCustomer();customerChanged()}
+function resetCustomer(){customer=defaultCustomer();renderCustomer();customerChanged()}
 CONVENIOS.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nombre;convSel.appendChild(o)});
 typeSel.onchange=()=>{customer.type=typeSel.value;renderCustomer();customerChanged()};
 nameInput.addEventListener('input',()=>{customer.name=nameInput.value;customerChanged()});
 convSel.onchange=()=>{customer.convenio=convSel.value;customerChanged()};
+opSel.onchange=()=>{customer.op=opSel.value;renderCustomer();customerChanged()};
+telInput.addEventListener('input',()=>{customer.telegram=telInput.value;customerChanged()});
+function moneyField(inp,key){
+ inp.addEventListener('input',()=>{
+  const v=inp.value.replace(/[^0-9.,]/g,'');
+  if(v!==inp.value)inp.value=v;
+  customer[key]=v;customerChanged();
+ });
+}
+moneyField(depositInput,'deposit');moneyField(priorInput,'priorAmt');
+priorBtns.forEach(b=>b.onclick=()=>{customer.prior=b.dataset.prior==='1';renderCustomer();customerChanged();if(customer.prior)priorInput.focus()});
 try{
  const c=JSON.parse(store.get(KEY_CUSTOMER)||'null');
- if(c&&['particular','empresa','sheriff'].includes(c.type)){customer.type=c.type;customer.name=String(c.name||'').slice(0,40);if(CONVENIOS.some(v=>v.id===c.convenio))customer.convenio=c.convenio}
+ if(c&&['particular','empresa','sheriff'].includes(c.type)){customer.type=c.type;customer.name=String(c.name||'').slice(0,40);if(CONVENIOS.some(v=>v.id===c.convenio))customer.convenio=c.convenio;
+  customer.op=c.op==='encargo'?'encargo':'venta';customer.telegram=String(c.telegram||'').slice(0,40);
+  customer.deposit=String(c.deposit||'').replace(/[^0-9.,]/g,'').slice(0,12);customer.prior=!!c.prior;customer.priorAmt=String(c.priorAmt||'').replace(/[^0-9.,]/g,'').slice(0,12)}
 }catch(e){}
 renderCustomer();
 noteEl.hidden=true;
