@@ -226,6 +226,25 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
 .dir-log{padding:8px 4px;border-bottom:1px solid #26382d;font-size:14px;color:#d9ccaa;overflow-wrap:anywhere}
 .dir-log b{color:var(--gold2)}
 
+/* ===== PESTAÑAS VENTA / PRESUPUESTO, EMPLEADOS, STOCK ===== */
+.mode-tabs{display:grid;grid-template-columns:1fr 1fr;margin:0 0 12px;border:1px solid #8b6a2e;border-radius:8px;overflow:hidden;background:#06130e}
+.mode-tab{min-height:48px;border:0;border-right:1px solid #8b6a2e;background:linear-gradient(#150f09,#0a1812);color:#a99a7d;font-size:15px;font-weight:bold;letter-spacing:.2em;cursor:pointer;touch-action:manipulation}
+.mode-tab:last-child{border-right:0}
+.mode-tab.on{background:linear-gradient(#80601f,#3a2a0c);color:#fff0b6;box-shadow:inset 0 0 14px #d7ae5444}
+body.mode-presupuesto .only-venta{display:none!important}
+.nostock{display:block;margin-top:2px;color:#f0a58f;font-size:11px;font-style:normal;letter-spacing:.14em;font-weight:bold}
+.nostock[hidden]{display:none}
+.product.no-stock{opacity:.55}
+.enc-actions .gold{background:linear-gradient(#80601f,#3a2a0c);border-color:#d2a733;color:#fff0b6}
+.emp-btns{display:flex;gap:6px;flex-wrap:wrap}
+.emp-btns button{min-height:44px;padding:8px 10px;border-radius:6px;border:1px solid #b88931;background:#242522;color:#f3e2b0;font-weight:bold;cursor:pointer;font-family:inherit;font-size:12px}
+.emp-btns .warn{background:#5b1515;border-color:#a84532;color:#f7d7c4}
+.stock-cats{grid-template-columns:repeat(3,minmax(0,1fr))!important;max-width:420px!important;margin:0 auto 10px!important}
+.stock-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid #26382d}
+.stock-row small{display:block;margin-top:2px;color:var(--gold2)}
+.stock-row label{flex:0 0 96px;color:#c9b27a;font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.stock-row input{display:block;width:100%;min-height:44px;margin-top:3px;text-align:center;font-size:16px;font-family:inherit;background:#040b08;border:1px solid #5d4928;border-radius:6px;color:#eee0bd}
+
 /* ===== FICHAJE ===== */
 .clock-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0 0;padding:10px 12px;border:1px solid #8b6a2e;border-radius:8px;background:linear-gradient(90deg,#25180e,#0d1c14);box-shadow:0 6px 20px #0008}
 .clock-info{min-width:0;color:#d9ccaa}
@@ -281,7 +300,7 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
   <div class="clock-info"><b>FICHAJE</b><span class="clock-status" id="clockStatus">Sin fichar</span></div>
   <div class="clock-actions">
     <button type="button" class="clock-link enc-btn" id="dirBtn" hidden>DIRECCIÓN</button>
-    <button type="button" class="clock-link enc-btn" id="encBtn">ENCARGOS</button>
+    <button type="button" class="clock-link enc-btn only-venta" id="encBtn">ENCARGOS</button>
     <button type="button" class="clock-link boss-btn" id="bossBtn">JEFE</button>
     <button type="button" class="clock-link" id="lastShiftBtn" hidden>Último registro</button>
     <button type="button" class="clock-btn" id="clockBtn">▸ Fichar entrada</button>
@@ -303,6 +322,11 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
 <div class="category-visual" id="categoryVisual">
   <img id="categoryImage" src="cabecera-harrington.png" alt="Catálogo Harrington Gunsmith">
   <div class="visual-title" id="categoryTitle">Catálogo Harrington</div>
+</div>
+
+<div class="mode-tabs" id="modeTabs">
+  <button type="button" class="mode-tab on" data-mode="venta">VENTA</button>
+  <button type="button" class="mode-tab" data-mode="presupuesto">PRESUPUESTO</button>
 </div>
 
 <div class="grid">
@@ -559,10 +583,10 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
 </section>
 
 <aside class="panel order">
-  <div class="order-title"><span>PEDIDO ACTUAL</span><button class="danger" id="clear">Vaciar</button></div>
-  <div class="loaded-banner" id="loadedBanner" hidden></div>
+  <div class="order-title"><span id="orderTitle">PEDIDO ACTUAL</span><button class="danger" id="clear">Vaciar</button></div>
+  <div class="loaded-banner only-venta" id="loadedBanner" hidden></div>
   <div class="client-box">
-    <label class="fld wide"><span>Tipo de operación</span>
+    <label class="fld wide only-venta"><span>Tipo de operación</span>
       <select id="opType"><option value="venta">Venta normal</option><option value="encargo">Encargo</option></select></label>
     <label class="fld wide"><span>Tipo de cliente</span>
       <select id="clientType">
@@ -570,22 +594,23 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
         <option value="empresa">Empresa</option>
         <option value="sheriff">Departamento del Sheriff</option>
       </select></label>
-    <label class="fld wide" id="clientNameWrap"><span id="clientNameLabel">Nombre del cliente</span>
+    <label class="fld wide only-venta" id="clientNameWrap"><span id="clientNameLabel">Nombre del cliente</span>
       <input id="clientName" type="text" maxlength="40" autocomplete="off" placeholder="Nombre"></label>
-    <label class="fld wide" id="telegramWrap" hidden><span>Telegrama de contacto</span>
+    <label class="fld wide only-venta" id="telegramWrap" hidden><span>Telegrama de contacto</span>
       <input id="telegram" type="text" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Ej.: JS-458"><div class="pay-err" id="telHint" hidden>Solo letras, números y guiones (máximo 10).</div></label>
     <label class="fld wide"><span>Convenio</span><select id="convenio"></select></label>
     <label class="fld wide" id="ofertaWrap" hidden><span>Ofertas disponibles</span><select id="oferta"></select></label>
+    <label class="fld wide only-venta" id="empWrap"><span>Empleado</span><select id="empSel"></select></label>
     <div class="client-note" id="clientNote" hidden></div>
   </div>
   <div class="cart" id="cart"><div class="empty">▣<br>Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div></div>
   <div class="summary" id="summary">0 productos · 0 unidades</div>
-  <div class="pay-box" id="depositBox" hidden>
+  <div class="pay-box only-venta" id="depositBox" hidden>
     <div class="pay-title">SEÑAL DEL ENCARGO</div>
     <label class="fld"><span>Señal entregada</span><div class="money"><i>$</i><input id="depositAmt" inputmode="decimal" placeholder="0.00" autocomplete="off"></div></label>
     <div class="pay-err" id="depositErr" hidden></div>
   </div>
-  <div class="pay-box" id="priorBox">
+  <div class="pay-box only-venta" id="priorBox">
     <div class="pay-title">¿EXISTE UNA CANTIDAD ABONADA ANTERIORMENTE?</div>
     <div class="seg"><button type="button" class="on" data-prior="0">No</button><button type="button" data-prior="1">Sí</button></div>
     <label class="fld" id="priorAmtWrap" hidden><span>Cantidad abonada anteriormente</span><div class="money"><i>$</i><input id="priorAmt" inputmode="decimal" placeholder="0.00" autocomplete="off"></div></label>
@@ -594,11 +619,11 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
   <div class="breakdown" id="breakdown"></div>
   <div class="total"><span id="totalLabel">TOTAL</span><span id="grand">$0.00</span></div>
   <div class="actions">
-    <button class="finish" id="finish">▣ Finalizar venta</button>
-    <button class="finish-enc" id="finishEnc" hidden>✔ Finalizar encargo</button>
-    <button id="copy">▤ Copiar para Discord</button>
-    <button id="download">⇩ Descargar comprobante</button>
-    <button class="new" id="new">↻ Nueva venta</button>
+    <button class="finish only-venta" id="finish">▣ Finalizar venta</button>
+    <button class="finish-enc only-venta" id="finishEnc" hidden>✔ Finalizar encargo</button>
+
+
+    <button class="new only-venta" id="new">↻ Nueva venta</button>
   </div>
   <div class="stamp"><img src="emblema-harrington.png" alt="">HARRINGTON GUNSMITH<br>FINE FIREARMS · AMMUNITION · REPAIRS<br>SAINT DENIS</div>
 </aside>
@@ -625,6 +650,7 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
           <div class="full"><span id="rcIdLabel">Venta N.º</span><b id="rcId"></b></div>
           <div><span>Fecha</span><b id="rcDate"></b></div>
           <div><span>Hora</span><b id="rcTime"></b></div>
+          <div class="full" id="rcEmpWrap"><span>Empleado</span><b id="rcEmp"></b></div>
           <div class="full" id="rcClientWrap"><span>Cliente</span><b id="rcClient"></b></div>
           <div class="full" id="rcTelWrap"><span>Telegrama</span><b id="rcTel"></b></div>
           <div class="full" id="rcConvWrap"><span>Convenio</span><b id="rcConv"></b></div>
@@ -786,6 +812,7 @@ function restoreOrder(){
  }catch(e){}
 }
 function calc(animate=true){
+ applyStockLimits(animate);
  let totalCents=0,units=0,products=0;
  inputs.forEach(i=>{
   const q=readQty(i), sub=q*priceCents(i), row=i.closest('.product'), subEl=row.querySelector('.subtotal'), txt=money(sub);
@@ -802,7 +829,7 @@ function calc(animate=true){
  const items=selected();
  if(!items.length) cart.innerHTML='<div class="empty">▣<br>Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div>';
  else cart.innerHTML=cartHTML(items);
- saveOrder(items);
+ if(appMode==='venta')saveOrder(items);
  return totalCents;
 }
 
@@ -812,13 +839,13 @@ function nextSaleNumber(){
  store.set(KEY_COUNTER,String(n));
  return n;
 }
-function signature(items){return items.map(x=>x.name+':'+x.qty+':'+x.cents).join('|')+'#'+customerName()+'#'+(currentDiscount()?currentDiscount().id+currentDiscount().pct:'')+'#'+customer.op+'#'+customer.telegram.trim()+'#'+computeFin().paid+'#'+(loadedEnc?loadedEnc.id:'')}
+function signature(items){return items.map(x=>x.name+':'+x.qty+':'+x.cents).join('|')+'#'+customerName()+'#'+(currentDiscount()?currentDiscount().id+currentDiscount().pct:'')+'#'+empName()+'#'+customer.op+'#'+customer.telegram.trim()+'#'+computeFin().paid+'#'+(loadedEnc?loadedEnc.id:'')}
 function snapshot(items,now){
  const total=items.reduce((a,x)=>a+x.qty*x.cents,0), units=items.reduce((a,x)=>a+x.qty,0);
  return {
   items:items.map(x=>({name:x.name,cents:x.cents,qty:x.qty,oq:x.oq||0})),
   totalCents:total,units:units,products:items.length,sig:signature(items),
-  client:customerName(),convenio:currentDiscount()?`${currentDiscount().nombre} (${currentDiscount().pct} %)`:'',convenioKind:currentDiscount()?(currentDiscount().kind==='oferta'?'Oferta':'Convenio'):'',
+  client:customerName(),employee:empName(),convenio:currentDiscount()?`${currentDiscount().nombre} (${currentDiscount().pct} %)`:'',convenioKind:currentDiscount()?(currentDiscount().kind==='oferta'?'Oferta':'Convenio'):'',
   ...finToSale(computeFin()),op:loadedEnc?'venta':customer.op,fromEncargo:loadedEnc?loadedEnc.id:'',telegram:loadedEnc?loadedEnc.telegram:(customer.op==='encargo'?customer.telegram.trim():''),
   date:`${madridParts(now.getTime()).day}/${madridParts(now.getTime()).month}/${madridParts(now.getTime()).year}`,
   time:`${madridParts(now.getTime()).hour}:${madridParts(now.getTime()).minute}`
@@ -836,9 +863,10 @@ function ensureSale(){
   sale=Object.assign({id:id},snapshot(items,now));
   store.set(KEY_SALE,JSON.stringify(sale));
  }else if(sale.sig!==signature(items)){
-  sale=Object.assign({id:sale.id},snapshot(items,now));
+  sale=Object.assign({id:sale.id,stockApplied:sale.stockApplied},snapshot(items,now));
   store.set(KEY_SALE,JSON.stringify(sale));
  }
+ applyStock(sale);
  logSale(sale);
  if(sale.op==='encargo')saveEncargoFromSale(sale);
  return sale;
@@ -860,7 +888,7 @@ function computeFin(){
  const final=afterPrices-pctCents, discounts=[];
  if(base-afterPrices>0)discounts.push({label:'Precio especial',cents:base-afterPrices});
  if(pctCents>0)discounts.push({label:`${dsc.kind==='oferta'?'Oferta':'Convenio'} ${dsc.nombre} (${dsc.pct} %)`,cents:pctCents});
- const enc=customer.op==='encargo'&&!loadedEnc, prior=!enc&&!loadedEnc&&customer.prior;
+ const enc=customer.op==='encargo'&&!loadedEnc&&appMode==='venta', prior=!enc&&!loadedEnc&&appMode==='venta'&&customer.prior;
  const raw=loadedEnc?loadedEnc.depositCents:(enc?parseMoney(customer.deposit):(prior?parseMoney(customer.priorAmt):0));
  const kind=loadedEnc?'fianza':(enc?'senal':(prior?'previo':''));
  const paid=Math.min(raw,final);
@@ -881,6 +909,7 @@ function dueCents(s){return s.kind?s.pendingCents:s.totalCents}
 function receiptText(s){
  const line='────────────────────', enc=s.op==='encargo';
  const out=['HARRINGTON GUNSMITH',enc?'REGISTRO DE ENCARGO':'REGISTRO DE VENTA','Saint Denis · 1880','',(enc?'Encargo: ':'Venta: ')+s.id,'Fecha: '+s.date,'Hora: '+s.time];
+ if(s.employee)out.push('Empleado: '+s.employee);
  if(s.client)out.push('Cliente: '+s.client);
  if(s.telegram)out.push('Telegrama: '+s.telegram);
  if(s.convenio)out.push((s.convenioKind||'Convenio')+': '+s.convenio);
@@ -906,6 +935,8 @@ function renderReceipt(s){
  $('rcTotal').textContent=money(dueCents(s));
  $('rcClient').textContent=s.client||'';
  $('rcClientWrap').hidden=!s.client;
+ $('rcEmp').textContent=s.employee||'';
+ $('rcEmpWrap').hidden=!s.employee;
  $('rcTel').textContent=s.telegram||'';
  $('rcTelWrap').hidden=!s.telegram;
  $('rcConv').textContent=s.convenio||'';
@@ -981,15 +1012,15 @@ inputs.forEach(i=>{
 document.getElementById('clear').onclick=async()=>{
  if(!selected().length)return say('El pedido ya está vacío');
  if(!await askConfirm('Vaciar pedido','¿Seguro que quieres borrar todos los productos del pedido actual?','Vaciar'))return;
- clearQuantities();resetSale();releaseEncargo();calc(false);say('Pedido vaciado');
+ clearQuantities();if(appMode==='venta'){resetSale();releaseEncargo()}calc(false);say('Pedido vaciado');
 };
 document.getElementById('new').onclick=doNew;
 document.getElementById('finish').onclick=()=>{
  const s=ensureSale(); if(!s)return;
  renderReceipt(s);openModal(receiptModal);receiptModal.scrollTop=0;say((s.op==='encargo'?'Encargo guardado · ':'Venta finalizada · ')+s.id);
 };
-document.getElementById('copy').onclick=doCopy;
-document.getElementById('download').onclick=doDownload;
+
+
 document.getElementById('rcCopy').onclick=doCopy;
 document.getElementById('rcDownload').onclick=doDownload;
 document.getElementById('rcNew').onclick=doNew;
@@ -1052,6 +1083,57 @@ let loadedEnc=encargos.find(e=>e.id===store.get(KEY_LOADED))||null;
 const bannerEl=document.getElementById('loadedBanner'), finishEncBtn=document.getElementById('finishEnc'), encBtn=document.getElementById('encBtn'), encModal=document.getElementById('encModal');
 function origQty(name){const f=loadedEnc&&loadedEnc.items.find(x=>x.name===name);return f?f.qty:0}
 function sanitizeTelegram(v){return String(v||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,10)}
+/* Modo de la calculadora, empleados y stock */
+let appMode='venta';
+const modeStash={};
+const KEY_EMP='harrington_empleados_v1', KEY_STOCK='harrington_stock_v1';
+function loadObj(k,fallback){try{const v=JSON.parse(store.get(k)||'null');return v&&typeof v===typeof fallback?v:fallback}catch(e){return fallback}}
+let empleados=loadObj(KEY_EMP,[]);
+if(!Array.isArray(empleados))empleados=[];
+let stockMap=loadObj(KEY_STOCK,{});
+if(Array.isArray(stockMap))stockMap={};
+const empSel=document.getElementById('empSel');
+function saveEmp(){store.set(KEY_EMP,JSON.stringify(empleados))}
+function saveStock(){store.set(KEY_STOCK,JSON.stringify(stockMap))}
+function empName(){const e=empleados.find(x=>x.id===customer.employee);return e?e.name:''}
+let empSig='';
+function refreshEmpSelect(){
+ if(customer.employee&&!empleados.some(e=>e.id===customer.employee))customer.employee='';
+ const sig=empleados.map(e=>e.id+e.name).join('|');
+ if(sig!==empSig){empSig=sig;empSel.innerHTML='<option value="">Seleccionar empleado</option>'+empleados.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('')}
+ empSel.value=customer.employee||'';
+}
+/* Stock: sin registrar = sin límite. El empleado nunca ve cantidades; solo se le impide superar las existencias. */
+function limitFor(name){
+ if(appMode!=='venta'||(customer.op==='encargo'&&!loadedEnc))return Infinity;
+ if(!(name in stockMap))return Infinity;
+ return stockMap[name]+((sale&&sale.stockApplied&&sale.stockApplied[name])||0)+origQty(name);
+}
+function applyStockLimits(animate){
+ let clamped=null;
+ inputs.forEach(i=>{
+  const lim=limitFor(i.dataset.name), row=i.closest('.product'), none=lim<=0;
+  if(readQty(i)>lim){i.value=Math.max(0,lim);clamped=i.dataset.name}
+  row.classList.toggle('no-stock',none);
+  row.querySelectorAll('.qty button,.qty input').forEach(el=>{el.disabled=none});
+  const f=row.querySelector('.nostock');if(f)f.hidden=!none;
+ });
+ if(clamped&&animate)say('No hay más unidades disponibles de '+clamped);
+}
+/* Descuenta el stock una sola vez por venta real (y ajusta si la venta se edita antes de cerrarla) */
+function applyStock(sl){
+ if(sl.op==='encargo')return;
+ const want={};
+ sl.items.forEach(x=>{const q=x.qty-(x.oq||0);if(q>0)want[x.name]=q});
+ const prev=sl.stockApplied||{};let ch=false;
+ new Set(Object.keys(want).concat(Object.keys(prev))).forEach(n=>{
+  const d=(want[n]||0)-(prev[n]||0);
+  if(d&&n in stockMap){stockMap[n]=Math.max(0,stockMap[n]-d);ch=true}
+ });
+ sl.stockApplied=want;
+ if(ch)saveStock();
+ store.set(KEY_SALE,JSON.stringify(sl));
+}
 const KEY_DISC='harrington_descuentos_v1';
 let descuentos=[];
 try{descuentos=JSON.parse(store.get(KEY_DISC)||'[]')}catch(e){}
@@ -1102,7 +1184,7 @@ const PRECIOS_CLIENTE=[
 const KEY_CUSTOMER='harrington_customer_v1';
 const typeSel=document.getElementById('clientType'), nameInput=document.getElementById('clientName'), convSel=document.getElementById('convenio');
 const nameWrap=document.getElementById('clientNameWrap'), nameLabel=document.getElementById('clientNameLabel'), noteEl=document.getElementById('clientNote');
-function defaultCustomer(){return {type:'particular',name:'',convenio:'ninguno',oferta:'ninguno',op:'venta',telegram:'',deposit:'',prior:false,priorAmt:''}}
+function defaultCustomer(){return {type:'particular',name:'',convenio:'ninguno',oferta:'ninguno',employee:'',op:'venta',telegram:'',deposit:'',prior:false,priorAmt:''}}
 const opSel=document.getElementById('opType'), telInput=document.getElementById('telegram'), telWrap=document.getElementById('telegramWrap');
 const depositBox=document.getElementById('depositBox'), priorBox=document.getElementById('priorBox'), priorAmtWrap=document.getElementById('priorAmtWrap');
 const depositInput=document.getElementById('depositAmt'), priorInput=document.getElementById('priorAmt');
@@ -1125,6 +1207,10 @@ function customerOk(){
   say(customer.type==='empresa'?'Indica el nombre de la empresa':'Indica el nombre del cliente');
   nameInput.focus();return false;
  }
+ if(!empName()){
+  say(empleados.length?'Selecciona el empleado que realiza la operación':'Dirección todavía no ha creado empleados');
+  empSel.focus();return false;
+ }
  if(customer.op==='encargo'&&!loadedEnc&&!/^[A-Z0-9-]{1,10}$/.test(customer.telegram)){
   say(customer.telegram?'Telegrama no válido: solo letras, números y guiones (máx. 10)':'El telegrama de contacto es obligatorio en un encargo');
   telInput.focus();return false;
@@ -1137,7 +1223,7 @@ function customerOk(){
 }
 function renderCustomer(){
  const enc=customer.op==='encargo';
- opSel.value=customer.op;typeSel.value=customer.type;nameInput.value=customer.name;refreshDiscountSelects();
+ opSel.value=customer.op;typeSel.value=customer.type;nameInput.value=customer.name;refreshDiscountSelects();refreshEmpSelect();
  telInput.value=customer.telegram;depositInput.value=customer.deposit;priorInput.value=customer.priorAmt;
  nameWrap.hidden=customer.type==='sheriff';
  const ld=!!loadedEnc;
@@ -1150,7 +1236,7 @@ function renderCustomer(){
  nameInput.placeholder=customer.type==='empresa'?'Empresa':'Nombre';
 }
 function customerChanged(){
- store.set(KEY_CUSTOMER,JSON.stringify(customer));
+ if(appMode==='venta')store.set(KEY_CUSTOMER,JSON.stringify(customer));
  const d=currentDiscount();
  noteEl.textContent=[specialPrices()?'Precios especiales del cliente aplicados':'',d?`${d.kind==='oferta'?'Oferta':'Convenio'} aplicado: ${d.nombre} (−${d.pct} %)`:''].filter(Boolean).join(' · ');
  noteEl.hidden=!noteEl.textContent;
@@ -1179,7 +1265,7 @@ moneyField(depositInput,'deposit');moneyField(priorInput,'priorAmt');
 priorBtns.forEach(b=>b.onclick=()=>{customer.prior=b.dataset.prior==='1';renderCustomer();customerChanged();if(customer.prior)priorInput.focus()});
 try{
  const c=JSON.parse(store.get(KEY_CUSTOMER)||'null');
- if(c&&['particular','empresa','sheriff'].includes(c.type)){customer.type=c.type;customer.name=String(c.name||'').slice(0,40);customer.convenio=String(c.convenio||'ninguno');customer.oferta=String(c.oferta||'ninguno');
+ if(c&&['particular','empresa','sheriff'].includes(c.type)){customer.type=c.type;customer.name=String(c.name||'').slice(0,40);customer.employee=String(c.employee||'');customer.convenio=String(c.convenio||'ninguno');customer.oferta=String(c.oferta||'ninguno');
   customer.op=c.op==='encargo'?'encargo':'venta';customer.telegram=sanitizeTelegram(c.telegram);
   customer.deposit=String(c.deposit||'').replace(/[^0-9.,]/g,'').slice(0,12);customer.prior=!!c.prior;customer.priorAmt=String(c.priorAmt||'').replace(/[^0-9.,]/g,'').slice(0,12)}
 }catch(e){}
@@ -1228,7 +1314,7 @@ function saveEncargoFromSale(sl){
  saveEncs();updateEncBtn();
 }
 const TYPE_NAMES={particular:'Cliente particular',empresa:'Empresa',sheriff:'Departamento del Sheriff'};
-let encView=null;
+let encView=null, encDraft=null;
 function badgesHTML(e){return `<span class="badge ${e.fab==='FABRICADO'?'fab':'pend'}">${e.fab}</span><span class="badge ${e.avisado?'si':'no'}">Cliente avisado: ${e.avisado?'SÍ':'NO'}</span>`}
 function renderEnc(){
  const body=document.getElementById('encBody'), title=document.getElementById('encTitle');
@@ -1245,6 +1331,8 @@ function renderEnc(){
   return;
  }
  title.textContent='FICHA DEL ENCARGO';
+ const dr=(encDraft&&encDraft.id===e.id)?encDraft:(encDraft={id:e.id,fab:e.fab,avisado:e.avisado});
+ const dirty=dr.fab!==e.fab||dr.avisado!==e.avisado;
  const rows=finRows({baseCents:e.baseCents,discountCents:e.discountCents,discounts:e.discounts,discountLabel:'Convenio',kind:'senal',totalCents:e.totalCents,paidCents:e.depositCents}).map(r=>[r[0]==='Señal entregada'?'Fianza pagada':r[0],r[1],r[2]]);
  body.innerHTML=`<button type="button" class="enc-back" data-act="back">◂ Volver a la lista</button>
   <div class="enc-id">${esc(e.id)} · ${esc(e.date)} ${esc(e.time)}</div>
@@ -1252,13 +1340,21 @@ function renderEnc(){
   <div class="cartrow carthead"><span>Producto</span><span>Cant.</span><span>P. unit.</span><span>Subtotal</span></div>${e.items.map(cartRow).join('')}
   <div style="margin-top:8px">${rows.map(r=>`<div class="brow ${r[2]||''}"><span>${esc(r[0])}</span><span>${r[1]}</span></div>`).join('')}<div class="brow due"><span>PENDIENTE</span><span>${money(e.pendingCents)}</span></div></div>
   <div class="enc-sec">
-   <label>ESTADO DE FABRICACIÓN<select id="encFab"><option value="PENDIENTE"${e.fab==='PENDIENTE'?' selected':''}>PENDIENTE</option><option value="FABRICADO"${e.fab==='FABRICADO'?' selected':''}>FABRICADO</option></select></label>
-   <label>¿CLIENTE AVISADO?<select id="encAv"><option value="NO"${!e.avisado?' selected':''}>NO</option><option value="SI"${e.avisado?' selected':''}${e.fab==='PENDIENTE'?' disabled':''}>SÍ</option></select></label>
-   ${e.fab==='PENDIENTE'?'<div class="enc-note">Podrás marcar «avisado» cuando el encargo esté FABRICADO.</div>':''}
+   <label>ESTADO DE FABRICACIÓN<select id="encFab"><option value="PENDIENTE"${dr.fab==='PENDIENTE'?' selected':''}>PENDIENTE</option><option value="FABRICADO"${dr.fab==='FABRICADO'?' selected':''}>FABRICADO</option></select></label>
+   <label>¿CLIENTE AVISADO?<select id="encAv"><option value="NO"${!dr.avisado?' selected':''}>NO</option><option value="SI"${dr.avisado?' selected':''}${dr.fab==='PENDIENTE'?' disabled':''}>SÍ</option></select></label>
+   ${dr.fab==='PENDIENTE'?'<div class="enc-note">Podrás marcar «avisado» cuando el encargo esté FABRICADO.</div>':''}
+   ${dirty?'<div class="enc-note" style="color:#f0c27a">Hay cambios sin guardar.</div>':''}
   </div>
-  <div class="enc-actions"><button type="button" class="primary" data-act="load">CARGAR ENCARGO</button><button type="button" class="warn" data-act="finish">FINALIZAR ENCARGO</button></div>`;
+  <div class="enc-actions"><button type="button" class="gold" data-act="save">GUARDAR CAMBIOS</button><button type="button" class="primary" data-act="load">CARGAR ENCARGO</button><button type="button" class="warn" data-act="finish">FINALIZAR ENCARGO</button></div>`;
 }
-function openEnc(){encView=null;renderEnc();openModal(encModal);encModal.scrollTop=0}
+function saveEncDraft(){
+ const e=pendingEncs().find(x=>x.id===encView);
+ if(!e||!encDraft||encDraft.id!==e.id)return;
+ if(encDraft.fab===e.fab&&encDraft.avisado===e.avisado)return say('No hay cambios que guardar');
+ e.fab=encDraft.fab;e.avisado=encDraft.fab==='FABRICADO'&&encDraft.avisado; /* coherencia: pendiente nunca puede estar avisado */
+ saveEncs();encDraft=null;encView=null;renderEnc();say('Cambios guardados');
+}
+function openEnc(){encView=null;encDraft=null;renderEnc();openModal(encModal);encModal.scrollTop=0}
 async function loadEncargo(id){
  const e=pendingEncs().find(x=>x.id===id); if(!e)return;
  if((selected().length||sale)&&!await askConfirm('Cargar encargo','Se reemplazará el pedido actual por el encargo '+e.id+'.','Cargar'))return;
@@ -1280,22 +1376,20 @@ document.getElementById('encClose').onclick=()=>closeModal(encModal);
 encModal.addEventListener('click',e=>{
  if(e.target===encModal)return closeModal(encModal);
  const card=e.target.closest('[data-open]');
- if(card){encView=card.dataset.open;renderEnc();encModal.scrollTop=0;return}
+ if(card){encView=card.dataset.open;encDraft=null;renderEnc();encModal.scrollTop=0;return}
  const act=e.target.closest('[data-act]');
  if(!act)return;
- if(act.dataset.act==='back'){encView=null;renderEnc()}
+ if(act.dataset.act==='back'){encView=null;encDraft=null;renderEnc()}
+ else if(act.dataset.act==='save')saveEncDraft();
  else if(act.dataset.act==='load')loadEncargo(encView);
  else if(act.dataset.act==='finish')finishFromCard(encView);
 });
 encModal.addEventListener('change',e=>{
- const en=pendingEncs().find(x=>x.id===encView); if(!en)return;
- if(e.target.id==='encFab'){
-  en.fab=e.target.value;
-  if(en.fab==='PENDIENTE')en.avisado=false; /* coherencia: pendiente nunca puede estar avisado */
- }else if(e.target.id==='encAv'){
-  en.avisado=e.target.value==='SI'&&en.fab==='FABRICADO';
- }else return;
- saveEncs();renderEnc();say('Estado guardado');
+ if(!encDraft||encDraft.id!==encView)return;
+ if(e.target.id==='encFab'){encDraft.fab=e.target.value;if(encDraft.fab==='PENDIENTE')encDraft.avisado=false}
+ else if(e.target.id==='encAv')encDraft.avisado=e.target.value==='SI'&&encDraft.fab==='FABRICADO';
+ else return;
+ renderEnc();
 });
 finishEncBtn.onclick=async()=>{
  if(!loadedEnc||loadedEnc.finished)return;
@@ -1312,7 +1406,7 @@ const KEY_SHIFTLOG='harrington_shiftlog_v1', KEY_SALELOG='harrington_salelog_v1'
 function loadLog(k){try{const a=JSON.parse(store.get(k)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
 function logShift(r){const a=loadLog(KEY_SHIFTLOG);a.push({name:r.name,start:r.start,end:r.end});store.set(KEY_SHIFTLOG,JSON.stringify(a.slice(-500)))}
 function logSale(sl){
- const a=loadLog(KEY_SALELOG), e={id:sl.id,date:sl.date,time:sl.time,op:sl.op,client:sl.client,products:sl.products,units:sl.units,dueCents:dueCents(sl),totalCents:sl.totalCents,convenio:sl.convenio||'',fromEncargo:sl.fromEncargo||''};
+ const a=loadLog(KEY_SALELOG), e={id:sl.id,date:sl.date,time:sl.time,op:sl.op,client:sl.client,employee:sl.employee||'',products:sl.products,units:sl.units,dueCents:dueCents(sl),totalCents:sl.totalCents,convenio:sl.convenio||'',fromEncargo:sl.fromEncargo||''};
  const k=a.findIndex(x=>x.id===sl.id);
  if(k>=0)a[k]=e;else a.push(e);
  store.set(KEY_SALELOG,JSON.stringify(a.slice(-500)));
@@ -1357,9 +1451,11 @@ setBoss(bossActive);
 
 /* ===== Consola de Dirección (modular: para añadir un módulo basta con añadirlo a esta lista) ===== */
 const DIRECCION_MODULOS=[
- {id:'convenios',titulo:'CONVENIOS Y OFERTAS',desc:'Crear, consultar y eliminar convenios y ofertas.',render:()=>renderModConvenios()},
- {id:'horarios',titulo:'REGISTROS HORARIOS',desc:'Consultar el historial de fichajes de los empleados.',render:()=>renderModHorarios()},
- {id:'ventas',titulo:'REGISTROS DE VENTAS',desc:'Consultar las ventas realizadas.',render:()=>renderModVentas()}
+ {id:'convenios',titulo:'CONVENIOS Y OFERTAS',desc:'Crear y administrar convenios y ofertas.',render:()=>renderModConvenios()},
+ {id:'empleados',titulo:'EMPLEADOS',desc:'Añadir, editar y eliminar empleados.',render:()=>renderModEmpleados()},
+ {id:'stock',titulo:'STOCK',desc:'Consultar existencias y añadir nuevas unidades fabricadas.',render:()=>renderModStock()},
+ {id:'horarios',titulo:'REGISTROS HORARIOS',desc:'Consultar los fichajes de los empleados.',render:()=>renderModHorarios()},
+ {id:'ventas',titulo:'REGISTROS DE VENTAS',desc:'Consultar las operaciones realizadas.',render:()=>renderModVentas()}
 ];
 let dirMod=null, dirForm=null;
 function fmtLong(ms){return new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',day:'numeric',month:'long'}).format(ms)}
@@ -1395,7 +1491,50 @@ function renderModHorarios(){
 }
 function renderModVentas(){
  const a=loadLog(KEY_SALELOG).slice().reverse().slice(0,100);
- return `<div class="dir-sec-title">VENTAS REGISTRADAS (${a.length})</div>`+(a.length?a.map(r=>`<div class="dir-log"><b>${esc(r.id)}</b> · ${esc(r.date)} ${esc(r.time)}${r.op==='encargo'?' · ENCARGO':''}<br>${esc(r.client||'—')} · ${summaryText(r.products,r.units)}${r.convenio?' · '+esc(r.convenio):''}<br>Total: ${money(r.totalCents)}${r.dueCents!==r.totalCents?' · A cobrar: '+money(r.dueCents):''}</div>`).join(''):'<div class="enc-empty">Todavía no hay ventas registradas.<br>Se guardan a partir de ahora al finalizar cada venta.</div>');
+ return `<div class="dir-sec-title">VENTAS REGISTRADAS (${a.length})</div>`+(a.length?a.map(r=>`<div class="dir-log"><b>${esc(r.id)}</b> · ${esc(r.date)} ${esc(r.time)}${r.op==='encargo'?' · ENCARGO':''}<br>Cliente: ${esc(r.client||'—')}<br>Empleado: ${esc(r.employee||'—')}<br>${summaryText(r.products,r.units)}${r.convenio?' · '+esc(r.convenio):''}<br>Total: ${money(r.totalCents)}${r.dueCents!==r.totalCents?' · A cobrar: '+money(r.dueCents):''}</div>`).join(''):'<div class="enc-empty">Todavía no hay ventas registradas.<br>Se guardan a partir de ahora al finalizar cada venta.</div>');
+}
+let empEdit=null, empErr='', stockCat='todos', stockDraft={};
+function renderModEmpleados(){
+ return `<div class="dir-form enc-sec"><label>NOMBRE DEL EMPLEADO<input id="empNew" type="text" maxlength="40" autocomplete="off" placeholder="Nombre del empleado"></label>
+  <div class="pay-err" id="empErr"${empErr?'':' hidden'}>${esc(empErr)}</div>
+  <div class="enc-actions"><button type="button" class="primary" data-dir="emp-add">AÑADIR</button></div></div>
+  <div class="dir-sec-title">EMPLEADOS (${empleados.length})</div>`+(empleados.length?empleados.map(e=>empEdit===e.id?
+  `<div class="dir-log"><input class="name-input" id="empEditInput" style="margin-bottom:8px;text-align:left" maxlength="40" value="${esc(e.name)}"><div class="enc-actions two"><button type="button" data-dir="emp-cancel">Cancelar</button><button type="button" class="primary" data-dir="emp-save:${esc(e.id)}">GUARDAR</button></div></div>`:
+  `<div class="dir-log" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b>${esc(e.name)}</b><span class="emp-btns"><button type="button" data-dir="emp-edit:${esc(e.id)}">✎ EDITAR</button><button type="button" class="warn" data-dir="emp-del:${esc(e.id)}">🗑 PAPELERA</button></span></div>`).join(''):'<div class="enc-empty">No hay empleados.<br>Añade al menos uno para poder finalizar ventas.</div>');
+}
+function empNameTaken(name,exceptId){return empleados.some(e=>e.id!==exceptId&&norm(e.name)===norm(name))}
+function empAdd(){
+ const inp=document.getElementById('empNew'), name=inp.value.trim().replace(/\s+/g,' ');
+ if(!name)empErr='Escribe el nombre del empleado';
+ else if(empNameTaken(name,null))empErr='Ya existe un empleado con ese nombre';
+ else{empleados.push({id:'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:name});saveEmp();empErr='';renderDir();renderCustomer();return say('Empleado añadido')}
+ renderDir();
+}
+function empSave(id){
+ const name=document.getElementById('empEditInput').value.trim().replace(/\s+/g,' '), e=empleados.find(x=>x.id===id);
+ if(!e)return;
+ if(!name)return say('El nombre no puede estar vacío');
+ if(empNameTaken(name,id))return say('Ya existe un empleado con ese nombre');
+ e.name=name;saveEmp();empEdit=null;renderDir();renderCustomer();say('Empleado actualizado');
+}
+async function empDelete(id){
+ const e=empleados.find(x=>x.id===id); if(!e)return;
+ if(!await askConfirm('Eliminar empleado',`«${e.name}» dejará de aparecer para nuevas ventas.`,'Eliminar'))return;
+ empleados=empleados.filter(x=>x.id!==id);saveEmp();renderDir();renderCustomer();say('Empleado eliminado');
+}
+function renderModStock(){
+ const cats=[...document.querySelectorAll('.cat-nav .cat-btn')].map(b=>`<button type="button" class="cat-btn ${b.dataset.cat===stockCat?'active':''}" data-dir="scat:${b.dataset.cat}"><img src="${esc(b.querySelector('img').getAttribute('src'))}" alt="${esc(b.title)}"></button>`).join('');
+ const rows=[...document.querySelectorAll('.product')].filter(p=>stockCat==='todos'||p.dataset.cat===stockCat).map(p=>{
+  const n=p.querySelector('.qty input').dataset.name, reg=n in stockMap;
+  return `<div class="stock-row"><div><b>${esc(n)}</b><small>Stock actual: ${reg?stockMap[n]:'sin registrar'}</small></div><label>Añadir<input type="text" inputmode="numeric" data-stock="${esc(n)}" value="${esc(stockDraft[n]||'')}" placeholder="0"></label></div>`;
+ }).join('');
+ return `<div class="cat-nav stock-cats">${cats}</div>${rows}<div class="enc-actions" style="margin-top:12px"><button type="button" class="primary" data-dir="stock-save">GUARDAR STOCK</button></div>`;
+}
+function saveStockDraft(){
+ let n=0;
+ Object.keys(stockDraft).forEach(name=>{const q=parseInt(stockDraft[name])||0;if(q>0){stockMap[name]=(stockMap[name]||0)+q;n++}});
+ stockDraft={};saveStock();renderDir();calc(false);
+ say(n?'Stock guardado':'No hay unidades que añadir');
 }
 function renderDir(){
  const body=document.getElementById('dirBody'), title=document.getElementById('dirTitle');
@@ -1440,9 +1579,50 @@ dirModal.addEventListener('click',e=>{
  else if(act==='cancel-form'){dirForm=null;renderDir()}
  else if(act==='save-form')saveDiscForm();
  else if(act==='del')deleteDisc(arg);
+ else if(act==='emp-add')empAdd();
+ else if(act==='emp-edit'){empEdit=arg;empErr='';renderDir();setTimeout(()=>{const i=document.getElementById('empEditInput');if(i)i.focus()},30)}
+ else if(act==='emp-cancel'){empEdit=null;renderDir()}
+ else if(act==='emp-save')empSave(arg);
+ else if(act==='emp-del')empDelete(arg);
+ else if(act==='scat'){stockCat=arg;renderDir()}
+ else if(act==='stock-save')saveStockDraft();
  else if(act==='exit-boss'){setBoss(false);closeModal(dirModal);say('Modo Jefe desactivado')}
 });
 setInterval(tickDiscounts,30000);
+dirModal.addEventListener('input',e=>{
+ const n=e.target.dataset&&e.target.dataset.stock;
+ if(n===undefined)return;
+ const v=e.target.value.replace(/[^0-9]/g,'').slice(0,6);
+ e.target.value=v;
+ if(v)stockDraft[n]=v;else delete stockDraft[n];
+});
+dirModal.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='empNew'){e.preventDefault();empAdd()}});
+
+/* ===== Selector de empleado, aviso "SIN STOCK" y pestañas Venta / Presupuesto ===== */
+empSel.onchange=()=>{customer.employee=empSel.value;customerChanged()};
+inputs.forEach(i=>i.closest('.product').querySelector('.pname').insertAdjacentHTML('beforeend','<em class="nostock" hidden>SIN STOCK</em>'));
+function captureMode(){
+ const q={};inputs.forEach(i=>{const n=readQty(i);if(n)q[i.dataset.name]=n});
+ return {qty:q,customer:JSON.parse(JSON.stringify(customer)),loadedEnc:loadedEnc};
+}
+function applyMode(st){
+ clearQuantities();
+ Object.keys(st.qty).forEach(n=>{const i=inputs.find(x=>x.dataset.name===n);if(i)i.value=st.qty[n]});
+ customer=st.customer||defaultCustomer();loadedEnc=st.loadedEnc||null;
+}
+/* Venta y Presupuesto comparten catálogo, precios y lógica, pero cada modo conserva sus propias cantidades */
+function setMode(m){
+ if(m===appMode)return;
+ modeStash[appMode]=captureMode();
+ appMode=m;
+ applyMode(modeStash[m]||{qty:{},customer:null,loadedEnc:null});
+ document.body.classList.toggle('mode-presupuesto',m==='presupuesto');
+ document.querySelectorAll('.mode-tab').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
+ document.getElementById('orderTitle').textContent=m==='presupuesto'?'PRESUPUESTO':'PEDIDO ACTUAL';
+ renderCustomer();customerChanged();
+}
+document.querySelectorAll('.mode-tab').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+
 
 /* ===== Fichaje de empleados ===== */
 const KEY_SHIFT='harrington_shift_v1', KEY_LASTSHIFT='harrington_lastshift_v1', KEY_EMPLOYEE='harrington_employee_v1';
