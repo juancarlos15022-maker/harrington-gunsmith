@@ -50,25 +50,20 @@ footer{text-align:center;color:#746a58;padding:18px;font-size:12px}
 @media(max-width:900px){.grid{grid-template-columns:1fr}.order{position:relative;top:0}}
 @media(max-width:650px){.wrap{padding:7px}.hero{padding:22px 8px 16px}.hero:before,.hero:after{display:none}.tabs button{min-width:105px}.table-head{display:none}.product{grid-template-columns:34px 1fr 80px;gap:6px;padding:10px 7px}.product .qty{grid-column:2/3;justify-content:flex-start}.product .subtotal{grid-column:3/4;grid-row:2}.pname{font-size:15px}.price{font-size:14px}.qty button{width:36px}.qty input{width:54px}}
 
-/* ===== HARRINGTON GUNSMITH · V3 FINAL ===== */
-.hero{
-  min-height:300px;padding:0;border-color:#a98135;
-  background:#07150f url("cabecera-web.png") center/cover no-repeat;
-  box-shadow:0 12px 42px #000c,inset 0 0 55px #0005
-}
+/* ===== HARRINGTON GUNSMITH V3 FINAL ===== */
+.hero{min-height:270px;padding:0;background:#07150f url("cabecera-web.png") center/cover no-repeat}
 .hero .place,.hero h1,.hero .motto,.hero .orn{display:none}
-.tabs{gap:7px;padding:7px;background:#050e0a;border-color:#8b6a2e}
+.tabs{gap:6px;padding:6px;background:#040c09;border-color:#8b6a2e}
 .tabs button{
-  position:relative;isolation:isolate;overflow:hidden;min-width:128px;height:70px;
-  padding:8px 9px;border:1px solid #705628!important;border-radius:7px;
+  position:relative;isolation:isolate;overflow:hidden;min-width:132px;height:72px;padding:0 8px;
+  border:1px solid #745927!important;border-radius:7px;color:#fff0b6!important;
   background-position:center!important;background-size:cover!important;
-  color:#fff1bd;text-shadow:0 2px 4px #000,0 0 7px #000;font-size:13px;
-  box-shadow:inset 0 0 22px #000b;transition:.18s ease
+  text-shadow:0 2px 5px #000,0 0 7px #000;font-size:13px
 }
-.tabs button:before{content:"";position:absolute;z-index:-1;inset:0;background:#02070473}
-.tabs button:hover{transform:translateY(-1px);border-color:#d7ae54!important}
-.tabs button.active{border-color:#f3d47c!important;box-shadow:0 0 13px #d7ae5470,inset 0 0 16px #0008;color:#fff7d6}
-.tabs button.active:before{background:#5b431d35}
+.tabs button:before{content:"";position:absolute;z-index:-1;inset:0;background:#0207048c;transition:.2s}
+.tabs button:hover:before{background:#0207045c}
+.tabs button.active{border-color:#f0cf73!important;box-shadow:0 0 0 1px #f0cf73,0 0 18px #d7ae5475,inset 0 0 22px #000}
+.tabs button.active:before{background:#33230755}
 .tabs button[data-cat="todos"]{background-image:url("boton-todos.png")}
 .tabs button[data-cat="revolveres"]{background-image:url("boton-revolveres.png")}
 .tabs button[data-cat="pistolas"]{background-image:url("boton-pistolas.png")}
@@ -78,30 +73,44 @@ footer{text-align:center;color:#746a58;padding:18px;font-size:12px}
 .tabs button[data-cat="blancas"]{background-image:url("boton-armas-blancas.png")}
 .tabs button[data-cat="municion"]{background-image:url("boton-municion.png")}
 .tabs button[data-cat="suministros"]{background-image:url("boton-suministros.png")}
-.category-visual{position:relative;overflow:hidden;height:220px;border:1px solid #72572b;border-radius:8px;margin:0 0 12px;background:#07120e;box-shadow:0 10px 30px #0008}
+.category-visual{position:relative;height:205px;margin:0 0 12px;overflow:hidden;border:1px solid #72572b;border-radius:8px;background:#07120e;box-shadow:0 10px 30px #0008}
 .category-visual img{width:100%;height:100%;object-fit:cover;display:block}
-.category-visual:after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 28%,#06110de8)}
-.category-visual .visual-title{position:absolute;z-index:2;left:20px;bottom:15px;color:#f3d47c;font-size:30px;font-weight:bold;text-shadow:0 2px 8px #000}
-.product.chosen{background:linear-gradient(90deg,#13291d,#0b1811);box-shadow:inset 3px 0 #d7ae54,inset 0 0 18px #d7ae5415}
-.product.flash .subtotal,.total.flash{animation:goldflash .35s ease}
-@keyframes goldflash{50%{color:#fff6c8;text-shadow:0 0 12px #f3d47c}}
-.order-summary{padding:0 12px 5px;color:#b7a681;font-size:12px;text-align:right}
-.receipt-seal{display:block;width:104px;height:104px;object-fit:contain;margin:4px auto 8px;filter:drop-shadow(0 5px 9px #0008)}
-.sale-number{text-align:center;color:#d4b969;font-size:12px;letter-spacing:.13em;margin:0 0 7px}
-.backtop{position:fixed;right:18px;bottom:20px;z-index:30;width:46px;height:46px;border-radius:50%;border:1px solid #d7ae54;background:#0a2117e8;color:#f3d47c;font-size:22px;box-shadow:0 5px 20px #000b;display:none}
-.backtop.show{display:block}
+.category-visual:after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 25%,#06110de8)}
+.category-visual strong{position:absolute;z-index:2;left:20px;bottom:14px;color:#f3d47c;font-size:29px;text-shadow:0 2px 8px #000}
+.product.chosen{background:linear-gradient(90deg,#132b1f,#0a1711);box-shadow:inset 3px 0 #d7ae54,inset 0 0 14px #d7ae5417}
+.subtotal,.total span:last-child{transition:.18s}
+.flash{animation:goldflash .35s ease}
+@keyframes goldflash{50%{color:#fff6c5;text-shadow:0 0 15px #e8b94e;transform:scale(1.025)}}
+.order-summary{padding:0 10px 7px;text-align:right;color:#a99a7d;font-size:12px}
+.receipt-modal{display:none;position:fixed;z-index:100;inset:0;background:#000c;padding:18px;overflow:auto}
+.receipt-modal.show{display:block}
+.receipt-paper{max-width:620px;margin:25px auto;padding:25px;background:#eadcba;color:#2b2115;border:8px double #74562a;box-shadow:0 20px 70px #000}
+.receipt-head{text-align:center}.receipt-head img{width:105px;max-height:105px;object-fit:contain}
+.receipt-head h2{margin:5px 0 0;font-size:28px}.receipt-head p{margin:4px 0 18px;font-style:italic}
+.receipt-id{display:flex;justify-content:space-between;gap:8px;font-size:12px;border-top:1px solid #8a7552;border-bottom:1px solid #8a7552;padding:8px 0}
+.receipt-lines{margin:12px 0}.receipt-line{display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 0;border-bottom:1px dashed #9a8768}
+.receipt-line small{display:block;color:#6b5b44}.receipt-grand{text-align:right;font-size:25px;font-weight:bold;margin:18px 0}
+.receipt-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.receipt-actions button{padding:11px;border:1px solid #765a31;background:#254b36;color:#fff;border-radius:5px;font-weight:bold}
+.receipt-actions .close-receipt{background:#51483d}.receipt-actions .new-receipt{background:#6b1818}
+.to-top{position:fixed;right:17px;bottom:17px;z-index:60;width:46px;height:46px;border-radius:50%;border:1px solid #d7ae54;background:#0b2619e8;color:#f3d47c;font-size:23px;box-shadow:0 5px 20px #000;display:none}
+.to-top.show{display:block}
 @media(max-width:650px){
- .hero{min-height:205px;background-size:cover}
+ .hero{min-height:185px}
  .tabs button{min-width:112px;height:64px;font-size:12px}
- .category-visual{height:155px}.category-visual .visual-title{font-size:23px;left:14px;bottom:11px}
- .backtop{right:10px;bottom:12px}
+ .category-visual{height:150px}.category-visual strong{font-size:22px;left:13px;bottom:10px}
+ .receipt-actions{grid-template-columns:1fr}
 }
 
 </style>
 </head>
 <body>
 <div class="wrap">
-<header class="hero" aria-label="Harrington Gunsmith · Saint Denis · 1880"></header>
+<header class="hero">
+  <div class="place">SAINT DENIS · 1880</div>
+  <h1>HARRINGTON GUNSMITH</h1>
+  <div class="motto">El precio de un apellido.</div>
+  <div class="orn">◆ ─── ✦ ─── ◆</div>
+</header>
 
 <nav class="tabs">
 <button class="active" data-cat="todos">✦ Todos</button>
@@ -117,7 +126,7 @@ footer{text-align:center;color:#746a58;padding:18px;font-size:12px}
 
 <div class="category-visual" id="categoryVisual">
   <img id="categoryImage" src="cabecera-harrington.png" alt="Catálogo Harrington Gunsmith">
-  <div class="visual-title" id="categoryTitle">Catálogo Harrington</div>
+  <strong id="categoryTitle">Catálogo Harrington</strong>
 </div>
 
 <div class="grid">
@@ -374,150 +383,127 @@ footer{text-align:center;color:#746a58;padding:18px;font-size:12px}
 <aside class="panel order">
   <div class="order-title"><span>PEDIDO ACTUAL</span><button class="danger" id="clear">Vaciar</button></div>
   <div class="cart" id="cart"><div class="empty">▣<br>Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div></div>
-  <div class="order-summary" id="orderSummary">0 productos · 0 unidades</div>
   <div class="total"><span>TOTAL</span><span id="grand">$0.00</span></div>
+  <div class="order-summary" id="orderSummary">0 productos · 0 unidades</div>
   <div class="actions">
     <button class="finish" id="finish">▣ Finalizar venta</button>
     <button id="copy">▤ Copiar para Discord</button>
     <button id="download">⇩ Descargar comprobante</button>
     <button class="new" id="new">↻ Nueva venta</button>
   </div>
-  <div class="stamp"><img class="receipt-seal" src="emblema-harrington.png" alt="Emblema Harrington Gunsmith">HARRINGTON GUNSMITH<br>FINE FIREARMS · AMMUNITION · REPAIRS<br>SAINT DENIS</div>
+  <div class="stamp">HARRINGTON GUNSMITH<br>FINE FIREARMS · AMMUNITION · REPAIRS<br>SAINT DENIS</div>
 </aside>
 </div>
 <footer>Harrington Gunsmith · Saint Denis · 1880</footer>
 </div>
 <div class="toast" id="toast"></div>
-<button class="backtop" id="backtop" aria-label="Volver arriba">↑</button>
+
+
+<div class="receipt-modal" id="receiptModal">
+ <div class="receipt-paper">
+  <div class="receipt-head">
+   <img src="emblema-harrington.png" alt="Emblema Harrington Gunsmith">
+   <h2>HARRINGTON GUNSMITH</h2><p>El precio de un apellido.</p>
+  </div>
+  <div class="receipt-id"><span id="receiptNumber"></span><span id="receiptDate"></span></div>
+  <div class="receipt-lines" id="receiptLines"></div>
+  <div class="receipt-grand" id="receiptGrand"></div>
+  <div class="receipt-actions">
+   <button id="modalCopy">▤ Copiar para Discord</button>
+   <button id="modalDownload">⇩ Descargar comprobante</button>
+   <button class="new-receipt" id="modalNew">↻ Nueva venta</button>
+   <button class="close-receipt" id="modalClose">Cerrar</button>
+  </div>
+ </div>
+</div>
+<button class="to-top" id="toTop" aria-label="Volver arriba">↑</button>
 
 <script>
+
 const inputs=[...document.querySelectorAll('.qty input')];
-const grand=document.getElementById('grand'),cart=document.getElementById('cart'),toast=document.getElementById('toast');
-const summary=document.getElementById('orderSummary'),backtop=document.getElementById('backtop');
-let lastReceipt='',lastSaleId='',cat='todos';
+const grand=document.getElementById('grand');
+const cart=document.getElementById('cart');
+const toast=document.getElementById('toast');
+const summary=document.getElementById('orderSummary');
+let lastReceipt='', lastSaleId='', cat='todos';
 
 const categoryVisuals={
- todos:{image:'cabecera-harrington.png',title:'Catálogo Harrington'},
- revolveres:{image:'revolveres.png',title:'Revólveres'},
- pistolas:{image:'pistolas.png',title:'Pistolas'},
- repetidoras:{image:'repetidoras.png',title:'Repetidoras'},
- rifles:{image:'rifles.png',title:'Rifles'},
- escopetas:{image:'escopetas.png',title:'Escopetas'},
- blancas:{image:'armas-blancas.png',title:'Armas blancas'},
- municion:{image:'municion.png',title:'Munición'},
- suministros:{image:'suministros.png',title:'Suministros'}
+ todos:['cabecera-harrington.png','Catálogo Harrington'],
+ revolveres:['revolveres.png','Revólveres'],
+ pistolas:['pistolas.png','Pistolas'],
+ repetidoras:['repetidoras.png','Repetidoras'],
+ rifles:['rifles.png','Rifles'],
+ escopetas:['escopetas.png','Escopetas'],
+ blancas:['armas-blancas.png','Armas blancas'],
+ municion:['municion.png','Munición'],
+ suministros:['suministros.png','Suministros']
 };
 
-function money(n){return '$'+n.toFixed(2)}
-function selected(){
- return inputs.map(i=>({name:i.dataset.name,price:+i.dataset.price,qty:Math.max(0,parseInt(i.value)||0)})).filter(x=>x.qty>0);
-}
-function saveCart(){
- const values={}; inputs.forEach(i=>values[i.dataset.name]=Math.max(0,parseInt(i.value)||0));
- localStorage.setItem('harrington-cart',JSON.stringify(values));
-}
-function restoreCart(){
- try{
-  const values=JSON.parse(localStorage.getItem('harrington-cart')||'{}');
-  inputs.forEach(i=>{if(values[i.dataset.name]!=null)i.value=values[i.dataset.name]});
- }catch(e){}
-}
-function calc(flash=false){
- let total=0;
- inputs.forEach(i=>{
-   const q=Math.max(0,parseInt(i.value)||0),sub=q*(+i.dataset.price),row=i.closest('.product');
-   row.querySelector('.subtotal').textContent=money(sub);
-   row.classList.toggle('chosen',q>0);
-   total+=sub;
- });
- grand.textContent=money(total);
- const items=selected(),units=items.reduce((s,x)=>s+x.qty,0);
- summary.textContent=`${items.length} producto${items.length===1?'':'s'} · ${units} unidad${units===1?'':'es'}`;
- if(!items.length)cart.innerHTML='<div class="empty">▣<br>Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div>';
- else cart.innerHTML=items.map(x=>`<div class="cartrow"><span>${x.name}</span><span>${x.qty}</span><span>${money(x.price)}</span><span>${money(x.qty*x.price)}</span></div>`).join('');
- if(flash){grand.parentElement.classList.remove('flash');void grand.parentElement.offsetWidth;grand.parentElement.classList.add('flash')}
- saveCart();
- return total;
-}
+function money(n){return '$'+Number(n).toFixed(2)}
+function selected(){return inputs.map(i=>({name:i.dataset.name,price:+i.dataset.price,qty:Math.max(0,parseInt(i.value)||0)})).filter(x=>x.qty>0)}
 function saleId(){
- const d=new Date(),pad=n=>String(n).padStart(2,'0');
- const date=`${pad(d.getDate())}${pad(d.getMonth()+1)}${String(d.getFullYear()).slice(-2)}`;
- let seq=+(localStorage.getItem('harrington-sale-seq')||0)+1;
- localStorage.setItem('harrington-sale-seq',seq);
- return `HG-${date}-${String(seq).padStart(3,'0')}`;
+ const d=new Date(), p=n=>String(n).padStart(2,'0');
+ const base=`HG-${p(d.getDate())}${p(d.getMonth()+1)}${String(d.getFullYear()).slice(-2)}`;
+ let seq=+(localStorage.getItem('hg-sale-seq')||0)+1;
+ localStorage.setItem('hg-sale-seq',seq);
+ return `${base}-${String(seq).padStart(3,'0')}`;
 }
-function receipt(createId=false){
- const items=selected(),total=calc(),now=new Date();
- if(!items.length)return '';
- if(createId||!lastSaleId)lastSaleId=saleId();
- return [
- '╔══════════════════════════════════╗',
- '       HARRINGTON GUNSMITH',
- '          SAINT DENIS · 1880',
- '       El precio de un apellido.',
- '╚══════════════════════════════════╝',
- `VENTA: ${lastSaleId}`,
- `FECHA: ${now.toLocaleDateString('es-ES')} · ${now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`,
- '──────────────────────────────────',
- ...items.map(x=>`${x.name} × ${x.qty}\n  ${money(x.price)}/u  →  ${money(x.qty*x.price)}`),
- '──────────────────────────────────',
- `TOTAL DE LA VENTA: ${money(total)}`,
- '──────────────────────────────────',
- 'HARRINGTON GUNSMITH · SAINT DENIS'
- ].join('\n');
+function saveDraft(){localStorage.setItem('hg-draft',JSON.stringify(inputs.map(i=>Math.max(0,parseInt(i.value)||0))))}
+function loadDraft(){try{const a=JSON.parse(localStorage.getItem('hg-draft')||'[]');inputs.forEach((i,n)=>{if(Number.isFinite(+a[n]))i.value=Math.max(0,+a[n])})}catch(e){}}
+function calc(animate=false){
+ let total=0,units=0,types=0;
+ inputs.forEach(i=>{
+   let q=Math.max(0,parseInt(i.value)||0),sub=q*(+i.dataset.price),p=i.closest('.product');
+   p.querySelector('.subtotal').textContent=money(sub); p.classList.toggle('chosen',q>0);
+   total+=sub; units+=q; if(q>0)types++;
+ });
+ grand.textContent=money(total); summary.textContent=`${types} producto${types===1?'':'s'} · ${units} unidad${units===1?'':'es'}`;
+ const items=selected();
+ cart.innerHTML=!items.length?'<div class="empty">▣<br>Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div>':
+ items.map(x=>`<div class="cartrow"><span>${x.name}</span><span>${x.qty}</span><span>${money(x.price)}</span><span>${money(x.qty*x.price)}</span></div>`).join('');
+ if(animate){grand.classList.remove('flash');void grand.offsetWidth;grand.classList.add('flash')}
+ saveDraft();return total;
+}
+function receiptText(){
+ const items=selected(),total=calc(),now=new Date();if(!items.length)return '';
+ if(!lastSaleId)lastSaleId=saleId();
+ return ['HARRINGTON GUNSMITH — REGISTRO DE VENTA','Saint Denis · 1880',`Venta: ${lastSaleId}`,'────────────────────────────',
+ ...items.map(x=>`${x.name} × ${x.qty} — ${money(x.price)}/u — ${money(x.qty*x.price)}`),'────────────────────────────',
+ `TOTAL DE LA VENTA: ${money(total)}`,`Registro: ${now.toLocaleDateString('es-ES')} · ${now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`,'El precio de un apellido.'].join('\n');
 }
 function say(t){toast.textContent=t;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
-function changeButton(b,delta){
- const i=b.parentElement.querySelector('input');
- i.value=Math.max(0,(parseInt(i.value)||0)+delta);
- const row=i.closest('.product');row.classList.remove('flash');void row.offsetWidth;row.classList.add('flash');
- lastReceipt='';lastSaleId='';calc(true);
+function showReceipt(){
+ const items=selected();if(!items.length)return say('Añade algún producto primero');
+ if(!lastSaleId)lastSaleId=saleId();const now=new Date(),total=calc();
+ document.getElementById('receiptNumber').textContent='VENTA · '+lastSaleId;
+ document.getElementById('receiptDate').textContent=now.toLocaleString('es-ES');
+ document.getElementById('receiptLines').innerHTML=items.map(x=>`<div class="receipt-line"><span><b>${x.name}</b><small>${x.qty} × ${money(x.price)}</small></span><b>${money(x.qty*x.price)}</b></div>`).join('');
+ document.getElementById('receiptGrand').textContent='TOTAL · '+money(total);
+ lastReceipt=receiptText();document.getElementById('receiptModal').classList.add('show');
 }
-document.querySelectorAll('.plus').forEach(b=>b.onclick=()=>changeButton(b,1));
-document.querySelectorAll('.minus').forEach(b=>b.onclick=()=>changeButton(b,-1));
-inputs.forEach(i=>i.oninput=()=>{i.value=Math.max(0,parseInt(i.value)||0);lastReceipt='';lastSaleId='';calc(true)});
+async function copyReceipt(){const t=lastReceipt||receiptText();if(!t)return say('Añade algún producto primero');try{await navigator.clipboard.writeText(t);say('Venta copiada para Discord')}catch(e){prompt('Copia este texto:',t)}}
+function downloadReceipt(){const t=lastReceipt||receiptText();if(!t)return say('Añade algún producto primero');const blob=new Blob([t],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(lastSaleId||'Harrington_Venta')+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500);say('Comprobante descargado')}
+function resetSale(ask=true){if(ask&&!confirm('¿Empezar una nueva venta y borrar las cantidades actuales?'))return;inputs.forEach(i=>i.value=0);lastReceipt='';lastSaleId='';localStorage.removeItem('hg-draft');calc();document.getElementById('receiptModal').classList.remove('show');say('Nueva venta preparada')}
+function updateCategoryVisual(){const v=categoryVisuals[cat]||categoryVisuals.todos;document.getElementById('categoryImage').src=v[0];document.getElementById('categoryTitle').textContent=v[1]}
+function filter(){const q=document.getElementById('search').value.toLowerCase().trim();document.querySelectorAll('.product').forEach(p=>p.style.display=((cat==='todos'||p.dataset.cat===cat)&&p.dataset.name.includes(q))?'grid':'none')}
 
-document.getElementById('clear').onclick=()=>{
- if(!selected().length)return say('El pedido ya está vacío');
- if(confirm('¿Vaciar todo el pedido?')){inputs.forEach(i=>i.value=0);lastReceipt='';lastSaleId='';calc();say('Pedido vaciado')}
-};
-document.getElementById('new').onclick=()=>{
- if(confirm('¿Empezar una nueva venta y borrar las cantidades actuales?')){
-  inputs.forEach(i=>i.value=0);lastReceipt='';lastSaleId='';calc();say('Nueva venta preparada');window.scrollTo({top:0,behavior:'smooth'})
- }
-};
-document.getElementById('finish').onclick=()=>{
- lastReceipt=receipt(true);if(!lastReceipt)return say('Añade algún producto primero');
- say('Venta finalizada · '+lastSaleId);
-};
-document.getElementById('copy').onclick=async()=>{
- const t=lastReceipt||receipt(false);if(!t)return say('Añade algún producto primero');
- try{await navigator.clipboard.writeText(t);say('Venta copiada para Discord')}catch(e){prompt('Copia este texto:',t)}
-};
-document.getElementById('download').onclick=()=>{
- const t=lastReceipt||receipt(false);if(!t)return say('Añade algún producto primero');
- const blob=new Blob([t],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');
- a.href=URL.createObjectURL(blob);a.download=(lastSaleId||'Harrington_Venta')+'.txt';a.click();
- setTimeout(()=>URL.revokeObjectURL(a.href),1000);say('Comprobante descargado');
-};
-
-function updateCategoryVisual(){
- const v=categoryVisuals[cat]||categoryVisuals.todos,img=document.getElementById('categoryImage'),title=document.getElementById('categoryTitle');
- if(img){img.src=v.image;img.alt=v.title+' · Harrington Gunsmith'} if(title)title.textContent=v.title;
-}
-function filter(){
- const q=document.getElementById('search').value.toLowerCase().trim();
- document.querySelectorAll('.product').forEach(p=>p.style.display=((cat==='todos'||p.dataset.cat===cat)&&p.dataset.name.includes(q))?'grid':'none');
-}
-document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
- document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
- b.classList.add('active');cat=b.dataset.cat;updateCategoryVisual();filter();
-});
+document.querySelectorAll('.plus').forEach(b=>b.onclick=()=>{let i=b.parentElement.querySelector('input');i.value=(parseInt(i.value)||0)+1;lastReceipt='';lastSaleId='';calc(true)});
+document.querySelectorAll('.minus').forEach(b=>b.onclick=()=>{let i=b.parentElement.querySelector('input');i.value=Math.max(0,(parseInt(i.value)||0)-1);lastReceipt='';lastSaleId='';calc(true)});
+inputs.forEach(i=>i.oninput=()=>{lastReceipt='';lastSaleId='';calc(true)});
+document.getElementById('clear').onclick=()=>{if(confirm('¿Vaciar todo el pedido?'))resetSale(false)};
+document.getElementById('new').onclick=()=>resetSale(true);
+document.getElementById('finish').onclick=showReceipt;
+document.getElementById('copy').onclick=copyReceipt;
+document.getElementById('download').onclick=downloadReceipt;
+document.getElementById('modalCopy').onclick=copyReceipt;
+document.getElementById('modalDownload').onclick=downloadReceipt;
+document.getElementById('modalNew').onclick=()=>resetSale(true);
+document.getElementById('modalClose').onclick=()=>document.getElementById('receiptModal').classList.remove('show');
+document.getElementById('receiptModal').onclick=e=>{if(e.target.id==='receiptModal')e.currentTarget.classList.remove('show')};
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');cat=b.dataset.cat;updateCategoryVisual();filter()});
 document.getElementById('search').oninput=filter;
+const toTop=document.getElementById('toTop');window.addEventListener('scroll',()=>toTop.classList.toggle('show',scrollY>500));toTop.onclick=()=>scrollTo({top:0,behavior:'smooth'});
+loadDraft();updateCategoryVisual();calc();
 
-window.addEventListener('scroll',()=>backtop.classList.toggle('show',window.scrollY>500));
-backtop.onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
-
-restoreCart();updateCategoryVisual();calc();
 </script>
 </body></html>
