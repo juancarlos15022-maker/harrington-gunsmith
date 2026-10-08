@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261008a
+/* HARRINGTON GUNSMITH · app.js · versión 20261008b
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== Referencias ===== */
 /* Productos añadidos y precios editados desde Dirección: se aplican antes de leer el catálogo */
@@ -63,7 +63,9 @@ const EMPTY_ART={
  crate:'<svg viewBox="0 0 64 40" aria-hidden="true"><path d="M12 12l20-8 20 8v18l-20 8-20-8z"/><path d="M12 12l20 8 20-8M32 20v18M22 8l20 8"/></svg>',
  anvil:'<svg viewBox="0 0 64 40" aria-hidden="true"><path d="M8 12h34l10-6h4v10h-8l-6 6H22l-2 8h8v4H12v-4h4l2-8H8z"/></svg>'
 };
-function emptyArt(k){return '<span class="empty-art">'+(EMPTY_ART[k]||'')+'</span>'}
+const EMPTY_IMG={rev:'vacio-pedido.png',scroll:'vacio-encargos.png',crate:'vacio-pedidos.png',anvil:'vacio-materiales.png'};
+/* Imagen propia si está subida; si no, el dibujo de líneas */
+function emptyArt(k){return '<span class="empty-art"><img src="'+EMPTY_IMG[k]+'" alt="" onerror="this.parentNode.classList.add(\'nofile\')">'+(EMPTY_ART[k]||'')+'</span>'}
 function bump(el){el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump')}
 /* Evita el doble toque: mientras una operación con la nube está en marcha, el botón no responde otra vez */
 const busyOps={};

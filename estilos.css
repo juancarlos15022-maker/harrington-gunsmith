@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261008a
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261008b
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -882,6 +882,10 @@ body.theme-night .hero-banner:before{background:radial-gradient(ellipse at 50% 0
 }
 /* 14) grabados de tinta en las pantallas vacías */
 .empty-art{display:block;width:96px;height:60px;margin:0 auto 8px;opacity:.75}
+.empty-art img{display:block;width:100%;height:100%;object-fit:cover;mix-blend-mode:screen;-webkit-mask-image:radial-gradient(ellipse at center,#000 62%,transparent 84%);mask-image:radial-gradient(ellipse at center,#000 62%,transparent 84%)}
+.empty-art:not(.nofile){width:min(280px,86%);height:auto;aspect-ratio:3/2;opacity:1}
+.empty-art:not(.nofile) svg{display:none}
+.empty-art.nofile img{display:none}
 .empty-art svg{width:100%;height:100%;fill:none;stroke:#c9a24a;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 0 #000)}
 /* 15) botones de latón y nogal: remaches, bisel y pulsación */
 .enc-actions button,.actions button,.receipt-actions button,.confirm-actions button,.clock-btn{border-color:#b88931}
