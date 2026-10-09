@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261009j
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261009k
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1311,6 +1311,79 @@ body.has-agotado .nostock{width:74px;height:36px;margin:2px 0 0;font-size:0;colo
 .mi-photo b{font:700 54px 'Cinzel Decorative',Georgia,serif;color:#e9bf5c}
 .mi-name{font:700 22px 'IM Fell English',Georgia,serif;color:#f3dfa6}.mi-role{color:#b8a77e;font-style:italic;margin-bottom:10px}
 .mi-box .enc-actions{display:grid;gap:8px;margin:8px 0}
+/* ===== Tienda ABIERTA / CERRADA: abierta cuando hay alguien fichado ===== */
+.g-shop{position:absolute;left:var(--dl,38.57%);width:var(--dw,22.95%);top:calc(var(--dt,47.33%) + var(--dh,26.04%) * .2);z-index:2;display:flex;flex-direction:column;align-items:center;pointer-events:none;opacity:0;transition:opacity .8s}
+.gate[data-ph="scene"] .g-shop{opacity:1}
+.gs-sign{width:96%;transform-origin:50% 0;animation:sway 4s ease-in-out infinite;filter:drop-shadow(0 .6cqh .8cqh #000c)}
+.gs-who{margin-top:.6cqh;padding:.25cqh 1cqh;border-radius:.6cqh;background:#000a;color:#f6d27c;font:italic 1.25cqh Georgia,serif;white-space:nowrap;text-shadow:0 1px 2px #000}
+.gs-who:empty{display:none}
+.gate.closed .g-img{filter:brightness(.62) saturate(.8)}
+.gate.closed .g-lamp.win{opacity:.15!important;animation:none}
+.gate.closed .g-interior::after{background:radial-gradient(ellipse at 50% 42%,#ffd9a044 0,transparent 60%)!important}
+.gate.closed .g-spill{opacity:.25!important}
+.shop-sign{display:block;width:78px;height:auto;margin:-4px 0 4px;filter:drop-shadow(0 3px 3px #000a);transform-origin:50% 0;animation:sway 4s ease-in-out infinite}
+.shop-sign[hidden]{display:none}
+/* ===== Dirección sobre el escritorio del despacho ===== */
+#dirModal{background:linear-gradient(#020604c0,#020604d8),url(fondo-direccion.webp) center/cover no-repeat fixed,#020604}
+@media(min-width:900px){#dirModal{background:linear-gradient(#02060499,#020604c4),url(fondo-direccion-ancho.webp) center/cover no-repeat fixed,#020604}}
+#dirModal .enc-panel{background:linear-gradient(rgba(6,14,10,.86),rgba(4,10,7,.9)),url(textura-cuero.webp) 0 0/280px,#0a1811;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+/* ===== Tutorial: una página de manual antiguo ===== */
+#tutModal{background:radial-gradient(ellipse at 50% 50%,#1a0f0899,#020604ee),#020604}
+@media(min-width:900px){#tutModal{background:radial-gradient(ellipse at 50% 50%,#0000 30%,#000c 100%),linear-gradient(#02060488,#020604aa),url(tutorial-libro-ancho.webp) center/cover no-repeat fixed,#120a06}}
+#tutModal .enc-panel{--tw:min(760px,96vw);max-width:var(--tw);border-radius:0;background:none;box-shadow:none;filter:drop-shadow(0 30px 40px #000);color:#2a1a0d;
+ border:0;border-image:url(tutorial-libro.webp) 230 128 320 180 fill / calc(var(--tw) * .2875) calc(var(--tw) * .16) calc(var(--tw) * .4) calc(var(--tw) * .225) stretch;
+ padding:calc(var(--tw) * .17) calc(var(--tw) * .12) calc(var(--tw) * .2) calc(var(--tw) * .19)}
+#tutModal .tour-wrap{background:#f3e7c899!important;border:1px solid #8a6a3288!important;box-shadow:none!important}
+#tutModal .enc-head{background:none!important;border:0!important;box-shadow:none!important;padding:0 0 10px}
+#tutModal #tutTitle{color:#3a220c!important;font-family:'Cinzel Decorative',Georgia,serif;letter-spacing:.1em;text-shadow:none}
+#tutModal #tutBody{padding:0}
+#tutModal .tut-intro{color:#5a4020}
+#tutModal details.tut{background:#f3e7c866;border:1px solid #8a6a3266;border-left:4px solid #8a5a1e;box-shadow:none}
+#tutModal details.tut>summary{color:#4a2a0a;text-shadow:none}
+#tutModal details.tut[open]>summary{border-bottom-color:#8a6a3266}
+#tutModal details.tut>summary::after{color:#7a4a14}
+#tutModal .tut-n{border-color:#7a4a14;color:#7a4a14}
+#tutModal .tut-c{color:#2e1e0e}
+#tutModal .tut-c b{color:#5a1e08}
+#tutModal .tut-c .tag{border-color:#2f6a42;color:#24603a}#tutModal .tut-c .tag.boss{border-color:#8a4a1e;color:#8a3a10}
+#tutModal .tour-wrap span{color:#5a4020}
+#tutModal .tut-group{margin:16px 0 8px;padding-top:10px;border-top:2px double #8a6a32;color:#6b2a0a;font:700 13px 'Cinzel Decorative',Georgia,serif;letter-spacing:.14em;text-align:center}
+
+/* ===== Ticket sobre papel con membrete ===== */
+.receipt-paper{border-radius:0;padding:calc(min(560px,94vw) * .36) calc(min(560px,94vw) * .075) calc(min(560px,94vw) * .2);background:none!important;border:0;border-image:url(ticket-papel.webp) 230 56 250 56 fill / calc(min(560px,94vw) * .36) calc(min(560px,94vw) * .088) calc(min(560px,94vw) * .39) stretch;filter:drop-shadow(0 18px 30px #000c)}
+.receipt-frame{border:0!important;box-shadow:none!important;padding:0 6px 6px}
+.receipt-frame>.corner{display:none}
+.receipt-emblem{height:70px}
+/* ===== Ventanas que se despliegan al abrirse ===== */
+@keyframes unfold{0%{opacity:0;transform:perspective(900px) rotateX(-12deg) scaleY(.6);transform-origin:50% 0}60%{opacity:1}100%{opacity:1;transform:none}}
+@keyframes popIn{0%{opacity:0;transform:scale(.88)}100%{opacity:1;transform:none}}
+.modal-overlay>.enc-panel{overflow-x:clip}
+.modal-overlay:not([hidden])>.enc-panel{animation:unfold .42s cubic-bezier(.2,.8,.25,1) both;transform-origin:50% 0}
+.modal-overlay.confirm:not([hidden])>.confirm-box{animation:popIn .22s ease both}
+@media(prefers-reduced-motion:reduce){.modal-overlay:not([hidden])>.enc-panel,.modal-overlay.confirm:not([hidden])>.confirm-box{animation:none}}
+/* ===== Botones de latón ===== */
+#finish,#finishEnc,#obGo,.clock-btn:not(.out),[data-dir^="su-pay"]{border:1px solid #f7dc8f!important;background:linear-gradient(180deg,#f6dc93 0,#d8a945 42%,#a8761f 58%,#8a5e16 100%)!important;color:#2a1606!important;text-shadow:0 1px 0 #fff3!important;font-weight:700;box-shadow:inset 0 1px 0 #fff8,inset 0 -2px 0 #5a3a0c,0 0 0 2px #2a1606,0 4px 10px #000a!important;transition:transform .08s,box-shadow .08s}
+#finish:active,#finishEnc:active,#obGo:active,.clock-btn:not(.out):active,[data-dir^="su-pay"]:active{transform:translateY(2px);box-shadow:inset 0 2px 4px #5a3a0c,0 0 0 2px #2a1606,0 1px 3px #000a!important}
+#finish::before,#finishEnc::before{filter:brightness(.2) sepia(1)}
+.clock-btn.out{border:1px solid #d9a08a!important;background:linear-gradient(180deg,#c86a4e 0,#8e2a16 55%,#5e160a 100%)!important;box-shadow:inset 0 1px 0 #fff5,inset 0 -2px 0 #3a0a04,0 0 0 2px #1a0602,0 4px 10px #000a!important}
+.clock-btn.out:active{transform:translateY(2px)}
+/* ===== Día y noche más marcados ===== */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;transition:background 2s}
+body.theme-night::before{background:radial-gradient(ellipse 60% 40% at 50% 0,#ffae4a2a,transparent 70%),radial-gradient(ellipse at 50% 50%,transparent 40%,#000a 100%)}
+body.theme-night .panel,body.theme-night .clock-bar{box-shadow:0 10px 30px #000b,0 0 40px #ff9a3a0d}
+body.theme-night .product.has-qty{box-shadow:inset 0 0 0 1px #e9b95a77,inset 0 0 26px #ffae4a22}
+body.theme-night .hero-banner img{filter:brightness(.88) saturate(1.05)}
+body.theme-day::before{background:radial-gradient(ellipse 80% 50% at 50% -10%,#fff2c822,transparent 70%)}
+body.theme-day .hero-banner img{filter:brightness(1.06) saturate(1.04)}
+/* ===== Repaso del móvil: botones con tamaño de dedo y textos que no se cortan ===== */
+@media(max-width:650px){
+ .enc-actions button,.dir-form button,.confirm-actions button{min-height:44px}
+ .enc-card .t{overflow-wrap:anywhere}
+ .dir-log{overflow-wrap:anywhere}
+ .badge{white-space:nowrap}
+ .dash{grid-template-columns:1fr 1fr}
+ .enc-money{flex-wrap:wrap;gap:4px 10px}
+}
 /* placa de día de pago */
 .pay-plate{position:relative;display:flex;align-items:center;gap:12px;width:100%;margin:10px 0 0;padding:11px 14px;border:2px double #e8b923;border-radius:8px;background:linear-gradient(100deg,#3a2606,#1a1206 55%,#0e1a12);box-shadow:0 6px 18px #0008,inset 0 0 22px #e8b92333;color:inherit;font:inherit;text-align:left;cursor:pointer;overflow:hidden}
 .pay-plate[hidden]{display:none}

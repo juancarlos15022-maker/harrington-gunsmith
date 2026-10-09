@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261009j
+/* HARRINGTON GUNSMITH · app.js · versión 20261009k
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -1502,19 +1502,6 @@ function saveGasto(){
  discordSend('gastos','GASTO · '+CAT_NAMES[gxDraft.cat]+'\n'+concepto+'\nImporte: '+money(cents));
  saveGastos();cloudPut('gasto:'+gastos[gastos.length-1].id,gastos[gastos.length-1]);gxDraft={cat:'',concepto:'',amt:''};per.g={mode:'dia',off:0};renderDir();say('Gasto guardado');
 }
-async function payWages(){
- const ws=weekStart(0), lab=dayStr(ws)+' – '+dayStr(ws+6), conc=e=>`Sueldo semanal · ${e.name} (${lab})`;
- const L=empleados.filter(e=>e.sueldo>0), todo=L.filter(e=>!gastos.some(g=>g.cat==='sueldos'&&g.concepto===conc(e)));
- if(!L.length)return say('Ningún empleado tiene sueldo: complétalo en EMPLEADOS');
- if(!todo.length)return say('Los sueldos de esta semana ya están apuntados');
- const tot=todo.reduce((a,e)=>a+e.sueldo,0);
- if(!await askConfirm('Apuntar sueldos','Semana '+lab+': '+todo.map(e=>e.name+' '+money(e.sueldo)).join(', ')+'. Total: '+money(tot)+'.','Apuntar'))return;
- const now=Date.now(), m=madridParts(now);
- todo.forEach((e,i)=>{const g={id:'g'+now.toString(36)+i+Math.random().toString(36).slice(2,4),cat:'sueldos',concepto:conc(e),cents:e.sueldo,day:dayNum(+m.year,+m.month,+m.day),date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`};gastos.push(g);cloudPut('gasto:'+g.id,g)});
- saveGastos();
- discordSend('gastos','SUELDOS DE LA SEMANA · '+lab+'\n'+todo.map(e=>'  '+e.name+' · '+money(e.sueldo)).join('\n')+'\nTotal: '+money(tot));
- renderDir();say(todo.length+' '+(todo.length===1?'sueldo apuntado':'sueldos apuntados')+' · '+money(tot));
-}
 /* ===== Sueldos: semana de lunes a domingo, se pagan el domingo =====
    El pago se apunta como gasto el día que se paga, así que cae en la semana de cuentas (viernes a jueves) en curso. */
 const SUELDO_PUESTO={'Jefe':5000,'Gerente':4000,'Armero experto':3000,'Armero':2500,'Aprendiz de armero':2000};
@@ -2150,7 +2137,7 @@ async function discordSend(kind,text,blob,fname,force,urlOverride){
   else init={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)};
   const r=await fetch(url,init);
   if(!r.ok)throw new Error(r.status);
-  if(force)say('Enviado a Discord ✔');
+  if(force)say('Enviado a Discord');
   return true;
  }catch(e){say('No se pudo enviar a Discord');return false}
 }
@@ -2981,7 +2968,6 @@ dirModal.addEventListener('click',e=>{
  else if(act==='bk-config')downloadBackup(true);
  else if(act==='bk-restore')document.getElementById('bkFile').click();
  else if(act==='gxsave')saveGasto();
- else if(act==='gx-sueldos')once('wages',payWages,b);
  else if(act==='su-pay')once('sue-'+arg,()=>paySueldo(arg),b);
  else if(act==='su-prev'){sueOff--;renderDir()}
  else if(act==='su-next'){if(sueWeek()+7<=payMonday(0))sueOff++;renderDir()}
@@ -3249,8 +3235,7 @@ document.getElementById('fsDown').onclick=()=>{if(fsI>0){fsI--;store.set('harrin
 applyFs();
 {let hc=store.get('harrington_hc_v1')==='1';document.body.classList.toggle('hc',hc);document.getElementById('hcBtn').onclick=()=>{hc=!hc;document.body.classList.toggle('hc',hc);store.set('harrington_hc_v1',hc?'1':'0');say(hc?'Alto contraste activado':'Alto contraste desactivado')}}
 /* Pantalla de bienvenida: solo una vez por sesión */
-{const sp=document.getElementById('splash');let seen=false;try{seen=sessionStorage.getItem('harrington_splash')==='1';sessionStorage.setItem('harrington_splash','1')}catch(e){}
- if(seen||(!window.__HG_NOGATE&&empleados.length))sp.remove();else{const nm=sp.querySelector('.sp-name');nm.innerHTML=[...nm.textContent].map((ch,i)=>`<i style="animation-delay:${(0.75+i*0.045).toFixed(3)}s">${ch===' '?'&nbsp;':ch}</i>`).join('');setTimeout(()=>{try{playThump()}catch(e){}},520);setTimeout(()=>sp.remove(),3000)}}
+
 /* Instalar como app (icono en la pantalla de inicio) */
 try{const m={name:'Harrington Gunsmith · Saint Denis',short_name:'Harrington',start_url:location.href.split('#')[0],display:'standalone',background_color:'#07140f',theme_color:'#07140f',icons:[{src:new URL('emblema-harrington.png',location.href).href,sizes:'512x512',type:'image/png'}]};
  const l=document.createElement('link');l.rel='manifest';l.href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));document.head.appendChild(l)}catch(e){}
@@ -3312,15 +3297,27 @@ const TUTORIAL=[
 <ul><li><b>Configuración</b>: empleados, clientes, proveedores, convenios y ofertas, precios, productos nuevos, Discord, mínimos de stock y la contraseña del jefe.</li><li><b>Operación</b>: stock, ventas, encargos, pedidos a proveedores, fichajes, gastos y cierres. Los números de venta y el stock los controla la nube, así que nunca se repiten ni se vende lo que ya no hay.</li></ul>
 <p>Los cambios llegan a los demás móviles <b>al instante</b>: la nube avisa en cuanto algo cambia. Si ese aviso no funcionara, cada móvil sigue comprobando la nube cada pocos segundos. Arriba, junto a FICHAJE, ves «☁ conectado», «☁ guardando…», «☁ guardado ✓» o «☁ sin conexión». <b>Sin conexión</b> puedes mirar el catálogo y hacer presupuestos, pero no finalizar ventas ni cambiar el stock. Los cambios de configuración se suben solos al volver la conexión.</p>
 <p>Haz una <b>copia de seguridad</b> de vez en cuando desde Dirección.</p>`],
-['Novedades: deshacer, sin conexión y app',`<ul><li><b>Deshacer</b>: al borrar un gasto, anular o borrar una ausencia, o empezar una venta nueva con productos puestos, el aviso de abajo lleva un botón <b>DESHACER</b> durante unos segundos.</li><li><b>Sin conexión</b>: si se cae la conexión sale una franja roja arriba. Puedes seguir trabajando: lo que hagas se guarda y se envía al volver.</li><li><b>Cerrar sesión</b>: al fichar tu salida, la web te pregunta si quieres cerrar tu sesión en ese dispositivo.</li><li><b>👁</b> junto a las contraseñas sirve para ver lo que escribes.</li><li><b>Como una app</b>: la web se guarda en el móvil, así que se abre al instante y aunque no haya conexión. En el móvil puedes añadirla a la pantalla de inicio desde el menú del navegador («Añadir a pantalla de inicio»).</li><li>En el <b>ordenador</b> la web ocupa toda la pantalla: productos en columnas y el pedido siempre a la derecha.</li><li>Con poca batería o con el ahorro de datos activado, se quitan los efectos de lluvia para gastar menos.</li></ul>`],
+['Novedades: deshacer, sin conexión y app',`<ul><li><b>Deshacer</b>: al borrar un gasto, anular o borrar una ausencia, o empezar una venta nueva con productos puestos, el aviso de abajo lleva un botón <b>DESHACER</b> durante unos segundos.</li><li><b>Sin conexión</b>: si se cae la conexión sale una franja roja arriba. Puedes seguir trabajando: lo que hagas se guarda y se envía al volver.</li><li><b>Cerrar sesión</b>: al fichar tu salida, la web te pregunta si quieres cerrar tu sesión en ese dispositivo.</li><li><b>👁</b> junto a las contraseñas sirve para ver lo que escribes.</li><li><b>Como una app</b>: la web se guarda en el móvil, así que se abre al instante y aunque no haya conexión. En el móvil puedes añadirla a la pantalla de inicio desde el menú del navegador («Añadir a pantalla de inicio»).</li><li>En el <b>ordenador</b> la web ocupa toda la pantalla: productos en columnas y el pedido siempre a la derecha.</li><li>Con poca batería o con el ahorro de datos activado, se quitan los efectos de lluvia para gastar menos.</li><li><b>ABIERTO / CERRADO</b>: la tienda está abierta cuando hay alguien fichado. En la entrada cuelga el cartel en la puerta con quién atiende, y en la pantalla principal sale junto al fichaje.</li><li>Este tutorial enseña a cada uno lo suyo: los empleados solo ven lo que usan; la dirección ve además su parte al final.</li></ul>`],
 ['Modo prueba (Arthur Ayudante)',`<ul><li>En la entrada, la última tarjeta es <b>Arthur Ayudante</b>, con el sello «PRUEBA». Sirve para probar las novedades sin miedo.</li><li>La primera vez te pide crear su contraseña; después, siempre la misma (es la única cosa que se guarda de verdad).</li><li>Dentro entras como jefe, con DIRECCIÓN, y ves una copia de los datos reales del momento.</li><li><b>Nada de lo que hagas se guarda</b> en la base de datos ni afecta a la web de verdad, y <b>no se envía nada a Discord</b>. Arriba sale la franja amarilla «MODO PRUEBA».</li><li>El botón <b>DISCORD (n)</b> de la franja enseña los mensajes que se habrían enviado, para comprobar que salen bien.</li><li><b>SALIR</b> (o cerrar la pestaña) borra la prueba y vuelve a la entrada normal.</li><li>Arthur Ayudante no aparece en Empleados, Sueldos ni en ningún listado.</li></ul>`],
 ['Objetivo, buscador y revisión',`<ul><li><b>Objetivo semanal</b> (Dirección → Ventas y caja → OBJETIVO SEMANAL): pon una meta de ventas para la semana (viernes a jueves). En la pantalla principal sale una barra dorada que se va llenando con lo cobrado; al llegar a la meta se pone verde y salta la celebración.</li><li><b>Buscador</b> (arriba en la consola de Dirección): escribe un cliente, un número de serie, un ticket, un encargo, un pedido o un empleado y pulsa ABRIR para ir a su apartado.</li><li><b>Revisión de datos</b> (Dirección → Sistema): comprueba stock negativo, turnos abiertos de hace mucho, ventas sin empleado, gastos o clientes repetidos, encargos y pedidos atascados y productos que se van a acabar, y te dice cómo arreglarlo. No cambia nada sola.</li><li><b>Productos que se acaban</b>: si al ritmo de ventas de las dos últimas semanas a un producto le quedan 5 días o menos, sale un aviso en Dirección.</li><li><b>Ficha completa</b> (Empleados → 📋 FICHA COMPLETA): ventas, cobrado, horas, sueldos, ausencias y ascensos de cada empleado.</li><li>Detalles nuevos: monedas de oro que caen al total al cobrar, el reloj de bolsillo junto a tu nombre mientras estás fichado, el cartel de «SE BUSCA» del empleado de la semana, los sellos ENTREGADO y RECIBIDO, la tablilla de AGOTADO y los mensajes de Discord con su imagen.</li></ul>`],
 ['Si algo no funciona',`<ul><li><b>No deja finalizar</b>: lee el aviso; suele faltar cliente, empleado, telegrama, pago adelantado o stock.</li><li><b>Producto SIN STOCK</b>: el jefe debe sumar existencias.</li><li><b>No suena</b>: en ⚙ comprueba que el sonido diga «♪ SÍ» y el volumen del móvil.</li><li><b>Un botón no responde</b>: si muestra ⏳, está guardando; espera a que termine.</li><li><b>No suena la música</b>: los navegadores no dejan sonar nada hasta que tocas la pantalla; toca cualquier sitio. Si sigue sin sonar, en ⚙ comprueba que «Música de fondo» diga «♫ SÍ».</li><li><b>Se lee poco</b>: usa A+ o el alto contraste ◐.</li><li><b>No ves un cambio reciente</b>: abre la web en una pestaña privada.</li></ul>`]];
 const tutModal=document.getElementById('tutModal');
 const HELP_MAP={objetivo:'Objetivo, buscador y revisión',revision:'Objetivo, buscador y revisión',empficha:'Empleados y contratos',sueldos:'Sueldos',ausencias:'Ausencias',convenios:'Convenios',empleados:'Empleados y contratos',clientes:'Clientes',productos:'Modo Jefe',stock:'Fabricación y recetas',fabricacion:'Fabricación y recetas',regstock:'Modo Jefe',horarios:'Fichaje',ventas:'Modo Jefe',semanales:'Ticket, copias y Discord',gastos:'Empleados y contratos',balance:'Ticket, copias y Discord',cierre:'Modo Jefe',proveedores:'Proveedores y pedidos',nuevopedido:'Proveedores y pedidos',regpedidos:'Proveedores y pedidos',discord:'Ticket, copias y Discord',nube:'Datos y dispositivos',reset:'Datos y dispositivos',copia:'Datos y dispositivos'};
+/* El tutorial muestra a cada uno lo suyo: los empleados no ven nada de Dirección ni de jefes */
+const TUT_BOSS=['Fabricación y recetas','Proveedores y pedidos','Empleados y contratos','Clientes','Sueldos','Modo Jefe y Dirección','Datos y dispositivos','Modo prueba','Objetivo, buscador y revisión','Convenios, ofertas y precios especiales'];
+const TUT_BOSS_RE=/Dirección|DIRECCIÓN|Modo Jefe|MODO JEFE|modo jefe|contraseña de jefe|SOLO JEFE|data-dir=/;
+function tutIsBoss(t){return /tag boss/.test(t[0])||TUT_BOSS.some(n=>t[0].indexOf(n)===0)}
+function tutClean(html){const d=document.createElement('div');d.innerHTML=html;d.querySelectorAll('li,p').forEach(el=>{if(TUT_BOSS_RE.test(el.innerHTML))el.remove()});d.querySelectorAll('ul,ol').forEach(l=>{if(!l.children.length)l.remove()});return d.innerHTML}
+function tutHTML(focus){
+ const boss=bossActive||isJefe(meEmp());let n=0;
+ const row=(t,body)=>`<details class="tut"${n===0&&!focus?' open':''}><summary><span class="tut-n">${++n}</span>${t}</summary><div class="tut-c">${body}</div></details>`;
+ const emp=TUTORIAL.filter(t=>!tutIsBoss(t)).map(t=>{const b=boss?t[1]:tutClean(t[1]);return b.replace(/<[^>]+>/g,'').trim()?row(t[0],b):''}).join('');
+ if(!boss)return emp;
+ return emp+'<div class="tut-group">PARA LA DIRECCIÓN</div>'+TUTORIAL.filter(tutIsBoss).map(t=>row(t[0],t[1])).join('');
+}
 function openTutorial(focus){
  if(typeof focus!=='string')focus='';
- document.getElementById('tutBody').innerHTML='<div class="tour-wrap"><button type="button" class="tour-start" id="tourStart">▶ VISITA GUIADA</button><span>Un recorrido rápido que te señala cada botón.</span></div><p class="tut-intro">Toca cada apartado para ver cómo funciona. Puedes abrir esta guía cuando quieras con el botón «? TUTORIAL» de arriba a la derecha.</p>'+TUTORIAL.map((t,i)=>`<details class="tut"${i===0&&!focus?' open':''}><summary><span class="tut-n">${i+1}</span>${t[0]}</summary><div class="tut-c">${t[1]}</div></details>`).join('');
+ document.getElementById('tutBody').innerHTML='<div class="tour-wrap"><button type="button" class="tour-start" id="tourStart">▶ VISITA GUIADA</button><span>Un recorrido rápido que te señala cada botón.</span></div><p class="tut-intro">Toca cada apartado para ver cómo funciona. Puedes abrir esta guía cuando quieras con el botón «? TUTORIAL» de arriba a la derecha.</p>'+tutHTML(focus);
  openModal(tutModal);tutModal.scrollTop=0;
  if(focus){const ds=[...document.querySelectorAll('#tutBody details.tut')], d=ds.find(x=>x.querySelector('summary').textContent.indexOf(focus)>=0);if(d){ds.forEach(x=>x.open=false);d.open=true;setTimeout(()=>d.scrollIntoView({block:'start'}),60)}}
  const tb=document.getElementById('tourStart');if(tb)tb.onclick=()=>{closeModal(tutModal);startTour()};
@@ -3345,7 +3342,7 @@ let tourI=0;
 function startTour(){tourI=0;let o=document.getElementById('tourOv');if(!o){o=document.createElement('div');o.id='tourOv';o.innerHTML='<div id="tourHi"></div><div id="tourTip" role="dialog" aria-live="polite"><div id="tourTx"></div><div class="tour-b"><span id="tourN"></span><button type="button" id="tourPrev">◂</button><button type="button" id="tourNext">Siguiente ▸</button><button type="button" id="tourEnd">Salir</button></div></div>';document.body.appendChild(o);
  document.getElementById('tourPrev').onclick=()=>tourGo(-1);document.getElementById('tourNext').onclick=()=>tourGo(1);document.getElementById('tourEnd').onclick=endTour;window.addEventListener('resize',()=>{if(!o.hidden)tourShow()})}
  o.hidden=false;tourShow()}
-function tourEl(i){const s=TOUR[i];if(!s)return null;const e=document.querySelector(s[0]);return e&&e.getClientRects().length?e:null}
+function tourEl(i){const s=TOUR[i];if(!s)return null;if(!bossActive&&/#dirBtn|#bossBtn|data-dir/.test(s[0]))return null;const e=document.querySelector(s[0]);return e&&e.getClientRects().length?e:null}
 function tourGo(d){let i=tourI+d;while(i>=0&&i<TOUR.length&&!tourEl(i))i+=d;if(i<0)return;if(i>=TOUR.length)return endTour();tourI=i;tourShow()}
 function tourShow(){
  if(!tourEl(tourI)){tourGo(1);return}
@@ -3435,6 +3432,7 @@ function fmtDuration(a,b){const m=Math.max(0,Math.round((b-a)/60000));return `${
 function renderClock(){
  const el=m=>{const mm=Math.max(0,Math.floor(m/60000));return mm<60?mm+' min':Math.floor(mm/60)+' h '+pad(mm%60)+' min'};
  clockStatus.innerHTML=shifts.length?shifts.map(x=>{const lg=Date.now()-x.start>MAX_SHIFT_H*3600000;return `<span class="shift-chip${lg?' long':''}" title="Entrada: ${esc(fmtTime(x.start))}"><i></i>${lg?'⚠ ':''}${esc(x.name)} · ${el(Date.now()-x.start)}${lg?' · ¿olvidó fichar la salida?':''}</span>`}).join(''):'Sin fichar';
+ try{shopState()}catch(e){}
  {const me=meEmp(), mine=me&&shifts.some(x=>x.empId===me.id);clockOutBtn.hidden=me?!mine:!shifts.length;clockBtn.hidden=!!mine;try{paintPocket()}catch(e){}}
  lastShiftBtn.hidden=!lastShift;
 }
@@ -4063,7 +4061,6 @@ function gateCheck(){if(window.__HG_NOGATE||SANDBOX||G.open||meEmp())return;if(e
 function gateOpen(opt){
  G.msgOk=!!(opt&&opt.msg&&/^Sesión cerrada/.test(opt.msg));
  opt=opt||{};G.open=true;gClear();G.pending=null;G.msg=opt.msg||'';G.big=null;
- const sp=document.getElementById('splash');if(sp)sp.remove();
  document.body.classList.add('gate-open');gate.hidden=false;
  const st=document.getElementById('gSignTxt');st.innerHTML=[...'HARRINGTON GUNSMITH'].map((ch,i)=>`<i style="animation-delay:${(0.9+i*0.07+(i%3)*0.05).toFixed(2)}s">${ch===' '?'&nbsp;':ch}</i>`).join('');
  const full=!opt.quick&&!gReduced();
@@ -4541,6 +4538,16 @@ document.getElementById('meChip').addEventListener('click',openMi);
 document.getElementById('meChip').addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();openMi()}});
 document.getElementById('miClose').onclick=()=>closeModal(miModal);
 miModal.addEventListener('click',ev=>{if(ev.target===miModal)closeModal(miModal)});
+/* ===== Tienda abierta o cerrada según haya alguien fichado ===== */
+function shopState(){
+ const open=shifts.length>0, names=shifts.map(s=>s.name.split(' ')[0]);
+ const g=document.getElementById('gate'), sg=document.getElementById('gsSign'), who=document.getElementById('gsWho');
+ if(g)g.classList.toggle('closed',!open);
+ const src=open?'cartel-abierto.webp':'cartel-cerrado.webp';
+ if(sg&&sg.getAttribute('src')!==src)sg.src=src;
+ if(who)who.textContent=open?'Atiende: '+(names.length>2?names.slice(0,2).join(', ')+' y '+(names.length-2)+' más':names.join(' y ')):'';
+ const ss=document.getElementById('shopSign');if(ss){if(ss.getAttribute('src')!==src)ss.src=src;ss.alt=open?'Tienda abierta':'Tienda cerrada';ss.title=open?'Abierta · atiende '+names.join(', '):'Cerrada: no hay nadie fichado';ss.hidden=false}
+}
 /* ===== Limpieza de la nube: borra marcas antiguas que ya no sirven para nada ===== */
 async function cloudJanitor(force){
  if(!bossActive)return;

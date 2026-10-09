@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
-<!-- HARRINGTON GUNSMITH · versión 20261009j · tres archivos: index.html, estilos.css y app.js -->
+<!-- HARRINGTON GUNSMITH · versión 20261009k · tres archivos: index.html, estilos.css y app.js -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#07140f">
@@ -14,7 +14,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
 <title>Harrington Gunsmith · Saint Denis</title>
-<link rel="stylesheet" href="estilos.css?v=20261009j">
+<link rel="stylesheet" href="estilos.css?v=20261009k">
+<link rel="preload" as="image" href="entrada-fachada.webp" media="(max-aspect-ratio: 23/20)">
+<link rel="preload" as="image" href="entrada-fachada-ancha.webp" media="(min-aspect-ratio: 23/20)">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 </head>
 <body>
 <div class="wrap">
@@ -27,7 +30,7 @@
 </header>
 
 <section class="clock-bar" aria-label="Fichaje de empleados">
-  <div class="clock-info"><b><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V9.5M12 13.5l3 2M10.5 3h3M12 3v3.5"/></svg>FICHAJE <span id="cloudSt" class="cloud-st">☁ …</span></b><span class="clock-status" id="clockStatus">Sin fichar</span></div>
+  <div class="clock-info"><img class="shop-sign" id="shopSign" alt="" hidden><b><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V9.5M12 13.5l3 2M10.5 3h3M12 3v3.5"/></svg>FICHAJE <span id="cloudSt" class="cloud-st">☁ …</span></b><span class="clock-status" id="clockStatus">Sin fichar</span></div>
   <div class="clock-actions">
     <span class="pocket" id="pocket" hidden aria-hidden="true"><i class="ph h"></i><i class="ph m"></i><i class="ph s"></i></span>
     <span class="me-chip" id="meChip" role="button" tabindex="0" title="Mi ficha" hidden></span>
@@ -386,6 +389,7 @@
  <div class="g-stage" id="gStage">
   <div class="g-img"></div>
   <div class="g-sign" aria-hidden="true"><span id="gSignTxt">HARRINGTON GUNSMITH</span></div>
+  <div class="g-shop" id="gShop" aria-hidden="true"><img class="gs-sign" id="gsSign" alt=""><span class="gs-who" id="gsWho"></span></div>
   <div class="g-doorwrap" aria-hidden="true"><div class="g-interior"></div><div class="g-leaf l"><div class="g-leafimg"></div></div><div class="g-leaf r"><div class="g-leafimg"></div></div></div>
   <div class="g-spill" aria-hidden="true"></div>
   <div class="g-lamps" id="gLamps"></div>
@@ -414,7 +418,7 @@
  <div class="g-flash" aria-hidden="true"></div>
  <div class="g-ui" id="gUi"></div>
 </div>
-<div class="splash" id="splash" aria-hidden="true"><div class="sp-seal"><span>H</span></div><img class="emblem" src="emblema-harrington.png" alt=""><div class="sp-name">HARRINGTON GUNSMITH</div><div class="sp-sub">Saint Denis · 1880</div></div>
+</div>
 <div class="toast" id="toast" role="status"></div>
 <div class="sbx-bar" id="sbxBar" hidden><b>🧪 MODO PRUEBA</b><span>Nada se guarda en la base de datos ni se envía a Discord.</span><button type="button" id="sbxDc">DISCORD (0)</button><button type="button" id="sbxOut">SALIR</button></div>
 <div class="modal-overlay" id="sbxModal" hidden><div class="enc-panel"><div class="enc-head"><span>DISCORD · MENSAJES DE PRUEBA</span><button type="button" class="danger" id="sbxClose">Cerrar</button></div><div id="sbxBody" style="padding:10px"></div></div></div>
@@ -608,6 +612,6 @@
   </div>
 </div>
 
-<script src="app.js?v=20261009j"></script>
+<script src="app.js?v=20261009k"></script>
 </body>
 </html>
