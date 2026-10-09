@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261009c
+/* HARRINGTON GUNSMITH · app.js · versión 20261009d
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== Referencias ===== */
 /* Productos añadidos y precios editados desde Dirección: se aplican antes de leer el catálogo */
@@ -3937,6 +3937,7 @@ function gateLoadImg(){
  const useV=()=>gTry(names('entrada-fachada'),u=>{gApplyLayout('v');gate.style.setProperty('--gimg','url("'+u+'")');gate.classList.add('img-ok');gate.classList.remove('no-img');G.img=true},()=>{gApplyLayout('v');gate.classList.add('no-img')});
  if(wide)gTry(names('entrada-fachada-ancha'),u=>{gApplyLayout('w');gate.style.setProperty('--gimg','url("'+u+'")');gate.classList.add('img-ok');gate.classList.remove('no-img');G.img=true},useV);
  else useV();
+ gTry(['tarjeta-empleado.png'],()=>gate.classList.add('card-img'),()=>{});
  const intV=()=>gTry(names('entrada-interior'),u=>{gate.style.setProperty('--iimg','url("'+u+'")');gate.classList.add('int-ok')});
  if(wide)gTry(names('entrada-interior-ancha'),u=>{gate.style.setProperty('--iimg','url("'+u+'")');gate.classList.add('int-ok')},intV);
  else intV();
@@ -3997,7 +3998,7 @@ const G_KEY='<svg viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 0-1.5 7.7L9 21h6l-1
 const G_CN='<svg viewBox="0 0 24 24"><path d="M2 22V9Q2 2 9 2h13"/><path d="M5.5 22V11q0-5.5 5.5-5.5H22"/><path d="M9 14q1.5-5 7-5"/><circle cx="9" cy="9" r="1.4"/></svg>';
 function cardInner(e,abs){
  const ini=(e.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(), ph=PHOTOS[e.id];
- return `${isJefe(e)?`<span class="gc-wax" title="Pide la contraseña de jefe">${G_KEY}</span>`:''}<i class="gc-cn tl">${G_CN}</i><i class="gc-cn tr">${G_CN}</i><i class="gc-cn bl">${G_CN}</i><i class="gc-cn br">${G_CN}</i><span class="gc-oval${ph?' has-photo':''}">${ph?`<img class="gc-photo" src="${ph}" alt="">`:''}<span class="gc-mono">${esc(ini)}</span></span><span class="gc-name">${esc(e.name)}</span><span class="gc-role">${esc(e.puesto||'Empleado')}</span><span class="gc-rank">${G_RANK[e.puesto]||''}</span><span class="gc-studio">Saint Denis, 1880</span>${abs?'<span class="gc-stamp">AUSENTE</span>':''}`;
+ return `${isJefe(e)?`<span class="gc-wax" title="Pide la contraseña de jefe">${G_KEY}</span>`:''}<i class="gc-cn tl">${G_CN}</i><i class="gc-cn tr">${G_CN}</i><i class="gc-cn bl">${G_CN}</i><i class="gc-cn br">${G_CN}</i><span class="gc-oval${ph?' has-photo':''}">${ph?`<img class="gc-photo" src="${ph}" alt="">`:''}<span class="gc-mono">${esc(ini)}</span></span><span class="gc-name" style="--nl:${Math.max(8,(e.name||'').length)}">${esc(e.name)}</span><span class="gc-role" style="--rl:${Math.max(8,(e.puesto||'Empleado').length)}">${esc(e.puesto||'Empleado')}</span><span class="gc-rank">${G_RANK[e.puesto]||''}</span><span class="gc-studio">Saint Denis, 1880</span>${abs?'<span class="gc-stamp">AUSENTE</span>':''}`;
 }
 function gateCards(){
  gClear();G.big=null;{const ob=document.getElementById('gBig');if(ob)ob.remove()}

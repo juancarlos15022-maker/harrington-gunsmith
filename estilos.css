@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261009c
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261009d
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1208,6 +1208,28 @@ body::after{content:"";position:fixed;left:50%;top:-30vh;width:min(1400px,160vw)
 .pw-box input{padding-right:46px!important}
 .pw-eye{position:absolute;right:6px;top:50%;translate:0 -50%;width:36px;height:36px;border:0;border-radius:6px;background:transparent;color:#d9c27a;font-size:18px;cursor:pointer;display:grid;place-items:center}
 .pw-eye:focus-visible{outline:2px solid #f6d27c}
+/* ===== Tarjeta de empleado pintada (tarjeta-empleado.png): el nombre, el puesto y el retrato van encima ===== */
+.gate.card-img .g-card{aspect-ratio:600/926;padding:0;border-radius:3.5%/2.3%;background:url(tarjeta-empleado.png) center/100% 100% no-repeat;box-shadow:none;filter:drop-shadow(0 14px 16px #000c) drop-shadow(0 3px 4px #0009);container-type:inline-size}
+.gate.card-img .g-card:hover,.gate.card-img .g-card:focus-visible,.gate.card-img .g-card.picked{box-shadow:none;filter:drop-shadow(0 22px 22px #000d) drop-shadow(0 0 14px #ffcf7a88)}
+.gate.card-img .g-card::after{border-radius:3.5%/2.3%;background:radial-gradient(ellipse at 30% 8%,#fff5 0,transparent 40%)}
+.gate.card-img .g-card::before{border-radius:3.5%/2.3%}
+.gate.card-img .gc-cn,.gate.card-img .gc-studio{display:none}
+.gate.card-img .gc-oval{position:absolute;left:17.1%;top:11.2%;width:65.7%;height:52.9%;aspect-ratio:auto;background:transparent;box-shadow:none}
+.gate.card-img .gc-oval::after{box-shadow:inset 0 0 6cqw #000a}
+.gate.card-img .gc-mono{font-size:22cqw;filter:drop-shadow(0 .6cqw 0 #000a)}
+.gate.card-img .gc-name{position:absolute;left:15%;width:70%;top:73.4%;height:8.6%;margin:0;display:grid;place-items:center;font-size:min(9.6cqw,calc(128cqw / var(--nl,8)));line-height:1;color:#2a1a0d;text-shadow:0 1px 0 #fff6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gate.card-img .gc-role{position:absolute;left:16%;width:68%;top:84.2%;height:4.8%;margin:0;display:grid;place-items:center;font-size:min(6.6cqw,calc(100cqw / var(--rl,8)));line-height:1;color:#5a3e17;white-space:nowrap;overflow:hidden}
+.gate.card-img .gc-rank{position:absolute;left:0;right:0;top:57.6%;justify-content:center;margin:0;padding:0;color:#f0c867;filter:drop-shadow(0 1px 1px #000)}
+.gate.card-img .gc-rank svg{width:7.5cqw;height:7.5cqw}
+.gate.card-img .gc-wax{top:-3%;right:-5%;width:24cqw;height:24cqw;background:url(sello-lacre.png) center/contain no-repeat;box-shadow:none;border-radius:0;transform:rotate(10deg)}
+.gate.card-img .gc-wax svg{display:none}
+.gate.card-img .gc-stamp{top:40%;font-size:7cqw;border-width:.8cqw}
+.gate.card-img .g-card.gb-front{padding:0;box-shadow:none;filter:drop-shadow(0 30px 40px #000) drop-shadow(0 0 40px #ffcf7a44)}
+.gate.card-img .g-big{aspect-ratio:600/926}
+.gate.card-img .gb-back{border-radius:3.5%/2.3%}
+.gate.lw.card-img .g-card:not(.gb-front){width:clamp(140px,10.2vw,210px)}
+.gate.lw.card-img .g-panel{width:min(1560px,98vw)}
+.gate.lw.card-img[data-ph="cards"] .g-ui{padding-top:max(38vh,220px)}
 /* placa de día de pago */
 .pay-plate{position:relative;display:flex;align-items:center;gap:12px;width:100%;margin:10px 0 0;padding:11px 14px;border:2px double #e8b923;border-radius:8px;background:linear-gradient(100deg,#3a2606,#1a1206 55%,#0e1a12);box-shadow:0 6px 18px #0008,inset 0 0 22px #e8b92333;color:inherit;font:inherit;text-align:left;cursor:pointer;overflow:hidden}
 .pay-plate[hidden]{display:none}
