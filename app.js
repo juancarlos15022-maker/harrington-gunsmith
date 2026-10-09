@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261009i
+/* HARRINGTON GUNSMITH · app.js · versión 20261009j
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -4114,7 +4114,7 @@ const G_RANK={'Jefe':'','Gerente':G_STAR+G_STAR,'Armero experto':G_CHEV+G_CHEV+G
 const G_KEY='<svg viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 0-1.5 7.7L9 21h6l-1.5-10.3A4 4 0 0 0 12 3z"/></svg>';
 const G_CN='<svg viewBox="0 0 24 24"><path d="M2 22V9Q2 2 9 2h13"/><path d="M5.5 22V11q0-5.5 5.5-5.5H22"/><path d="M9 14q1.5-5 7-5"/><circle cx="9" cy="9" r="1.4"/></svg>';
 function cardInner(e,abs){
- const ini=(e.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(), ph=PHOTOS[e.id];
+ const ini=(e.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(), ph=PHOTOS[e.id]||(e.id==='prueba'?'arthur-ayudante.webp':null);
  return `${isJefe(e)?`<span class="gc-wax" title="Pide la contraseña de jefe">${G_KEY}</span>`:''}<i class="gc-cn tl">${G_CN}</i><i class="gc-cn tr">${G_CN}</i><i class="gc-cn bl">${G_CN}</i><i class="gc-cn br">${G_CN}</i><span class="gc-oval${ph?' has-photo':''}">${ph?`<img class="gc-photo" src="${ph}" alt="">`:''}<span class="gc-mono">${esc(ini)}</span></span><span class="gc-name" style="--nl:${Math.max(8,(e.name||'').length)}">${esc(e.name)}</span><span class="gc-role" style="--rl:${Math.max(8,(e.puesto||'Empleado').length)}">${esc(e.puesto||'Empleado')}</span><span class="gc-rank">${G_RANK[e.puesto]||''}</span><span class="gc-studio">Saint Denis, 1880</span>${abs?'<span class="gc-stamp">AUSENTE</span>':''}${e.id==='prueba'?'<span class="gc-stamp prueba">PRUEBA</span>':''}`;
 }
 function gateCards(){
@@ -4175,7 +4175,7 @@ async function loadPhotos(){
 }
 function paintPhotos(){
  document.querySelectorAll('#gate [data-gcard], #gate .gb-front').forEach(c=>{
-  const id=c.dataset.gcard||c.dataset.emp, ov=c.querySelector('.gc-oval');if(!ov)return;const ph=PHOTOS[id], im=ov.querySelector('.gc-photo');
+  const id=c.dataset.gcard||c.dataset.emp, ov=c.querySelector('.gc-oval');if(!ov)return;const ph=PHOTOS[id]||(id==='prueba'?'arthur-ayudante.webp':null), im=ov.querySelector('.gc-photo');
   if(ph){if(im)im.src=ph;else ov.insertAdjacentHTML('afterbegin',`<img class="gc-photo" src="${ph}" alt="">`);ov.classList.add('has-photo')}else{if(im)im.remove();ov.classList.remove('has-photo')}
  });
 }
