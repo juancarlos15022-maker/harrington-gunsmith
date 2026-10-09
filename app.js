@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261009za
+/* HARRINGTON GUNSMITH · app.js · versión 20261010a
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -295,6 +295,11 @@ function restoreSale(){
  }catch(e){}
 }
 function resetSale(){sale=null;store.remove(KEY_SALE)}
+/* Venta ya finalizada que enseña el ticket: el carrito se vacía nada más finalizar,
+   pero los botones del ticket (copiar, descargar, imagen) siguen usando esta venta */
+let doneSale=null;
+function clearAfterSale(s){doneSale=s;clearQuantities();resetSale();resetCustomer();calc(false);try{updateFinish()}catch(e){}}
+async function ticketSale(){if(doneSale&&!receiptModal.hidden&&!selected().length)return doneSale;return await ensureSaleCloud()}
 /* Desglose económico: subtotal, convenio, precio final, señal / abonado */
 function parseMoney(v){const n=parseFloat(numIn(v).replace(/[^0-9.]/g,''));return isFinite(n)&&n>0?Math.round(Math.min(n,99999999)*100):0}
 function computeFin(){
@@ -409,13 +414,13 @@ async function copyText(t){
  }catch(e){return false}
 }
 async function doCopy(){
- const s=await ensureSaleCloud(); if(!s)return;
+ const s=await ticketSale(); if(!s)return;
  const t=receiptText(s);
  if(await copyText(t))say('Venta copiada para Discord');
  else prompt('Copia este texto:',t);
 }
 async function doDownload(){
- const s=await ensureSaleCloud(); if(!s)return;
+ const s=await ticketSale(); if(!s)return;
  const blob=new Blob(['\ufeff'+receiptText(s)],{type:'text/plain;charset=utf-8'}), a=document.createElement('a');
  a.href=URL.createObjectURL(blob);a.download='Harrington_'+s.id+'.txt';
  document.body.appendChild(a);a.click();a.remove();
@@ -426,6 +431,7 @@ function clearQuantities(){inputs.forEach(i=>i.value=0)}
 function printFx(){receiptModal.classList.remove('printing');void receiptModal.offsetWidth;receiptModal.classList.add('printing');try{playPrint()}catch(e){}}
 function playPrint(){if(!soundOn)return;const c=ac();if(!c)return;const t0=c.currentTime+.05;for(let i=0;i<22;i++){const t=t0+i*.055+Math.random()*.01, len=Math.floor(c.sampleRate*.012), b=c.createBuffer(1,len,c.sampleRate), d=b.getChannelData(0);for(let k=0;k<len;k++)d[k]=(Math.random()*2-1)*(1-k/len);const s=c.createBufferSource(), f=c.createBiquadFilter(), g=c.createGain();s.buffer=b;f.type='bandpass';f.frequency.value=2400+Math.random()*600;g.gain.value=.05;s.connect(f);f.connect(g);g.connect(c.destination);s.start(t)}}
 async function doNew(){
+ if(!selected().length&&!sale&&!receiptModal.hidden){closeModal(receiptModal);return say('Nueva venta preparada')}
  const hasData=selected().length>0||sale;
  if(hasData&&!await askConfirm('Nueva venta','Se borrarán las cantidades y el comprobante actual. Los productos y precios no cambian.','Nueva venta'))return;
  const snap=!sale&&!loadedEnc&&selected().length?{q:[...inputs].map(i=>[i,i.value]),c:JSON.parse(JSON.stringify(customer))}:null;
@@ -451,6 +457,7 @@ document.getElementById('finish').onclick=e=>once('finish',async()=>{
  const s=await ensureSaleCloud(); if(!s)return;
  renderReceipt(s);openModal(receiptModal);receiptModal.scrollTop=0;printFx();if(s.op==='encargo')playPencil();else playRegister();notifySale(s);setTimeout(playThump,s.op==='encargo'?1250:650);say((s.op==='encargo'?'Encargo guardado · ':'Venta finalizada · ')+s.id);
  if(s.op!=='encargo'){askSerials(s);setTimeout(()=>checkRecord(s),1600);setTimeout(coinsFx,200);setTimeout(renderGoal,1200)}
+ clearAfterSale(s);
 },e.currentTarget);
 /* ¡Récord de la casa!: la mayor venta o el mejor día de todos */
 function checkRecord(s){
@@ -993,6 +1000,7 @@ async function finishEncargoNow(){
  saveEncs();updateEncBtn();renderCustomer();
  renderReceipt(sl);openModal(receiptModal);receiptModal.scrollTop=0;printFx();playRegister();notifySale(sl);setTimeout(()=>{if(!stampImgFx('entregado',2.57))playThump()},700);setTimeout(coinsFx,200);say('Encargo finalizado');
  askSerials(sl);
+ clearAfterSale(sl);
 }
 updateEncBtn();
 
@@ -4038,7 +4046,7 @@ async function pedidoBlob(r){
  }catch(e){return null}
 }
 async function ticketImage(copy){
- const s=await ensureSaleCloud(); if(!s)return;
+ const s=await ticketSale(); if(!s)return;
  const blob=await ticketBlob(s); if(!blob)return say('No se pudo crear la imagen');
  if(copy&&navigator.clipboard&&window.ClipboardItem){try{await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);return say('Imagen copiada · pégala en Discord')}catch(e){}}
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Harrington_'+s.id+'.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
@@ -4070,11 +4078,11 @@ const TUTORIAL=[
 <ul><li>Toca <b>tu tarjeta</b> en «¿Quién entra hoy?» (las estrellas y galones indican el puesto; el sello rojo, que es jefe). La tarjeta se acerca y te pide <b>tu contraseña</b>; al acertarla se da la vuelta y te saluda.</li><li><b>La primera vez</b> que entras, la tarjeta te pide que <b>crees tu contraseña</b> (dos veces, mínimo 4 caracteres). A partir de ahí, solo tú puedes entrar con tu tarjeta. Si la olvidas, pídele a la dirección que te la resetee y la próxima vez crearás una nueva. Si fallas 5 veces seguidas, la tarjeta se bloquea un minuto.</li><li>Los jefes entran con la contraseña de jefe, que es compartida. La web te saluda por tu nombre con un resumen: tus horas de esta semana, si es día de pago, los encargos pendientes y quién está ausente.</li><li><b>Tu foto</b>: toca <b>tu nombre</b> arriba para abrir tu ficha y pulsa <b>📷 SUBIR MI FOTO</b> (por ejemplo, una captura de tu personaje). Saldrá en tu tarjeta de la entrada en tono sepia. Puedes cambiarla o quitarla cuando quieras.</li><li>La entrada dura unos 4 segundos. Si tienes prisa, toca la pantalla y pasas directamente a las tarjetas.</li><li><b>Tu usuario queda fijo</b> hasta que cierres la pestaña o la web. Sale arriba, junto a Dirección. Todo lo que hagas va a tu nombre: ventas, fichajes, ausencias y pedidos recibidos. No se puede cambiar de usuario sin cerrar y volver a abrir. Si recargas la página, sigues siendo tú.</li><li><b>Jefes</b>: las fichas con el puesto «Jefe» piden la <b>contraseña de jefe</b> (la misma para todos los jefes) cada vez que se entra. Con ella, el modo jefe y DIRECCIÓN quedan activados hasta que cierres la web; no se cierran por inactividad.</li><li>Si la dirección te <b>expulsa</b> (por ejemplo, si se te queda la sesión pillada), vuelves a la entrada con un aviso y tienes que elegir tu ficha otra vez. Si estabas fichado, se te ficha la salida en ese momento.</li><li><b>👁</b> junto a las contraseñas sirve para ver lo que escribes.</li><li><b>Cerrar sesión</b>: al fichar tu salida, la web te pregunta si quieres cerrar tu sesión en ese dispositivo.</li></ul>`],
 ['Primeros pasos',`<p>Esta web es la calculadora de ventas, presupuestos y encargos de <b>Harrington Gunsmith</b>. Funciona igual en móvil y en ordenador.</p>
 <ul><li><b>FICHAJE</b> (barra de arriba): ▸ Fichar entrada y ◂ Fichar salida.</li><li><b>ENCARGOS</b>: los encargos guardados que aún no se han entregado.</li><li><b>Tu nombre</b> (arriba): el usuario con el que has entrado. Si eres jefe, sale «· JEFE» y el botón <b>DIRECCIÓN</b>.</li><li>La placa <b>DÍA DE PAGO</b> (dorada) sale desde el domingo hasta que se pagan todos los sueldos; luego cambia a <b>SUELDOS PAGADOS</b> (verde) hasta el jueves. Cada uno ve en ella su propio sueldo.</li><li><b>PEDIDOS</b>: los pedidos a proveedores pendientes. La pestaña <b>MATERIALES</b> (junto a Venta y Presupuesto) muestra el almacén de materiales.</li><li><b>⚙</b> abre los ajustes: <b>música de fondo</b> (un piano de saloon, activado de serie; empieza a sonar en cuanto tocas la pantalla y se apaga aquí), <b>ambiente</b> (AUTO cambia solo entre día y noche según la hora española; también puedes dejar ☀ DÍA o ☾ NOCHE fijo), sonido y vibración, tamaño del texto (A− / A+) y alto contraste (◐). Cada móvil recuerda sus ajustes.</li><li>La placa dorada <b>EMPLEADO DE LA SEMANA</b> muestra quién más cobró la semana anterior.</li><li>En el tutorial, <b>▶ VISITA GUIADA</b> hace un recorrido rápido señalando cada botón.</li><li>Junto a FICHAJE ves cada empleado fichado con el tiempo que lleva, y el estado de la nube: «☁ guardando…» mientras se guarda algo y «☁ guardado ✓» cuando ya está.</li><li>Los avisos de error salen en <b>rojo</b> y duran más en pantalla; los normales, en verde.</li><li><b>? TUTORIAL</b> (esquina superior derecha) abre esta guía cuando la necesites.</li><li>El botón <b>↑</b> aparece al bajar mucho y te devuelve arriba.</li></ul>
-<p>Si recargas la página o se cierra el navegador, <b>la venta que tenías en curso se conserva</b>. Se borra solo con Vaciar o Nueva venta, y siempre pidiendo confirmación.</p>
+<p>Si recargas la página o se cierra el navegador, <b>la venta que tenías en curso se conserva</b>. Se borra con Vaciar o Nueva venta (siempre pidiendo confirmación) y, sola, <b>al finalizar la venta</b>.</p>
 <p>Para tenerla como una app: en el menú del navegador, <b>Añadir a pantalla de inicio</b>.</p>`],
 ['Catálogo y categorías',`<ul><li><b>SIN PRECIO</b>: un producto que aún no tiene precio sale en el catálogo con ese aviso y no se puede añadir a la venta. La dirección le pone el precio en <b>Dirección → PRODUCTOS Y PRECIOS</b> y desde ese momento se vende normal.</li><li>Los <b>botones con imagen</b> filtran los productos por categoría y cambian la imagen grande de arriba. «Todos» los muestra todos.</li><li>El <b>buscador</b> encuentra productos por su nombre, sin importar las tildes.</li><li>Cada fila tiene el dibujo de su categoría, el <b>nombre</b> (tócalo para ver su ficha con descripción, precio y si está disponible), el precio, la <b>cantidad</b> y el subtotal.</li><li>Para la cantidad usa <b>−</b> y <b>+</b>, o escribe el número. En la munición hay además <b>+10, +50 y +100</b>.</li><li>Los productos con cantidad se resaltan en dorado.</li><li><b>SIN STOCK</b>: no se puede añadir. Si intentas pasarte de lo que hay, la cantidad se corrige sola y te avisa. <b>Nunca</b> se muestra cuántas unidades quedan.</li><li>Los productos recién añadidos llevan la etiqueta <b>NUEVO</b>.</li></ul>`],
 ['Hacer una venta',`<ol><li>Elige productos y cantidades.</li><li>En <b>Tipo de operación</b> deja «Venta normal».</li><li><b>Tipo de cliente</b>: particular, empresa o Departamento del Sheriff (este último no pide nombre).</li><li>Escribe el <b>nombre</b>. Si el cliente ya está guardado, sale como sugerencia y se cargan sus datos y sus precios especiales.</li><li>Elige <b>Convenio</b> u <b>Oferta</b> si corresponde. Solo aparecen los vigentes y compatibles con el cliente. No se suman: al elegir uno se quita el otro.</li><li>Elige el <b>Empleado</b> que hace la venta. Es obligatorio.</li><li>Si quieres, añade una <b>Nota</b>: saldrá en el ticket y en el aviso de Discord.</li><li>Revisa el desglose: Subtotal, descuento y Total.</li><li>El botón de abajo <b>te dice qué falta</b> («Falta elegir el empleado», «Falta el telegrama»…). Cuando está todo, se pone verde con <b>FINALIZAR VENTA</b> (o GUARDAR ENCARGO): púlsalo y se abre el ticket y se descuenta el stock. Mientras se guarda, el botón queda bloqueado para que un doble toque no haga dos ventas.</li><li>Si una venta o el día superan el mejor registro de la casa, sale <b>¡RÉCORD DE LA CASA!</b> con campanas.</li><li>Si has vendido <b>armas</b> a un cliente con nombre, se abre una ventana para apuntar sus <b>números de serie</b> (opcional): se guardan en su ficha de cliente y en su mensaje de Discord. «Ahora no» la cierra.</li></ol>
-<p><b>Vaciar</b> borra los productos del pedido. <b>Nueva venta</b> lo borra todo para empezar de cero. En el móvil, una <b>barra fija abajo</b> te muestra el total y tiene el botón FINALIZAR.</p>
+<p><b>Al finalizar la venta, el carrito se vacía solo</b>: los productos, el cliente y el convenio se borran y queda listo para el siguiente cliente, sin pulsar nada. El ticket sigue abierto con todos sus botones. Si después ves un error en una venta ya finalizada, la dirección la anula en Dirección → Registros de ventas y se hace de nuevo.</p><p><b>Vaciar</b> y <b>Nueva venta</b> son para cuando el cliente <b>se echa atrás a mitad</b>: borran lo que hayas puesto. Vaciar quita los productos; Nueva venta lo borra todo para empezar de cero. En el móvil, una <b>barra fija abajo</b> te muestra el total y tiene el botón FINALIZAR.</p>
 <p>Si no deja finalizar, el aviso te dice qué falta: nombre, empleado, telegrama, pago adelantado o stock.</p>`],
 ['Presupuesto',`<p>La pestaña <b>PRESUPUESTO</b> sirve para decirle a un cliente cuánto costaría una compra, sin vender nada.</p>
 <ul><li>Usa el mismo catálogo, precios, convenios y ofertas.</li><li>No genera ticket, no se registra, <b>no toca el stock</b> y no limita por existencias.</li><li>Cada pestaña recuerda sus propias cantidades, así que puedes hacer un presupuesto sin estropear una venta a medias.</li><li>Solo tienes que comunicarle el <b>Total</b> al cliente.</li><li>Si el cliente se decide, pulsa <b>PASAR A VENTA ▸</b>: los productos, el cliente y el convenio pasan a la pestaña VENTA para finalizarla sin volver a meterlos.</li></ul>`],
@@ -4085,7 +4093,7 @@ const TUTORIAL=[
 <p><b>Entregarlo</b>: en la ficha, <b>CARGAR ENCARGO</b>. Se cargan productos, precios, convenio y adelanto. Puedes añadir más cosas. El adelanto se descuenta <b>una sola vez</b> y no es un descuento. Al terminar, <b>FINALIZAR ENCARGO</b>.</p>`],
 ['Convenios, ofertas y precios especiales',`<ul><li><b>Convenio</b> (lo crea el jefe): para un tipo de cliente y un grupo (suministros, municiones o ambos). Puede dar un <b>porcentaje</b> a partir de X unidades (no se multiplica por bloques) o <b>unidades gratis</b> por cada X (se repiten por bloque completo; son las más baratas de las elegidas, y salen del stock igualmente).</li><li><b>Oferta</b>: un porcentaje del 1 al 5 % sobre toda la compra.</li><li>Caducan solas y en el desplegable ves «caduca en N días».</li><li><b>Precio especial</b> de un cliente: se aplica al elegirlo.</li></ul>`],
 ['Ticket, copias y Discord',`<p>Al finalizar se abre el <b>ticket</b>: número de venta (HG-fecha-contador), fecha y hora de España, empleado, cliente, productos, desglose y el sello PAGADO (o ANOTADO en un encargo).</p>
-<ul><li><b>Copiar para Discord</b>: copia el texto limpio.</li><li><b>Descargar comprobante</b>: archivo de texto.</li><li><b>Descargar imagen / Copiar imagen</b>: el ticket como imagen.</li><li><b>Nueva venta</b> y <b>Cerrar</b>.</li></ul>
+<ul><li><b>Copiar para Discord</b>: copia el texto limpio.</li><li><b>Descargar comprobante</b>: archivo de texto.</li><li><b>Descargar imagen / Copiar imagen</b>: el ticket como imagen.</li><li><b>Nueva venta</b> y <b>Cerrar</b>: el carrito ya se ha vaciado solo al finalizar, así que los dos cierran el ticket y puedes atender al siguiente.</li></ul>
 <p><b>Discord automático</b> (si el jefe lo configuró en Dirección → Discord, cada tipo a su propio canal). Los mensajes llegan como <b>tarjetas</b> con una franja de color según el tipo (ventas doradas, gastos rojos, pedidos verdes…), el título destacado, los datos ordenados y el emblema de la casa:</p>
 <ul><li>Cada <b>venta</b> publica su ticket al finalizar, y cada <b>encargo</b> se publica al crearlo con todos sus datos (telegrama, adelanto, pendiente…).</li><li>Cada <b>gasto</b> se publica al guardarlo. También fichajes, anulaciones, cierres de caja y pedidos a proveedores.</li></ul>
 <ul><li>El <b>stock de productos</b> y el <b>almacén de materiales</b>: cada uno es un mensaje en su canal que se actualiza en tiempo real con cada venta, fabricación, pedido recibido o anulación.</li><li>El <b>contrato</b> (imagen) de cada empleado nuevo, la <b>ficha de cada cliente</b> y la <b>ficha de cada proveedor</b> con su lista de precios. Las fichas de clientes y proveedores se publican al crearlas y, cuando las cambias, <b>se actualiza el mismo mensaje</b> en lugar de salir otro (si alguien lo borró en Discord, se publica uno nuevo).</li></ul>
