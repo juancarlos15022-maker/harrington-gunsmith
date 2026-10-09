@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261009v
+/* HARRINGTON GUNSMITH · app.js · versión 20261009w
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -3119,6 +3119,21 @@ const RECETAS_LOTES=[
   'Cuchillo terrorífico':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
   'Cuchillo tradicional':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
   'Hacha de tala':[['Barra de hierro',1],['Mena de carbón',1],['Trozo de madera',2]]}},
+ {v:'3',r:{ /* mantenimiento, arcos, lazos y munición. [material, cantidad, 1 = es un PRODUCTO de la tienda] */
+  'Pólvora':[['Azufre',1],['Mena de carbón',1],['Sal',1]],
+  'Trapo':[['Tela',1],['Fibra',1]],
+  'Aceite de Arma':[['Grasa animal',3],['Botella vacía',1],['Pólvora',1,1]],
+  'Arco':[['Trozo de madera',2],['Fibra',3]],
+  'Arco mejorado':[['Arco',1,1],['Trozo de madera',4],['Fibra',5],['Mena de hierro',4]],
+  'Lazo':[['Fibra',10]],
+  'Lazo Reforzado':[['Lazo',1,1],['Mena de hierro',1],['Fibra',10]],
+  'Flechas':[['Trozo de madera',2],['Piedra',2]],
+  'Munición Varmint':[['Pólvora',1,1],['Mena de hierro',1],['Papel',1]],
+  'Munición Revolver':[['Pólvora',1,1],['Mena de hierro',1],['Papel',1]],
+  'Munición Pistola':[['Pólvora',1,1],['Mena de hierro',1],['Papel',1]],
+  'Munición Rifle':[['Pólvora',3,1],['Mena de hierro',1],['Papel',1]],
+  'Munición Repetidora':[['Pólvora',1,1],['Mena de hierro',1],['Papel',1]],
+  'Munición Escopeta':[['Pólvora',3,1],['Mena de hierro',1],['Papel',1]]}},
  {v:'2',r:{ /* armas de fuego: pieza de arma (normal o especial), cañón y culata de su familia, y tornillos */
   'Cattleman Revolver':[['Pieza de arma',1],['Cañón de revólver',2],['Culata de revólver',4],['Tornillo',5]],
   'Doble Action Revolver':[['Pieza de arma',1],['Cañón de revólver',2],['Culata de revólver',4],['Tornillo',8]],
@@ -3140,23 +3155,40 @@ const RECETAS_LOTES=[
   'Recortada Escopeta':[['Pieza de arma especial',8],['Cañón de escopeta',2],['Culata de escopeta',1],['Tornillo',30]],
   'Doble Cañón Escopeta':[['Pieza de arma especial',9],['Cañón de escopeta',2],['Culata de escopeta',1],['Tornillo',30]]}}
 ];
+/* Proveedores dictados por la dirección: se crean una sola vez (si ya existe uno con ese nombre, no se toca) */
+const PROVEEDORES_BASE=[
+ {k:'roanoke',name:'Roanoke Mining Company',tipo:'Mina',ubic:'Annesburg',tel:'ER6080',prods:[['Mena de hierro',0.50],['Mena de carbón',0.10],['Azufre',0.10],['Sal',0.07],['Piedra',0.07]]}
+];
+async function proveedoresBase(){
+ for(const b of PROVEEDORES_BASE){
+  try{if(localStorage.getItem('harrington_provbase_'+b.k)==='1')continue}catch(e){}
+  if(!await claimRow('proveedor-base-'+b.k,{ts:Date.now()})){try{localStorage.setItem('harrington_provbase_'+b.k,'1')}catch(e){}continue}
+  if(!proveedores.some(v=>norm(v.name)===norm(b.name))){
+   const id='v'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+   proveedores.push({id:id,name:b.name,tel:b.tel,tipo:b.tipo,ubic:b.ubic,prods:b.prods.map(([n,p])=>({name:canonMat(n),price:Math.round(p*100)}))});
+   saveProveedores();publishProveedor(id);if(!dirModal.hidden&&dirMod==='proveedores')renderDir();
+  }
+  try{localStorage.setItem('harrington_provbase_'+b.k,'1')}catch(e){}
+ }
+}
 let recBaseBusy=false;
 function recLoteDone(v){try{return localStorage.getItem('harrington_recbase_'+v)==='1'||(v==='1'&&localStorage.getItem('harrington_recbase')==='1')}catch(e){return false}}
 function recLoteMark(v){try{localStorage.setItem('harrington_recbase_'+v,'1')}catch(e){}}
 async function recetasBase(){
  if(recBaseBusy||!cloud.ok||SANDBOX)return;
- const pend=RECETAS_LOTES.filter(l=>!recLoteDone(l.v));if(!pend.length)return;
  recBaseBusy=true;
+ try{await proveedoresBase()}catch(e){}
+ const pend=RECETAS_LOTES.filter(l=>!recLoteDone(l.v));if(!pend.length){recBaseBusy=false;return}
  try{
   const names=inputs.map(i=>i.dataset.name), add={}, all={};
   for(const l of pend){
    /* reserva en la nube: solo el primer dispositivo lo aplica */
    if(!await claimRow('recetas-base-'+l.v,{ts:Date.now()})){recLoteMark(l.v);continue}
-   Object.keys(l.r).forEach(n=>{all[n]=l.r[n];if(names.indexOf(n)>=0)add[n]=l.r[n].map(([m,q])=>({m:canonMat(m),q:q}))});
+   Object.keys(l.r).forEach(n=>{all[n]=l.r[n];if(names.indexOf(n)>=0)add[n]=l.r[n].map(([m,q,p])=>p?{m:m,q:q,p:true}:{m:canonMat(m),q:q})});
    recLoteMark(l.v);
   }
   /* los materiales que falten se crean en el almacén con 0 unidades, para que salgan en las listas */
-  const mats=Array.from(new Set(Object.keys(all).flatMap(n=>all[n].map(x=>canonMat(x[0]))))).filter(m=>stockMap[matKey(m)]===undefined);
+  const mats=Array.from(new Set(Object.keys(all).flatMap(n=>all[n].filter(x=>!x[2]).map(x=>canonMat(x[0]))))).filter(m=>stockMap[matKey(m)]===undefined);
   if(mats.length)await moverStock(mats.map(m=>({producto:matKey(m),delta:0})),'Materiales nuevos');
   if(Object.keys(add).length){Object.assign(recetas,add);store.set(KEY_RECETAS,JSON.stringify(recetas));if(!dirModal.hidden&&dirMod==='fabricacion')renderDir()}
  }catch(e){}
@@ -3352,15 +3384,15 @@ dirModal.addEventListener('change',e=>{if(e.target.id==='npProv'){npDraft.prov=e
 let empErr='', stockCat='todos', stockDraft={};
 /* --- Fabricación: recetas de cada producto --- */
 let fabEdit=null, fabDraft=[], fabCat='todos', mminDraft={}, fabWant='';
-function fabRows(){const L=fabDraft.filter(r=>r.m||r.q);if(L.length<matNames().length)L.push({m:'',q:''});fabDraft=L;return L}
-function fabRowHTML(r,i){const ns=matNames();return `<div class="fab-row"><select data-fab="m" data-i="${i}" aria-label="Material"><option value="">Material…</option>${ns.map(n=>`<option value="${esc(n)}"${r.m===n?' selected':''}>${esc(n)}</option>`).join('')}${r.m&&ns.indexOf(r.m)<0?`<option value="${esc(r.m)}" selected>${esc(r.m)}</option>`:''}</select><input data-fab="q" data-i="${i}" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Unidades" value="${esc(r.q)}"></div>`}
-function canMake(name){const r=recipeOf(name);if(!r.length)return null;return Math.min(...r.map(x=>Math.floor((stockMap[matKey(x.m)]||0)/x.q)))}
+function fabRows(){const L=fabDraft.filter(r=>r.m||r.q);if(L.length<matNames().length+inputs.length)L.push({m:'',q:''});fabDraft=L;return L}
+function fabRowHTML(r,i){const ns=matNames();return `<div class="fab-row"><select data-fab="m" data-i="${i}" aria-label="Material"><option value="">Material…</option><optgroup label="Materiales del almacén">${ns.map(n=>`<option value="${esc(n)}"${r.m===n?' selected':''}>${esc(n)}</option>`).join('')}</optgroup><optgroup label="Productos de la tienda">${inputs.map(x=>x.dataset.name).filter(n=>n!==fabEdit).map(n=>`<option value="${esc('prod:'+n)}"${r.m==='prod:'+n?' selected':''}>${esc(n)}</option>`).join('')}</optgroup>${r.m&&ns.indexOf(r.m)<0&&r.m.indexOf('prod:')!==0?`<option value="${esc(r.m)}" selected>${esc(r.m)}</option>`:''}</select><input data-fab="q" data-i="${i}" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Unidades" value="${esc(r.q)}"></div>`}
+function canMake(name){const r=recipeOf(name);if(!r.length)return null;return Math.min(...r.map(x=>Math.floor((stockMap[ingKey(x.m)]||0)/x.q)))}
 function renderModFabricacion(){
  const ns=matNames();
  if(fabEdit){
   const i=inputs.find(x=>x.dataset.name===fabEdit);
   return `<div class="dir-form enc-sec"><div class="dir-sec-title" style="margin-top:0">RECETA · ${esc(fabEdit.toUpperCase())}</div>
-   ${ns.length?`<p class="bk-note" style="margin:0 0 8px">Elige cada material y cuántas unidades gasta <b>una</b> unidad de este producto. Al elegir un material aparece otro hueco.</p><div id="fabList">${fabRows().map((r,k)=>fabRowHTML(r,k)).join('')}</div>`:'<div class="enc-empty">Todavía no hay materiales en el almacén.<br>Aparecen solos al recibir los pedidos a proveedores.</div>'}
+   ${ns.length?`<p class="bk-note" style="margin:0 0 8px">Elige cada material y cuántas unidades gasta <b>una</b> unidad de este producto. Al elegir un material aparece otro hueco. Abajo del desplegable están también los <b>productos de la tienda</b> (pólvora, arco…), para las recetas que llevan otro producto ya fabricado.</p><div id="fabList">${fabRows().map((r,k)=>fabRowHTML(r,k)).join('')}</div>`:'<div class="enc-empty">Todavía no hay materiales en el almacén.<br>Aparecen solos al recibir los pedidos a proveedores.</div>'}
    <div class="pay-err" id="fabErr" hidden></div>
    <div class="enc-actions two" style="margin-top:8px"><button type="button" data-dir="fab-cancel">Cancelar</button><button type="button" class="primary" data-dir="fab-save">ACEPTAR</button></div>
    ${recipeOf(fabEdit).length?'<div class="enc-actions" style="margin-top:8px"><button type="button" class="warn" data-dir="fab-clear">QUITAR RECETA</button></div>':''}</div>
@@ -3381,7 +3413,7 @@ function renderModFabricacion(){
 function fabNeedHTML(){
  const n=parseInt(fabWant)||0;if(!fabEdit||n<=0)return '<p class="bk-note" style="margin:0">Escribe cuántas quieres fabricar y te digo qué materiales faltan.</p>';
  const r=recipeOf(fabEdit), miss=[];
- const rows=r.map(x=>{const need=x.q*n, have=stockMap[matKey(x.m)]||0, f=Math.max(0,need-have);if(f)miss.push({m:x.m,q:f});return `<div class="reg-line"><span>${esc(x.m)}</span><b class="${f?'zero':''}">${have} de ${need}${f?' · faltan '+f:' ✓'}</b></div>`}).join('');
+ const rows=r.map(x=>{const need=x.q*n, have=stockMap[ingKey(x.m)]||0, f=Math.max(0,need-have);if(f)miss.push({m:x.m,q:f});return `<div class="reg-line"><span>${esc(ingLabel(x.m))}</span><b class="${f?'zero':''}">${have} de ${need}${f?' · faltan '+f:' ✓'}</b></div>`}).join('');
  if(!miss.length)return rows+'<p class="bk-note" style="margin:8px 0 0">Hay material suficiente: súmalas en STOCK para fabricarlas.</p>';
  const by={}, none=[];
  miss.forEach(x=>{const v=proveedores.find(p=>(p.prods||[]).some(y=>norm(y.name)===norm(x.m)));if(v)(by[v.id]=by[v.id]||[]).push(x);else none.push(x)});
@@ -3406,8 +3438,9 @@ function saveReceta(){
   if(!r.m)return err('Elige el material de la línea con '+r.q+' unidades');
   const q=Number(r.q);
   if(!(Number.isInteger(q)&&q>0))return err('Indica cuántas unidades de «'+r.m+'» gasta');
-  if(seen[r.m])return err('«'+r.m+'» está repetido');
-  seen[r.m]=1;out.push({m:r.m,q:q});
+  const isP=r.m.indexOf('prod:')===0, nm=isP?r.m.slice(5):r.m;
+  if(seen[nm])return err('«'+nm+'» está repetido');
+  seen[nm]=1;out.push(isP?{m:nm,q:q,p:true}:{m:nm,q:q});
  }
  if(out.length)recetas[fabEdit]=out;else delete recetas[fabEdit];
  saveRecetas();say(out.length?'Receta guardada':'Receta vacía: no gasta materiales');fabEdit=null;fabDraft=[];renderDir();
@@ -3561,7 +3594,7 @@ function renderModRegistroStock(){
  }).join('')).join('')+`<div class="dir-sec-title">ÚLTIMOS MOVIMIENTOS</div><div class="ledger">`+(mv.length?mv.map(x=>`<div class="dir-log"><b>${x.delta>0?'+':'−'}${Math.abs(x.delta)}</b> ${esc(x.name)}<br>${esc(x.why)} · ${esc(x.date)} ${esc(x.time)}</div>`).join(''):'<div class="enc-empty">Todavía no hay movimientos.</div>')+'</div>';
 }
 function needMaterials(items){const need={};items.forEach(x=>recipeOf(x.producto).forEach(r=>{need[r.m]=(need[r.m]||0)+r.q*x.delta}));return need}
-function missingMaterials(need){return Object.keys(need).filter(k=>(stockMap[matKey(k)]||0)<need[k]).map(k=>`${k}: necesitas ${need[k]} y hay ${stockMap[matKey(k)]||0}`)}
+function missingMaterials(need){return Object.keys(need).filter(k=>(stockMap[ingKey(k)]||0)<need[k]).map(k=>`${ingLabel(k)}: necesitas ${need[k]} y hay ${stockMap[ingKey(k)]||0}`)}
 async function saveStockDraft(){
  const items=[];let n=0,m=0;
  const err=t=>{const e=document.getElementById('stErr');if(e){e.innerHTML=t;e.hidden=false;e.scrollIntoView({block:'nearest'})}say('Faltan materiales para fabricar')};
@@ -3571,8 +3604,8 @@ async function saveStockDraft(){
   const need=needMaterials(items), miss=missingMaterials(need);
   if(miss.length)return err('<b>No hay materiales suficientes.</b> No se ha sumado nada.<br>'+miss.map(esc).join('<br>'));
   if(Object.keys(need).length&&!await askConfirm('Fabricar','Vas a fabricar: '+items.map(x=>x.delta+' × '+x.producto).join(', ')+'. Se gastarán del almacén: '+Object.keys(need).map(k=>need[k]+' '+k).join(', ')+'.','Fabricar'))return;
-  const all=items.concat(Object.keys(need).map(k=>({producto:matKey(k),delta:-need[k]})));
-  try{await moverStock(all,'Fabricación');items.forEach(x=>logStock(x.producto,x.delta,recipeOf(x.producto).length?'Fabricación':'Entrada de stock'));Object.keys(need).forEach(k=>logStock(k+' (material)',-need[k],'Fabricación'));n=items.length;
+  const all=items.concat(Object.keys(need).map(k=>({producto:ingKey(k),delta:-need[k]})));
+  try{await moverStock(all,'Fabricación');items.forEach(x=>logStock(x.producto,x.delta,recipeOf(x.producto).length?'Fabricación':'Entrada de stock'));Object.keys(need).forEach(k=>logStock(isProdIng(k)?k:k+' (material)',-need[k],'Fabricación'));n=items.length;
    if(Object.keys(need).length){try{localStorage.setItem('harrington_lastfab',JSON.stringify({ts:Date.now(),items:items,need:need}))}catch(x){}stampFx('FABRICADO');playAnvil()}}
   catch(e){
    if(String(e.message).indexOf('STOCK_INSUFICIENTE')>=0){try{await refreshStock()}catch(x){}return err('<b>No hay materiales suficientes</b> (otro dispositivo los acaba de gastar). No se ha sumado nada.<br>'+missingMaterials(needMaterials(items)).map(esc).join('<br>'))}
@@ -3588,7 +3621,7 @@ function lastFab(){try{const f=JSON.parse(localStorage.getItem('harrington_lastf
 async function undoFab(){
  const f=lastFab(); if(!f)return say('Ya no se puede deshacer');
  if(!await askConfirm('Deshacer fabricación','Se quitarán del stock '+f.items.map(x=>x.delta+' × '+x.producto).join(', ')+' y se devolverán al almacén '+Object.keys(f.need).map(k=>f.need[k]+' '+k).join(', ')+'.','Deshacer'))return;
- const mv=f.items.map(x=>({producto:x.producto,delta:-x.delta})).concat(Object.keys(f.need).map(k=>({producto:matKey(k),delta:f.need[k]})));
+ const mv=f.items.map(x=>({producto:x.producto,delta:-x.delta})).concat(Object.keys(f.need).map(k=>({producto:ingKey(k),delta:f.need[k]})));
  try{await moverStock(mv,'Fabricación deshecha');mv.forEach(x=>logStock(isMat(x.producto)?x.producto.slice(4)+' (material)':x.producto,x.delta,'Fabricación deshecha'))}
  catch(e){
   if(String(e.message).indexOf('STOCK_INSUFICIENTE')>=0)return say('No se puede deshacer: alguna de esas unidades ya se ha vendido');
@@ -3776,7 +3809,7 @@ dirModal.addEventListener('click',e=>{
  }
  else if(act==='stock-save')once('stock',saveStockDraft,b);
  else if(act==='fcat'){fabCat=arg;renderDir()}
- else if(act==='fab-open'){const n=inputs[+arg]&&inputs[+arg].dataset.name;if(n){fabEdit=n;fabWant='';fabDraft=recipeOf(n).map(r=>({m:r.m,q:String(r.q)}));renderDir();dirModal.scrollTop=0}}
+ else if(act==='fab-open'){const n=inputs[+arg]&&inputs[+arg].dataset.name;if(n){fabEdit=n;fabWant='';fabDraft=recipeOf(n).map(r=>({m:(r.p||isProdIng(r.m))&&!matNames().includes(r.m)?'prod:'+r.m:r.m,q:String(r.q)}));renderDir();dirModal.scrollTop=0}}
  else if(act==='fab-cancel'){fabEdit=null;fabDraft=[];renderDir()}
  else if(act==='fab-save')saveReceta();
  else if(act==='fab-clear'){fabDraft=[];saveReceta()}
@@ -4033,7 +4066,7 @@ const TUTORIAL=[
 ['Fabricación y recetas <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → FABRICACIÓN</b>: sale la lista de todos los productos (armas, munición y suministros). Toca uno para crear su <b>receta</b>:</p>
 <ul><li>Elige un <b>material</b> en el desplegable y escribe cuántas <b>unidades</b> gasta una unidad del producto. Al elegirlo aparece otro desplegable para el siguiente material.</li><li>Pulsa <b>ACEPTAR</b>. «Quitar receta» la borra.</li><li>En la lista ves la receta de cada producto y cuántas unidades se pueden fabricar con el almacén actual.</li></ul>
 <p><b>Fabricar</b> = sumar unidades en <b>Dirección → STOCK</b>: se suman al stock de productos y se restan sus materiales, todo a la vez. Antes te muestra un <b>resumen para confirmar</b> («vas a fabricar 3 Cattleman y se gastarán 12 Hierro…»). Si falta algún material, <b>no se suma nada</b> y te dice qué falta y cuánto. Los productos sin receta se suman sin gastar materiales. Al fabricar suena un yunque y cae el sello FABRICADO.</p>
-<ul><li><b>↶ Deshacer última fabricación</b>: durante 10 minutos aparece arriba en STOCK; quita esas unidades y devuelve los materiales (si ya se vendieron, no se puede).</li><li><b>Coste y margen</b>: con los precios de los pedidos recibidos (o de la lista del proveedor), cada producto con receta muestra cuánto cuesta fabricarlo, su precio de venta y el margen.</li><li><b>Márgenes de cada producto</b> (arriba en FABRICACIÓN): todos los productos con receta, del que menos deja al que más, con el margen en dólares y en %: en rojo si se vende por debajo del coste, en dorado si deja menos del 15 %. Si comprando los materiales al proveedor más barato costaría menos, te dice a quién y cuánto ganarías de más.</li><li><b>Avisos de margen</b> (en la consola de Dirección): si un producto pasa a costar más de fabricar porque ha subido algún material (sale durante 7 días), si deja menos del 10 % o si se vende por debajo de su coste.</li><li><b>¿Qué me falta?</b>: dentro de la receta, escribe cuántas quieres fabricar y te dice qué materiales faltan. Con <b>PREPARAR PEDIDO A…</b> te deja el pedido al proveedor que los vende ya rellenado, para revisarlo y emitirlo.</li><li><b>Almacén y mínimos de materiales</b>: arriba en FABRICACIÓN puedes fijar el mínimo de cada material; los que bajen de él salen como avisos.</li><li>El buscador encuentra productos y recetas.</li></ul>`],
+<ul><li><b>↶ Deshacer última fabricación</b>: durante 10 minutos aparece arriba en STOCK; quita esas unidades y devuelve los materiales (si ya se vendieron, no se puede).</li><li><b>Recetas con otro producto</b>: algunas recetas llevan un producto de la tienda ya fabricado (la munición y el aceite llevan <b>pólvora</b>, el arco mejorado lleva un <b>arco</b>, el lazo reforzado un <b>lazo</b>). Al fabricarlas se gastan del stock de productos, no del almacén, y en la receta salen como «(producto)». En el editor están al final del desplegable, en «Productos de la tienda». Su coste se calcula con la receta de ese producto.</li><li><b>Coste y margen</b>: con los precios de los pedidos recibidos (o de la lista del proveedor), cada producto con receta muestra cuánto cuesta fabricarlo, su precio de venta y el margen.</li><li><b>Márgenes de cada producto</b> (arriba en FABRICACIÓN): todos los productos con receta, del que menos deja al que más, con el margen en dólares y en %: en rojo si se vende por debajo del coste, en dorado si deja menos del 15 %. Si comprando los materiales al proveedor más barato costaría menos, te dice a quién y cuánto ganarías de más.</li><li><b>Avisos de margen</b> (en la consola de Dirección): si un producto pasa a costar más de fabricar porque ha subido algún material (sale durante 7 días), si deja menos del 10 % o si se vende por debajo de su coste.</li><li><b>¿Qué me falta?</b>: dentro de la receta, escribe cuántas quieres fabricar y te dice qué materiales faltan. Con <b>PREPARAR PEDIDO A…</b> te deja el pedido al proveedor que los vende ya rellenado, para revisarlo y emitirlo.</li><li><b>Almacén y mínimos de materiales</b>: arriba en FABRICACIÓN puedes fijar el mínimo de cada material; los que bajen de él salen como avisos.</li><li>El buscador encuentra productos y recetas.</li></ul>`],
 ['Proveedores y pedidos <span class="tag boss">SOLO JEFE</span>',`<ul><li><b>Dirección → PROVEEDORES</b>: crea cada proveedor con el <b>nombre de la empresa</b>, su <b>tipo de negocio</b> (herrería, mina, tala… elige uno de la lista o escribe uno nuevo y quedará guardado para los siguientes), su <b>telegrama</b> y su <b>lista de productos con el precio por unidad</b>. Al escribir un producto aparece otro hueco. Puedes ampliar o cambiar la lista cuando quieras con EDITAR.</li><li><b>FICHA</b>: cada proveedor tiene su ficha con forma de <b>contrato de suministro</b>: el nombre en la cabecera, su telegrama (con ⧉ COPIAR), la ubicación y la lista de precios. Desde ahí puedes pulsar <b>HACER PEDIDO</b> para ir directamente a pedirle con él ya elegido.</li><li><b>Ubicación</b> (opcional): el pueblo donde está el proveedor (Annesburg, Rhodes…). Elige uno de la lista o escribe otro.</li><li><b>Comparar precios</b>: si dos o más proveedores venden lo mismo (por ejemplo «Hierro»), al final de PROVEEDORES sale <b>COMPARAR PRECIOS</b> con todos ordenados del más barato al más caro. Al hacer un pedido, cada producto lleva una etiqueta: <b>✓ el más barato</b> en verde, o en dorado el proveedor que lo vende más barato y a qué precio. Para que los compare, el producto tiene que llamarse igual en los dos.</li><li><b>📋 PEGAR MENSAJE</b> (opcional): en lo alto de la ficha del proveedor, pega el mensaje que te manda (por ejemplo «Mina Rock Roy, de Annesburg. Telegrama MRR-21. Lista de precios: oro 5$, hierro 1,20$, carbón 0,80$, sal 0,50$, azufre 2$») y pulsa <b>RELLENAR LA FICHA</b>. La web pone sola el nombre de la empresa, el telegrama, el tipo de negocio (mina, herrería, aserradero…) y cada producto con su precio. Si un producto viene sin precio, lo deja para que lo escribas tú. Si el proveedor ya estaba en la lista, abre su ficha y actualiza los precios. Revísalo y pulsa CREAR NUEVO PROVEEDOR o GUARDAR CAMBIOS. La forma de siempre, a mano, sigue igual.</li><li>La ficha del proveedor con su lista de precios se publica en el canal de Discord «Proveedores» y <b>se actualiza en el mismo mensaje</b> cada vez que la cambias.</li><li><b>COPIAR TELEGRAMA</b> (en REALIZAR NUEVO PEDIDO, y COPIAR PEDIDO en la ventana PEDIDOS): copia el pedido listo para mandarlo al proveedor, con cada material, cantidad, precio, total y si está pagado.</li><li><b>Dirección → REALIZAR NUEVO PEDIDO</b>: elige el proveedor y te sale <b>su lista de productos y precios</b>. Igual que en la calculadora, usa <b>−</b> y <b>+</b> o escribe la cantidad: el subtotal y el total se calculan solos. Si necesitas algo que no está en su lista, añádelo en «Otros materiales». Indica si ya está <b>pagado</b> y pulsa <b>EMITIR PEDIDO</b>: se publica en el canal «Pedidos» con cada producto, el precio por unidad, el total de cada línea y el total, y aparece a todos los empleados en PEDIDOS.</li><li>Cambiar los precios de un proveedor no cambia los pedidos ya emitidos.</li><li>Al emitir un pedido, en Discord sale también como <b>imagen de albarán</b>.</li><li>Con muchos proveedores aparece un buscador (por nombre, tipo o producto).</li><li><b>Dirección → REGISTRO DE PEDIDOS</b>: pedidos completados, por día o por semana, con descarga y <b>ENVIAR A DISCORD</b>.</li><li>Para <b>cancelar</b> un pedido pendiente, ábrelo en PEDIDOS estando en Modo Jefe y pulsa CANCELAR PEDIDO. Si mientras tanto otro empleado ya lo había completado, no se cancela y se te avisa.</li><li>Al emitir, completar o cancelar un pedido se avisa solo al canal de Discord «Pedidos».</li></ul>`],
 ['Empleados y contratos <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → EMPLEADOS</b>. Para incorporar a alguien rellena todos los datos:</p>
 <ul><li><b>Nombre</b> del empleado.</li><li><b>Puesto</b>: Jefe, Gerente, Armero experto, Armero o Aprendiz de armero.</li><li><b>Sueldo semanal</b> en dólares (por ejemplo 20 o 40).</li><li><b>Horas semanales</b>: viene puesto 10; cámbialo si hace falta.</li><li><b>Fecha de inicio</b> del contrato. El <b>periodo de prueba</b> es de una semana desde ese día y se calcula solo.</li></ul>
@@ -4477,11 +4510,16 @@ function applyStockMap(m){stockMap=m&&typeof m==='object'&&!Array.isArray(m)?m:{
 async function moverStock(items,why){const m=await sbRpc('mover_stock',{p_items:items});applyStockMap(m);cloudRev();invChanged(items,why);return m}
 /* --- Almacén de materiales: viven en la misma tabla de stock con el prefijo «mat:» --- */
 function matKey(n){return 'mat:'+n}
+/* Un ingrediente es un PRODUCTO de la tienda (pólvora, arco, lazo…) si alguna receta lo marca así (p:true),
+   o si no existe como material y sí como producto. Entonces se gasta del stock de productos. */
+function isProdIng(m){for(const k in recetas){const L=recetas[k];if(Array.isArray(L)&&L.some(r=>r&&r.m===m&&r.p))return true}return stockMap[matKey(m)]===undefined&&inputs.some(i=>i.dataset.name===m)}
+function ingKey(m){return isProdIng(m)?m:matKey(m)}
+function ingLabel(m){return isProdIng(m)?m+' (producto)':m}
 function isMat(k){return String(k).indexOf('mat:')===0}
 function matNames(){return Object.keys(stockMap).filter(isMat).map(k=>k.slice(4)).sort((a,b)=>a.localeCompare(b,'es'))}
 function canonMat(n){n=String(n||'').trim().replace(/\s+/g,' ');const f=matNames().find(x=>norm(x)===norm(n));return f||n}
 function recipeOf(name){return (recetas[name]||[]).filter(r=>r&&r.m&&r.q>0)}
-function recipeText(name){const r=recipeOf(name);return r.length?r.map(x=>x.q+' × '+x.m).join(', '):''}
+function recipeText(name){const r=recipeOf(name);return r.length?r.map(x=>x.q+' × '+x.m+(x.p?' (producto)':'')).join(', '):''}
 /* Precio por unidad de cada material: el del último pedido recibido; si no hay, el de la lista del proveedor */
 function matCost(n){
  const k=norm(n);let best=null,bt=0;
@@ -4490,11 +4528,11 @@ function matCost(n){
  for(const v of proveedores)for(const x of (v.prods||[]))if(norm(x.name)===k)return x.price;
  return null;
 }
-function productCost(name){const r=recipeOf(name);if(!r.length)return null;let s=0;for(const x of r){const c=matCost(x.m);if(c===null)return undefined;s+=c*x.q}return s}
+function productCost(name,d){const r=recipeOf(name);if(!r.length)return null;if((d||0)>5)return undefined;let s=0;for(const x of r){const c=isProdIng(x.m)?productCost(x.m,(d||0)+1):matCost(x.m);if(c===null||c===undefined)return undefined;s+=c*x.q}return s}
 function productPrice(name){const i=inputs.find(x=>x.dataset.name===name);return i?Math.round(Number(i.dataset.price)*100):0}
 /* Lo más barato que se podría pagar por un material (entre la lista de cada proveedor y el último pedido) */
 function cheapMat(n){const k=norm(n);let best=null,who='';proveedores.forEach(v=>(v.prods||[]).forEach(x=>{if(norm(x.name)===k&&x.price>0&&(best===null||x.price<best)){best=x.price;who=v.name}}));const c=matCost(n);if(c!==null&&(best===null||c<=best))return {c:c,who:''};return best===null?null:{c:best,who:who}}
-function productCheapCost(name){const r=recipeOf(name);if(!r.length)return null;let s=0;const W={};for(const x of r){const b=cheapMat(x.m);if(!b)return undefined;s+=b.c*x.q;if(b.who)W[b.who]=1}return {c:s,who:Object.keys(W)}}
+function productCheapCost(name,d){const r=recipeOf(name);if(!r.length)return null;if((d||0)>5)return undefined;let s=0;const W={};for(const x of r){let b;if(isProdIng(x.m)){const z=productCheapCost(x.m,(d||0)+1);b=z&&z.c!==undefined?{c:z.c,who:''}:null;if(z&&z.who)z.who.forEach(w=>W[w]=1)}else b=cheapMat(x.m);if(!b)return undefined;s+=b.c*x.q;if(b.who)W[b.who]=1}return {c:s,who:Object.keys(W)}}
 function marginRows(){
  return inputs.map(i=>i.dataset.name).filter(n=>recipeOf(n).length).map(n=>{const c=productCost(n), p=productPrice(n), ch=productCheapCost(n);return {n:n,c:c,p:p,mg:(c===null||c===undefined)?null:p-c,pct:(c===null||c===undefined||!p)?null:Math.round((p-c)/p*100),ch:ch}})
   .sort((a,b)=>(a.pct===null?999:a.pct)-(b.pct===null?999:b.pct));
