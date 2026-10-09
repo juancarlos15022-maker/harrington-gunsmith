@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261009n
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261009p
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1496,3 +1496,33 @@ body.theme-day .hero-banner img{filter:brightness(1.06) saturate(1.04)}
 .pf-paper .cmp-tag.alt{background:#f3e0b4;color:#6b3c08;border-color:#a8792e}
 .pf-paper .enc-empty{color:#6b4c1d}
 .pf-paper .enc-actions{margin-top:10px}
+/* Modo ligero: lo mismo que «reducir movimiento» del sistema, y algo más */
+html.lite .paid-stamp.hit{animation:none;opacity:.82}
+html.lite .grid.flip{animation:none}
+html.lite .splash{display:none}
+html.lite .bump{animation:none}
+html.lite *{transition-duration:.01s!important}
+html.lite .wrap>*{animation:none}
+html.lite .modal-overlay:not([hidden])>*{animation:none}
+html.lite .paid-stamp.img.hit{animation:none;opacity:.9}
+html.lite #receiptModal:not([hidden]) .receipt-wrap{animation:none}
+html.lite #dirBody.pg-in,html.lite #dirBody.pg-back,html.lite .stamp-fx span,html.lite .shift-chip i{animation:none}
+html.lite .stamp-fx span{opacity:1;transform:rotate(-12deg)}
+html.lite .g-card{animation:none;opacity:1}
+html.lite .g-grain,html.lite .g-fog,html.lite .g-lamp{animation:none}
+html.lite .gate[data-ph="zoom"] .g-stage{transform:translateX(-50%)}
+html.lite .g-leaf{transition:none}
+html.lite .g-smoke,html.lite .gr-lamp{animation:none}
+html.lite .g-card{transition:none}
+html.lite #receiptModal.printing .receipt-paper,html.lite #receiptModal.printing .receipt-wrap::before{animation:none}
+html.lite #receiptModal.printing .receipt-wrap::before{display:none}
+html.lite .modal-overlay:not([hidden])>.enc-panel,html.lite .modal-overlay.confirm:not([hidden])>.confirm-box{animation:none}
+html.lite .pay-plate.due::after{animation:none;display:none}
+html.lite .hero-banner:before,html.lite .sp-seal,html.lite .sp-name i,html.lite .sp-sub,html.lite .record-fx,html.lite .record-fx div{animation:none;opacity:1;transform:none}
+html.lite .pz-hit{animation:none;outline:2px solid #f0d278}
+html.lite .glass,html.lite .g-smoke,html.lite .g-dust{display:none!important}
+html.lite .pay-plate.due::after,html.lite .hero-banner:before{animation:none!important}
+.hz-note{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px;padding:9px 11px;border:1px dashed #b8913f;border-radius:7px;background:rgba(60,40,10,.35);color:#e9d9ad;font-size:13.5px;line-height:1.35}
+.hz-note span{flex:1 1 200px}
+.hz-note button{flex:0 0 auto;padding:9px 12px;border-radius:6px;border:1px solid #b88931;background:linear-gradient(#1b2a1a,#0a1812);color:#f3e2b0;font-weight:bold;font-family:inherit;cursor:pointer}
+.cf-paper .hz-note{background:rgba(255,248,225,.5);color:#3d2a12;border-color:#8a6a3a}

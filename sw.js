@@ -15,6 +15,14 @@ function fromNet(req) {
   });
 }
 
+/* al llegar una versión nueva de app.js o estilos.css, se borran las versiones viejas guardadas */
+function prune(url) {
+  caches.open(CACHE).then(c => c.keys().then(keys => keys.forEach(k => {
+    const u = new URL(k.url);
+    if (u.origin === url.origin && u.pathname === url.pathname && u.search !== url.search) c.delete(k);
+  }))).catch(() => {});
+}
+
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
@@ -36,7 +44,7 @@ self.addEventListener('fetch', e => {
 
   /* app.js y estilos.css llevan versión (?v=…): si ya está guardada esa versión, se usa al instante */
   if (url.search.indexOf('v=') >= 0 || fonts) {
-    e.respondWith(caches.match(req).then(r => r || fromNet(req)));
+    e.respondWith(caches.match(req).then(r => r || fromNet(req).then(res => { if (!fonts) prune(url); return res; })));
     return;
   }
 

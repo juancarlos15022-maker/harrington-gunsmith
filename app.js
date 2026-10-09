@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261009n
+/* HARRINGTON GUNSMITH · app.js · versión 20261009p
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -47,7 +47,7 @@ if(SANDBOX)(function(){
    else if(f.startsWith('eq.'))rows=rows.filter(r=>r.clave===f.slice(3));
    else if(f.startsWith('like.')){const p=decodeURIComponent(f.slice(5));rows=p==='*:*'?rows.filter(r=>r.clave.includes(':')):rows.filter(r=>r.clave.startsWith(pre(f)))}
   }
-  const a=q.get('actualizado');if(a&&a.startsWith('gt.')){const t=Date.parse(a.slice(3));rows=rows.filter(r=>Date.parse(r.actualizado)>t)}
+  q.getAll('actualizado').forEach(a=>{if(a.startsWith('gt.')){const t=Date.parse(a.slice(3));rows=rows.filter(r=>Date.parse(r.actualizado)>t)}else if(a.startsWith('lte.')){const t=Date.parse(a.slice(4));rows=rows.filter(r=>Date.parse(r.actualizado)<=t)}});
   if(q.get('order')==='actualizado.asc')rows.sort((x,y)=>Date.parse(x.actualizado)-Date.parse(y.actualizado));
   if(q.get('limit'))rows=rows.slice(0,+q.get('limit'));
   const sel=q.get('select');if(sel&&sel!=='*'){const c=sel.split(',');rows=rows.map(r=>{const o={};c.forEach(k=>{if(k in r)o[k]=r[k]});return o})}
@@ -96,6 +96,23 @@ if(SANDBOX)(function(){
  };
  SBX.exit=function(){try{['harrington_sandbox','harrington_me_v1','harrington_boss_active_v1','harrington_tab'].forEach(k=>sessionStorage.removeItem(k))}catch(e){}location.reload()};
 })();
+/* ===== Modo ligero: menos animaciones en móviles justos, con poca batería o si se elige en ⚙ ===== */
+var FX={mode:'auto',slow:false,low:false};
+try{FX.mode=localStorage.getItem('harrington_fx')||'auto';FX.slow=localStorage.getItem('harrington_fx_slow')==='1'}catch(e){}
+try{const n=navigator, weak=(n.deviceMemory&&n.deviceMemory<=2)||(n.hardwareConcurrency&&n.hardwareConcurrency<=2);if(weak)FX.slow=true;if(n.connection&&n.connection.saveData)FX.low=true}catch(e){}
+function fxLite(){return FX.mode==='lite'||(FX.mode==='auto'&&(FX.slow||FX.low))}
+function fxApply(){document.documentElement.classList.toggle('lite',fxLite());const b=document.getElementById('fxBtn');if(b)b.textContent=({auto:'AUTO',full:'COMPLETAS',lite:'LIGERAS'})[FX.mode]+(FX.mode==='auto'?(fxLite()?' · ligeras':' · completas'):'')}
+function calmFx(){return document.documentElement.classList.contains('lite')||!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)}
+fxApply();
+try{if(navigator.getBattery)navigator.getBattery().then(b=>{const f=()=>{FX.low=(b.level<.2&&!b.charging)||!!(navigator.connection&&navigator.connection.saveData);fxApply()};f();b.addEventListener('levelchange',f);b.addEventListener('chargingchange',f)}).catch(()=>{})}catch(e){}
+/* Mide la fluidez unos segundos después de abrir: si va a menos de ~25 imágenes por segundo, pasa a ligero */
+window.addEventListener('load',()=>setTimeout(()=>{
+ if(document.hidden||!window.requestAnimationFrame)return;
+ let n=0,t0=0,last=0,worst=0;
+ const step=t=>{if(!t0){t0=t;last=t}else{worst=Math.max(worst,t-last);last=t}if(++n<60&&!document.hidden)requestAnimationFrame(step);else if(n>=60){const avg=(last-t0)/(n-1), slow=avg>40;
+  if(slow!==FX.slow&&!(navigator.deviceMemory<=2)){FX.slow=slow;try{localStorage.setItem('harrington_fx_slow',slow?'1':'0')}catch(e){}fxApply()}}};
+ requestAnimationFrame(step);
+},4000));
 /* ===== Referencias ===== */
 /* Productos añadidos y precios editados desde Dirección: se aplican antes de leer el catálogo */
 (function(){
@@ -1103,7 +1120,9 @@ const THEMES=['auto','dia','noche'], THEME_TXT={auto:'AUTO',dia:'☀ DÍA',noche
 function themeNow(){const m=store.get('harrington_theme')||'auto';if(m!=='auto')return m;const hh=+madridParts(Date.now()).hour;return hh>=8&&hh<20?'dia':'noche'}
 function applyTheme(){const t=themeNow();document.body.classList.toggle('theme-day',t==='dia');document.body.classList.toggle('theme-night',t==='noche');const b=document.getElementById('themeBtn');if(b)b.textContent=THEME_TXT[store.get('harrington_theme')||'auto']+((store.get('harrington_theme')||'auto')==='auto'?(t==='dia'?' · ☀':' · ☾'):'')}
 document.getElementById('themeBtn').onclick=e=>{e.stopPropagation();const cur=store.get('harrington_theme')||'auto', nx=THEMES[(THEMES.indexOf(cur)+1)%3];store.set('harrington_theme',nx);applyTheme();say('Ambiente: '+({auto:'automático según la hora',dia:'día',noche:'noche'})[nx])};
-applyTheme();setInterval(applyTheme,300000);
+applyTheme();
+document.getElementById('fxBtn').onclick=e=>{e.stopPropagation();const L=['auto','full','lite'];FX.mode=L[(L.indexOf(FX.mode)+1)%3];try{localStorage.setItem('harrington_fx',FX.mode)}catch(err){}fxApply();say('Animaciones: '+({auto:'automáticas (ligeras si el móvil va justo o con poca batería)',full:'completas',lite:'ligeras'})[FX.mode])};
+fxApply();
 /* Menú ⚙ de ajustes (sonido, tamaño del texto y contraste) */
 (function(){
  const btn=document.getElementById('setBtn'), pop=document.getElementById('setPop');
@@ -1414,7 +1433,7 @@ function accounts(r){
 }
 function periodBar(k){
  const pi=periodInfo(k), p=per[k];
- return `<div class="seg" style="margin-bottom:8px"><button type="button" class="${p.mode==='dia'?'on':''}" data-dir="pm:${k}dia">DIARIO</button><button type="button" class="${p.mode==='sem'?'on':''}" data-dir="pm:${k}sem">SEMANAL</button></div>
+ return hzNote(pi.r.s)+`<div class="seg" style="margin-bottom:8px"><button type="button" class="${p.mode==='dia'?'on':''}" data-dir="pm:${k}dia">DIARIO</button><button type="button" class="${p.mode==='sem'?'on':''}" data-dir="pm:${k}sem">SEMANAL</button></div>
  <div class="enc-actions" style="grid-template-columns:48px 1fr 48px;margin-bottom:10px"><button type="button" data-dir="pp:${k}" aria-label="Anterior">◂</button><button type="button" data-dir="pw:${k}" style="font-size:13px">${pi.label}${p.off===0?'<br>('+(pi.sem?'esta semana':'hoy')+')':''}</button><button type="button" data-dir="pn:${k}" aria-label="Siguiente"${p.off>=0?' disabled':''}>▸</button></div>`;
 }
 function repButtons(k){return `<div class="enc-actions" style="margin-top:10px"><button type="button" class="primary" data-dir="rep-dl:${k}">DESCARGAR ${per[k].mode==='sem'?'SEMANAL':'DIARIO'}</button><button type="button" class="gold" data-dir="rep-dc:${k}">ENVIAR A DISCORD</button><button type="button" data-dir="rep-cp:${k}">COPIAR PARA DISCORD</button></div>`}
@@ -1557,7 +1576,7 @@ function renderPayPlate(){
  el.className='pay-plate '+s.st;
  if(el.innerHTML!==html)el.innerHTML=html;el.hidden=false;
 }
-setInterval(renderPayPlate,60000);
+setInterval(()=>{if(!document.hidden)renderPayPlate()},60000);
 function renderModSueldos(){
  const ws=sueWeek(), cur=sueIsCur(ws), L=sueEmps(ws), sun=ws+6, canNext=ws+7<=payMonday(0);
  let tot=0, paid=0;
@@ -1720,7 +1739,7 @@ function rollTo(el,cents,instant){
  if(el._raf)cancelAnimationFrame(el._raf);
  const from=el._cur===undefined?cents:el._cur;
  el._cur=cents;
- if(instant||from===cents||window.matchMedia('(prefers-reduced-motion:reduce)').matches){el.textContent=money(cents);return}
+ if(instant||from===cents||calmFx()){el.textContent=money(cents);return}
  const t0=performance.now();
  const step=now=>{const k=Math.min(1,(now-t0)/380), e=1-Math.pow(1-k,3);el.textContent=money(Math.round(from+(cents-from)*e));if(k<1)el._raf=requestAnimationFrame(step);else el.textContent=money(cents)};
  el._raf=requestAnimationFrame(step);
@@ -1850,7 +1869,7 @@ function clientSales(c){
 let clHistAll=false;
 function clientHistHTML(c){
  const L=clientSales(c), ok=L.filter(x=>!x.voided), tot=ok.reduce((a,x)=>a+collected(x),0);
- const head=`<div class="dir-sec-title">HISTORIAL DE COMPRAS (${ok.length})</div>`;
+ const head=`<div class="dir-sec-title">HISTORIAL DE COMPRAS (${ok.length})</div>`+hzNote(-Infinity);
  if(!L.length)return head+'<div class="enc-empty">Todavía no hay compras a su nombre.<br>Se apuntan solas al cobrar una venta con su nombre de cliente.</div>';
  const last=ok[0], ago=last?todayNum()-saleDay(last):null;
  const agoT=ago===null?'—':ago<=0?'Hoy':ago===1?'Ayer':'Hace '+ago+' días';
@@ -2445,7 +2464,7 @@ function ausInput(t){
 }
 ausModal.addEventListener('change',e=>ausInput(e.target));
 ausModal.addEventListener('input',e=>{if(e.target.id==='auMot')ausInput(e.target)});
-setInterval(()=>{updateAusBtn();if(!ausModal.hidden&&ausView==='list')renderAus()},60000);
+setInterval(()=>{if(document.hidden)return;updateAusBtn();if(!ausModal.hidden&&ausView==='list')renderAus()},60000);
 /* Dirección → AUSENCIAS (con el motivo) */
 function renderModAusencias(){
  const now=ausNowList(), fut=ausencias.filter(ausFuture), past=ausencias.filter(a=>!ausActive(a)&&!ausFuture(a)).slice().reverse().slice(0,60);
@@ -2666,6 +2685,7 @@ dirModal.addEventListener('input',e=>{if(e.target.id==='pzText')pzText=e.target.
 dirModal.addEventListener('click',e=>{
  const b=e.target.closest('[data-dir]'); if(!b)return;
  const [act,arg]=b.dataset.dir.split(':');
+ if(act==='hz-load'){cloudLoadOld();e.stopImmediatePropagation();return}
  if(act==='pv-view'){pvView=arg;pvEdit=null;renderDir();dirModal.scrollTop=0;e.stopImmediatePropagation();return}
  if(act==='pv-close'){pvView=null;renderDir();e.stopImmediatePropagation();return}
  if(act==='pv-order'){const v=proveedores.find(x=>x.id===arg);if(v){pvView=null;dirMod='nuevopedido';npDraft.prov=v.id;npDraft.lq={};renderDir();dirModal.scrollTop=0}e.stopImmediatePropagation();return}
@@ -3343,7 +3363,7 @@ dirModal.addEventListener('click',e=>{
  else if(act==='fab-undo')undoFab();
  else if(act==='exit-boss'){setBoss(false);closeModal(dirModal);say('Modo Jefe desactivado')}
 });
-setInterval(tickDiscounts,30000);
+setInterval(()=>{if(!document.hidden)tickDiscounts()},30000);
 dirModal.addEventListener('input',e=>{
  const n=e.target.dataset&&e.target.dataset.stock;
  if(n===undefined)return;
@@ -3615,7 +3635,7 @@ const TUTORIAL=[
 <ul><li><b>Configuración</b>: empleados, clientes, proveedores, convenios y ofertas, precios, productos nuevos, Discord, mínimos de stock y la contraseña del jefe.</li><li><b>Operación</b>: stock, ventas, encargos, pedidos a proveedores, fichajes, gastos y cierres. Los números de venta y el stock los controla la nube, así que nunca se repiten ni se vende lo que ya no hay.</li></ul>
 <p>Los cambios llegan a los demás móviles <b>al instante</b>: la nube avisa en cuanto algo cambia. Si ese aviso no funcionara, cada móvil sigue comprobando la nube cada pocos segundos. Arriba, junto a FICHAJE, ves «☁ conectado», «☁ guardando…», «☁ guardado ✓» o «☁ sin conexión». <b>Sin conexión</b> puedes mirar el catálogo y hacer presupuestos, pero no finalizar ventas ni cambiar el stock. Los cambios de configuración se suben solos al volver la conexión.</p>
 <p>Haz una <b>copia de seguridad</b> de vez en cuando desde Dirección.</p>`],
-['Novedades: deshacer, sin conexión y app',`<ul><li><b>Deshacer</b>: al borrar un gasto, un cliente o un proveedor, anular o borrar una ausencia, o empezar una venta nueva con productos puestos, el aviso de abajo lleva un botón <b>DESHACER</b> durante unos segundos. Discord no se entera hasta que pasa ese tiempo.</li><li><b>Barra de abajo (móvil)</b>: siempre a mano, con <b>VENTA</b> (vuelve arriba, al catálogo), <b>ENCARGOS</b>, <b>PEDIDOS</b>, <b>AUSENCIAS</b> y <b>FICHAR</b> / <b>SALIDA</b>. El número rojo indica cuántos hay pendientes. Cuando tienes productos en la venta, la barra del total se coloca justo encima.</li><li><b>Atajos de teclado (ordenador)</b>: <kbd>/</kbd> para buscar un producto, <kbd>1</kbd> a <kbd>9</kbd> para cambiar de categoría, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> para finalizar la venta, <kbd>?</kbd> para abrir este tutorial y <kbd>Esc</kbd> para cerrar ventanas. Los tienes también en ⚙ Ajustes.</li><li><b>Sin conexión</b>: si se cae la conexión sale una franja roja arriba. Puedes seguir trabajando: lo que hagas se guarda y se envía al volver.</li><li><b>Cerrar sesión</b>: al fichar tu salida, la web te pregunta si quieres cerrar tu sesión en ese dispositivo.</li><li><b>👁</b> junto a las contraseñas sirve para ver lo que escribes.</li><li><b>Como una app</b>: la web se guarda en el móvil, así que se abre al instante y aunque no haya conexión. En el móvil puedes añadirla a la pantalla de inicio desde el menú del navegador («Añadir a pantalla de inicio»).</li><li>En el <b>ordenador</b> la web ocupa toda la pantalla: productos en columnas y el pedido siempre a la derecha.</li><li>Con poca batería o con el ahorro de datos activado, se quitan los efectos de lluvia para gastar menos.</li><li><b>ABIERTO / CERRADO</b>: la tienda está abierta cuando hay alguien fichado. En la entrada cuelga el cartel en la puerta con quién atiende, y en la pantalla principal sale junto al fichaje.</li><li>Este tutorial enseña a cada uno lo suyo: los empleados solo ven lo que usan; la dirección ve además su parte al final.</li></ul>`],
+['Novedades: deshacer, sin conexión y app',`<ul><li><b>Deshacer</b>: al borrar un gasto, un cliente o un proveedor, anular o borrar una ausencia, o empezar una venta nueva con productos puestos, el aviso de abajo lleva un botón <b>DESHACER</b> durante unos segundos. Discord no se entera hasta que pasa ese tiempo.</li><li><b>Barra de abajo (móvil)</b>: siempre a mano, con <b>VENTA</b> (vuelve arriba, al catálogo), <b>ENCARGOS</b>, <b>PEDIDOS</b>, <b>AUSENCIAS</b> y <b>FICHAR</b> / <b>SALIDA</b>. El número rojo indica cuántos hay pendientes. Cuando tienes productos en la venta, la barra del total se coloca justo encima.</li><li><b>Más rápida en dispositivos nuevos</b>: la primera vez que alguien abre la web en un móvil nuevo, baja todo lo pendiente (encargos, pedidos, ausencias…), pero de los registros (ventas, fichajes, gastos, cierres y movimientos) solo los últimos 4 meses. Si vas a una semana más antigua en los registros, o en la ficha de un cliente, sale el botón <b>CARGAR TODO EL HISTORIAL</b> para bajar el resto en ese dispositivo.</li><li><b>Animaciones</b> (⚙ Ajustes): <b>AUTO</b> pone las animaciones ligeras (sin lluvia, polillas ni efectos pesados) si el móvil va justo o le queda poca batería; <b>COMPLETAS</b> las deja siempre todas; <b>LIGERAS</b>, siempre las mínimas. Además, con la web en segundo plano no se repinta nada, para gastar menos batería.</li><li><b>Atajos de teclado (ordenador)</b>: <kbd>/</kbd> para buscar un producto, <kbd>1</kbd> a <kbd>9</kbd> para cambiar de categoría, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> para finalizar la venta, <kbd>?</kbd> para abrir este tutorial y <kbd>Esc</kbd> para cerrar ventanas. Los tienes también en ⚙ Ajustes.</li><li><b>Sin conexión</b>: si se cae la conexión sale una franja roja arriba. Puedes seguir trabajando: lo que hagas se guarda y se envía al volver.</li><li><b>Cerrar sesión</b>: al fichar tu salida, la web te pregunta si quieres cerrar tu sesión en ese dispositivo.</li><li><b>👁</b> junto a las contraseñas sirve para ver lo que escribes.</li><li><b>Como una app</b>: la web se guarda en el móvil, así que se abre al instante y aunque no haya conexión. En el móvil puedes añadirla a la pantalla de inicio desde el menú del navegador («Añadir a pantalla de inicio»).</li><li>En el <b>ordenador</b> la web ocupa toda la pantalla: productos en columnas y el pedido siempre a la derecha.</li><li>Con poca batería o con el ahorro de datos activado, se quitan los efectos de lluvia para gastar menos.</li><li><b>ABIERTO / CERRADO</b>: la tienda está abierta cuando hay alguien fichado. En la entrada cuelga el cartel en la puerta con quién atiende, y en la pantalla principal sale junto al fichaje.</li><li>Este tutorial enseña a cada uno lo suyo: los empleados solo ven lo que usan; la dirección ve además su parte al final.</li></ul>`],
 ['Modo prueba (Arthur Ayudante)',`<ul><li>En la entrada, la última tarjeta es <b>Arthur Ayudante</b>, con el sello «PRUEBA». Sirve para probar las novedades sin miedo.</li><li>La primera vez te pide crear su contraseña; después, siempre la misma (es la única cosa que se guarda de verdad).</li><li>Dentro entras como jefe, con DIRECCIÓN, y ves una copia de los datos reales del momento.</li><li><b>Nada de lo que hagas se guarda</b> en la base de datos ni afecta a la web de verdad, y <b>no se envía nada a Discord</b>. Arriba sale la franja amarilla «MODO PRUEBA».</li><li>El botón <b>DISCORD (n)</b> de la franja enseña los mensajes que se habrían enviado, para comprobar que salen bien.</li><li><b>SALIR</b> (o cerrar la pestaña) borra la prueba y vuelve a la entrada normal.</li><li>Arthur Ayudante no aparece en Empleados, Sueldos ni en ningún listado.</li></ul>`],
 ['Objetivo, buscador y revisión',`<ul><li><b>Objetivo semanal</b> (Dirección → Ventas y caja → OBJETIVO SEMANAL): pon una meta de ventas para la semana (viernes a jueves). En la pantalla principal sale una barra dorada que se va llenando con lo cobrado; al llegar a la meta se pone verde y salta la celebración.</li><li><b>Buscador</b> (arriba en la consola de Dirección): escribe un cliente, un número de serie, un ticket, un encargo, un pedido o un empleado y pulsa ABRIR para ir a su apartado.</li><li><b>Revisión de datos</b> (Dirección → Sistema): comprueba stock negativo, turnos abiertos de hace mucho, ventas sin empleado, gastos o clientes repetidos, encargos y pedidos atascados y productos que se van a acabar, y te dice cómo arreglarlo. No cambia nada sola.</li><li><b>Productos que se acaban</b>: si al ritmo de ventas de las dos últimas semanas a un producto le quedan 5 días o menos, sale un aviso en Dirección.</li><li><b>Ficha completa</b> (Empleados → 📋 FICHA COMPLETA): ventas, cobrado, horas, sueldos, ausencias y ascensos de cada empleado.</li><li>Detalles nuevos: monedas de oro que caen al total al cobrar, el reloj de bolsillo junto a tu nombre mientras estás fichado, el cartel de «SE BUSCA» del empleado de la semana, los sellos ENTREGADO y RECIBIDO, la tablilla de AGOTADO y los mensajes de Discord con su imagen.</li></ul>`],
 ['Si algo no funciona',`<ul><li><b>No deja finalizar</b>: lee el aviso; suele faltar cliente, empleado, telegrama, pago adelantado o stock.</li><li><b>Producto SIN STOCK</b>: el jefe debe sumar existencias.</li><li><b>No suena</b>: en ⚙ comprueba que el sonido diga «♪ SÍ» y el volumen del móvil.</li><li><b>Un botón no responde</b>: si muestra ⏳, está guardando; espera a que termine.</li><li><b>No suena la música</b>: los navegadores no dejan sonar nada hasta que tocas la pantalla; toca cualquier sitio. Si sigue sin sonar, en ⚙ comprueba que «Música de fondo» diga «♫ SÍ».</li><li><b>Se lee poco</b>: usa A+ o el alto contraste ◐.</li><li><b>No ves un cambio reciente</b>: abre la web en una pestaña privada.</li></ul>`]];
@@ -3754,7 +3774,7 @@ function renderClock(){
  {const me=meEmp(), mine=me&&shifts.some(x=>x.empId===me.id);clockOutBtn.hidden=me?!mine:!shifts.length;clockBtn.hidden=!!mine;try{paintPocket()}catch(e){}}
  lastShiftBtn.hidden=!lastShift;
 }
-setInterval(()=>{if(shifts.length)renderClock()},30000);
+setInterval(()=>{if(shifts.length&&!document.hidden)renderClock()},30000);
 function renderEmpWeek(){
  const el=document.getElementById('empWeek'); if(!el)return;
  const ws=weekStart(-1), tot={};
@@ -4144,7 +4164,55 @@ function applyRecord(clave,valor){
   renderClock();
  }
 }
+/* Registros que se acumulan para siempre: un dispositivo nuevo solo baja los últimos 4 meses */
+const HZ_TYPES=['venta:','turno:','gasto:','cierre:','mov:'], HZ_DAYS=120;
+cloud.oldest='';try{cloud.oldest=localStorage.getItem('harrington_cloud_oldest')||''}catch(e){}
+async function pullRange(pf,gt,lte){
+ let last=gt||'', got=0, top='';
+ for(let page=0;page<200;page++){
+  const r=await sbFetch('/rest/v1/datos?select=clave,valor,actualizado&clave=like.'+pf+'*'+(last?'&actualizado=gt.'+encodeURIComponent(last):'')+(lte?'&actualizado=lte.'+encodeURIComponent(lte):'')+'&order=actualizado.asc&limit=500');
+  if(!r.ok)throw new Error(r.status);
+  const rows=await r.json();
+  rows.forEach(x=>applyRecord(x.clave,x.valor));got+=rows.length;
+  if(rows.length){last=rows[rows.length-1].actualizado;top=last}
+  if(rows.length<500)break;
+ }
+ return {got:got,top:top};
+}
+function hzDay(){if(!cloud.oldest)return -Infinity;const m=madridParts(Date.parse(cloud.oldest));return dayNum(+m.year,+m.month,+m.day)}
+let hzLoading=false;
+async function cloudLoadOld(){
+ if(!cloud.oldest||hzLoading)return;
+ hzLoading=true;if(!dirModal.hidden)renderDir();
+ try{
+  let got=0;for(const pf of HZ_TYPES){const x=await pullRange(pf,'',cloud.oldest);got+=x.got}
+  cloud.oldest='';try{localStorage.removeItem('harrington_cloud_oldest')}catch(e){}
+  say('Historial completo cargado ('+got+' registros antiguos)');
+ }catch(e){say('No se pudo cargar el historial. Prueba otra vez con conexión.','err')}
+ hzLoading=false;if(!dirModal.hidden)renderDir();
+}
+function hzNote(fromDay){
+ if(!cloud.oldest||fromDay>=hzDay())return '';
+ return `<div class="hz-note"><span>Este dispositivo solo tiene a mano los registros de los últimos 4 meses (desde el ${esc(fmtDate(Date.parse(cloud.oldest)))}).</span><button type="button" data-dir="hz-load"${hzLoading?' disabled':''}>${hzLoading?'⏳ CARGANDO…':'CARGAR TODO EL HISTORIAL'}</button></div>`;
+}
 async function cloudPullRecords(){
+ if(!cloud.since){
+  /* primera vez en este dispositivo: lo pendiente y la configuración, entero; los registros, solo lo reciente */
+  const hz=new Date(Date.now()-HZ_DAYS*86400000).toISOString();
+  const hasOld=await sbFetch('/rest/v1/datos?select=clave&clave=like.venta:*&actualizado=lte.'+encodeURIComponent(hz)+'&limit=1').then(r=>r.ok?r.json():[]).catch(()=>[]);
+  if(hasOld.length){
+   let got=0, top='';
+   const keep=['encargo:','pedido:','ausencia:','fichaje:','cfg:','expulsion:'];
+   for(const pf of keep){const x=await pullRange(pf,'',hz);got+=x.got}
+   /* y todo lo reciente, de cualquier tipo */
+   const x=await pullRange('*:',hz,'');
+   got+=x.got;top=x.top;
+   cloud.oldest=hz;try{localStorage.setItem('harrington_cloud_oldest',hz)}catch(e){}
+   {cloud.since=top||hz;try{localStorage.setItem('harrington_cloud_since',cloud.since)}catch(e){}}
+   if(got&&!dirModal.hidden&&!document.activeElement.matches('input,select,textarea'))renderDir();
+   return got;
+  }
+ }
  let since=cloud.since?new Date(Date.parse(cloud.since)-120000).toISOString():'', got=0;
  for(let page=0;page<40;page++){
   const flt=since?'&actualizado=gt.'+encodeURIComponent(since):'';
@@ -4257,6 +4325,7 @@ setTimeout(()=>cloudPoll(),300);
    Si una imagen no carga como "nombre.png", prueba "nombre.png.png"
    (por si el archivo se subió con la extensión duplicada). */
 function imgFallback(img){
+ if(!img.getAttribute('src'))return; /* imágenes que aún no tienen archivo (se ponen después) */
  if(img.dataset.retried||/\.png\.png$/i.test(img.getAttribute('src')||'')){img.dataset.failed='1';return}
  img.dataset.retried='1';
  img.src=img.getAttribute('src')+'.png';
@@ -4322,7 +4391,7 @@ async function loadPresence(force){
 }
 function presTxt(id){const o=PRES.map[id];if(!o)return ['','Sin conexión registrada'];if(o.on)return ['on','Conectado ahora'];return ['','Visto por última vez: '+(fmtDate(o.last)===fmtDate(Date.now())?'hoy':fmtDate(o.last))+' a las '+fmtTime(o.last)]}
 function paintPresence(){document.querySelectorAll('[data-pres]').forEach(el=>{const t=presTxt(el.dataset.pres);el.className='pres '+t[0];el.textContent=t[1]})}
-setInterval(()=>{if(!dirModal.hidden&&dirMod==='empleados')loadPresence()},30000);
+setInterval(()=>{if(!document.hidden&&!dirModal.hidden&&dirMod==='empleados')loadPresence()},30000);
 function empExtra(e){
  const me=meEmp(), self=me&&me.id===e.id, jf=isJefe(e), ph=PHOTOS[e.id];
  return `<div class="it">${ph?`<img class="emp-ph" src="${ph}" alt="">`:''}<span class="pres" data-pres="${esc(e.id)}">…</span>${jf?'<span class="clv ok">🔑 Entra con la contraseña de jefe</span>':`<span class="clv" data-clave="${esc(e.id)}">🔑 …</span>`}</div>
@@ -4337,7 +4406,7 @@ var CLAVES={};try{CLAVES=JSON.parse(localStorage.getItem('harrington_claves_v1')
 function gT(fn,ms){G.timers.push(setTimeout(fn,ms))}
 function gClear(){G.timers.forEach(clearTimeout);G.timers=[]}
 function gPh(p){gate.dataset.ph=p}
-const gReduced=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+const gReduced=()=>calmFx();
 /* Ahorro: con poca batería (sin cargar) o con «ahorro de datos» se quitan la lluvia, las polillas y las gotas */
 try{if(navigator.connection&&navigator.connection.saveData)G.low=true;if(navigator.getBattery)navigator.getBattery().then(b=>{const f=()=>{G.low=(b.level<.2&&!b.charging)||!!(navigator.connection&&navigator.connection.saveData)};f();b.addEventListener('levelchange',f);b.addEventListener('chargingchange',f)}).catch(()=>{})}catch(e){}
 /* Medidas de cada fachada (en % de la imagen): puerta, letrero, farolas, humo, polillas y suelo para la lluvia */
@@ -4720,7 +4789,7 @@ probeImg('tarjeta-reverso.webp',()=>{try{gate.classList.add('back-img')}catch(e)
 var IMG_OK={};['moneda-oro.webp','reloj-bolsillo.webp','cartel-se-busca.webp','sello-entregado.webp','sello-recibido.webp'].forEach(s=>probeImg(s,()=>{IMG_OK[s]=1;if(s==='cartel-se-busca.webp')renderEmpWeek();if(s==='reloj-bolsillo.webp')paintPocket()}));
 /* monedas que caen hacia el total al cobrar */
 function coinsFx(){
- if(!IMG_OK['moneda-oro.webp']||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))return;
+ if(!IMG_OK['moneda-oro.webp']||calmFx())return;
  const vis=el=>{if(!el)return null;const r=el.getBoundingClientRect();return r.width&&r.bottom>0&&r.top<innerHeight?r:null};
  const ob=document.getElementById('obTotal'), gr=document.getElementById('grand'), rr=document.getElementById('receiptModal')&&!receiptModal.hidden?vis(document.querySelector('#receiptModal .receipt-paper')):null;
  const g=vis(gr)?gr:vis(ob)?ob:gr;if(!g)return;let r=vis(g)||{left:innerWidth/2-40,top:innerHeight-60,width:80,height:30};if(rr)r={left:rr.left+rr.width/2-40,top:rr.top+60,width:80,height:30};const tx=r.left+r.width/2, ty=r.top+r.height/2;
@@ -4739,7 +4808,7 @@ function paintPocket(){
  el.querySelector('.h').style.rotate=(hh*30+mm/2)+'deg';el.querySelector('.m').style.rotate=(mm*6+s/10)+'deg';el.querySelector('.s').style.rotate=(s*6)+'deg';
  const sh=me&&shifts.find(x=>x.empId===me.id);el.title=sh?'Fichado desde las '+fmtTime(sh.start):'';
 }
-setInterval(paintPocket,1000);
+setInterval(()=>{if(!document.hidden)paintPocket()},1000);
 /* sello grande de imagen (ENTREGADO, RECIBIDO) con su golpe */
 function stampImgFx(name,ar){
  const src='sello-'+name+'.webp';if(!IMG_OK[src])return false;
@@ -4759,7 +4828,10 @@ function renderGoal(){
  if(done){let f='';try{f=localStorage.getItem('harrington_goal_done')||''}catch(e){}if(f!==String(ws)){try{localStorage.setItem('harrington_goal_done',String(ws))}catch(e){}if(v>0&&f!=='')recordFx('¡OBJETIVO CONSEGUIDO!','Esta semana: '+money(v)+' de '+money(OBJ.cents));else if(f==='')try{localStorage.setItem('harrington_goal_done',String(ws))}catch(e){}}}
 }
 document.getElementById('goalBar').onclick=()=>{if(bossActive){dirMod='objetivo';dirForm=null;renderDir();openModal(dirModal);dirModal.scrollTop=0}};
-setInterval(renderGoal,60000);
+setInterval(()=>{if(!document.hidden)renderGoal()},60000);
+/* Al volver a la web, se pone todo al día de golpe */
+document.addEventListener('visibilitychange',()=>{if(document.hidden)return;[applyTheme,renderPayPlate,updateAusBtn,tickDiscounts,renderGoal,paintPocket,()=>{if(shifts.length)renderClock()}].forEach(f=>{try{f()}catch(e){}})});
+setInterval(()=>{if(!document.hidden)applyTheme()},300000);
 function renderModObjetivo(){
  const v=goalWeekCash();
  return `<div class="dir-form enc-sec"><div class="dir-sec-title" style="margin-top:0">OBJETIVO DE VENTAS DE LA SEMANA</div>
@@ -4837,7 +4909,7 @@ function renderModRevision(){
 }
 /* En el ordenador, las franjas de categoría usan su versión alargada (nombre-ancha.webp) */
 function catImg(src){return innerWidth>=1100&&/\.webp$/.test(src)?src.replace(/\.webp$/,'-ancha.webp'):src}
-(function(){const im=document.getElementById('categoryImage');if(!im)return;let base=im.getAttribute('src');
+(function(){const im=document.getElementById('categoryImage');if(!im)return;let base=im.getAttribute('src')||im.dataset.src;
  im.addEventListener('error',()=>{const s=im.getAttribute('src');if(/-ancha\.webp$/.test(s))im.src=s.replace('-ancha.webp','.webp')});
  im.src=catImg(base);let wasW=innerWidth>=1100;window.addEventListener('resize',()=>{const w=innerWidth>=1100;if(w!==wasW){wasW=w;const s=im.getAttribute('src').replace('-ancha.webp','.webp');im.src=catImg(s)}})})();
 /* ===== Mi ficha: cada empleado puede poner o quitar su propia foto (tocando su nombre arriba) ===== */
