@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261009z
+/* HARRINGTON GUNSMITH · app.js · versión 20261009za
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -3157,7 +3157,8 @@ const RECETAS_LOTES=[
 ];
 /* Proveedores dictados por la dirección: se crean una sola vez (si ya existe uno con ese nombre, no se toca) */
 const PROVEEDORES_BASE=[
- {k:'roanoke',name:'Roanoke Mining Company',tipo:'Mina',ubic:'Annesburg',tel:'ER6080',prods:[['Mena de hierro',0.50],['Mena de carbón',0.10],['Azufre',0.10],['Sal',0.07],['Piedra',0.07]]}
+ {k:'roanoke',name:'Roanoke Mining Company',tipo:'Mina',ubic:'Annesburg',tel:'ER6080',prods:[['Mena de hierro',0.50],['Mena de carbón',0.10],['Azufre',0.10],['Sal',0.07],['Piedra',0.07]]},
+ {k:'tala-annesburg',name:'Tala Annesburg',tipo:'Tala',ubic:'Annesburg',tel:'AN5025',prods:[['Fibra',0.07],['Trozo de madera',1.33],['Tablones',0.74]]}
 ];
 async function proveedoresBase(){
  for(const b of PROVEEDORES_BASE){
@@ -4550,7 +4551,7 @@ function ingLabel(m){return isProdIng(m)?m+' (producto)':m}
 function isMat(k){return String(k).indexOf('mat:')===0}
 function matNames(){return Object.keys(stockMap).filter(isMat).map(k=>k.slice(4)).filter(n=>!(MAT_ALIAS[norm(n)]&&!stockMap[matKey(n)])).sort((a,b)=>a.localeCompare(b,'es'))}
 /* Nombres de la mina → nombre en el almacén de la tienda */
-const MAT_ALIAS={'mena de hierro':'Hierro','menas de hierro':'Hierro','mena de carbon':'Carbón','menas de carbon':'Carbón'};
+const MAT_ALIAS={'mena de hierro':'Hierro','menas de hierro':'Hierro','mena de carbon':'Carbón','menas de carbon':'Carbón','tablones':'Tabla de madera','tablon':'Tabla de madera','tablas de madera':'Tabla de madera','trozo madera':'Trozo de madera','trozos de madera':'Trozo de madera'};
 function canonMat(n){n=String(n||'').trim().replace(/\s+/g,' ');const a=MAT_ALIAS[norm(n)];if(a)n=a;const f=matNames().find(x=>norm(x)===norm(n));return f||n}
 function sameMat(a,b){return norm(canonMat(a))===norm(canonMat(b))}
 function recipeOf(name){return (recetas[name]||[]).filter(r=>r&&r.m&&r.q>0)}
