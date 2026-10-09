@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261009r
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261009t
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1585,3 +1585,6 @@ html.lite .pay-plate.due::after,html.lite .hero-banner:before{animation:none!imp
 .au-filt{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
 .au-filt button{padding:7px 10px;border-radius:14px;border:1px solid #76633e;background:#242522;color:#eee1c6;font:inherit;font-size:12.5px;cursor:pointer}
 .au-filt button.on{background:#5a4213;border-color:#d2a733;color:#fff3c4}
+/* Productos que aún no tienen precio */
+.product.noprice .price{color:#f0c27a;font-size:12px;letter-spacing:.05em;font-family:var(--f-sc)}
+.product.noprice .qty{opacity:.45}

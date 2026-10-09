@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261009r
+/* HARRINGTON GUNSMITH · app.js · versión 20261009t
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -3095,6 +3095,48 @@ function renderModHistorial(){
 }
 dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir^="au-"]');if(!b)return;const [a,arg]=b.dataset.dir.split(':');if(a==='au-cat'){auCat=arg||'';auAll=false}else if(a==='au-all')auAll=!auAll;else return;renderDir();e.stopImmediatePropagation()},true);
 dirModal.addEventListener('input',e=>{if(!e.target.dataset||!e.target.dataset.auq)return;auQ=e.target.value;clearTimeout(renderModHistorial.t);renderModHistorial.t=setTimeout(()=>{renderDir();const i=dirModal.querySelector('[data-auq]');if(i){i.focus();i.setSelectionRange(auQ.length,auQ.length)}},200)});
+/* ===== Productos sin precio: se ven en el catálogo pero no se pueden vender hasta que Dirección les ponga precio ===== */
+let noPriceWarned=0;
+function markNoPrice(){
+ inputs.forEach(i=>{
+  const pr=i.closest('.product'), none=!(Number(i.dataset.price)>0);
+  pr.classList.toggle('noprice',none);
+  const pe=pr.querySelector('.price');if(none&&pe&&pe.textContent!=='SIN PRECIO')pe.textContent='SIN PRECIO';else if(!none&&pe&&pe.textContent==='SIN PRECIO')pe.textContent=money(Math.round(Number(i.dataset.price)*100));
+  if(none&&readQty(i)>0){i.value=0;if(Date.now()-noPriceWarned>2500){noPriceWarned=Date.now();say('«'+i.dataset.name+'» aún no tiene precio: la dirección tiene que ponérselo en PRODUCTOS Y PRECIOS','err')}setTimeout(()=>calc(false),0)}
+ });
+}
+(function(){const _c=calc;calc=function(){const r=_c.apply(this,arguments);try{markNoPrice()}catch(e){}return r}})();
+setTimeout(()=>{try{markNoPrice()}catch(e){}},0);
+/* ===== Recetas de fabricación dictadas por la dirección: se ponen una sola vez (sustituyen a las anteriores de esos productos) ===== */
+const RECETAS_BASE={
+ 'Cuchillo':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
+ 'Machete':[['Barra de hierro',5],['Trozo de madera',3],['Mena de carbón',2]],
+ 'Machete de coleccionista':[['Barra de hierro',5],['Tabla de madera',3],['Mena de carbón',2]],
+ 'Cuchillo rústico':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
+ 'Cuchillo rayado':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
+ 'Cuchillo terrorífico':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
+ 'Cuchillo tradicional':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
+ 'Hacha de tala':[['Barra de hierro',1],['Mena de carbón',1],['Trozo de madera',2]]
+};
+const RECETAS_BASE_VER='1';
+let recBaseBusy=false;
+async function recetasBase(){
+ if(recBaseBusy||!cloud.ok||SANDBOX)return;
+ try{if(localStorage.getItem('harrington_recbase')===RECETAS_BASE_VER)return}catch(e){}
+ recBaseBusy=true;
+ try{
+  /* se aplica UNA sola vez entre todos los dispositivos: después, lo que cambie la dirección en FABRICACIÓN manda */
+  if(!await claimRow('recetas-base-'+RECETAS_BASE_VER,{ts:Date.now()})){try{localStorage.setItem('harrington_recbase',RECETAS_BASE_VER)}catch(e){}recBaseBusy=false;return}
+  const names=inputs.map(i=>i.dataset.name), add={};
+  Object.keys(RECETAS_BASE).forEach(n=>{if(names.indexOf(n)>=0)add[n]=RECETAS_BASE[n].map(([m,q])=>({m:canonMat(m),q:q}))});
+  /* los materiales que falten se crean en el almacén con 0 unidades, para que salgan en las listas */
+  const mats=Array.from(new Set(Object.keys(RECETAS_BASE).flatMap(n=>RECETAS_BASE[n].map(x=>canonMat(x[0]))))).filter(m=>stockMap[matKey(m)]===undefined);
+  if(mats.length)await moverStock(mats.map(m=>({producto:matKey(m),delta:0})),'Materiales nuevos');
+  if(Object.keys(add).length){Object.assign(recetas,add);store.set(KEY_RECETAS,JSON.stringify(recetas));if(!dirModal.hidden&&dirMod==='fabricacion')renderDir()}
+  try{localStorage.setItem('harrington_recbase',RECETAS_BASE_VER)}catch(e){}
+ }catch(e){}
+ recBaseBusy=false;
+}
 /* --- Proveedores (jefe) --- */
 const TIPOS_PROV=['Herrería','Mina','Tala','Aserradero','Ganadería','Granja','Otro'];
 function pvRows(d){const L=(d.prods||[]).filter(r=>r&&(r.n||r.p)).map(r=>({n:r.n||'',p:r.p||''}));if(L.length<MAX_PPROD)L.push({n:'',p:''});d.prods=L;return L}
@@ -3939,7 +3981,7 @@ const TUTORIAL=[
 <ul><li><b>FICHAJE</b> (barra de arriba): ▸ Fichar entrada y ◂ Fichar salida.</li><li><b>ENCARGOS</b>: los encargos guardados que aún no se han entregado.</li><li><b>Tu nombre</b> (arriba): el usuario con el que has entrado. Si eres jefe, sale «· JEFE» y el botón <b>DIRECCIÓN</b>.</li><li>La placa <b>DÍA DE PAGO</b> (dorada) sale desde el domingo hasta que se pagan todos los sueldos; luego cambia a <b>SUELDOS PAGADOS</b> (verde) hasta el jueves. Cada uno ve en ella su propio sueldo.</li><li><b>PEDIDOS</b>: los pedidos a proveedores pendientes. La pestaña <b>MATERIALES</b> (junto a Venta y Presupuesto) muestra el almacén de materiales.</li><li><b>⚙</b> abre los ajustes: <b>música de fondo</b> (un piano de saloon, activado de serie; empieza a sonar en cuanto tocas la pantalla y se apaga aquí), <b>ambiente</b> (AUTO cambia solo entre día y noche según la hora española; también puedes dejar ☀ DÍA o ☾ NOCHE fijo), sonido y vibración, tamaño del texto (A− / A+) y alto contraste (◐). Cada móvil recuerda sus ajustes.</li><li>La placa dorada <b>EMPLEADO DE LA SEMANA</b> muestra quién más cobró la semana anterior.</li><li>En el tutorial, <b>▶ VISITA GUIADA</b> hace un recorrido rápido señalando cada botón.</li><li>Junto a FICHAJE ves cada empleado fichado con el tiempo que lleva, y el estado de la nube: «☁ guardando…» mientras se guarda algo y «☁ guardado ✓» cuando ya está.</li><li>Los avisos de error salen en <b>rojo</b> y duran más en pantalla; los normales, en verde.</li><li><b>? TUTORIAL</b> (esquina superior derecha) abre esta guía cuando la necesites.</li><li>El botón <b>↑</b> aparece al bajar mucho y te devuelve arriba.</li></ul>
 <p>Si recargas la página o se cierra el navegador, <b>la venta que tenías en curso se conserva</b>. Se borra solo con Vaciar o Nueva venta, y siempre pidiendo confirmación.</p>
 <p>Para tenerla como una app: en el menú del navegador, <b>Añadir a pantalla de inicio</b>.</p>`],
-['Catálogo y categorías',`<ul><li>Los <b>botones con imagen</b> filtran los productos por categoría y cambian la imagen grande de arriba. «Todos» los muestra todos.</li><li>El <b>buscador</b> encuentra productos por su nombre, sin importar las tildes.</li><li>Cada fila tiene el dibujo de su categoría, el <b>nombre</b> (tócalo para ver su ficha con descripción, precio y si está disponible), el precio, la <b>cantidad</b> y el subtotal.</li><li>Para la cantidad usa <b>−</b> y <b>+</b>, o escribe el número. En la munición hay además <b>+10, +50 y +100</b>.</li><li>Los productos con cantidad se resaltan en dorado.</li><li><b>SIN STOCK</b>: no se puede añadir. Si intentas pasarte de lo que hay, la cantidad se corrige sola y te avisa. <b>Nunca</b> se muestra cuántas unidades quedan.</li><li>Los productos recién añadidos llevan la etiqueta <b>NUEVO</b>.</li></ul>`],
+['Catálogo y categorías',`<ul><li><b>SIN PRECIO</b>: un producto que aún no tiene precio sale en el catálogo con ese aviso y no se puede añadir a la venta. La dirección le pone el precio en <b>Dirección → PRODUCTOS Y PRECIOS</b> y desde ese momento se vende normal.</li><li>Los <b>botones con imagen</b> filtran los productos por categoría y cambian la imagen grande de arriba. «Todos» los muestra todos.</li><li>El <b>buscador</b> encuentra productos por su nombre, sin importar las tildes.</li><li>Cada fila tiene el dibujo de su categoría, el <b>nombre</b> (tócalo para ver su ficha con descripción, precio y si está disponible), el precio, la <b>cantidad</b> y el subtotal.</li><li>Para la cantidad usa <b>−</b> y <b>+</b>, o escribe el número. En la munición hay además <b>+10, +50 y +100</b>.</li><li>Los productos con cantidad se resaltan en dorado.</li><li><b>SIN STOCK</b>: no se puede añadir. Si intentas pasarte de lo que hay, la cantidad se corrige sola y te avisa. <b>Nunca</b> se muestra cuántas unidades quedan.</li><li>Los productos recién añadidos llevan la etiqueta <b>NUEVO</b>.</li></ul>`],
 ['Hacer una venta',`<ol><li>Elige productos y cantidades.</li><li>En <b>Tipo de operación</b> deja «Venta normal».</li><li><b>Tipo de cliente</b>: particular, empresa o Departamento del Sheriff (este último no pide nombre).</li><li>Escribe el <b>nombre</b>. Si el cliente ya está guardado, sale como sugerencia y se cargan sus datos y sus precios especiales.</li><li>Elige <b>Convenio</b> u <b>Oferta</b> si corresponde. Solo aparecen los vigentes y compatibles con el cliente. No se suman: al elegir uno se quita el otro.</li><li>Elige el <b>Empleado</b> que hace la venta. Es obligatorio.</li><li>Si quieres, añade una <b>Nota</b>: saldrá en el ticket y en el aviso de Discord.</li><li>Revisa el desglose: Subtotal, descuento y Total.</li><li>El botón de abajo <b>te dice qué falta</b> («Falta elegir el empleado», «Falta el telegrama»…). Cuando está todo, se pone verde con <b>FINALIZAR VENTA</b> (o GUARDAR ENCARGO): púlsalo y se abre el ticket y se descuenta el stock. Mientras se guarda, el botón queda bloqueado para que un doble toque no haga dos ventas.</li><li>Si una venta o el día superan el mejor registro de la casa, sale <b>¡RÉCORD DE LA CASA!</b> con campanas.</li><li>Si has vendido <b>armas</b> a un cliente con nombre, se abre una ventana para apuntar sus <b>números de serie</b> (opcional): se guardan en su ficha de cliente y en su mensaje de Discord. «Ahora no» la cierra.</li></ol>
 <p><b>Vaciar</b> borra los productos del pedido. <b>Nueva venta</b> lo borra todo para empezar de cero. En el móvil, una <b>barra fija abajo</b> te muestra el total y tiene el botón FINALIZAR.</p>
 <p>Si no deja finalizar, el aviso te dice qué falta: nombre, empleado, telegrama, pago adelantado o stock.</p>`],
@@ -4707,7 +4749,7 @@ async function cloudPoll(force){
   }
   if(cloud.outbox.length)cloudFlushOutbox();
   cloud.last=Date.now();
-  autoWeekly();autoMonthly();renderEmpWeek();renderPayPlate();renderGoal();
+  autoWeekly();autoMonthly();recetasBase();renderEmpWeek();renderPayPlate();renderGoal();
  }catch(e){setCloudState(false)}
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){cloudPoll();rtConnect()}});
