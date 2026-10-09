@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261008b
+/* HARRINGTON GUNSMITH · app.js · versión 20261009b
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== Referencias ===== */
 /* Productos añadidos y precios editados desde Dirección: se aplican antes de leer el catálogo */
@@ -463,7 +463,8 @@ const KEY_CLIENTES='harrington_clientes_v1';
 let clientes=loadObj(KEY_CLIENTES,[]);
 if(!Array.isArray(clientes))clientes=[];
 function saveClientes(){store.set(KEY_CLIENTES,JSON.stringify(clientes))}
-const KEY_PROVEEDORES='harrington_proveedores_v1', KEY_PEDIDOS='harrington_pedidos_v1', KEY_RECETAS='harrington_recetas_v1';
+const KEY_PROVEEDORES='harrington_proveedores_v1', KEY_PEDIDOS='harrington_pedidos_v1', KEY_RECETAS='harrington_recetas_v1', KEY_AUS='harrington_ausencias_v1';
+var ausencias=loadObj(KEY_AUS,[]);if(!Array.isArray(ausencias))ausencias=[];
 var recetas=loadObj(KEY_RECETAS,{});if(!recetas||typeof recetas!=='object'||Array.isArray(recetas))recetas={};
 function saveRecetas(){store.set(KEY_RECETAS,JSON.stringify(recetas))}
 let proveedores=loadObj(KEY_PROVEEDORES,[]);
@@ -495,10 +496,11 @@ function saveStock(){store.set(KEY_STOCK,JSON.stringify(stockMap))}
 function empName(){const e=empleados.find(x=>x.id===customer.employee);return e?e.name:''}
 let empSig='';
 function refreshEmpSelect(){
+ const me=typeof meEmp==='function'?meEmp():null;if(me)customer.employee=me.id;
  if(customer.employee&&!empleados.some(e=>e.id===customer.employee))customer.employee='';
  const sig=empleados.map(e=>e.id+e.name).join('|');
  if(sig!==empSig){empSig=sig;empSel.innerHTML='<option value="">Seleccionar empleado</option>'+empleados.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('')}
- empSel.value=customer.employee||'';
+ empSel.value=customer.employee||'';empSel.disabled=!!me;
 }
 /* Stock: sin registrar = sin límite. El empleado nunca ve cantidades; solo se le impide superar las existencias. */
 function limitFor(name){
@@ -886,7 +888,7 @@ function ding(c,t,freq,vol,dur){
   o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+dur+.05);
  });
 }
-function buzz(p){try{if(soundOn&&navigator.vibrate)navigator.vibrate(p)}catch(e){}}
+function buzz(p){try{if(navigator.userActivation&&!navigator.userActivation.hasBeenActive)return;if(soundOn&&navigator.vibrate)navigator.vibrate(p)}catch(e){}}
 /* Golpe seco del sello al caer sobre el papel */
 function playThump(){
  buzz(35);
@@ -1037,6 +1039,7 @@ function setBoss(v){
  bossActive=v;
  try{if(v)sessionStorage.setItem(KEY_BOSS_ACTIVE,'1');else sessionStorage.removeItem(KEY_BOSS_ACTIVE)}catch(e){}
  dirBtn.hidden=!v;bossBtn.classList.toggle('on',v);bossBtn.textContent=v?'JEFE ✓':'JEFE';bumpBoss();
+ try{const c=document.getElementById('meChip'), me=meEmp();if(c&&me)c.innerHTML=ICO_USER+esc(me.name)+(v?' · JEFE':'')}catch(e){}
 }
 function bossError(t){bossErr.textContent=t;bossErr.hidden=!t}
 const wnorm=v=>norm(String(v||'').trim());
@@ -1061,7 +1064,7 @@ function openBoss(mode){
  bossPw1.value='';bossPw2.value='';bossWord.value='';bossError('');
  openModal(bossModal);setTimeout(()=>(M.w1?bossPw1:bossWord).focus(),60);
 }
-function finishBoss(msg){closeModal(bossModal);setBoss(true);say(msg||'MODO JEFE ACTIVADO')}
+function finishBoss(msg){closeModal(bossModal);setBoss(true);if(G&&G.pending){const e=G.pending;G.pending=null;return gateHello(e)}applyMe();say(msg||'MODO JEFE ACTIVADO')}
 function checkNewWord(word,pw){
  if(word.length<3)return 'La palabra de seguridad debe tener al menos 3 caracteres';
  if(wnorm(word)===wnorm(pw))return 'La palabra de seguridad debe ser distinta de la contraseña';
@@ -1115,7 +1118,7 @@ async function submitBoss(){
 }
 bossBtn.onclick=()=>{if(bossActive){setBoss(false);closeModal(dirModal);say('Modo Jefe desactivado')}else openBoss()};
 document.getElementById('bossOk').onclick=submitBoss;
-document.getElementById('bossCancel').onclick=()=>closeModal(bossModal);
+document.getElementById('bossCancel').onclick=()=>{closeModal(bossModal);if(G&&G.open){if(G.pendMode==='setup')gBigClose();G.pending=null;G.pendMode=''}};
 document.getElementById('bossChange').onclick=()=>openBoss('resetword');
 [bossPw1,bossPw2,bossWord].forEach(i=>i.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submitBoss()}}));
 bossModal.addEventListener('click',e=>{if(e.target===bossModal)closeModal(bossModal)});
@@ -1131,9 +1134,11 @@ const DIRECCION_MODULOS=[
  {id:'regstock',titulo:'REGISTRO DE STOCK',desc:'Existencias actuales y movimientos.',render:()=>renderModRegistroStock()},
  {id:'fabricacion',titulo:'FABRICACIÓN',desc:'Recetas: qué materiales gasta cada producto al fabricarlo.',render:()=>renderModFabricacion()},
  {id:'horarios',titulo:'REGISTROS HORARIOS',desc:'Consultar los fichajes de los empleados.',render:()=>renderModHorarios()},
+ {id:'ausencias',titulo:'AUSENCIAS',desc:'Quién está ausente, hasta cuándo y por qué.',render:()=>renderModAusencias()},
  {id:'ventas',titulo:'REGISTROS DE VENTAS',desc:'Consultar y anular operaciones.',render:()=>renderModVentas()},
  {id:'semanales',titulo:'REGISTROS SEMANALES',desc:'Resumen semanal de ventas y fichajes de cada empleado.',render:()=>renderModSemanales()},
  {id:'gastos',titulo:'GASTOS',desc:'Registrar gastos y descargar el registro.',render:()=>renderModGastos()},
+ {id:'sueldos',titulo:'SUELDOS',desc:'Pago de los domingos según las horas echadas.',render:()=>renderModSueldos()},
  {id:'balance',titulo:'BALANCE DE CUENTAS',desc:'Ingresos, gastos y beneficios.',render:()=>renderModBalance()},
  {id:'cierre',titulo:'CIERRE DE CAJA',desc:'Contar la caja del día y ver la diferencia.',render:()=>renderModCierre()},
  {id:'proveedores',titulo:'PROVEEDORES',desc:'Crear y gestionar tus proveedores (herrerías, minas, talas…).',render:()=>renderModProveedores()},
@@ -1222,7 +1227,7 @@ function weekData(){
 function salesSum(e){return {ops:e.sales.length,units:e.sales.filter(r=>r.op!=='encargo').reduce((a,r)=>a+r.units,0),cash:e.sales.reduce((a,r)=>a+collected(r),0)}}
 function shiftsSum(e){return {n:e.shifts.length,ms:e.shifts.reduce((a,r)=>a+Math.max(0,r.end-r.start),0)}}
 function contractH(name){const x=empleados.find(e=>e.name===name);return x&&x.puesto?(x.horas||10):0}
-function hoursVs(name,ms){const c=contractH(name);if(!c)return '';const h=ms/3600000;return ` de ${c} h`+(h>=c?' ✓':` (faltan ${fmtDuration(0,Math.max(0,c*3600000-ms))})`)}
+function hoursVs(name,ms,ws){return ''}
 function empLines(e,type){
  const L=[];
  if(type==='ventas'){
@@ -1378,7 +1383,7 @@ function renderModGastos(){
   <div class="enc-actions" style="margin-top:8px"><button type="button" class="primary" data-dir="gxsave">GUARDAR</button></div></div>`;
  const list=a.ex.length?a.ex.slice().reverse().map(x=>`<div class="dir-log"><b>${CAT_NAMES[x.cat]}</b> · ${esc(x.date)} ${esc(x.time)}<br>${esc(x.concepto)}<br><b>${money(x.cents)}</b><div class="emp-btns"><button type="button" class="warn" data-dir="gxdel:${esc(x.id)}">🗑 ELIMINAR</button></div></div>`).join(''):'<div class="enc-empty">No hay gastos en este periodo.</div>';
  return `${form}<div class="dir-sec-title">REGISTRO DE GASTOS</div>${periodBar('g')}${list}
-  <div class="enc-actions" style="margin:8px 0"><button type="button" class="gold" data-dir="gx-sueldos">APUNTAR SUELDOS DE ESTA SEMANA</button></div>
+  <div class="enc-actions" style="margin:8px 0"><button type="button" class="gold" data-dir="open:sueldos">PAGAR SUELDOS (SEGÚN LAS HORAS)</button></div>
   <div class="enc-card dir-item" style="margin-top:8px"><div class="enc-money"><span>Proveedor: ${money(a.byCat.proveedor)}</span><span>Sueldos: ${money(a.byCat.sueldos)}</span><span>Otros: ${money(a.byCat.otros)}</span></div><div class="brow due"><span>TOTAL GASTOS</span><span>${money(a.gas)}</span></div></div>${repButtons('g')}`;
 }
 function saveGasto(){
@@ -1405,10 +1410,143 @@ async function payWages(){
  discordSend('gastos','SUELDOS DE LA SEMANA · '+lab+'\n'+todo.map(e=>'  '+e.name+' · '+money(e.sueldo)).join('\n')+'\nTotal: '+money(tot));
  renderDir();say(todo.length+' '+(todo.length===1?'sueldo apuntado':'sueldos apuntados')+' · '+money(tot));
 }
+/* ===== Sueldos: semana de lunes a domingo, se pagan el domingo =====
+   El pago se apunta como gasto el día que se paga, así que cae en la semana de cuentas (viernes a jueves) en curso. */
+const SUELDO_PUESTO={'Jefe':5000,'Gerente':4000,'Armero experto':3000,'Armero':2500,'Aprendiz de armero':2000};
+const ASCENSO={'Aprendiz de armero':'Armero','Armero':'Armero experto','Armero experto':'Gerente'};
+function payMonday(off){const n=todayNum(),dow=new Date(n*86400000).getUTCDay();return n-((dow+6)%7)+off*7}
+/* Semana que toca pagar: la que termina hoy si es domingo; si no, la que terminó el domingo pasado */
+function payDueWeek(){const dow=new Date(todayNum()*86400000).getUTCDay();return payMonday(dow===0?0:-1)}
+let sueOff=0;
+function sueWeek(){return payDueWeek()+sueOff*7}
+function sueIsCur(ws){return ws>payDueWeek()}
+function isoDay(n){const d=new Date(n*86400000);return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate())}
+function sueEmps(ws){const fin=isoDay(ws+6);return empleados.filter(e=>e.puesto&&e.sueldo>0&&(!e.inicio||e.inicio<=fin))}
+function suePaid(e,ws){return gastos.find(g=>g.cat==='sueldos'&&g.sueldo&&g.sueldo.ws===ws&&g.sueldo.emp===e.id)}
+/* Las horas de una semana van desde su lunes hasta que se paga (o hasta el lunes siguiente); lo fichado después de pagar pasa a la semana siguiente */
+function sueCut(e,ws){const end=madridMidnight(ws+7), p=suePaid(e,ws);return p&&p.sueldo.at?Math.min(p.sueldo.at,end):end}
+function workedMs(e,ws){
+ const a=sueCut(e,ws-7), b=sueCut(e,ws);let ms=0;
+ loadLog(KEY_SHIFTLOG).forEach(r=>{if(r.name===e.name&&r.start>=a&&r.start<b)ms+=Math.max(0,r.end-r.start)});
+ const o=shifts.find(x=>x.empId===e.id);if(o&&o.start>=a&&o.start<b)ms+=Math.max(0,Math.min(Date.now(),b)-o.start);
+ return ms;
+}
+/* Sueldo de un día concreto: con un ascenso, el día del ascenso se cobra aún el antiguo y el nuevo cuenta desde el día siguiente */
+function salaryOn(e,day){let s=e.sueldo;(e.ascensos||[]).slice().sort((a,b)=>b.desde-a.desde).forEach(x=>{if(day<x.desde)s=x.antes});return s}
+function sueSegs(e,ws){const out=[];for(let d=0;d<7;d++){const s=salaryOn(e,ws+d), l=out[out.length-1];if(l&&l.s===s)l.n++;else out.push({s:s,n:1})}return out}
+function sueBase(e,ws){return Math.round(sueSegs(e,ws).reduce((a,x)=>a+x.s*x.n,0)/7)}
+function segTxt(seg){return seg.length>1?seg.map(x=>x.n+' '+(x.n===1?'día':'días')+' a '+money(x.s)).join(' + '):''}
+function sueCalc(e,ws){
+ const p=suePaid(e,ws);if(p&&p.sueldo.pay!=null)return Object.assign({paid:p},p.sueldo);
+ const c=e.horas||10, req=weekRequired(e.name,ws), need=req.h*3600000, w=workedMs(e,ws), base=sueBase(e,ws), seg=sueSegs(e,ws);
+ const miss=Math.max(0,need-w), extra=need?Math.max(0,w-need):0, desc=Math.min(base,Math.round(base*miss/(c*3600000)));
+ const o=shifts.find(x=>x.empId===e.id);
+ return {c:c,req:req.h,abs:req.d,worked:w,miss:miss,extra:extra,base:base,seg:seg,rate:Math.round(base/c),desc:desc,pay:base-desc,nuevo:!!(e.inicio&&e.inicio>isoDay(ws)),open:!!o,name:e.name,puesto:e.puesto};
+}
+function hm(ms){const m=Math.round(ms/60000);return Math.floor(m/60)+' h'+(m%60?' '+pad(m%60)+' min':'')}
+function sueLab(ws){return dayStr(ws).slice(0,5)+' – '+dayStr(ws+6).slice(0,5)}
+function sueDue(ws){return sueEmps(ws).filter(e=>suePaid(e,ws)||sueCalc(e,ws).pay>0)}
+function suePending(ws){return sueDue(ws).filter(e=>!suePaid(e,ws))}
+/* Estado de la placa de la pantalla principal */
+function payState(){
+ const ws=payDueWeek(), L=sueDue(ws);if(!L.length)return null;
+ const paid=L.filter(e=>suePaid(e,ws)).length;
+ if(paid<L.length)return {st:'due',ws:ws,paid:paid,total:L.length};
+ return todayNum()<=ws+6+4?{st:'paid',ws:ws,paid:paid,total:L.length}:null;
+}
+function renderPayPlate(){
+ const el=document.getElementById('payPlate');if(!el)return;
+ const s=payState();if(!s){el.hidden=true;el.innerHTML='';return}
+ const me=meEmp(), mine=me&&sueDue(s.ws).some(e=>e.id===me.id)?sueCalc(me,s.ws):null;
+ const own=mine?` · Tu sueldo: <b>${money(mine.pay)}</b> · ${mine.paid?'pagado ✓':'pendiente'}`:'';
+ const html=s.st==='due'
+  ?`<span class="pp-coin" aria-hidden="true">$</span><div><small>DOMINGO ${esc(dayStr(s.ws+6).slice(0,5))} · SEMANA ${esc(sueLab(s.ws))}</small><b>DÍA DE PAGO</b><span>${s.paid} de ${s.total} sueldos pagados${own}</span></div>`
+  :`<span class="pp-coin ok" aria-hidden="true">✓</span><div><small>SEMANA ${esc(sueLab(s.ws))}</small><b>SUELDOS PAGADOS</b><span>Todos los sueldos están pagados${own}</span></div><i class="pp-stamp" aria-hidden="true">PAGADO</i>`;
+ el.className='pay-plate '+s.st;
+ if(el.innerHTML!==html)el.innerHTML=html;el.hidden=false;
+}
+setInterval(renderPayPlate,60000);
+function renderModSueldos(){
+ const ws=sueWeek(), cur=sueIsCur(ws), L=sueEmps(ws), sun=ws+6, canNext=ws+7<=payMonday(0);
+ let tot=0, paid=0;
+ const cards=L.map(e=>{
+  const k=sueCalc(e,ws), p=k.paid;tot+=k.pay;if(p)paid+=p.cents;
+  const st=k.req===0?`<span class="badge si">EXENTO</span>`:k.miss?`<span class="badge no">FALTAN ${esc(hm(k.miss))}</span>`:k.extra>=60000?`<span class="badge si">+${esc(hm(k.extra))} EXTRA</span>`:`<span class="badge si">✓ HORAS CUMPLIDAS</span>`;
+  const sg=segTxt(k.seg||[]);
+  return `<div class="enc-card dir-item"><div class="t">${esc(e.name)} ${st}</div>
+   <div class="it">${esc((e.puesto||'').toUpperCase())} · Horas echadas: <b>${esc(hm(k.worked))}</b> de ${k.req} h${k.req<k.c?` (ausente ${k.abs} días${k.req?': la mitad':': exento'})`:''}${k.open&&!p?'<br>Está fichado ahora: cuenta hasta este momento.':''}${k.nuevo?`<br>Empezó el ${esc(fmtISO(e.inicio))} (semana incompleta)`:''}</div>
+   <div class="enc-money"><span>Sueldo: ${money(k.base)}${sg?' ('+esc(sg)+')':''}</span>${k.desc?`<span>Descuento: −${money(k.desc)} (${esc(hm(k.miss))} × ${money(k.rate)}/h)</span>`:''}${k.extra>=60000&&!k.miss?`<span>Horas extra: ${esc(hm(k.extra))} (sin pagar)</span>`:''}</div>
+   <div class="brow due"><span>${p?'PAGADO':'A PAGAR'}</span><span>${money(p?p.cents:k.pay)}</span></div>
+   ${p?`<div class="enc-note">✓ Pagado el ${esc(p.date)} a las ${esc(p.time)}${k.by?' por '+esc(k.by):''} · está en GASTOS.</div>`:cur?`<div class="enc-note">Semana en curso: se paga el domingo ${esc(dayStr(sun).slice(0,5))}.</div>`:k.pay>0?`<div class="enc-actions"><button type="button" class="primary" data-dir="su-pay:${esc(e.id)}">PAGAR ${money(k.pay)}</button></div>`:'<div class="enc-note">No ha echado ninguna hora: no hay nada que pagar.</div>'}</div>`;
+ }).join('');
+ const nav=`<div style="display:grid;grid-template-columns:48px 1fr 48px;gap:8px;margin-bottom:10px" class="enc-actions"><button type="button" data-dir="su-prev" aria-label="Semana anterior">◂</button><button type="button" data-dir="su-now" style="font-size:14px">${cur?'SEMANA EN CURSO':'SEMANA '+esc(sueLab(ws))}</button><button type="button" data-dir="su-next" aria-label="Semana siguiente"${canNext?'':' disabled'}>▸</button></div>`;
+ return `${nav}<div class="dir-sec-title" style="margin-top:0">${cur?'PROVISIONAL · SE PAGA EL DOMINGO '+esc(dayStr(sun).slice(0,5)):'PAGO DEL DOMINGO '+esc(dayStr(sun).slice(0,5))}</div>
+  <p class="bk-note">Semana de sueldos del lunes ${esc(dayStr(ws).slice(0,5))} al domingo ${esc(dayStr(sun).slice(0,5))}. Si un empleado no echa sus horas se le descuenta lo proporcional: sueldo ÷ horas de contrato × horas que faltan. Las horas cuentan hasta que pulsas PAGAR; lo que fiche después pasa a la semana siguiente. Si asciende a mitad de semana, cada día se cobra con el sueldo que tenía ese día. Las horas de más se muestran, pero no se pagan.</p>
+  ${cards||'<div class="enc-empty">Ningún empleado tiene sueldo esa semana. Complétalo en EMPLEADOS.</div>'}
+  ${L.length?`<div class="enc-card dir-item"><div class="brow"><span>Total de la semana</span><span>${money(tot)}</span></div><div class="brow"><span>Ya pagado</span><span>${money(paid)}</span></div><div class="brow due"><span>PENDIENTE</span><span>${money(Math.max(0,tot-paid))}</span></div></div>`:''}`;
+}
+async function claimRow(key,val){
+ const r=await sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=representation'},body:JSON.stringify([{clave:key,valor:val,actualizado:new Date().toISOString()}])});
+ if(!r.ok)throw new Error(r.status);
+ const rows=await r.json();return Array.isArray(rows)&&rows.length>0;
+}
+async function paySueldo(id){
+ const ws=sueWeek(), e=empleados.find(x=>x.id===id);if(!e||sueIsCur(ws))return;
+ if(suePaid(e,ws))return say('El sueldo de '+e.name+' de esa semana ya está pagado');
+ const k=sueCalc(e,ws), lab=sueLab(ws);
+ if(!(k.pay>0))return;
+ if(!await askConfirm('Pagar sueldo',e.name+' · semana '+lab+': '+hm(k.worked)+' de '+k.req+' h.'+(k.open?' Está fichado ahora: cuenta hasta este momento.':'')+(k.desc?' Sueldo '+money(k.base)+' − descuento '+money(k.desc)+'.':'')+' Se apuntará en GASTOS: '+money(k.pay)+'.','Pagar'))return;
+ const now=Date.now();
+ try{if(!await claimRow('sueldo-'+ws+'-'+e.id,{ts:now,cents:k.pay})){await cloudPullRecords();renderDir();return say('Ese sueldo ya lo pagó otro dispositivo')}}
+ catch(err){return say('Sin conexión: no se ha pagado. Inténtalo de nuevo')}
+ const m=madridParts(now), by=meEmp()?meEmp().name:'';
+ const snap={ws:ws,emp:e.id,at:now,by:by,name:e.name,puesto:e.puesto,c:k.c,req:k.req,abs:k.abs,worked:k.worked,miss:k.miss,extra:k.extra,base:k.base,seg:k.seg,rate:k.rate,desc:k.desc,pay:k.pay};
+ const g={id:'g'+now.toString(36)+Math.random().toString(36).slice(2,5),cat:'sueldos',concepto:'Sueldo · '+e.name+' ('+lab+')'+(k.desc?' · −'+money(k.desc)+' por '+hm(k.miss)+' sin echar':''),cents:k.pay,day:dayNum(+m.year,+m.month,+m.day),date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`,sueldo:snap};
+ gastos.push(g);saveGastos();cloudPut('gasto:'+g.id,g);
+ renderDir();renderPayPlate();
+ const left=suePending(ws).length;
+ say('Sueldo pagado: '+e.name+' · '+money(k.pay)+(left?' · quedan '+left:' · ¡todos los sueldos pagados!'));
+ if(!left)paySummary(ws);
+}
+/* Cuando se paga el último sueldo, un solo mensaje al canal «Sueldos» con toda la semana */
+function paySummaryText(ws){
+ const L=sueEmps(ws), out=['SUELDOS PAGADOS · Semana '+dayStr(ws)+' – '+dayStr(ws+6),''];let tot=0, dsc=0, by='';
+ L.forEach(e=>{
+  const k=sueCalc(e,ws), sg=segTxt(k.seg||[]);
+  out.push(e.name+' · '+(k.puesto||e.puesto||''));
+  out.push('  Horas: '+hm(k.worked)+' de '+k.req+' h'+(k.req<k.c?' (ausente '+k.abs+' días'+(k.req?': la mitad':': exento')+')':''));
+  if(k.paid){
+   tot+=k.pay;dsc+=k.desc;if(k.by)by=k.by;
+   out.push('  Sueldo: '+money(k.base)+(sg?' ('+sg+')':'')+(k.desc?' · Descuento: −'+money(k.desc)+' ('+hm(k.miss)+' sin echar)':' · íntegro')+(k.extra>=60000&&!k.miss?' · +'+hm(k.extra)+' extra (sin pagar)':''));
+   out.push('  Pagado: '+money(k.pay));
+  }else out.push('  No ha echado horas: no cobra esta semana');
+  out.push('');
+ });
+ out.push('Total pagado: '+money(tot),'Total descontado: '+money(dsc));
+ if(by)out.push('Pagado por: '+by);
+ return out.join('\n');
+}
+async function paySummary(ws){
+ try{if(!await claimRow('sueldos-resumen-'+ws,{ts:Date.now()}))return}catch(e){return}
+ discordSend('sueldos',paySummaryText(ws));
+}
+/* Ascensos: Aprendiz de armero → Armero → Armero experto → Gerente (tope) */
+async function empAscenso(id){
+ const e=empleados.find(x=>x.id===id), nx=e&&ASCENSO[e.puesto];if(!nx||!empHasContract(e))return;
+ const ns=SUELDO_PUESTO[nx];
+ if(!await askConfirm('Ascenso',e.name+': '+e.puesto+' '+money(e.sueldo)+' → '+nx+' '+money(ns)+'. Hoy cobra todavía el sueldo antiguo; el nuevo cuenta desde mañana. Se publicará el contrato nuevo en Discord, sin periodo de prueba.','Ascender'))return;
+ e.ascensos=(e.ascensos||[]).concat([{ts:Date.now(),desde:todayNum()+1,de:e.puesto,a:nx,antes:e.sueldo,nuevo:ns}]);
+ e.puesto=nx;e.sueldo=ns;e.prueba='';e.sinPrueba=true;e.alta=Date.now();
+ saveEmp();renderDir();renderCustomer();renderPayPlate();
+ say('¡'+e.name+' asciende a '+nx+'! Nuevo sueldo: '+money(ns));
+ sendContract(e,true);
+}
 async function deleteGasto(id){
  const x=gastos.find(g=>g.id===id); if(!x)return;
  if(!await askConfirm('Eliminar gasto',`«${x.concepto}» (${money(x.cents)}) se borrará del registro.`,'Eliminar'))return;
- gastos=gastos.filter(g=>g.id!==id);saveGastos();cloudDel('gasto:'+id);renderDir();say('Gasto eliminado');
+ gastos=gastos.filter(g=>g.id!==id);saveGastos();cloudDel('gasto:'+id);
+ if(x.sueldo){['sueldo-'+x.sueldo.ws+'-'+x.sueldo.emp,'sueldos-resumen-'+x.sueldo.ws].forEach(k=>sbFetch('/rest/v1/datos?clave=eq.'+encodeURIComponent(k),{method:'DELETE'}).catch(()=>{}))}
+ renderDir();renderPayPlate();say('Gasto eliminado');
 }
 function gastosDoc(){
  const pi=periodInfo('g'), a=accounts(pi.r), line='────────────────────', now=Date.now();
@@ -1694,7 +1832,7 @@ function saveCierre(){
 }
 /* --- Discord --- */
 function renderModDiscord(){
- const E=[['ventas','Ventas: ticket al finalizar y registro semanal (solo los jueves a las 22:00, o al pulsar «Enviar a Discord»)'],['encargos','Encargos: creación, entrega y cancelación (con el ticket)'],['fichajes','Fichajes de entrada y salida'],['gastos','Gastos: al guardarlos y registro semanal (solo los jueves a las 22:00, o al pulsar «Enviar a Discord»)'],['balance','Balance de cuentas semanal (solo los jueves a las 22:00, o al pulsar «Enviar a Discord»)'],['pedidos','Pedidos a proveedores: al emitirlos, completarlos o cancelarlos'],['empleados','Empleados: imagen del contrato al incorporar a alguien'],['clientes','Clientes: ficha al crearlo, se actualiza al modificarlo'],['proveedores','Proveedores: ficha y lista de precios, se actualiza al modificarla'],['stock','Stock de productos: un mensaje que se actualiza en tiempo real (ventas, fabricación, anulaciones)'],['materiales','Almacén de materiales: un mensaje que se actualiza en tiempo real (pedidos recibidos y fabricación)'],['resumen','Resumen del día: al fichar la salida el último empleado'],['anulaciones','Anulaciones de ventas'],['cierres','Cierres de caja']];
+ const E=[['ventas','Ventas: ticket al finalizar y registro semanal (solo los jueves a las 22:00, o al pulsar «Enviar a Discord»)'],['encargos','Encargos: creación, entrega y cancelación (con el ticket)'],['fichajes','Fichajes de entrada y salida'],['gastos','Gastos: al guardarlos y registro semanal (solo los jueves a las 22:00, o al pulsar «Enviar a Discord»)'],['balance','Balance de cuentas semanal (solo los jueves a las 22:00, o al pulsar «Enviar a Discord»)'],['pedidos','Pedidos a proveedores: al emitirlos, completarlos o cancelarlos'],['empleados','Empleados: imagen del contrato al incorporar a alguien'],['clientes','Clientes: ficha al crearlo, se actualiza al modificarlo'],['proveedores','Proveedores: ficha y lista de precios, se actualiza al modificarla'],['stock','Stock de productos: un mensaje que se actualiza en tiempo real (ventas, fabricación, anulaciones)'],['materiales','Almacén de materiales: un mensaje que se actualiza en tiempo real (pedidos recibidos y fabricación)'],['resumen','Resumen del día: al fichar la salida el último empleado'],['ausencias','Ausencias: cuando alguien avisa, vuelve o la anula (con el motivo)'],['sueldos','Sueldos: resumen de toda la semana al pagar el último sueldo'],['anulaciones','Anulaciones de ventas'],['cierres','Cierres de caja']];
  return `<p class="bk-note">Cada tipo de aviso puede ir a su <b>propio canal</b>: crea un webhook por canal y pégalo en «canal propio». Los que dejes vacíos usan el <b>canal general</b>. Se configura una vez en cada dispositivo (o importa la «configuración» desde Copia de seguridad).</p>
   <div class="dir-form enc-sec"><label>CANAL GENERAL (POR DEFECTO)<input id="whUrl" type="text" autocomplete="off" spellcheck="false" placeholder="https://discord.com/api/webhooks/..." value="${esc(webhook.url)}"></label>
   ${E.map(([k,l])=>`<div class="wh-row"><label class="chk"><input type="checkbox" data-ev="${k}"${webhook.ev[k]?' checked':''}>${l}</label><input class="wh-own" type="text" data-whu="${k}" autocomplete="off" spellcheck="false" placeholder="Canal propio (opcional): https://discord.com/api/webhooks/..." value="${esc(webhook.urls[k]||'')}"></div>`).join('')}
@@ -1711,14 +1849,14 @@ function saveWebhookForm(silent){
 }
 function testWebhooks(){
  if(!saveWebhookForm(true))return;
- const NAMES={ventas:'ventas',encargos:'encargos',fichajes:'fichajes',gastos:'gastos',balance:'balance de cuentas',pedidos:'pedidos',empleados:'contratos de empleados',clientes:'clientes',proveedores:'proveedores',stock:'stock',materiales:'materiales',resumen:'resumen del día',anulaciones:'anulaciones',cierres:'cierres'}, dest={};
+ const NAMES={ventas:'ventas',encargos:'encargos',fichajes:'fichajes',gastos:'gastos',balance:'balance de cuentas',pedidos:'pedidos',empleados:'contratos de empleados',clientes:'clientes',proveedores:'proveedores',stock:'stock',materiales:'materiales',resumen:'resumen del día',ausencias:'ausencias',sueldos:'sueldos',anulaciones:'anulaciones',cierres:'cierres'}, dest={};
  if(webhook.url)dest[webhook.url]=['canal general'];
  Object.keys(webhook.urls).forEach(k=>{(dest[webhook.urls[k]]=dest[webhook.urls[k]]||[]).push(NAMES[k])});
  const urls=Object.keys(dest); if(!urls.length)return say('Pega primero un enlace de webhook');
  urls.forEach(u=>discordSend('ventas','Prueba de conexión desde Harrington Gunsmith ✔\nAvisos de este canal: '+dest[u].join(', '),null,null,true,u));
 }
 /* --- Resetear datos de operación --- */
-const RESET_OPTS=[['ventas','Ventas (registro de ventas, balance y numeración de tickets)',1],['encargos','Encargos (pendientes y entregados)',1],['gastos','Gastos',1],['pedidos','Pedidos a proveedores (pendientes y completados)',1],['cierres','Cierres de caja',1],['fichajes','Fichajes (registros horarios y fichados ahora)',1],['movimientos','Historial de movimientos de stock',1],['stock','Existencias de stock de productos (poner todo a 0)',0],['materiales','Almacén de materiales (poner todo a 0)',0]];
+const RESET_OPTS=[['ventas','Ventas (registro de ventas, balance y numeración de tickets)',1],['encargos','Encargos (pendientes y entregados)',1],['gastos','Gastos',1],['pedidos','Pedidos a proveedores (pendientes y completados)',1],['cierres','Cierres de caja',1],['fichajes','Fichajes (registros horarios, fichados ahora y ausencias)',1],['movimientos','Historial de movimientos de stock',1],['stock','Existencias de stock de productos (poner todo a 0)',0],['materiales','Almacén de materiales (poner todo a 0)',0]];
 function renderModReset(){
  return `<p class="bk-note">Borra para siempre, en <b>todos los dispositivos</b>, los datos de operación que marques. <b>No se toca</b>: empleados, clientes, convenios y ofertas, precios y productos, Discord, mínimos de stock ni las contraseñas. El balance de cuentas queda a cero al borrar las ventas y los gastos.</p>
   <div class="dir-form enc-sec">${RESET_OPTS.map(o=>`<label class="chk"><input type="checkbox" data-rs="${o[0]}"${o[2]?' checked':''}>${o[1]}</label>`).join('')}
@@ -1775,6 +1913,7 @@ async function nubeUp(){
   encargos.forEach(e=>{cloud.sig['encargo:'+e.id]=JSON.stringify(e);cloudPut('encargo:'+e.id,e)});
   shifts.forEach(e=>cloudPut('fichaje:'+e.empId,e));
   pedidos.forEach(e=>cloudPut('pedido:'+e.id,e));
+  ausencias.forEach(e=>cloudPut('ausencia:'+e.id,e));
   const rows=Object.keys(stockMap).map(k=>({producto:k,cantidad:Math.max(0,stockMap[k]|0)}));
   if(rows.length){const r=await sbFetch('/rest/v1/stock?on_conflict=producto',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(rows)});if(!r.ok)throw new Error(r.status)}
   const lc=parseInt(store.get(KEY_COUNTER))||0;
@@ -1810,6 +1949,8 @@ function rankingHTML(list){
  return `<div class="enc-card dir-item"><div class="t">RANKING DE LA SEMANA</div>${r.map((x,i)=>`<div class="reg-line"><span><i class="medal m${i+1}" aria-label="${i+1}º">${i+1}</i>${esc(x.n)}</span><b>${money(x.c)}</b></div>`).join('')}</div>`;
 }
 const MOD_ICONS={
+ sueldos:'<rect x="3" y="7" width="18" height="11" rx="1.5"/><circle cx="12" cy="12.5" r="2.5"/><path d="M6 10v5M18 10v5"/>',
+ ausencias:'<path d="M7 4h10M7 20h10M8 4c0 5 8 5 8 8s-8 3-8 8M16 4c0 5-8 5-8 8s8 3 8 8"/>',
  fabricacion:'<path d="M4 10h11l3-3h2v6h-3l-2 2H9l-1 5H6l1-5H4z"/><path d="M14 7V4M11 7V5"/>',
  convenios:'<path d="M3 12l9-9h8v8l-9 9z"/><circle cx="16" cy="8" r="1.4"/>',
  empleados:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.6 2.7-6 6-6s6 2.4 6 6"/><circle cx="17.5" cy="9" r="2.4"/><path d="M16 14.2c3 .2 5 2 5 5.2"/>',
@@ -1833,6 +1974,9 @@ const MOD_ICONS={
 };
 function avisosHTML(){
  const A=[], hoy=todayISO();
+ ausNowList().forEach(a=>A.push(['pend',`<b>${esc(a.name)}</b> está ausente ${esc(ausUntil(a))} (${esc(a.cat||'')}).`]));
+ ausencias.filter(a=>ausFuture(a)&&a.start-Date.now()<2*86400000).forEach(a=>A.push(['pend',`<b>${esc(a.name)}</b> estará ausente desde el ${esc(ausWhen(a.start))}.`]));
+ (()=>{const s=payState();if(s&&s.st==='due'){const n=suePending(s.ws);A.push(['pend',`Día de pago (semana ${esc(sueLab(s.ws))}): quedan <b>${n.length}</b> ${n.length===1?'sueldo':'sueldos'} por pagar (${n.map(e=>esc(e.name)).join(', ')}). Ve a <b>SUELDOS</b>.`])}})();
  longShifts().forEach(x=>A.push(['bad',`<b>${esc(x.name)}</b> lleva ${fmtDuration(x.start,Date.now())} fichado: ¿se le olvidó fichar la salida? Ciérralo en <b>Registros horarios</b>.`]));
  empleados.forEach(e=>{if(e.prueba&&e.inicio<=hoy&&e.prueba>=hoy){const d=Math.round((Date.parse(e.prueba)-Date.parse(hoy))/86400000);A.push(['pend',`El periodo de prueba de <b>${esc(e.name)}</b> termina ${d===0?'hoy':d===1?'mañana':'el '+fmtISO(e.prueba)}.`])}});
  pendingEncs().filter(x=>x.promise&&x.promise<hoy).forEach(x=>A.push(['bad',`Encargo de <b>${esc(x.client)}</b> vencido desde el ${fmtISO(x.promise)}.`]));
@@ -1855,16 +1999,17 @@ function renderDashboard(){
   card('Fichado ahora',shifts.length?shifts.map(x=>esc(x.name)).join(', '):'Nadie',shifts.length?'en este dispositivo':'en este dispositivo')+
   card('Pedidos',`${pendingPed().length} ${plural(pendingPed().length,'pendiente','pendientes')}`,pendingPed().filter(p=>!p.received).length?pendingPed().filter(p=>!p.received).length+' por recibir':'')+
   card('Materiales',lowMats().length?`${lowMats().length} bajo mínimo`:`${matNames().length} en almacén`,'',lowMats().length?'neg':'')+
+  card('Ausentes ahora',ausNowList().length?ausNowList().map(a=>esc(a.name)).join(', '):'Nadie','',ausNowList().length?'neg':'')+
   card('En prueba',(t=>`${t.length} ${plural(t.length,'empleado','empleados')}`)(empleados.filter(e=>e.prueba&&e.prueba>=todayISO()&&e.inicio<=todayISO())),'')+
   `</div>${avisosHTML()}<div class="dir-sec-title">SEMANA ACTUAL</div>${chartSVG({s:w,e:w+6})}<div class="dir-sec-title">HERRAMIENTAS</div>`;
 }
 /* ===== Discord (webhook), registro de movimientos de stock, copia de seguridad ===== */
 const KEY_WEBHOOK='harrington_webhook_v1', KEY_STOCKLOG='harrington_stocklog_v1', KEY_CIERRES='harrington_cierres_v1', KEY_PRICES='harrington_prices_v1', KEY_CUSTPROD='harrington_custprod_v1';
 let webhook=loadObj(KEY_WEBHOOK,{});
-var EV_DEF={ventas:true,encargos:true,fichajes:true,gastos:true,anulaciones:true,cierres:true,balance:true,pedidos:true,empleados:true,clientes:true,proveedores:true,stock:true,materiales:true,resumen:true};
+var EV_DEF={ventas:true,encargos:true,fichajes:true,gastos:true,anulaciones:true,cierres:true,balance:true,pedidos:true,empleados:true,clientes:true,proveedores:true,stock:true,materiales:true,resumen:true,ausencias:true,sueldos:true};
 webhook=Object.assign({url:''},webhook,{ev:Object.assign({},EV_DEF,webhook.ev||{}),urls:Object.assign({},webhook.urls||{})});
 const WH_RE=/^https:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+/;
-const KIND_COLOR={ventas:0xC9A24A,encargos:0x9A6B1C,fichajes:0x3F7A52,gastos:0xA8321C,balance:0x1B6A3A,pedidos:0x2E7D4F,empleados:0x7A5A22,clientes:0x3A5A8C,proveedores:0x6B5A2A,stock:0x6B8E23,materiales:0x8B5A2B,anulaciones:0x7A1608,cierres:0xB88931,resumen:0xE0B25C};
+const KIND_COLOR={ventas:0xC9A24A,encargos:0x9A6B1C,fichajes:0x3F7A52,gastos:0xA8321C,balance:0x1B6A3A,pedidos:0x2E7D4F,empleados:0x7A5A22,clientes:0x3A5A8C,proveedores:0x6B5A2A,stock:0x6B8E23,materiales:0x8B5A2B,anulaciones:0x7A1608,cierres:0xB88931,resumen:0xE0B25C,ausencias:0x5A6E8C,sueldos:0x3E8E4E};
 function dcEsc(s){return String(s).replace(/([*_~|`])/g,'\\$1')}
 function dcIcon(){try{return /^https?:/.test(location.protocol)?new URL('emblema-harrington.png',location.href).href:''}catch(e){return ''}}
 /* Convierte el texto de siempre en una tarjeta: 1.ª línea = título; «Clave: valor» en negrita */
@@ -1922,7 +2067,7 @@ function logStock(name,delta,why){
  store.set(KEY_STOCKLOG,JSON.stringify(a.slice(-800)));cloudPut('mov:'+rec.uid,rec);
 }
 var bossTimer=null;
-function bumpBoss(){clearTimeout(bossTimer);if(bossActive)bossTimer=setTimeout(()=>{setBoss(false);closeModal(dirModal);say('Modo Jefe cerrado por inactividad')},300000)}
+function bumpBoss(){clearTimeout(bossTimer);if(bossActive&&!(typeof meEmp==='function'&&isJefe(meEmp())))bossTimer=setTimeout(()=>{setBoss(false);closeModal(dirModal);say('Modo Jefe cerrado por inactividad')},300000)}
 ['click','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{if(bossActive)bumpBoss()},{passive:true}));
 function allHKeys(){const k=[];for(let i=0;i<localStorage.length;i++){const n=localStorage.key(i);if(n&&n.indexOf('harrington_')===0&&n!==KEY_BOSS_ACTIVE&&n!=='harrington_cloud_dirty'&&n!=='harrington_cloud_outbox'&&n!=='harrington_cloud_since'&&n!=='harrington_reset_seen'&&n!=='harrington_cloud_joined'&&n!=='harrington_prejoin_backup')k.push(n)}return k}
 const CONFIG_KEYS=[KEY_EMP,KEY_DISC,KEY_CUSTPROD,KEY_PRICES,KEY_CLIENTES,KEY_WEBHOOK,KEY_STOCKMIN,'harrington_proveedores_v1','harrington_recetas_v1'];
@@ -1954,6 +2099,7 @@ const pedBtn=document.getElementById('pedBtn'), pedModal=document.getElementById
 let pedView=null, pedDraft=null;
 function pendingPed(){return pedidos.filter(x=>!x.completedAt&&!x.cancelled)}
 function updatePedBtn(){const n=pendingPed().length;pedBtn.innerHTML=ICO_PED+(n?`PEDIDOS (${n})`:'PEDIDOS')}
+const ICO_AUS='<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10M7 20h10M8 4c0 5 8 5 8 8s-8 3-8 8M16 4c0 5-8 5-8 8s8 3 8 8"/></svg>';
 function savePed(rec){
  const k=pedidos.findIndex(x=>x.id===rec.id);
  if(k>=0)pedidos[k]=rec;else pedidos.push(rec);
@@ -1980,7 +2126,7 @@ function renderPed(){
   return;
  }
  title.textContent='PEDIDO A PROVEEDOR';
- if(!pedDraft||pedDraft.id!==x.id)pedDraft={id:x.id,received:!!x.received,paid:!!x.paid,oRec:!!x.received,oPaid:!!x.paid,emp:empleados.some(e=>e.id===store.get(KEY_EMPLOYEE))?store.get(KEY_EMPLOYEE):''};
+ if(!pedDraft||pedDraft.id!==x.id)pedDraft={id:x.id,received:!!x.received,paid:!!x.paid,oRec:!!x.received,oPaid:!!x.paid,emp:meEmp()?meEmp().id:empleados.some(e=>e.id===store.get(KEY_EMPLOYEE))?store.get(KEY_EMPLOYEE):''};
  body.innerHTML=`<button type="button" class="enc-back" data-pact="back">◂ Volver a la lista</button>
   <div class="albaran"><div class="alb-h">ALBARÁN DE PEDIDO</div>
   <div class="enc-id">${esc(x.code)} · ${esc(x.date)} ${esc(x.time)} · ${ago(x.ts)}</div>
@@ -1990,7 +2136,7 @@ function renderPed(){
   <div class="alb-stamps">${x.received?'<span class="alb-st ok">RECIBIDO</span>':''}${x.paid?'<span class="alb-st ok">PAGADO</span>':'<span class="alb-st bad">POR PAGAR</span>'}</div></div>
   <div class="badges" style="margin:8px 0">${pedBadges(x)}</div>
   <div class="enc-sec">
-   <label>EMPLEADO QUE LO REGISTRA<select id="pdEmp"><option value="">Seleccionar empleado</option>${empleados.map(e=>`<option value="${esc(e.id)}"${pedDraft.emp===e.id?' selected':''}>${esc(e.name)}</option>`).join('')}</select></label>
+   <label>EMPLEADO QUE LO REGISTRA<select id="pdEmp"${meEmp()?' disabled':''}><option value="">Seleccionar empleado</option>${empleados.map(e=>`<option value="${esc(e.id)}"${pedDraft.emp===e.id?' selected':''}>${esc(e.name)}</option>`).join('')}</select></label>
    <label>¿RECIBIDO?<select id="pdRec"${x.received?' disabled':''}><option value="0"${!pedDraft.received?' selected':''}>NO</option><option value="1"${pedDraft.received?' selected':''}>SÍ</option></select></label>
    ${x.received?'<div class="enc-note">Ya recibido: sus materiales ya están en el almacén.</div>':'<div class="enc-note">Al marcarlo como recibido, sus materiales se suman al almacén de MATERIALES.</div>'}
    <label>¿PAGADO?<select id="pdPaid"${x.paidInitial?' disabled':''}><option value="0"${!pedDraft.paid?' selected':''}>NO</option><option value="1"${pedDraft.paid?' selected':''}>SÍ</option></select></label>
@@ -2071,6 +2217,127 @@ pedModal.addEventListener('change',e=>{
  else if(e.target.id==='pdPaid')pedDraft.paid=e.target.value==='1';
 });
 updatePedBtn();
+/* ===== Ausencias: el empleado avisa de que no podrá entrar; el motivo solo lo ve el jefe ===== */
+const ausBtn=document.getElementById('ausBtn'), ausModal=document.getElementById('ausModal');
+const AUS_CATS=['Viaje','Trabajo','Estudios','Salud','Asuntos personales','Otro'];
+const AUS_UNITS={horas:{t:'Horas',n:12,ms:3600000,s:'hora',p:'horas'},dias:{t:'Días',n:6,ms:86400000,s:'día',p:'días'},semanas:{t:'Semanas',n:4,ms:7*86400000,s:'semana',p:'semanas'},indef:{t:'Sin fecha de vuelta',n:0,ms:0}};
+let ausView='list', ausDraft=null;
+function ausNew(){return {emp:meEmp()?meEmp().id:empleados.some(e=>e.id===store.get(KEY_EMPLOYEE))?store.get(KEY_EMPLOYEE):'',desde:'ahora',fecha:'',unit:'dias',n:'1',cat:'',motivo:''}}
+function madridMidnight(d){let ms=d*86400000;const p=madridParts(ms);return ms-(+p.hour)*3600000-(+p.minute)*60000}
+function ausStart(d){const t=todayNum();if(d.desde==='ahora')return Date.now();if(d.desde==='manana')return madridMidnight(t+1);if(d.desde==='pasado')return madridMidnight(t+2);if(d.desde==='fecha'&&/^\d{4}-\d{2}-\d{2}$/.test(d.fecha)){const x=d.fecha.split('-').map(Number);return madridMidnight(dayNum(x[0],x[1],x[2]))}return 0}
+function ausEnd(start,unit,n){if(unit==='indef')return 0;return start+(+n||1)*AUS_UNITS[unit].ms}
+function ausLen(a){if(a.unit==='indef')return 'sin fecha de vuelta';const u=AUS_UNITS[a.unit];return a.n+' '+(+a.n===1?u.s:u.p)}
+function ausWhen(ms){return fmtDate(ms)+' '+fmtTime(ms)}
+function ausUntil(a){if(!a.end)return 'sin fecha de vuelta';const t=todayNum(), m=madridParts(a.end), d=dayNum(+m.year,+m.month,+m.day);if(a.unit==='horas'||d===t)return 'hasta las '+fmtTime(a.end)+(d===t?'':' del '+fmtDate(a.end));return 'hasta el '+DIAS_L[new Date(d*86400000).getUTCDay()]+' '+dayStr(d).slice(0,5)}
+const DIAS_L=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+function ausActive(a,t){t=t||Date.now();return !a.cancelled&&!a.returned&&a.start<=t&&(!a.end||a.end>t)}
+function ausFuture(a){return !a.cancelled&&!a.returned&&a.start>Date.now()}
+function ausNowList(){return ausencias.filter(a=>ausActive(a))}
+function updateAusBtn(){const n=ausNowList().length;ausBtn.innerHTML=ICO_AUS+(n?`AUSENCIAS (${n})`:'AUSENCIAS')}
+function saveAus(rec){const k=ausencias.findIndex(x=>x.id===rec.id);if(k>=0)ausencias[k]=rec;else ausencias.push(rec);ausencias.sort((a,b)=>(a.start||0)-(b.start||0));store.set(KEY_AUS,JSON.stringify(ausencias));cloudPut('ausencia:'+rec.id,rec);updateAusBtn()}
+/* Días de ausencia que caen dentro de una semana de las cuentas (viernes a jueves) */
+function ausDaysInWeek(name,ws){
+ const s=madridMidnight(ws), e=madridMidnight(ws+7);let ms=0;
+ ausencias.forEach(a=>{if(a.cancelled||a.name!==name)return;const end=a.returned?(a.returnedAt||a.start):(a.end||Infinity);const o=Math.min(end,e)-Math.max(a.start,s);if(o>0)ms+=o});
+ return Math.min(7,Math.round(ms/86400000));
+}
+/* Horas que se le exigen esa semana: menos de 3 días = todas; 3 o 4 = la mitad; más de 4 = ninguna */
+function weekRequired(name,ws){const c=contractH(name);if(!c)return {h:0,d:0};const d=ausDaysInWeek(name,ws);return {h:d>4?0:d>=3?c/2:c,d:d,c:c}}
+function renderAus(){
+ const body=document.getElementById('ausBody'), title=document.getElementById('ausTitle');
+ if(ausView==='form'){
+  const d=ausDraft, u=AUS_UNITS[d.unit], st=ausStart(d), en=st?ausEnd(st,d.unit,d.n):0;
+  title.textContent='NUEVA AUSENCIA';
+  body.innerHTML=`<button type="button" class="enc-back" data-aus="back">◂ Volver</button>
+  <div class="dir-form enc-sec">
+   <label>EMPLEADO<select id="auEmp"${meEmp()&&!bossActive?' disabled':''}><option value="">Seleccionar empleado</option>${empleados.map(e=>`<option value="${esc(e.id)}"${d.emp===e.id?' selected':''}>${esc(e.name)}</option>`).join('')}</select></label>
+   <label>DESDE<select id="auDesde">${[['ahora','Ahora'],['manana','Mañana'],['pasado','Pasado mañana'],['fecha','Otra fecha…']].map(o=>`<option value="${o[0]}"${d.desde===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select></label>
+   ${d.desde==='fecha'?`<label>FECHA DE INICIO<input id="auFecha" type="date" value="${esc(d.fecha)}" min="${todayISO()}"></label>`:''}
+   <div class="au-two"><label>DURACIÓN<select id="auUnit">${Object.keys(AUS_UNITS).map(k=>`<option value="${k}"${d.unit===k?' selected':''}>${AUS_UNITS[k].t}</option>`).join('')}</select></label>
+   ${u.n?`<label>CUÁNTO<select id="auN">${Array.from({length:u.n},(_,i)=>i+1).map(i=>`<option value="${i}"${+d.n===i?' selected':''}>${i} ${i===1?u.s:u.p}</option>`).join('')}</select></label>`:'<div></div>'}</div>
+   <label>MOTIVO<select id="auCat"><option value="">Seleccionar…</option>${AUS_CATS.map(c=>`<option${d.cat===c?' selected':''}>${c}</option>`).join('')}</select></label>
+   <label>EXPLICA EL MOTIVO<textarea id="auMot" maxlength="300" rows="3" placeholder="Ej.: Me voy de viaje con la familia y no podré conectarme.">${esc(d.motivo)}</textarea></label>
+   <div class="enc-note" id="auVuelta">${st?(en?'Vuelve aproximadamente el '+esc(ausWhen(en))+'.':'Sin fecha de vuelta: queda ausente hasta que pulse «He vuelto».'):'Elige la fecha de inicio.'}</div>
+   <div class="enc-note">El motivo solo lo ve la dirección. Tus compañeros solo verán que estás ausente y hasta cuándo.</div>
+   <div class="pay-err" id="auErr" hidden></div>
+   <div class="enc-actions" style="margin-top:8px"><button type="button" class="primary" data-aus="save">CONFIRMAR AUSENCIA</button></div>
+  </div>`;
+  return;
+ }
+ const now=ausNowList(), fut=ausencias.filter(ausFuture);
+ title.textContent='AUSENCIAS';
+ const row=a=>`<div class="enc-card dir-item"><div class="t">${esc(a.name)}</div><div class="it">${ausActive(a)?'Ausente '+esc(ausUntil(a)):'Desde el '+esc(ausWhen(a.start))+' · '+esc(ausLen(a))}</div>${!meEmp()||bossActive||meEmp().id===a.empId?`<div class="enc-actions"><button type="button" data-aus="back-now:${esc(a.id)}">${ausActive(a)?'✓ HE VUELTO':'ANULAR'}</button></div>`:''}</div>`;
+ body.innerHTML=`<div class="enc-actions" style="margin-bottom:10px"><button type="button" class="primary" data-aus="new">+ AVISAR DE UNA AUSENCIA</button></div>
+  <div class="dir-sec-title" style="margin-top:0">AUSENTES AHORA (${now.length})</div>${now.length?now.map(row).join(''):'<div class="enc-empty">Nadie está ausente ahora.</div>'}
+  ${fut.length?`<div class="dir-sec-title">PRÓXIMAS AUSENCIAS (${fut.length})</div>`+fut.map(row).join(''):''}
+  <p class="bk-note">Avisa aquí si no vas a poder entrar al servidor durante un tiempo. Si es de 3 o 4 días, esa semana solo te tocan la mitad de tus horas; si es de más de 4 días, quedas exento esa semana.</p>`;
+}
+function saveAusencia(){
+ const d=ausDraft, err=t=>{const e=document.getElementById('auErr');e.textContent=t;e.hidden=false;e.scrollIntoView({block:'nearest'})};
+ const emp=empleados.find(e=>e.id===d.emp);
+ if(!emp)return err('Selecciona el empleado');
+ const st=ausStart(d);if(!st)return err('Elige la fecha de inicio');
+ if(!d.cat)return err('Elige el motivo');
+ const mot=d.motivo.trim().replace(/\s+/g,' ');if(mot.length<3)return err('Escribe el motivo de la ausencia');
+ const en=ausEnd(st,d.unit,d.n);
+ if(ausencias.some(a=>a.empId===emp.id&&!a.cancelled&&!a.returned&&a.start<(en||Infinity)&&(a.end||Infinity)>st))return err(emp.name+' ya tiene una ausencia en esas fechas');
+ const rec={id:'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),empId:emp.id,name:emp.name,start:st,end:en,unit:d.unit,n:d.unit==='indef'?0:+d.n,cat:d.cat,motivo:mot,ts:Date.now(),returned:false,cancelled:false};
+ saveAus(rec);store.set(KEY_EMPLOYEE,emp.id);
+ discordSend('ausencias',['AUSENCIA · '+emp.name,'Desde: '+ausWhen(st),'Duración: '+ausLen(rec),'Vuelve: '+(en?ausWhen(en):'sin fecha de vuelta'),'Motivo: '+d.cat,'Explicación: '+mot].join('\n'));
+ ausView='list';ausDraft=null;renderAus();say('Ausencia avisada: '+emp.name+' '+ausUntil(rec));
+}
+function ausEndNow(id,silent){
+ const a=ausencias.find(x=>x.id===id);if(!a)return;
+ const fut=a.start>Date.now(), rec=Object.assign({},a,fut?{cancelled:true,cancelledAt:Date.now()}:{returned:true,returnedAt:Date.now()});
+ saveAus(rec);
+ discordSend('ausencias',(fut?'AUSENCIA ANULADA · ':'REGRESO · ')+a.name+'\n'+(fut?'Ya no se ausentará desde el '+ausWhen(a.start):'Ha vuelto el '+ausWhen(Date.now())+(a.end&&a.end>Date.now()?' (antes de lo previsto)':'')));
+ if(!silent){renderAus();say(fut?'Ausencia anulada':'¡Bienvenido de vuelta, '+a.name+'!')}
+ if(!dirModal.hidden)renderDir();
+}
+ausBtn.onclick=()=>{ausView='list';ausDraft=null;renderAus();openModal(ausModal);ausModal.scrollTop=0};
+document.getElementById('ausClose').onclick=()=>closeModal(ausModal);
+ausModal.addEventListener('click',e=>{
+ if(e.target===ausModal)return closeModal(ausModal);
+ const b=e.target.closest('[data-aus]');if(!b)return;
+ const [act,arg]=b.dataset.aus.split(':');
+ if(act==='new'){ausDraft=ausNew();ausView='form';renderAus();ausModal.scrollTop=0}
+ else if(act==='back'){ausView='list';renderAus()}
+ else if(act==='save')once('aus',async()=>saveAusencia(),b);
+ else if(act==='back-now'){const a=ausencias.find(x=>x.id===arg);if(!a)return;askConfirm(a.start>Date.now()?'Anular ausencia':'He vuelto',a.start>Date.now()?'Se anulará la ausencia de '+a.name+'.':'Se dará por terminada la ausencia de '+a.name+'.',a.start>Date.now()?'Anular':'He vuelto').then(ok=>{if(ok)ausEndNow(arg)})}
+});
+function ausInput(t){
+ if(!ausDraft)return;const id=t.id;
+ if(id==='auEmp')ausDraft.emp=t.value;
+ else if(id==='auDesde'){ausDraft.desde=t.value;renderAus();return}
+ else if(id==='auFecha')ausDraft.fecha=t.value;
+ else if(id==='auUnit'){ausDraft.unit=t.value;ausDraft.n='1';renderAus();return}
+ else if(id==='auN')ausDraft.n=t.value;
+ else if(id==='auCat')ausDraft.cat=t.value;
+ else if(id==='auMot'){ausDraft.motivo=t.value;return}
+ else return;
+ const st=ausStart(ausDraft), en=st?ausEnd(st,ausDraft.unit,ausDraft.n):0, el=document.getElementById('auVuelta');
+ if(el)el.textContent=st?(en?'Vuelve aproximadamente el '+ausWhen(en)+'.':'Sin fecha de vuelta: queda ausente hasta que pulse «He vuelto».'):'Elige la fecha de inicio.';
+}
+ausModal.addEventListener('change',e=>ausInput(e.target));
+ausModal.addEventListener('input',e=>{if(e.target.id==='auMot')ausInput(e.target)});
+setInterval(()=>{updateAusBtn();if(!ausModal.hidden&&ausView==='list')renderAus()},60000);
+/* Dirección → AUSENCIAS (con el motivo) */
+function renderModAusencias(){
+ const now=ausNowList(), fut=ausencias.filter(ausFuture), past=ausencias.filter(a=>!ausActive(a)&&!ausFuture(a)).slice().reverse().slice(0,60);
+ const card=a=>`<div class="enc-card dir-item"><div class="t">${esc(a.name)}${ausActive(a)?' <span class="badge pend">AUSENTE</span>':a.cancelled?' <span class="badge no">ANULADA</span>':a.returned?' <span class="badge si">VOLVIÓ</span>':''}</div>
+  <div class="it">Desde el ${esc(ausWhen(a.start))} · ${esc(ausLen(a))}${a.end?' · vuelve el '+esc(ausWhen(a.end)):''}${a.returned?'<br>Volvió el '+esc(ausWhen(a.returnedAt)):''}</div>
+  <div class="au-mot"><b>${esc(a.cat||'—')}</b> · ${esc(a.motivo||'')}</div>
+  <div class="enc-actions two">${ausActive(a)||ausFuture(a)?`<button type="button" data-dir="au-end:${esc(a.id)}">${ausActive(a)?'DAR POR VUELTO':'ANULAR'}</button>`:'<span></span>'}<button type="button" class="warn" data-dir="au-del:${esc(a.id)}">🗑 BORRAR</button></div></div>`;
+ return `<p class="bk-note">Solo tú ves el motivo. Horas semanales: si la ausencia ocupa 3 o 4 días de una semana de sueldos (lunes a domingo), esa semana se le exige la mitad de sus horas; si ocupa más de 4 días, queda exento esa semana; con menos de 3 días, todas sus horas.</p>
+  <div class="dir-sec-title">AUSENTES AHORA (${now.length})</div>${now.length?now.map(card).join(''):'<div class="enc-empty">Nadie está ausente ahora.</div>'}
+  ${fut.length?`<div class="dir-sec-title">PRÓXIMAS (${fut.length})</div>`+fut.map(card).join(''):''}
+  <div class="dir-sec-title">HISTORIAL (${past.length})</div>${past.length?past.map(card).join(''):'<div class="enc-empty">Todavía no hay ausencias anteriores.</div>'}`;
+}
+async function delAusencia(id){
+ const a=ausencias.find(x=>x.id===id);if(!a)return;
+ if(!await askConfirm('Borrar ausencia','La ausencia de '+a.name+' desaparecerá del registro y dejará de contar para sus horas.','Borrar'))return;
+ ausencias=ausencias.filter(x=>x.id!==id);store.set(KEY_AUS,JSON.stringify(ausencias));cloudDel('ausencia:'+id);updateAusBtn();renderDir();say('Ausencia borrada');
+}
 /* --- Proveedores (jefe) --- */
 const TIPOS_PROV=['Herrería','Mina','Tala','Aserradero','Ganadería','Granja','Otro'];
 function pvRows(d){const L=(d.prods||[]).filter(r=>r&&(r.n||r.p)).map(r=>({n:r.n||'',p:r.p||''}));if(L.length<MAX_PPROD)L.push({n:'',p:''});d.prods=L;return L}
@@ -2300,6 +2567,7 @@ function empFields(d,p){
 }
 function pruebaTxt(iso){return /^\d{4}-\d{2}-\d{2}$/.test(iso||'')?`Periodo de prueba: <b>1 semana</b>, del ${fmtISO(iso)} al ${fmtISO(isoAdd(iso,6))}.`:'Periodo de prueba: 1 semana desde la fecha de inicio.'}
 function renderModEmpleados(){
+ setTimeout(()=>{loadPresence();loadClaves();loadPhotos()},0);
  if(!empDraft.inicio)empDraft.inicio=isoToday();
  const card=e=>{
   if(eeDraft&&eeDraft.id===e.id)return `<div class="dir-form enc-sec"><div class="dir-sec-title" style="margin-top:0">EDITAR EMPLEADO</div>${empFields(eeDraft,'ee')}
@@ -2307,8 +2575,8 @@ function renderModEmpleados(){
    <div class="pay-err" id="eeErr" hidden></div>
    <div class="enc-actions two"><button type="button" data-dir="emp-cancel">Cancelar</button><button type="button" class="primary" data-dir="emp-save:${esc(e.id)}">GUARDAR</button></div></div>`;
   const ok=empHasContract(e);
-  return `<div class="enc-card dir-item"><div class="t">${esc(e.name)}</div><div class="it">${ok?`${esc(e.puesto.toUpperCase())} · ${money(e.sueldo)} a la semana · ${e.horas||10} h semanales<br>Inicio: ${fmtISO(e.inicio)} · prueba hasta el ${fmtISO(e.prueba||isoAdd(e.inicio,6))}`:'<span class="lowtag">FALTAN LOS DATOS DEL CONTRATO</span> Pulsa EDITAR para completarlos.'}</div>
-   <div class="enc-actions emp3"><button type="button" data-dir="emp-edit:${esc(e.id)}">✎ EDITAR</button><button type="button" data-dir="emp-ct:${esc(e.id)}"${ok?'':' disabled'}>📜 CONTRATO</button><button type="button" class="warn" data-dir="emp-del:${esc(e.id)}">🗑 PAPELERA</button></div></div>`;
+  return `<div class="enc-card dir-item"><div class="t">${esc(e.name)}</div><div class="it">${ok?`${esc(e.puesto.toUpperCase())} · ${money(e.sueldo)} a la semana · ${e.horas||10} h semanales<br>Inicio: ${fmtISO(e.inicio)} · ${e.sinPrueba?'sin periodo de prueba (ascendido)':'prueba hasta el '+fmtISO(e.prueba||isoAdd(e.inicio,6))}`:'<span class="lowtag">FALTAN LOS DATOS DEL CONTRATO</span> Pulsa EDITAR para completarlos.'}</div>
+   <div class="enc-actions emp3"><button type="button" data-dir="emp-edit:${esc(e.id)}">✎ EDITAR</button><button type="button" data-dir="emp-ct:${esc(e.id)}"${ok?'':' disabled'}>📜 CONTRATO</button><button type="button" class="warn" data-dir="emp-del:${esc(e.id)}">🗑 PAPELERA</button></div>${ok&&ASCENSO[e.puesto]?`<div class="enc-actions"><button type="button" class="gold" data-dir="emp-up:${esc(e.id)}">⬆ ASCENSO A ${esc(ASCENSO[e.puesto].toUpperCase())} · ${money(SUELDO_PUESTO[ASCENSO[e.puesto]])}</button></div>`:''}${empExtra(e)}</div>`;
  };
  return `<div class="dir-form enc-sec"><div class="dir-sec-title" style="margin-top:0">NUEVO EMPLEADO</div>${empFields(empDraft,'emp')}
   <div class="pay-err" id="empErr"${empErr?'':' hidden'}>${esc(empErr)}</div>
@@ -2340,7 +2608,7 @@ function empSave(id){
  const c=empCheck(eeDraft,id), errEl=document.getElementById('eeErr');
  if(c.err){errEl.textContent=c.err;errEl.hidden=false;return}
  const send=eeDraft.send;
- Object.assign(e,c);if(!e.alta)e.alta=Date.now();
+ Object.assign(e,c);if(!e.alta)e.alta=Date.now();if(e.sinPrueba)e.prueba='';
  saveEmp();eeDraft=null;renderDir();renderCustomer();say('Empleado actualizado');
  if(send)sendContract(e);
 }
@@ -2350,12 +2618,13 @@ async function empDelete(id){
  empleados=empleados.filter(x=>x.id!==id);saveEmp();renderDir();renderCustomer();say('Empleado eliminado');
 }
 function contractText(e){
- return ['CONTRATO DE TRABAJO · HARRINGTON GUNSMITH','Empleado: '+e.name,'Puesto: '+e.puesto,'Sueldo semanal: '+money(e.sueldo),'Horas semanales: '+(e.horas||10),'Inicio del contrato: '+fmtISO(e.inicio),'Periodo de prueba: 1 semana (del '+fmtISO(e.inicio)+' al '+fmtISO(e.prueba||isoAdd(e.inicio,6))+')'].join('\n');
+ return ['CONTRATO DE TRABAJO · HARRINGTON GUNSMITH','Empleado: '+e.name,'Puesto: '+e.puesto,'Sueldo semanal: '+money(e.sueldo),'Horas semanales: '+(e.horas||10),'Inicio del contrato: '+fmtISO(e.inicio),e.sinPrueba?'Periodo de prueba: no (contrato por ascenso)':'Periodo de prueba: 1 semana (del '+fmtISO(e.inicio)+' al '+fmtISO(e.prueba||isoAdd(e.inicio,6))+')'].join('\n');
 }
-async function sendContract(e){
+async function sendContract(e,asc){
  if(!(webhook.urls.empleados||webhook.url)||!webhook.ev.empleados)return;
  let blob=null;try{blob=await contractBlob(e)}catch(x){}
- discordSend('empleados',contractText(e),blob,'Contrato_'+e.name.replace(/[^A-Za-z0-9áéíóúüñÁÉÍÓÚÜÑ_-]+/g,'_')+'.png',true);
+ const up=asc&&e.ascensos&&e.ascensos[e.ascensos.length-1];
+ discordSend('empleados',(up?'ASCENSO · '+e.name+': '+up.de+' → '+up.a+'\nNuevo sueldo: '+money(up.nuevo)+' (desde el '+dayStr(up.desde)+')\n\n':'')+contractText(e),blob,'Contrato_'+e.name.replace(/[^A-Za-z0-9áéíóúüñÁÉÍÓÚÜÑ_-]+/g,'_')+'.png',true);
 }
 async function downloadContract(id){
  const e=empleados.find(x=>x.id===id); if(!e||!empHasContract(e))return;
@@ -2389,11 +2658,11 @@ async function contractBlob(e){
   kv('SUELDO SEMANAL',money(e.sueldo)+' a la semana');
   kv('HORAS SEMANALES',(e.horas||10)+' horas a la semana');
   kv('INICIO DEL CONTRATO',fmtISO(e.inicio));
-  kv('PERIODO DE PRUEBA','1 semana · hasta el '+fmtISO(e.prueba||isoAdd(e.inicio,6)));
+  kv('PERIODO DE PRUEBA',e.sinPrueba?'Sin periodo de prueba':'1 semana · hasta el '+fmtISO(e.prueba||isoAdd(e.inicio,6)));
   y+=6;
   wrap('El empleado se compromete a desempeñar su oficio con diligencia, honradez y lealtad a la casa, y a guardar el debido cuidado con las armas, la munición y la caja. La casa abonará el sueldo pactado cada semana.','18px '+ff,ink,26);
   y+=6;
-  wrap('Durante el periodo de prueba, cualquiera de las partes podrá dar por terminada esta relación sin más aviso.','italic 18px '+ff,'#4a3417',26);
+  {const up=e.sinPrueba&&e.ascensos&&e.ascensos[e.ascensos.length-1];wrap(up?'Contrato por ascenso de '+up.de+' a '+up.a+'. Sustituye al anterior y rige desde el '+dayStr(up.desde)+'.':'Durante el periodo de prueba, cualquiera de las partes podrá dar por terminada esta relación sin más aviso.','italic 18px '+ff,'#4a3417',26)}
   y+=18;
   const f=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',day:'numeric',month:'long',year:'numeric'}).format(e.alta||Date.now());
   ctr('En Saint Denis, a '+f+'.','18px '+ff,ink,64);
@@ -2468,7 +2737,7 @@ async function undoFab(){
  try{localStorage.removeItem('harrington_lastfab')}catch(e){}
  renderDir();calc(false);say('Fabricación deshecha');
 }
-const DIR_SECCIONES=[['VENTAS Y CAJA',['ventas','semanales','gastos','balance','cierre']],['CATÁLOGO, PRECIOS Y CONVENIOS',['productos','convenios']],['ALMACÉN Y FABRICACIÓN',['stock','fabricacion','regstock']],['PROVEEDORES',['proveedores','nuevopedido','regpedidos']],['PERSONAL',['empleados','horarios']],['CLIENTES',['clientes']],['SISTEMA',['discord','nube','copia','reset']]];
+const DIR_SECCIONES=[['VENTAS Y CAJA',['ventas','semanales','gastos','sueldos','balance','cierre']],['CATÁLOGO, PRECIOS Y CONVENIOS',['productos','convenios']],['ALMACÉN Y FABRICACIÓN',['stock','fabricacion','regstock']],['PROVEEDORES',['proveedores','nuevopedido','regpedidos']],['PERSONAL',['empleados','horarios','ausencias']],['CLIENTES',['clientes']],['SISTEMA',['discord','nube','copia','reset']]];
 let dirLast=null;
 document.getElementById('dirModal').addEventListener('toggle',e=>{const d=e.target;if(!d.matches||!d.matches('details.mod-sec'))return;let st={};try{st=JSON.parse(localStorage.getItem('harrington_dirsec')||'{}')}catch(x){}if(d.open)st[d.dataset.sec]=1;else delete st[d.dataset.sec];try{localStorage.setItem('harrington_dirsec',JSON.stringify(st))}catch(x){}},true);
 function renderDir(){
@@ -2530,12 +2799,13 @@ async function deleteDisc(id){
  renderDir();tickDiscounts();say('Eliminado');
 }
 dirBtn.onclick=()=>{dirMod=null;dirForm=null;renderDir();openModal(dirModal);dirModal.scrollTop=0};
+document.getElementById('payPlate').onclick=()=>{if(bossActive){dirMod='sueldos';dirForm=null;sueOff=0;renderDir();openModal(dirModal);dirModal.scrollTop=0}else say('Los sueldos los paga la dirección los domingos')};
 document.getElementById('dirClose').onclick=()=>closeModal(dirModal);
 dirModal.addEventListener('click',e=>{
  if(e.target===dirModal)return closeModal(dirModal);
  const b=e.target.closest('[data-dir]'); if(!b)return;
  const [act,arg]=b.dataset.dir.split(':');
- if(act==='open'){dirMod=arg;dirForm=null;wkType=null;wkEmp=null;wkOffset=0;clView=null;clEdit=null;fabEdit=null;renderDir();dirModal.scrollTop=0}
+ if(act==='open'){dirMod=arg;dirForm=null;sueOff=0;wkType=null;wkEmp=null;wkOffset=0;clView=null;clEdit=null;fabEdit=null;renderDir();dirModal.scrollTop=0}
  else if(act==='back'){
   if(dirMod==='fabricacion'&&fabEdit){fabEdit=null;fabDraft=[]}
   else if(dirMod==='clientes'&&(clView||clEdit)){clView=null;clEdit=null}
@@ -2567,6 +2837,8 @@ dirModal.addEventListener('click',e=>{
  else if(act==='wh-save')saveWebhookForm();
  else if(act==='wh-test')testWebhooks()
  else if(act==='rs-do')once('reset',doReset,b);
+ else if(act==='au-end')ausEndNow(arg);
+ else if(act==='au-del')delAusencia(arg);
  else if(act==='sh-fix'){const i=dirModal.querySelector('[data-shfix="'+arg+'"]');closeShiftAt(arg,i?i.value:'')}
  else if(act==='help')openTutorial(HELP_MAP[arg]||'Modo Jefe');
  else if(act==='pv-save')saveProveedor();
@@ -2592,6 +2864,10 @@ dirModal.addEventListener('click',e=>{
  else if(act==='bk-restore')document.getElementById('bkFile').click();
  else if(act==='gxsave')saveGasto();
  else if(act==='gx-sueldos')once('wages',payWages,b);
+ else if(act==='su-pay')once('sue-'+arg,()=>paySueldo(arg),b);
+ else if(act==='su-prev'){sueOff--;renderDir()}
+ else if(act==='su-next'){if(sueWeek()+7<=payMonday(0))sueOff++;renderDir()}
+ else if(act==='su-now'){sueOff=0;renderDir()}
  else if(act==='gxdel')deleteGasto(arg);
  else if(act==='pm'){per[arg[0]]={mode:arg.slice(1),off:0};renderDir()}
  else if(act==='pp'){per[arg].off--;renderDir()}
@@ -2618,6 +2894,11 @@ dirModal.addEventListener('click',e=>{
  else if(act==='emp-ct')downloadContract(arg);
  else if(act==='emp-save')empSave(arg);
  else if(act==='emp-del')empDelete(arg);
+ else if(act==='emp-up')once('up-'+arg,()=>empAscenso(arg),b);
+ else if(act==='emp-kick')once('kick-'+arg,()=>empKick(arg),b);
+ else if(act==='emp-reset')once('rst-'+arg,()=>empResetClave(arg),b);
+ else if(act==='emp-foto')empPickFoto(arg);
+ else if(act==='emp-nofoto')once('nf-'+arg,()=>empNoFoto(arg),b);
  else if(act==='scat'){stockCat=arg;renderDir()}
  else if(act==='splus'||act==='sminus'){
   const n=inputs[+arg].dataset.name, v=Math.min(999999,Math.max(0,(parseInt(stockDraft[n])||0)+(act==='splus'?1:-1)));
@@ -2654,7 +2935,7 @@ function empInput(t){
  const m=/^(emp|ee)(Name|Puesto|Sueldo|Inicio|Send|Horas)$/.exec(t.id||''); if(!m)return;
  const d=m[1]==='emp'?empDraft:eeDraft; if(!d)return;
  if(m[2]==='Name')d.name=t.value;
- else if(m[2]==='Puesto')d.puesto=t.value;
+ else if(m[2]==='Puesto'){const old=SUELDO_PUESTO[d.puesto], cur=parseMoney(d.sueldo);d.puesto=t.value;if(SUELDO_PUESTO[t.value]&&(!d.sueldo||cur===old)){d.sueldo=String(SUELDO_PUESTO[t.value]/100);const s=document.getElementById(m[1]+'Sueldo');if(s)s.value=d.sueldo}}
  else if(m[2]==='Sueldo'){const v=t.value.replace(/[^0-9.,]/g,'');if(v!==t.value)t.value=v;d.sueldo=v}
  else if(m[2]==='Inicio'){d.inicio=t.value;const el=document.getElementById(m[1]+'Prueba');if(el)el.innerHTML=pruebaTxt(t.value)}
  else if(m[2]==='Send')d.send=t.checked;
@@ -2847,13 +3128,15 @@ applyFs();
 {let hc=store.get('harrington_hc_v1')==='1';document.body.classList.toggle('hc',hc);document.getElementById('hcBtn').onclick=()=>{hc=!hc;document.body.classList.toggle('hc',hc);store.set('harrington_hc_v1',hc?'1':'0');say(hc?'Alto contraste activado':'Alto contraste desactivado')}}
 /* Pantalla de bienvenida: solo una vez por sesión */
 {const sp=document.getElementById('splash');let seen=false;try{seen=sessionStorage.getItem('harrington_splash')==='1';sessionStorage.setItem('harrington_splash','1')}catch(e){}
- if(seen)sp.remove();else{const nm=sp.querySelector('.sp-name');nm.innerHTML=[...nm.textContent].map((ch,i)=>`<i style="animation-delay:${(0.75+i*0.045).toFixed(3)}s">${ch===' '?'&nbsp;':ch}</i>`).join('');setTimeout(()=>{try{playThump()}catch(e){}},520);setTimeout(()=>sp.remove(),3000)}}
+ if(seen||(!window.__HG_NOGATE&&empleados.length))sp.remove();else{const nm=sp.querySelector('.sp-name');nm.innerHTML=[...nm.textContent].map((ch,i)=>`<i style="animation-delay:${(0.75+i*0.045).toFixed(3)}s">${ch===' '?'&nbsp;':ch}</i>`).join('');setTimeout(()=>{try{playThump()}catch(e){}},520);setTimeout(()=>sp.remove(),3000)}}
 /* Instalar como app (icono en la pantalla de inicio) */
 try{const m={name:'Harrington Gunsmith · Saint Denis',short_name:'Harrington',start_url:location.href.split('#')[0],display:'standalone',background_color:'#07140f',theme_color:'#07140f',icons:[{src:new URL('emblema-harrington.png',location.href).href,sizes:'512x512',type:'image/png'}]};
  const l=document.createElement('link');l.rel='manifest';l.href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));document.head.appendChild(l)}catch(e){}
 const TUTORIAL=[
+['Entrada y usuario',`<p>Al abrir la web aparece la <b>fachada de la tienda</b>. Pulsa <b>ENTRAR</b>: suena la campanilla, se abre la puerta y pasas dentro.</p>
+<ul><li>Toca <b>tu tarjeta</b> en «¿Quién entra hoy?» (las estrellas y galones indican el puesto; el sello rojo, que es jefe). La tarjeta se acerca y te pide <b>tu contraseña</b>; al acertarla se da la vuelta y te saluda.</li><li><b>La primera vez</b> que entras, la tarjeta te pide que <b>crees tu contraseña</b> (dos veces, mínimo 4 caracteres). A partir de ahí, solo tú puedes entrar con tu tarjeta. Si la olvidas, pídele a la dirección que te la resetee y la próxima vez crearás una nueva. Si fallas 5 veces seguidas, la tarjeta se bloquea un minuto.</li><li>Los jefes entran con la contraseña de jefe, que es compartida. La web te saluda por tu nombre con un resumen: tus horas de esta semana, si es día de pago, los encargos pendientes y quién está ausente.</li><li>La entrada dura unos 4 segundos. Si tienes prisa, toca la pantalla y pasas directamente a las tarjetas.</li><li><b>Tu usuario queda fijo</b> hasta que cierres la pestaña o la web. Sale arriba, junto a Dirección. Todo lo que hagas va a tu nombre: ventas, fichajes, ausencias y pedidos recibidos. No se puede cambiar de usuario sin cerrar y volver a abrir. Si recargas la página, sigues siendo tú.</li><li><b>Jefes</b>: las fichas con el puesto «Jefe» piden la <b>contraseña de jefe</b> (la misma para todos los jefes) cada vez que se entra. Con ella, el modo jefe y DIRECCIÓN quedan activados hasta que cierres la web; no se cierran por inactividad.</li><li>Si la dirección te <b>expulsa</b> (por ejemplo, si se te queda la sesión pillada), vuelves a la entrada con un aviso y tienes que elegir tu ficha otra vez. Si estabas fichado, se te ficha la salida en ese momento.</li></ul>`],
 ['Primeros pasos',`<p>Esta web es la calculadora de ventas, presupuestos y encargos de <b>Harrington Gunsmith</b>. Funciona igual en móvil y en ordenador.</p>
-<ul><li><b>FICHAJE</b> (barra de arriba): ▸ Fichar entrada y ◂ Fichar salida.</li><li><b>ENCARGOS</b>: los encargos guardados que aún no se han entregado.</li><li><b>JEFE</b>: acceso del jefe. Solo después de entrar aparece <b>DIRECCIÓN</b>.</li><li><b>PEDIDOS</b>: los pedidos a proveedores pendientes. La pestaña <b>MATERIALES</b> (junto a Venta y Presupuesto) muestra el almacén de materiales.</li><li><b>⚙</b> abre los ajustes: <b>música de fondo</b> (un piano de saloon, activado de serie; empieza a sonar en cuanto tocas la pantalla y se apaga aquí), <b>ambiente</b> (AUTO cambia solo entre día y noche según la hora española; también puedes dejar ☀ DÍA o ☾ NOCHE fijo), sonido y vibración, tamaño del texto (A− / A+) y alto contraste (◐). Cada móvil recuerda sus ajustes.</li><li>La placa dorada <b>EMPLEADO DE LA SEMANA</b> muestra quién más cobró la semana anterior.</li><li>En el tutorial, <b>▶ VISITA GUIADA</b> hace un recorrido rápido señalando cada botón.</li><li>Junto a FICHAJE ves cada empleado fichado con el tiempo que lleva, y el estado de la nube: «☁ guardando…» mientras se guarda algo y «☁ guardado ✓» cuando ya está.</li><li>Los avisos de error salen en <b>rojo</b> y duran más en pantalla; los normales, en verde.</li><li><b>? TUTORIAL</b> (esquina superior derecha) abre esta guía cuando la necesites.</li><li>El botón <b>↑</b> aparece al bajar mucho y te devuelve arriba.</li></ul>
+<ul><li><b>FICHAJE</b> (barra de arriba): ▸ Fichar entrada y ◂ Fichar salida.</li><li><b>ENCARGOS</b>: los encargos guardados que aún no se han entregado.</li><li><b>Tu nombre</b> (arriba): el usuario con el que has entrado. Si eres jefe, sale «· JEFE» y el botón <b>DIRECCIÓN</b>.</li><li>La placa <b>DÍA DE PAGO</b> (dorada) sale desde el domingo hasta que se pagan todos los sueldos; luego cambia a <b>SUELDOS PAGADOS</b> (verde) hasta el jueves. Cada uno ve en ella su propio sueldo.</li><li><b>PEDIDOS</b>: los pedidos a proveedores pendientes. La pestaña <b>MATERIALES</b> (junto a Venta y Presupuesto) muestra el almacén de materiales.</li><li><b>⚙</b> abre los ajustes: <b>música de fondo</b> (un piano de saloon, activado de serie; empieza a sonar en cuanto tocas la pantalla y se apaga aquí), <b>ambiente</b> (AUTO cambia solo entre día y noche según la hora española; también puedes dejar ☀ DÍA o ☾ NOCHE fijo), sonido y vibración, tamaño del texto (A− / A+) y alto contraste (◐). Cada móvil recuerda sus ajustes.</li><li>La placa dorada <b>EMPLEADO DE LA SEMANA</b> muestra quién más cobró la semana anterior.</li><li>En el tutorial, <b>▶ VISITA GUIADA</b> hace un recorrido rápido señalando cada botón.</li><li>Junto a FICHAJE ves cada empleado fichado con el tiempo que lleva, y el estado de la nube: «☁ guardando…» mientras se guarda algo y «☁ guardado ✓» cuando ya está.</li><li>Los avisos de error salen en <b>rojo</b> y duran más en pantalla; los normales, en verde.</li><li><b>? TUTORIAL</b> (esquina superior derecha) abre esta guía cuando la necesites.</li><li>El botón <b>↑</b> aparece al bajar mucho y te devuelve arriba.</li></ul>
 <p>Si recargas la página o se cierra el navegador, <b>la venta que tenías en curso se conserva</b>. Se borra solo con Vaciar o Nueva venta, y siempre pidiendo confirmación.</p>
 <p>Para tenerla como una app: en el menú del navegador, <b>Añadir a pantalla de inicio</b>.</p>`],
 ['Catálogo y categorías',`<ul><li>Los <b>botones con imagen</b> filtran los productos por categoría y cambian la imagen grande de arriba. «Todos» los muestra todos.</li><li>El <b>buscador</b> encuentra productos por su nombre, sin importar las tildes.</li><li>Cada fila tiene el dibujo de su categoría, el <b>nombre</b> (tócalo para ver su ficha con descripción, precio y si está disponible), el precio, la <b>cantidad</b> y el subtotal.</li><li>Para la cantidad usa <b>−</b> y <b>+</b>, o escribe el número. En la munición hay además <b>+10, +50 y +100</b>.</li><li>Los productos con cantidad se resaltan en dorado.</li><li><b>SIN STOCK</b>: no se puede añadir. Si intentas pasarte de lo que hay, la cantidad se corrige sola y te avisa. <b>Nunca</b> se muestra cuántas unidades quedan.</li><li>Los productos recién añadidos llevan la etiqueta <b>NUEVO</b>.</li></ul>`],
@@ -2888,20 +3171,28 @@ const TUTORIAL=[
 ['Empleados y contratos <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → EMPLEADOS</b>. Para incorporar a alguien rellena todos los datos:</p>
 <ul><li><b>Nombre</b> del empleado.</li><li><b>Puesto</b>: Jefe, Gerente, Armero experto, Armero o Aprendiz de armero.</li><li><b>Sueldo semanal</b> en dólares (por ejemplo 20 o 40).</li><li><b>Horas semanales</b>: viene puesto 10; cámbialo si hace falta.</li><li><b>Fecha de inicio</b> del contrato. El <b>periodo de prueba</b> es de una semana desde ese día y se calcula solo.</li></ul>
 <p>Al pulsar <b>ACEPTAR Y CREAR CONTRATO</b> el empleado aparece en todas las listas (ventas, fichaje, pedidos…) y se publica en el canal de Discord «Empleados» la <b>imagen del contrato</b> con todos sus datos.</p>
-<ul><li><b>✎ EDITAR</b>: cambia sus datos. Marca «Publicar el contrato actualizado» si quieres que salga otra vez en Discord. Los empleados que ya tenías aparecen con «Faltan los datos del contrato» hasta que los completes.</li><li><b>📜 CONTRATO</b>: descarga la imagen del contrato.</li><li><b>🗑 PAPELERA</b>: lo quita de las listas, sin borrar sus ventas ni fichajes.</li><li>Los sueldos se apuntan como gasto en <b>GASTOS → APUNTAR SUELDOS DE ESTA SEMANA</b>: con un toque crea el gasto de cada empleado con su sueldo de contrato (te pide confirmación y no repite los ya apuntados esa semana).</li><li>En <b>Registros semanales → Fichaje</b> ves las horas fichadas frente a las contratadas («8 h de 10 h»).</li><li>En el resumen de Dirección te avisa cuando termina el periodo de prueba de alguien.</li></ul>`],
+<ul><li><b>✎ EDITAR</b>: cambia sus datos. Marca «Publicar el contrato actualizado» si quieres que salga otra vez en Discord. Los empleados que ya tenías aparecen con «Faltan los datos del contrato» hasta que los completes.</li><li><b>📜 CONTRATO</b>: descarga la imagen del contrato.</li><li><b>🗑 PAPELERA</b>: lo quita de las listas, sin borrar sus ventas ni fichajes.</li><li>Los sueldos se pagan en <b>Dirección → SUELDOS</b> (mira la sección «Sueldos» de este tutorial).</li><li>Cada empleado muestra si está <b>conectado ahora</b> o cuándo se le vio por última vez, y si ya ha creado su contraseña.</li><li><b>🔑 RESET CONTRASEÑA</b>: borra la contraseña del empleado; la próxima vez que entre tendrá que crear una nueva. Nadie puede ver las contraseñas, ni siquiera la dirección.</li><li><b>📷 FOTO</b>: sube una foto del personaje (por ejemplo una captura del juego). Sale en el óvalo de su tarjeta de la entrada, en tono sepia, como un retrato antiguo. Sin foto, salen sus iniciales.</li><li><b>⏏ EXPULSAR</b>: cierra su sesión en todos sus dispositivos (por ejemplo, si se le ha quedado pillada) y, si estaba fichado, le ficha la salida en ese momento (sale en Discord como «fichada por la dirección al expulsarle»). Tendrá que volver a elegir su ficha. Los jefes también se pueden expulsar entre sí; a uno mismo, no.</li><li><b>⬆ ASCENSO</b>: sube al empleado al siguiente puesto con su sueldo: Aprendiz de armero ($20) → Armero ($25) → Armero experto ($30) → Gerente ($40, el tope). Se publica el contrato nuevo en Discord, sin periodo de prueba. El día del ascenso cobra todavía el sueldo antiguo y el nuevo cuenta desde el día siguiente.</li><li>Al crear un empleado, el sueldo se rellena solo según el puesto (Jefe $50, Gerente $40, Armero experto $30, Armero $25, Aprendiz $20). Puedes cambiarlo.</li><li>En <b>Registros semanales → Fichaje</b> ves las horas fichadas frente a las contratadas («8 h de 10 h»).</li><li>En el resumen de Dirección te avisa cuando termina el periodo de prueba de alguien.</li></ul>`],
 ['Clientes <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → CLIENTES → AÑADIR CLIENTE</b>: escribe su <b>nombre</b>, el tipo (particular o empresa) y su <b>telegrama</b> (obligatorio). El <b>número de identificación</b>, los <b>números de serie</b> y el <b>arma</b> son opcionales.</p>
 <ul><li><b>Armas vendidas · números de serie</b>: no es obligatorio rellenarlo al crearlo. Al escribir un número aparece otro hueco, hasta <b>20 por cliente</b>. Al lado puedes elegir qué arma es (opcional).</li><li><b>FICHA</b>: muestra todos sus datos. Al lado del número de identificación, del telegrama, de cada número de serie y de cada arma hay un botón <b>⧉ COPIAR</b> que lo copia al portapapeles para pegarlo donde quieras.</li><li>Con <b>EDITAR</b> puedes añadir más números de serie, cambiar datos o ponerle <b>precios especiales</b>.</li><li>Al crearlo se publica su ficha en el canal de Discord «Clientes» (con identificación, armas y números de serie) y, cada vez que le añades algo, <b>se actualiza ese mismo mensaje</b>.</li><li>Los clientes que se guardan solos al vender aparecen en la lista; su ficha sale en Discord la primera vez que los editas o que se les apunta un número de serie.</li><li>Los números de serie también se pueden apuntar <b>al vender</b>: al finalizar una venta con armas sale una ventana para escribirlos.</li><li>La ficha se ve como una <b>tarjeta de registro</b> de papel.</li></ul>`],
-['Fichaje',`<ul><li><b>▸ Fichar entrada</b>: elige tu nombre en la lista (la crea el jefe).</li><li>Pueden estar fichados <b>varios empleados a la vez</b> en el mismo dispositivo.</li><li><b>◂ Fichar salida</b>: si hay varios, eliges quién sale. Se muestra el registro con el tiempo trabajado y puedes copiarlo o descargarlo.</li><li><b>Último registro</b> vuelve a abrir el último fichaje.</li><li>Al fichar la entrada, la web te saluda; al fichar la salida, te dice cuánto has vendido hoy.</li><li>Si alguien lleva <b>más de 8 horas</b> fichado, su placa se pone en rojo («¿olvidó fichar la salida?») y sale un aviso en Dirección. El jefe lo cierra en <b>Dirección → Registros horarios → TURNOS ABIERTOS</b>, poniendo la <b>hora real de salida</b>, para que las horas cuadren.</li><li>Cuando ficha la salida el <b>último empleado</b>, se publica en Discord, en su canal «Resumen del día», un resumen: ventas, gastos, beneficio, encargos nuevos, pedidos recibidos, unidades fabricadas y quién ha trabajado.</li></ul>`],
-['Modo Jefe y Dirección <span class="tag boss">SOLO JEFE</span>',`<ul><li><b>JEFE</b>: la primera vez crea una contraseña y una <b>palabra de seguridad</b>. Si olvidas la contraseña, «Cambiar contraseña» pide la palabra y te deja poner otra. El modo se cierra solo tras 5 minutos sin tocar nada.</li></ul>
+['Sueldos',`<p>Los sueldos van por <b>semanas de lunes a domingo</b> y se pagan <b>el domingo</b>. Están en <b>Dirección → Ventas y caja → SUELDOS</b>.</p>
+<ul><li>Cada empleado con contrato sale con las <b>horas que ha echado</b> esa semana y lo que le toca cobrar, calculado sobre el <b>sueldo de su contrato</b>.</li><li>Si ha echado todas sus horas cobra el <b>sueldo íntegro</b>.</li><li>Si le faltan horas se le <b>descuenta lo proporcional</b>: sueldo ÷ horas de contrato × horas que faltan. Ej.: sueldo de $50 por 10 h y ha echado 7 h → $50 ÷ 10 = $5 la hora × 3 h = −$15 → cobra <b>$35</b>. Se cuenta también por minutos.</li><li>Si ha echado <b>de más</b>, cobra su sueldo íntegro y se muestra aparte, por ejemplo «+2 h extra». Las horas extra no se pagan solas: tú decides.</li><li>Las horas cuentan <b>hasta que pulsas PAGAR</b>. Lo que se fiche después ese domingo pasa a la semana siguiente.</li><li><b>Ascenso a mitad de semana</b>: cada día se cobra con el sueldo que tenía ese día. El día del ascenso, el antiguo; desde el día siguiente, el nuevo. Ej.: armero ($25) que asciende el martes a armero experto ($30): lunes y martes 2 × $25 ÷ 7 + de miércoles a domingo 5 × $30 ÷ 7 = <b>$28.57</b>.</li><li>Ausencias: con 3 o 4 días esa semana solo se le exigen la mitad de sus horas; con más de 4 días queda exento y cobra el sueldo íntegro.</li><li>Pulsa <b>PAGAR</b> en cada empleado: se apunta en <b>GASTOS</b> (tipo Sueldos) con la fecha del pago, así que entra en la semana de cuentas (viernes a jueves) en curso, y se sincroniza con todos los dispositivos. Nada se paga solo: siempre tienes que pulsar tú.</li><li>No se puede pagar dos veces el mismo sueldo, ni desde dos dispositivos. Si te equivocas, borra ese gasto en GASTOS y podrás pagarlo de nuevo.</li><li>Con ◂ ▸ ves semanas anteriores y la <b>semana en curso</b> (provisional, todavía no se puede pagar).</li></ul>
+<p><b>Placa de la pantalla principal</b> (la ven todos):</p>
+<ul><li><b>DÍA DE PAGO</b> en dorado desde el domingo, mientras quede algún sueldo por pagar, con «3 de 5 sueldos pagados». Si no se paga el domingo, sigue saliendo hasta que se pague.</li><li>Al pagar el último, cambia sola a <b>SUELDOS PAGADOS</b> en verde en todos los dispositivos, y se queda hasta el jueves.</li><li>Cada empleado ve también <b>su propio sueldo</b> y si está pagado. El de los demás solo lo ves tú.</li><li>Tócala para ir directamente a SUELDOS.</li></ul>
+<p><b>Discord</b>: al pagar el último sueldo de la semana se publica <b>un solo mensaje</b> en el canal «Sueldos» con todos los empleados: horas echadas, sueldo, si es íntegro o cuánto se le ha descontado y lo pagado.</p>`],
+['Ausencias',`<p>Si no vas a poder entrar al servidor durante un tiempo, avísalo con el botón <b>AUSENCIAS</b> (arriba, junto a Pedidos):</p>
+<ol><li>Pulsa <b>+ AVISAR DE UNA AUSENCIA</b>.</li><li>Elige tu <b>nombre</b>, <b>desde</b> cuándo (ahora, mañana, pasado mañana u otra fecha) y la <b>duración</b>: horas, días, semanas o «sin fecha de vuelta», y cuántas.</li><li>Elige el <b>motivo</b> y explícalo en el recuadro.</li><li>Pulsa <b>CONFIRMAR AUSENCIA</b>. La web te dice cuándo vuelves aproximadamente.</li></ol>
+<ul><li>Tus compañeros solo ven que estás ausente y hasta cuándo («Arthur · ausente hasta el lunes»). <b>El motivo solo lo ve la dirección</b>, en Dirección → AUSENCIAS y en el canal de Discord «Ausencias».</li><li>Si vuelves antes, pulsa <b>✓ HE VUELTO</b>. Al fichar la entrada, una ausencia en curso se termina sola.</li><li>Las ausencias futuras se pueden <b>anular</b>.</li><li><b>Horas semanales</b> (semana de sueldos, de lunes a domingo): con menos de 3 días de ausencia esa semana tienes que echar todas tus horas; con 3 o 4 días, la mitad; con más de 4 días, quedas exento esa semana. En SUELDOS se ve así: «de 5 h (ausente 3 días: la mitad)» o «EXENTO».</li></ul>`],
+['Fichaje',`<ul><li><b>▸ Fichar entrada</b>: te ficha a ti directamente (el usuario con el que has entrado).</li><li>Arriba se ven todos los compañeros que están fichados ahora.</li><li><b>◂ Fichar salida</b>: ficha tu salida. Se muestra el registro con el tiempo trabajado y puedes copiarlo o descargarlo.</li><li><b>Último registro</b> vuelve a abrir el último fichaje.</li><li>Al fichar la entrada, la web te saluda; al fichar la salida, te dice cuánto has vendido hoy.</li><li>Si alguien lleva <b>más de 8 horas</b> fichado, su placa se pone en rojo («¿olvidó fichar la salida?») y sale un aviso en Dirección. El jefe lo cierra en <b>Dirección → Registros horarios → TURNOS ABIERTOS</b>, poniendo la <b>hora real de salida</b>, para que las horas cuadren.</li><li>Cuando ficha la salida el <b>último empleado</b>, se publica en Discord, en su canal «Resumen del día», un resumen: ventas, gastos, beneficio, encargos nuevos, pedidos recibidos, unidades fabricadas y quién ha trabajado.</li></ul>`],
+['Modo Jefe y Dirección <span class="tag boss">SOLO JEFE</span>',`<ul><li>Los jefes entran eligiendo su ficha (puesto «Jefe») y escribiendo la <b>contraseña de jefe</b>, que es la misma para todos. La primera vez se crea la contraseña y una <b>palabra de seguridad</b>. Si olvidas la contraseña, «Cambiar contraseña» pide la palabra y te deja poner otra.</li><li>El modo jefe se queda activado hasta que cierras la web.</li><li>Mientras no haya ningún empleado con el puesto «Jefe», sigue estando el botón <b>JEFE</b> de arriba para entrar con la contraseña (por ejemplo, la primera vez).</li></ul>
 <p><b>DIRECCIÓN</b> abre la consola: resumen de hoy (ventas, gastos, beneficio, encargos, stock bajo, pedidos, materiales y empleados en prueba), una lista de <b>AVISOS</b> (pruebas que terminan, encargos vencidos, pedidos que tardan, stock o materiales bajos), el gráfico de la semana y las herramientas, agrupadas en <b>secciones plegables</b> (Ventas y caja, Catálogo, Almacén y fabricación, Proveedores, Personal, Clientes, Sistema). La web recuerda qué secciones dejas abiertas. En el ordenador, el resumen y los apartados se ven en <b>cuadrícula</b>. Dentro de cada apartado, el botón <b>? AYUDA</b> abre directamente su explicación en este tutorial. <b>Las semanas de las cuentas van de viernes a jueves</b>.</p><p>En Modo Jefe, al tocar el nombre de un producto del catálogo, su ficha muestra además el stock exacto, las unidades vendidas esta semana, la receta, el coste y el margen. El ranking semanal lleva medallas y el registro de stock, barras de nivel.</p>
-<ul><li><b>Convenios y ofertas</b>: crear, ver y eliminar.</li><li><b>Empleados</b> (puesto, sueldo, contrato) y <b>Clientes</b> (telegrama, números de serie y precios especiales).</li><li><b>Productos y precios</b>: cambiar precios y añadir productos.</li><li><b>Stock</b>: sumar existencias (fabricar) con − / + y fijar el mínimo (el semáforo marca verde, ámbar o rojo). <b>Fabricación</b>: las recetas de materiales. <b>Registro de stock</b>: existencias y movimientos.</li><li><b>Registros horarios, de ventas</b> (buscar y <b>anular</b>) y <b>semanales</b> (con descarga).</li><li><b>Gastos</b>, <b>Balance de cuentas</b> y <b>Cierre de caja</b>, cada uno con descarga y «Enviar a Discord».</li><li><b>Proveedores</b>, <b>Realizar nuevo pedido</b> y <b>Registro de pedidos</b>.</li><li><b>Discord</b>, <b>Nube</b>, <b>Copia de seguridad</b> y <b>Resetear datos</b> (borra ventas, gastos, encargos y demás, sin tocar empleados ni configuración).</li></ul>`],
+<ul><li><b>Convenios y ofertas</b>: crear, ver y eliminar.</li><li><b>Sueldos</b>: el pago de los domingos (semana de lunes a domingo) según las horas echadas, con el botón PAGAR.</li><li><b>Ausencias</b>: quién está ausente, hasta cuándo y el motivo (solo tú lo ves); puedes darlas por terminadas o borrarlas.</li><li><b>Empleados</b> (puesto, sueldo, contrato) y <b>Clientes</b> (telegrama, números de serie y precios especiales).</li><li><b>Productos y precios</b>: cambiar precios y añadir productos.</li><li><b>Stock</b>: sumar existencias (fabricar) con − / + y fijar el mínimo (el semáforo marca verde, ámbar o rojo). <b>Fabricación</b>: las recetas de materiales. <b>Registro de stock</b>: existencias y movimientos.</li><li><b>Registros horarios, de ventas</b> (buscar y <b>anular</b>) y <b>semanales</b> (con descarga).</li><li><b>Gastos</b>, <b>Balance de cuentas</b> y <b>Cierre de caja</b>, cada uno con descarga y «Enviar a Discord».</li><li><b>Proveedores</b>, <b>Realizar nuevo pedido</b> y <b>Registro de pedidos</b>.</li><li><b>Discord</b>, <b>Nube</b>, <b>Copia de seguridad</b> y <b>Resetear datos</b> (borra ventas, gastos, encargos y demás, sin tocar empleados ni configuración).</li></ul>`],
 ['Datos y dispositivos',`<p>Todos los datos están en la <b>nube</b> y se comparten entre los móviles en pocos segundos:</p>
 <ul><li><b>Configuración</b>: empleados, clientes, proveedores, convenios y ofertas, precios, productos nuevos, Discord, mínimos de stock y la contraseña del jefe.</li><li><b>Operación</b>: stock, ventas, encargos, pedidos a proveedores, fichajes, gastos y cierres. Los números de venta y el stock los controla la nube, así que nunca se repiten ni se vende lo que ya no hay.</li></ul>
 <p>Los cambios llegan a los demás móviles <b>al instante</b>: la nube avisa en cuanto algo cambia. Si ese aviso no funcionara, cada móvil sigue comprobando la nube cada pocos segundos. Arriba, junto a FICHAJE, ves «☁ conectado», «☁ guardando…», «☁ guardado ✓» o «☁ sin conexión». <b>Sin conexión</b> puedes mirar el catálogo y hacer presupuestos, pero no finalizar ventas ni cambiar el stock. Los cambios de configuración se suben solos al volver la conexión.</p>
 <p>Haz una <b>copia de seguridad</b> de vez en cuando desde Dirección.</p>`],
 ['Si algo no funciona',`<ul><li><b>No deja finalizar</b>: lee el aviso; suele faltar cliente, empleado, telegrama, pago adelantado o stock.</li><li><b>Producto SIN STOCK</b>: el jefe debe sumar existencias.</li><li><b>No suena</b>: en ⚙ comprueba que el sonido diga «♪ SÍ» y el volumen del móvil.</li><li><b>Un botón no responde</b>: si muestra ⏳, está guardando; espera a que termine.</li><li><b>No suena la música</b>: los navegadores no dejan sonar nada hasta que tocas la pantalla; toca cualquier sitio. Si sigue sin sonar, en ⚙ comprueba que «Música de fondo» diga «♫ SÍ».</li><li><b>Se lee poco</b>: usa A+ o el alto contraste ◐.</li><li><b>No ves un cambio reciente</b>: abre la web en una pestaña privada.</li></ul>`]];
 const tutModal=document.getElementById('tutModal');
-const HELP_MAP={convenios:'Convenios',empleados:'Empleados y contratos',clientes:'Clientes',productos:'Modo Jefe',stock:'Fabricación y recetas',fabricacion:'Fabricación y recetas',regstock:'Modo Jefe',horarios:'Fichaje',ventas:'Modo Jefe',semanales:'Ticket, copias y Discord',gastos:'Empleados y contratos',balance:'Ticket, copias y Discord',cierre:'Modo Jefe',proveedores:'Proveedores y pedidos',nuevopedido:'Proveedores y pedidos',regpedidos:'Proveedores y pedidos',discord:'Ticket, copias y Discord',nube:'Datos y dispositivos',reset:'Datos y dispositivos',copia:'Datos y dispositivos'};
+const HELP_MAP={sueldos:'Sueldos',ausencias:'Ausencias',convenios:'Convenios',empleados:'Empleados y contratos',clientes:'Clientes',productos:'Modo Jefe',stock:'Fabricación y recetas',fabricacion:'Fabricación y recetas',regstock:'Modo Jefe',horarios:'Fichaje',ventas:'Modo Jefe',semanales:'Ticket, copias y Discord',gastos:'Empleados y contratos',balance:'Ticket, copias y Discord',cierre:'Modo Jefe',proveedores:'Proveedores y pedidos',nuevopedido:'Proveedores y pedidos',regpedidos:'Proveedores y pedidos',discord:'Ticket, copias y Discord',nube:'Datos y dispositivos',reset:'Datos y dispositivos',copia:'Datos y dispositivos'};
 function openTutorial(focus){
  if(typeof focus!=='string')focus='';
  document.getElementById('tutBody').innerHTML='<div class="tour-wrap"><button type="button" class="tour-start" id="tourStart">▶ VISITA GUIADA</button><span>Un recorrido rápido que te señala cada botón.</span></div><p class="tut-intro">Toca cada apartado para ver cómo funciona. Puedes abrir esta guía cuando quieras con el botón «? TUTORIAL» de arriba a la derecha.</p>'+TUTORIAL.map((t,i)=>`<details class="tut"${i===0&&!focus?' open':''}><summary><span class="tut-n">${i+1}</span>${t[0]}</summary><div class="tut-c">${t[1]}</div></details>`).join('');
@@ -2917,7 +3208,7 @@ const TOUR=[
  ['#products .product .qty','Elige la cantidad con − y +, o escríbela. Lo que no tiene stock sale como SIN STOCK.'],
  ['#opType','Venta normal o Encargo (el encargo pide telegrama y pago por adelantado).'],
  ['#clientName','El nombre del cliente. Si ya es cliente de la casa, aparece como sugerencia.'],
- ['#empSel','Tu nombre: es obligatorio para finalizar.'],
+ ['#empSel','Tu nombre: va solo, es el usuario con el que has entrado.'],
  ['#finish','Este botón te dice qué falta. Cuando está todo, se pone verde: púlsalo para finalizar y sale el ticket.'],
  ['#encBtn','Los encargos pendientes de entregar.'],
  ['#pedBtn','Los pedidos a proveedores: márcalos como recibidos cuando llegue la mercancía.'],
@@ -3019,7 +3310,7 @@ function fmtDuration(a,b){const m=Math.max(0,Math.round((b-a)/60000));return `${
 function renderClock(){
  const el=m=>{const mm=Math.max(0,Math.floor(m/60000));return mm<60?mm+' min':Math.floor(mm/60)+' h '+pad(mm%60)+' min'};
  clockStatus.innerHTML=shifts.length?shifts.map(x=>{const lg=Date.now()-x.start>MAX_SHIFT_H*3600000;return `<span class="shift-chip${lg?' long':''}" title="Entrada: ${esc(fmtTime(x.start))}"><i></i>${lg?'⚠ ':''}${esc(x.name)} · ${el(Date.now()-x.start)}${lg?' · ¿olvidó fichar la salida?':''}</span>`}).join(''):'Sin fichar';
- clockOutBtn.hidden=!shifts.length;
+ {const me=meEmp(), mine=me&&shifts.some(x=>x.empId===me.id);clockOutBtn.hidden=me?!mine:!shifts.length;clockBtn.hidden=!!mine}
  lastShiftBtn.hidden=!lastShift;
 }
 setInterval(()=>{if(shifts.length)renderClock()},30000);
@@ -3037,6 +3328,8 @@ function fillEmployeeSelect(list,last){
  employeeInput.value=list.some(e=>e.id===last)?last:'';
 }
 function openEntry(){
+ const me=meEmp();
+ if(me){if(shifts.some(x=>x.empId===me.id))return say('Ya has fichado la entrada');entryMode='in';fillEmployeeSelect([me],me.id);return acceptEntry()}
  const free=empleados.filter(e=>!shifts.some(x=>x.empId===e.id));
  if(!empleados.length)return say('Dirección todavía no ha creado empleados');
  if(!free.length)return say('Todos los empleados ya han fichado la entrada');
@@ -3047,6 +3340,7 @@ function openEntry(){
 }
 function openExit(){
  if(!shifts.length)return;
+ {const me=meEmp();if(me){if(shifts.some(x=>x.empId===me.id))return doExit(me.id);return say('No has fichado la entrada')}}
  if(shifts.length===1)return doExit(shifts[0].empId);
  entryMode='out';
  document.getElementById('entryTitle').textContent='Fichar salida';
@@ -3063,6 +3357,7 @@ function acceptEntry(){
  if(!emp)return say('Selecciona un empleado');
  const sh={name:emp.name,empId:emp.id,start:Date.now()};
  shifts.push(sh);store.set(KEY_SHIFT,JSON.stringify(shifts));store.set(KEY_EMPLOYEE,emp.id);cloudPut('fichaje:'+emp.id,sh);
+ ausencias.filter(a=>a.empId===emp.id&&ausActive(a)).forEach(a=>ausEndNow(a.id,true));
  closeModal(entryModal);renderClock();say(`${saludo()}, ${emp.name}. Entrada a las ${fmtTime(sh.start)}: que sea una jornada próspera.`,'long');
  discordSend('fichajes','ENTRADA · '+emp.name+'\n'+fmtDate(sh.start)+' '+fmtTime(sh.start));
 }
@@ -3090,7 +3385,7 @@ function endShift(sh,end,fixedBy){
  store.set(KEY_LASTSHIFT,JSON.stringify(lastShift));logShift(lastShift);
  shifts=shifts.filter(x=>x!==sh);if(shifts.length)store.set(KEY_SHIFT,JSON.stringify(shifts));else store.remove(KEY_SHIFT);cloudDel('fichaje:'+sh.empId);
  renderClock();
- discordSend('fichajes',(fixedBy?'SALIDA CORREGIDA POR LA DIRECCIÓN\n':'')+shiftText(lastShift));
+ discordSend('fichajes',(fixedBy==='expel'?'SALIDA FICHADA POR LA DIRECCIÓN AL EXPULSARLE\n':fixedBy?'SALIDA CORREGIDA POR LA DIRECCIÓN\n':'')+shiftText(lastShift));
  if(!shifts.length)setTimeout(()=>sendDaySummary(),1500);
 }
 function closeShiftAt(empId,hhmm){
@@ -3222,7 +3517,7 @@ function applyRemote(clave,val,t){
  cloud.applying=false;cloud.stamps[clave]=t;
  const same=prev===JSON.stringify(val);
  if(same)return;
- if(clave==='empleados'){empleados=Array.isArray(val)?val:[];renderCustomer()}
+ if(clave==='empleados'){empleados=Array.isArray(val)?val:[];renderCustomer();try{applyMe();if(G.open&&gate.dataset.ph==='cards')gateCards();else gateCheck()}catch(e){}}
  else if(clave==='clientes'){clientes=Array.isArray(val)?val:[];refreshClientList()}
  else if(clave==='descuentos'){descuentos=Array.isArray(val)?val:[];renderCustomer()}
  else if(clave==='precios'){applyPrices(val&&typeof val==='object'?val:{})}
@@ -3376,12 +3671,20 @@ function applyRecord(clave,valor){
   encargos.sort((a,b)=>(a.ts||0)-(b.ts||0));cloud.sig[clave]=JSON.stringify(valor);
   try{localStorage.setItem(KEY_ENC,JSON.stringify(encargos))}catch(e){}
   updateEncBtn();
+ }else if(type==='ausencia'){
+  const k=ausencias.findIndex(x=>x.id===id);
+  if(del){if(k>=0)ausencias.splice(k,1)}else if(k>=0)ausencias[k]=valor;else ausencias.push(valor);
+  ausencias.sort((a,b)=>(a.start||0)-(b.start||0));
+  try{localStorage.setItem(KEY_AUS,JSON.stringify(ausencias))}catch(e){}
+  updateAusBtn();if(!ausModal.hidden&&ausView==='list')renderAus();
  }else if(type==='pedido'){
   const k=pedidos.findIndex(x=>x.id===id);
   if(del){if(k>=0)pedidos.splice(k,1)}else if(k>=0)pedidos[k]=valor;else pedidos.push(valor);
   pedidos.sort((a,b)=>(a.ts||0)-(b.ts||0));
   try{localStorage.setItem(KEY_PEDIDOS,JSON.stringify(pedidos))}catch(e){}
   updatePedBtn();
+ }else if(type==='expulsion'){
+  onExpulsion(id,valor);
  }else if(type==='fichaje'){
   shifts=shifts.filter(x=>x.empId!==id);if(!del)shifts.push(valor);
   try{localStorage.setItem(KEY_SHIFT,JSON.stringify(shifts))}catch(e){}
@@ -3412,17 +3715,18 @@ function wipeOps(){
  cloud.sig={};cloud.since='';cloud.revSeen=0;cloud.outbox=[];saveOutbox();
  try{localStorage.removeItem('harrington_cloud_since')}catch(e){}
  pedidos=[];store.remove(KEY_PEDIDOS);updatePedBtn();
+ ausencias=[];store.remove(KEY_AUS);updateAusBtn();
  updateEncBtn();renderClock();renderCustomer();
 }
 /* Reseteo: borra en este dispositivo los datos de operación indicados */
-const RESET_TYPES={ventas:['venta:'],pedidos:['pedido:'],encargos:['encargo:'],gastos:['gasto:'],cierres:['cierre:'],fichajes:['turno:','fichaje:'],movimientos:['mov:'],stock:[],materiales:[]};
+const RESET_TYPES={ventas:['venta:'],pedidos:['pedido:'],encargos:['encargo:'],gastos:['gasto:','sueldo-','sueldos-'],cierres:['cierre:'],fichajes:['turno:','fichaje:','ausencia:'],movimientos:['mov:'],stock:[],materiales:[]};
 function wipeLocal(what){
  if(what.indexOf('ventas')>=0){store.remove(KEY_SALELOG);store.remove(KEY_COUNTER);sale=null;store.remove(KEY_SALE)}
  if(what.indexOf('encargos')>=0){encargos=[];store.remove(KEY_ENC);loadedEnc=null;store.remove(KEY_LOADED);cloud.sig={};updateEncBtn();renderCustomer()}
  if(what.indexOf('gastos')>=0){gastos=[];store.remove(KEY_GASTOS)}
  if(what.indexOf('pedidos')>=0){pedidos=[];store.remove(KEY_PEDIDOS);updatePedBtn()}
  if(what.indexOf('cierres')>=0)store.remove(KEY_CIERRES);
- if(what.indexOf('fichajes')>=0){store.remove(KEY_SHIFTLOG);store.remove(KEY_LASTSHIFT);shifts=[];lastShift=null;store.remove(KEY_SHIFT);renderClock()}
+ if(what.indexOf('fichajes')>=0){store.remove(KEY_SHIFTLOG);store.remove(KEY_LASTSHIFT);shifts=[];lastShift=null;store.remove(KEY_SHIFT);renderClock();ausencias=[];store.remove(KEY_AUS);updateAusBtn()}
  if(what.indexOf('movimientos')>=0)store.remove(KEY_STOCKLOG);
  const pre=[];what.forEach(w=>(RESET_TYPES[w]||[]).forEach(x=>pre.push(x)));
  cloud.outbox=cloud.outbox.filter(o=>!pre.some(x=>o.clave.indexOf(x)===0));saveOutbox();
@@ -3466,11 +3770,11 @@ async function cloudPoll(force){
   }
   if(cloud.outbox.length)cloudFlushOutbox();
   cloud.last=Date.now();
-  autoWeekly();renderEmpWeek();
+  autoWeekly();renderEmpWeek();renderPayPlate();
  }catch(e){setCloudState(false)}
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){cloudPoll();rtConnect()}});
-setTimeout(()=>{try{updateFinish();renderEmpWeek()}catch(e){}},400);
+setTimeout(()=>{try{updateFinish();renderEmpWeek();updateAusBtn();renderPayPlate()}catch(e){}},400);
 /* Aviso instantáneo: Supabase avisa en el momento en que cambia algo y este móvil se actualiza al instante.
    Si ese canal no funciona, se sigue preguntando a la nube cada 6 segundos como siempre. */
 const rt={ws:null,ref:0,hb:null,ok:false,got:0,retry:0,timer:null};
@@ -3507,8 +3811,392 @@ document.querySelectorAll('img').forEach(img=>{
  if(img.complete&&img.naturalWidth===0)imgFallback(img);
 });
 
+/* ===== Usuario de la sesión: se elige al entrar y no se cambia hasta cerrar la web ===== */
+var ME=null;try{ME=JSON.parse(sessionStorage.getItem('harrington_me_v1')||'null')}catch(e){}
+const ICO_USER='<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.5-6.5 8-6.5s7 2 8 6.5"/></svg>';
+function meEmp(){return ME&&ME.id?empleados.find(e=>e.id===ME.id)||null:null}
+function isJefe(e){return !!e&&e.puesto==='Jefe'}
+function hasJefes(){return empleados.some(isJefe)}
+function setMe(e){ME=e?{id:e.id,at:Date.now()}:null;try{if(ME)sessionStorage.setItem('harrington_me_v1',JSON.stringify(ME));else sessionStorage.removeItem('harrington_me_v1')}catch(x){}applyMe();presencePing(true)}
+function applyMe(){
+ const me=meEmp(), chip=document.getElementById('meChip');
+ document.body.classList.toggle('has-me',!!me);
+ if(chip){chip.hidden=!me;if(me)chip.innerHTML=ICO_USER+esc(me.name)+(bossActive?' · JEFE':'')}
+ bossBtn.hidden=!!me&&hasJefes();
+ refreshEmpSelect();renderClock();renderPayPlate();
+}
+/* Expulsar: la dirección cierra la sesión de un empleado en todos sus dispositivos y le ficha la salida */
+var EXPUL={};
+function onExpulsion(id,v){
+ EXPUL[id]=v;
+ if(ME&&ME.id===id&&v&&!v.deleted&&v.ts>ME.at){
+  setMe(null);if(bossActive)setBoss(false);
+  document.querySelectorAll('.modal-overlay:not([hidden])').forEach(m=>closeModal(m));
+  gateOpen({quick:true,msg:'⏏ La dirección ha cerrado tu sesión'+(v.by?' ('+v.by+')':'')+'. Vuelve a elegir tu ficha.'});
+ }
+}
+async function empKick(id){
+ const e=empleados.find(x=>x.id===id);if(!e)return;
+ const sh=shifts.find(x=>x.empId===id);
+ if(!await askConfirm('Expulsar','Se cerrará la sesión de '+e.name+' en todos sus dispositivos'+(sh?' y se le fichará la salida (lleva '+fmtDuration(sh.start,Date.now())+').':'.')+' Tendrá que volver a elegir su ficha al entrar.','Expulsar'))return;
+ if(sh)endShift(sh,Date.now(),'expel');
+ cloudPut('expulsion:'+id,{ts:Date.now(),by:meEmp()?meEmp().name:''});
+ say(e.name+' ha sido expulsado'+(sh?' y se le ha fichado la salida':''));renderDir();
+}
+/* Conectados: cada dispositivo avisa a la nube cada 2 minutos de quién lo está usando */
+/* una fila por pestaña abierta (se guarda en la pestaña, así sobrevive a recargar la página) */
+var DEV_ID='';try{DEV_ID=sessionStorage.getItem('harrington_tab')||'';if(!DEV_ID){DEV_ID='t'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);sessionStorage.setItem('harrington_tab',DEV_ID)}}catch(e){DEV_ID='t'+Math.random().toString(36).slice(2,9)}
+var PRES={map:{},at:0,was:''};
+function presencePing(force){
+ const me=meEmp();if(!me&&!PRES.was)return;
+ if(me)PRES.was=me.id;
+ sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify([{clave:'presencia-'+DEV_ID,valor:{emp:me?me.id:'',prev:PRES.was,ts:Date.now()},actualizado:new Date().toISOString()}])}).catch(()=>{});
+ if(!me)PRES.was='';
+}
+setInterval(()=>{if(document.visibilityState==='visible'&&meEmp())presencePing()},120000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&meEmp())presencePing()});
+async function loadPresence(force){
+ if(!force&&Date.now()-PRES.at<15000)return paintPresence();
+ PRES.at=Date.now();
+ try{
+  const r=await sbFetch('/rest/v1/datos?select=clave,valor&clave=like.presencia-*');if(!r.ok)return;
+  const rows=await r.json(), m={};let gc=0;
+  rows.forEach(x=>{const v=x.valor||{}, id=v.emp||v.prev;if(Date.now()-(v.ts||0)>14*86400000&&gc++<10){sbFetch('/rest/v1/datos?clave=eq.'+encodeURIComponent(x.clave),{method:'DELETE'}).catch(()=>{});return}if(!id)return;const o=m[id]||(m[id]={last:0,on:false});if(v.ts>o.last)o.last=v.ts;if(v.emp&&Date.now()-v.ts<300000)o.on=true});
+  PRES.map=m;paintPresence();
+ }catch(e){}
+}
+function presTxt(id){const o=PRES.map[id];if(!o)return ['','Sin conexión registrada'];if(o.on)return ['on','Conectado ahora'];return ['','Visto por última vez: '+(fmtDate(o.last)===fmtDate(Date.now())?'hoy':fmtDate(o.last))+' a las '+fmtTime(o.last)]}
+function paintPresence(){document.querySelectorAll('[data-pres]').forEach(el=>{const t=presTxt(el.dataset.pres);el.className='pres '+t[0];el.textContent=t[1]})}
+setInterval(()=>{if(!dirModal.hidden&&dirMod==='empleados')loadPresence()},30000);
+function empExtra(e){
+ const me=meEmp(), self=me&&me.id===e.id, jf=isJefe(e), ph=PHOTOS[e.id];
+ return `<div class="it">${ph?`<img class="emp-ph" src="${ph}" alt="">`:''}<span class="pres" data-pres="${esc(e.id)}">…</span>${jf?'<span class="clv ok">🔑 Entra con la contraseña de jefe</span>':`<span class="clv" data-clave="${esc(e.id)}">🔑 …</span>`}</div>
+  <div class="enc-actions two">${jf?'<span></span>':`<button type="button" data-dir="emp-reset:${esc(e.id)}">🔑 RESET CONTRASEÑA</button>`}<button type="button" data-dir="emp-foto:${esc(e.id)}">📷 ${ph?'CAMBIAR FOTO':'FOTO'}</button></div>${ph?`<div class="enc-actions"><button type="button" class="warn" data-dir="emp-nofoto:${esc(e.id)}">QUITAR FOTO</button></div>`:''}`+(self?'':`<div class="enc-actions"><button type="button" class="warn" data-dir="emp-kick:${esc(e.id)}">⏏ EXPULSAR</button></div>`);
+}
+
+/* ===== Entrada: fachada, puerta, «¿Quién entra hoy?» y saludo ===== */
+const gate=document.getElementById('gate'), gUi=document.getElementById('gUi');
+var G={open:false,pending:null,pendMode:'',timers:[],img:false,fx:null,fails:{},lock:{},big:null,pw:null};
+var PHOTOS={};try{PHOTOS=JSON.parse(localStorage.getItem('harrington_fotos_v1')||'{}')||{}}catch(e){PHOTOS={}}
+var CLAVES={};try{CLAVES=JSON.parse(localStorage.getItem('harrington_claves_v1')||'{}')||{}}catch(e){CLAVES={}}
+function gT(fn,ms){G.timers.push(setTimeout(fn,ms))}
+function gClear(){G.timers.forEach(clearTimeout);G.timers=[]}
+function gPh(p){gate.dataset.ph=p}
+const gReduced=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+function gateLoadImg(){
+ const tryU=(u,next)=>{const im=new Image();im.onload=()=>{gate.style.setProperty('--gimg','url("'+u+'")');gate.classList.add('img-ok');gate.classList.remove('no-img');G.img=true};im.onerror=()=>{if(next)tryU(next,null);else gate.classList.add('no-img')};im.src=u};
+ tryU('entrada-fachada.png','entrada-fachada.png.png');
+}
+function gateCheck(){if(window.__HG_NOGATE||G.open||meEmp())return;if(empleados.length)gateOpen()}
+function gateOpen(opt){
+ opt=opt||{};G.open=true;gClear();G.pending=null;G.msg=opt.msg||'';G.big=null;
+ const sp=document.getElementById('splash');if(sp)sp.remove();
+ document.body.classList.add('gate-open');gate.hidden=false;
+ const st=document.getElementById('gSignTxt');st.innerHTML=[...'HARRINGTON GUNSMITH'].map((ch,i)=>`<i style="animation-delay:${(0.9+i*0.07+(i%3)*0.05).toFixed(2)}s">${ch===' '?'&nbsp;':ch}</i>`).join('');
+ const full=!opt.quick&&!gReduced();
+ G.full=full;gFx(true);loadPhotos();
+ if(full){gPh('scene');gUi.innerHTML='<button type="button" class="g-enter" id="gEnter">ENTRAR</button><div class="g-hint">Harrington Gunsmith · Saint Denis</div>';gBoltLoop(3500)}
+ else gateCards();
+}
+/* ---- sonidos de la entrada ---- */
+function gBell(){
+ if(!soundOn)return;const c=ac();if(!c)return;const t0=c.currentTime+.02;
+ [0,.13,.29].forEach((d,k)=>{[[1,1],[2.76,.45],[5.4,.22],[8.93,.1]].forEach(([r,v])=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=1760*r*(1+k*.004);g.gain.setValueAtTime(.0001,t0+d);g.gain.exponentialRampToValueAtTime(.12*v*(1-k*.25),t0+d+.004);g.gain.exponentialRampToValueAtTime(.0001,t0+d+1.6/r+.25);o.connect(g);g.connect(c.destination);o.start(t0+d);o.stop(t0+d+2)})});
+}
+function gCreak(){
+ if(!soundOn)return;const c=ac();if(!c)return;const t0=c.currentTime+.05, d=1.3;
+ const o=c.createOscillator(), f=c.createBiquadFilter(), g=c.createGain(), l=c.createOscillator(), lg=c.createGain();
+ o.type='sawtooth';o.frequency.setValueAtTime(95,t0);o.frequency.linearRampToValueAtTime(150,t0+d*.45);o.frequency.linearRampToValueAtTime(110,t0+d);
+ l.type='square';l.frequency.value=23;lg.gain.value=14;l.connect(lg);lg.connect(o.frequency);
+ f.type='bandpass';f.frequency.value=780;f.Q.value=5;
+ g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(.05,t0+.08);g.gain.setValueAtTime(.05,t0+d*.7);g.gain.exponentialRampToValueAtTime(.0001,t0+d);
+ o.connect(f);f.connect(g);g.connect(c.destination);o.start(t0);l.start(t0);o.stop(t0+d+.05);l.stop(t0+d+.05);
+}
+function gThunder(){
+ if(!soundOn||!(navigator.userActivation&&navigator.userActivation.hasBeenActive))return;const c=ac();if(!c||c.state!=='running')return;
+ const len=c.sampleRate*3, buf=c.createBuffer(1,len,c.sampleRate), x=buf.getChannelData(0);let v=0;
+ for(let i=0;i<len;i++){v=(v+(Math.random()*2-1)*.06)*.985;x[i]=v}
+ const s=c.createBufferSource(), f=c.createBiquadFilter(), g=c.createGain(), t0=c.currentTime+.02;
+ s.buffer=buf;f.type='lowpass';f.frequency.value=220;
+ g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(.9,t0+.18);g.gain.exponentialRampToValueAtTime(.25,t0+.9);g.gain.exponentialRampToValueAtTime(.0001,t0+2.9);
+ s.connect(f);f.connect(g);g.connect(c.destination);s.start(t0);s.stop(t0+3);
+}
+/* ---- relámpagos lejanos mientras se espera en la puerta ---- */
+function gBolt(){gate.classList.remove('bolt');void gate.offsetWidth;gate.classList.add('bolt');setTimeout(()=>gate.classList.remove('bolt'),950);setTimeout(()=>{try{gThunder()}catch(e){}},700+Math.random()*900)}
+function gBoltLoop(first){gT(()=>{if(gate.dataset.ph==='scene'&&!gReduced())gBolt();if(gate.dataset.ph==='scene')gBoltLoop()},first||(7000+Math.random()*8000))}
+function gateEnter(){
+ if(gate.dataset.ph!=='scene')return;
+ gClear();
+ try{gBell()}catch(e){}
+ setTimeout(()=>{try{gCreak()}catch(e){}},260);
+ gUi.innerHTML='';gPh('open');
+ gT(()=>gPh('zoom'),1300);
+ gT(()=>gPh('flash'),3150);
+ gT(()=>gateCards(),3900);
+}
+/* ---- tarjetas ---- */
+const G_STAR='<svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 20.9l1.6-7L2 9.2l7.1-.6z"/></svg>', G_CHEV='<svg viewBox="0 0 24 24"><path d="M3 15l9-7 9 7-2.4 2.6L12 12.4l-6.6 5.2z"/></svg>';
+const G_RANK={'Jefe':'','Gerente':G_STAR+G_STAR,'Armero experto':G_CHEV+G_CHEV+G_CHEV,'Armero':G_CHEV+G_CHEV,'Aprendiz de armero':G_CHEV};
+const G_KEY='<svg viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 0-1.5 7.7L9 21h6l-1.5-10.3A4 4 0 0 0 12 3z"/></svg>';
+const G_CN='<svg viewBox="0 0 24 24"><path d="M2 22V9Q2 2 9 2h13"/><path d="M5.5 22V11q0-5.5 5.5-5.5H22"/><path d="M9 14q1.5-5 7-5"/><circle cx="9" cy="9" r="1.4"/></svg>';
+function cardInner(e,abs){
+ const ini=(e.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(), ph=PHOTOS[e.id];
+ return `${isJefe(e)?`<span class="gc-wax" title="Pide la contraseña de jefe">${G_KEY}</span>`:''}<i class="gc-cn tl">${G_CN}</i><i class="gc-cn tr">${G_CN}</i><i class="gc-cn bl">${G_CN}</i><i class="gc-cn br">${G_CN}</i><span class="gc-oval${ph?' has-photo':''}">${ph?`<img class="gc-photo" src="${ph}" alt="">`:''}<span class="gc-mono">${esc(ini)}</span></span><span class="gc-name">${esc(e.name)}</span><span class="gc-role">${esc(e.puesto||'Empleado')}</span><span class="gc-rank">${G_RANK[e.puesto]||''}</span><span class="gc-studio">Saint Denis, 1880</span>${abs?'<span class="gc-stamp">AUSENTE</span>':''}`;
+}
+function gateCards(){
+ gClear();G.big=null;{const ob=document.getElementById('gBig');if(ob)ob.remove()}
+ gPh('cards');
+ const rank=e=>{const i=PUESTOS.indexOf(e.puesto);return i<0?99:i};
+ const L=empleados.slice().sort((a,b)=>rank(a)-rank(b)||a.name.localeCompare(b.name,'es'));
+ const abs=new Set(ausNowList().map(a=>a.empId));
+ const ROT=[-2.2,1.6,-1.2,2.4,-1.8,1.1,2,-2.6];
+ gUi.innerHTML=`<div class="g-panel">${G.msg?`<div class="g-msg">${esc(G.msg)}</div>`:''}<h2 class="g-title">¿Quién entra hoy?</h2><p class="g-sub">Toca tu tarjeta. Quedará a tu nombre hasta que cierres la web.</p>
+  <div class="g-cards" id="gCards">${L.map((e,i)=>`<button type="button" class="g-card${isJefe(e)?' jefe':''}" data-gcard="${esc(e.id)}" style="--r:${ROT[i%ROT.length]}deg;--dx:${(i%2?1:-1)*24}px;animation-delay:${(0.25+i*0.13).toFixed(2)}s" aria-label="${esc(e.name)}${e.puesto?', '+esc(e.puesto):''}">${cardInner(e,abs.has(e.id))}</button>`).join('')}</div></div>`;
+ gUi.scrollTop=0;
+}
+/* inclinación 3D y brillo dorado al mover el dedo o el ratón por la tarjeta */
+gate.addEventListener('pointermove',ev=>{
+ const c=ev.target.closest&&ev.target.closest('.g-card:not(.gb-front)');if(!c||gReduced())return;
+ const r=c.getBoundingClientRect(), px=(ev.clientX-r.left)/r.width, py=(ev.clientY-r.top)/r.height;
+ c.style.setProperty('--ty',((px-.5)*18).toFixed(1)+'deg');c.style.setProperty('--tx',((.5-py)*14).toFixed(1)+'deg');
+ c.style.setProperty('--gx',(px*100).toFixed(0)+'%');c.style.setProperty('--gy',(py*100).toFixed(0)+'%');c.classList.add('tilt');
+});
+gate.addEventListener('pointerout',ev=>{const c=ev.target.closest&&ev.target.closest('.g-card');if(c&&!c.contains(ev.relatedTarget)){['--tx','--ty'].forEach(k=>c.style.removeProperty(k));c.classList.remove('tilt')}});
+/* ---- contraseñas personales: se guardan cifradas en la nube, una fila por empleado ---- */
+async function fetchClave(id){
+ try{
+  const ctl=typeof AbortController!=='undefined'?new AbortController():null, to=setTimeout(()=>{try{ctl&&ctl.abort()}catch(e){}},7000);
+  const r=await sbFetch('/rest/v1/datos?select=valor&clave=eq.'+encodeURIComponent('clave-'+id),ctl?{signal:ctl.signal}:{});clearTimeout(to);
+  if(!r.ok)throw new Error(r.status);
+  const rows=await r.json(), hsh=rows[0]&&rows[0].valor&&rows[0].valor.h||null;
+  if(hsh)CLAVES[id]=hsh;else delete CLAVES[id];
+  try{localStorage.setItem('harrington_claves_v1',JSON.stringify(CLAVES))}catch(e){}
+  return {hash:hsh};
+ }catch(e){return {err:true,hash:CLAVES[id]||null}}
+}
+function empHash(id,pw){return hashStr('emp|'+id+'|'+pw)}
+var CLAVE_SET=null;
+async function loadClaves(){
+ try{const r=await sbFetch('/rest/v1/datos?select=clave&clave=like.clave-*');if(!r.ok)return;const rows=await r.json();CLAVE_SET=new Set(rows.map(x=>x.clave.slice(6)));paintClaves()}catch(e){}
+}
+function paintClaves(){document.querySelectorAll('[data-clave]').forEach(el=>{const ok=CLAVE_SET&&CLAVE_SET.has(el.dataset.clave);el.className='clv'+(ok?' ok':'');el.textContent=CLAVE_SET?(ok?'🔑 Contraseña creada':'🔑 Sin contraseña: la creará la próxima vez que entre'):'🔑 …'})}
+async function empResetClave(id){
+ const e=empleados.find(x=>x.id===id);if(!e)return;
+ if(!await askConfirm('Reset contraseña','Se borrará la contraseña de '+e.name+'. La próxima vez que entre tendrá que crear una nueva.','Resetear'))return;
+ try{const r=await sbFetch('/rest/v1/datos?clave=eq.'+encodeURIComponent('clave-'+id),{method:'DELETE'});if(!r.ok)throw new Error(r.status)}
+ catch(err){return say('Sin conexión: no se ha reseteado. Inténtalo de nuevo')}
+ delete CLAVES[id];try{localStorage.setItem('harrington_claves_v1',JSON.stringify(CLAVES))}catch(x){}
+ if(CLAVE_SET)CLAVE_SET.delete(id);paintClaves();say('Contraseña de '+e.name+' reseteada: la creará al entrar');
+}
+/* ---- fotos de los personajes ---- */
+async function loadPhotos(){
+ try{
+  const r=await sbFetch('/rest/v1/datos?select=clave,valor&clave=like.foto-*');if(!r.ok)return;
+  const rows=await r.json(), m={};rows.forEach(x=>{if(x.valor&&x.valor.img)m[x.clave.slice(5)]=x.valor.img});
+  const ch=JSON.stringify(m)!==JSON.stringify(PHOTOS);PHOTOS=m;
+  try{localStorage.setItem('harrington_fotos_v1',JSON.stringify(m))}catch(e){}
+  if(ch){paintPhotos();if(!dirModal.hidden&&dirMod==='empleados'&&!document.activeElement.matches('input,select,textarea'))renderDir()}
+ }catch(e){}
+}
+function paintPhotos(){
+ document.querySelectorAll('#gate [data-gcard], #gate .gb-front').forEach(c=>{
+  const id=c.dataset.gcard||c.dataset.emp, ov=c.querySelector('.gc-oval');if(!ov)return;const ph=PHOTOS[id], im=ov.querySelector('.gc-photo');
+  if(ph){if(im)im.src=ph;else ov.insertAdjacentHTML('afterbegin',`<img class="gc-photo" src="${ph}" alt="">`);ov.classList.add('has-photo')}else{if(im)im.remove();ov.classList.remove('has-photo')}
+ });
+}
+function empPickFoto(id){
+ const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+ inp.onchange=()=>{const f=inp.files&&inp.files[0];if(f)empSaveFoto(id,f)};inp.click();
+}
+async function empSaveFoto(id,file){
+ const e=empleados.find(x=>x.id===id);if(!e)return;
+ let url='';
+ try{
+  const src=URL.createObjectURL(file), im=await new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=ko;i.src=src});
+  const W=240,H=300,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  const s=Math.max(W/im.width,H/im.height), w=im.width*s, hh=im.height*s;g.drawImage(im,(W-w)/2,(H-hh)/2.6,w,hh);
+  url=c.toDataURL('image/jpeg',.82);URL.revokeObjectURL(src);
+ }catch(err){return say('No se ha podido leer esa imagen')}
+ try{
+  const r=await sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify([{clave:'foto-'+id,valor:{img:url,ts:Date.now()},actualizado:new Date().toISOString()}])});
+  if(!r.ok)throw new Error(r.status);
+ }catch(err){return say('Sin conexión: la foto no se ha guardado')}
+ PHOTOS[id]=url;try{localStorage.setItem('harrington_fotos_v1',JSON.stringify(PHOTOS))}catch(x){}
+ renderDir();say('Foto de '+e.name+' guardada');
+}
+async function empNoFoto(id){
+ const e=empleados.find(x=>x.id===id);if(!e)return;
+ if(!await askConfirm('Quitar foto','La tarjeta de '+e.name+' volverá a mostrar sus iniciales.','Quitar'))return;
+ try{const r=await sbFetch('/rest/v1/datos?clave=eq.'+encodeURIComponent('foto-'+id),{method:'DELETE'});if(!r.ok)throw new Error(r.status)}catch(err){return say('Sin conexión: no se ha quitado')}
+ delete PHOTOS[id];try{localStorage.setItem('harrington_fotos_v1',JSON.stringify(PHOTOS))}catch(x){}
+ renderDir();say('Foto quitada');
+}
+/* ---- la tarjeta elegida se acerca, pide la contraseña y se da la vuelta ---- */
+function gBigOpen(e,src){
+ const old=document.getElementById('gBig');if(old)old.remove();
+ const wrap=document.createElement('div');wrap.className='g-bigwrap';wrap.id='gBig';
+ wrap.innerHTML=`<div class="g-big"><div class="gb-inner"><div class="gb-face g-card gb-front${isJefe(e)?' jefe':''}" data-emp="${esc(e.id)}">${cardInner(e,false)}</div><div class="gb-face gb-back" id="gBack"></div></div></div><div class="g-pw" id="gPw" hidden></div>`;
+ gate.appendChild(wrap);G.big=wrap;
+ const big=wrap.querySelector('.g-big');
+ if(src&&!gReduced()){
+  const a=src.getBoundingClientRect(), b=big.getBoundingClientRect();
+  if(b.width){big.style.transition='none';big.style.transform=`translate(${a.left+a.width/2-(b.left+b.width/2)}px,${a.top+a.height/2-(b.top+b.height/2)}px) scale(${a.width/b.width})`;void big.offsetWidth;big.style.transition='';big.style.transform=''}
+ }
+ requestAnimationFrame(()=>wrap.classList.add('on'));
+ const cards=document.getElementById('gCards');if(cards)cards.classList.add('chosen');if(src)src.classList.add('picked');
+}
+function gBigClose(){
+ const w=G.big;G.big=null;G.pw=null;G.pending=null;
+ const cards=document.getElementById('gCards');if(cards){cards.classList.remove('chosen');cards.querySelectorAll('.picked').forEach(x=>x.classList.remove('picked'))}
+ if(w){w.classList.remove('on');setTimeout(()=>w.remove(),350)}
+}
+function gPwShow(e,mode,extra){
+ const p=document.getElementById('gPw');if(!p)return;
+ G.pw={e:e,mode:mode,hash:extra||null};p.hidden=false;
+ const nm=esc(e.name.split(' ')[0]);
+ if(mode==='wait'){p.innerHTML=`<label>Comprobando la tarjeta de ${nm}…</label><div class="gp-btns"><button type="button" class="gp-no" data-gpw="no">Cancelar</button><span></span></div>`;return}
+ if(mode==='offline'){p.innerHTML=`<label>Sin conexión con la nube</label><div class="gp-err">No se puede comprobar tu contraseña ahora. Inténtalo en un momento.</div><div class="gp-btns"><button type="button" class="gp-no" data-gpw="no">Volver</button><button type="button" class="gp-ok" data-gpw="retry">REINTENTAR</button></div>`;return}
+ const create=mode==='create';
+ p.innerHTML=`<label for="gPw1">${create?`Primera vez, ${nm}: crea tu contraseña`:mode==='boss'?'Contraseña de jefe':`Tu contraseña, ${nm}`}</label>
+  <input id="gPw1" type="password" autocomplete="off" maxlength="40" placeholder="${create?'Nueva contraseña':'Contraseña'}">
+  ${create?'<input id="gPw2" type="password" autocomplete="off" maxlength="40" placeholder="Repítela"><div class="gp-note">Mínimo 4 caracteres. Solo tú la sabrás; si la olvidas, la dirección puede resetearla.</div>':''}
+  <div class="gp-err" id="gPwErr"></div>
+  <div class="gp-btns"><button type="button" class="gp-no" data-gpw="no" id="gPwCancel">Cancelar</button><button type="button" class="gp-ok" data-gpw="ok" id="gPwOk">ENTRAR</button></div>
+  ${mode==='boss'&&bossCreds()&&bossCreds().word?'<button type="button" class="gp-forgot" data-gpw="forgot">¿Has olvidado la contraseña?</button>':''}`;
+ setTimeout(()=>{const i=document.getElementById('gPw1');if(i)try{i.focus({preventScroll:true})}catch(x){}},320);
+}
+function gPwErr(t){const el=document.getElementById('gPwErr');if(el)el.textContent=t}
+async function gPwSubmit(){
+ const s=G.pw;if(!s||s.busy)return;const e=s.e, v1=(document.getElementById('gPw1')||{}).value||'', v2=(document.getElementById('gPw2')||{}).value||'';
+ if(G.lock[e.id]>Date.now())return gPwErr('Demasiados intentos: espera un minuto');
+ s.busy=true;
+ try{
+  if(s.mode==='create'){
+   if(v1.length<4)return gPwErr('Mínimo 4 caracteres');
+   if(v1!==v2)return gPwErr('Las dos contraseñas no coinciden');
+   const hh=await empHash(e.id,v1);
+   let ok=false;try{ok=await claimRow('clave-'+e.id,{h:hh,ts:Date.now()})}catch(x){return gPwErr('Sin conexión: no se ha podido guardar. Inténtalo de nuevo')}
+   if(!ok){const r=await fetchClave(e.id);gPwShow(e,'login',r.hash);return gPwErr('Esta tarjeta ya tiene contraseña: escríbela')}
+   CLAVES[e.id]=hh;try{localStorage.setItem('harrington_claves_v1',JSON.stringify(CLAVES))}catch(x){}
+   return gateHello(e);
+  }
+  if(!v1)return gPwErr('Escribe la contraseña');
+  const good=s.mode==='boss'?await checkPw(v1):(await empHash(e.id,v1))===s.hash;
+  if(good){G.fails[e.id]=0;if(s.mode==='boss')setBoss(true);return gateHello(e)}
+  G.fails[e.id]=(G.fails[e.id]||0)+1;
+  const i=document.getElementById('gPw1');if(i){i.value='';i.focus()}
+  if(G.fails[e.id]>=5){G.fails[e.id]=0;G.lock[e.id]=Date.now()+60000;gPwErr('Demasiados intentos: la tarjeta queda bloqueada un minuto');setTimeout(gBigClose,1600)}
+  else gPwErr('Contraseña incorrecta');
+  try{buzz([40,40,40])}catch(x){}
+ }finally{s.busy=false}
+}
+async function gatePick(id){
+ if(G.big)return;
+ const e=empleados.find(x=>x.id===id);if(!e)return;
+ if(G.lock[id]>Date.now())return say('Demasiados intentos: espera un minuto para volver a probar con '+e.name);
+ try{playClick()}catch(x){}
+ gBigOpen(e,gUi.querySelector('[data-gcard="'+id+'"]'));
+ if(isJefe(e)){
+  if(!bossCreds()){G.pending=e;G.pendMode='setup';setTimeout(()=>openBoss(),300);return}
+  return gPwShow(e,'boss');
+ }
+ gPwShow(e,'wait');
+ const r=await fetchClave(id);
+ if(!G.big||!G.pw||G.pw.e.id!==id)return;
+ if(r.err&&!r.hash)return gPwShow(e,'offline');
+ gPwShow(e,r.hash?'login':'create',r.hash);
+}
+function gateHello(e){
+ gClear();
+ setMe(e);if(!isJefe(e)&&bossActive)setBoss(false);
+ gPh('hello');
+ if(!G.big)gBigOpen(e,null);
+ const w=G.big, p=document.getElementById('gPw');if(p){p.hidden=true;p.innerHTML=''}G.pw=null;
+ w.classList.add('hello');
+ const L=gateLines(e).slice(0,5);
+ document.getElementById('gBack').innerHTML=`<div class="g-hseal">H</div><div class="g-hi">${esc(saludo())},</div><div class="g-name">${esc(e.name)}</div><div class="g-role">${esc((e.puesto||'').toUpperCase())}${isJefe(e)?' · MODO JEFE':''}</div>
+  <ul class="g-lines">${L.map((t,i)=>`<li style="animation-delay:${(1.1+i*0.15).toFixed(2)}s">${t}</li>`).join('')}</ul><div class="g-go">Toca para entrar a la tienda</div>`;
+ gT(()=>w.querySelector('.g-big').classList.add('flipped'),180);
+ gT(()=>{try{playThump()}catch(x){}},950);
+ gT(gateClose,7000);
+}
+function gateLines(e){
+ const L=[], c=contractH(e.name);
+ if(c){const ws=payMonday(0), r=weekRequired(e.name,ws), w=workedMs(e,ws);
+  if(r.h===0)L.push('Esta semana estás <b>exento</b> de horas por tu ausencia.');
+  else L.push(`Esta semana llevas <b>${esc(hm(w))}</b> de ${r.h} h`+(w>=r.h*3600000?' ✓':` · te faltan ${esc(hm(r.h*3600000-w))}`)+'.')}
+ const s=payState();
+ if(s){const mine=sueDue(s.ws).some(x=>x.id===e.id)?sueCalc(e,s.ws):null;
+  if(s.st==='due')L.push('Hoy es <b>día de pago</b>'+(mine?`: tu sueldo es de <b>${money(mine.pay)}</b> · ${mine.paid?'ya pagado ✓':'pendiente'}`:'')+'.');
+  else L.push('Sueldos pagados ✓'+(mine?` · el tuyo: <b>${money(mine.pay)}</b>`:'')+'.')}
+ const sh=shifts.find(x=>x.empId===e.id);
+ L.push(sh?`Sigues fichado desde las <b>${esc(fmtTime(sh.start))}</b>.`:'No olvides <b>fichar la entrada</b> al empezar.');
+ const ne=pendingEncs().length;if(ne)L.push(`Hay <b>${ne}</b> ${ne===1?'encargo pendiente':'encargos pendientes'}.`);
+ if(isJefe(e)){const np=pendingPed().length;if(np)L.push(`<b>${np}</b> ${np===1?'pedido a proveedores por recibir':'pedidos a proveedores por recibir'}.`)}
+ ausNowList().filter(a=>a.empId!==e.id).slice(0,2).forEach(a=>L.push(`${esc(a.name)} está ausente ${esc(ausUntil(a))}.`));
+ return L;
+}
+function gateClose(){
+ if(!G.open||gate.dataset.ph==='close')return;
+ gClear();
+ gPh('close');
+ setTimeout(()=>{gate.hidden=true;G.open=false;G.big=null;gFx(false);document.body.classList.remove('gate-open');gUi.innerHTML='';{const ob=document.getElementById('gBig');if(ob)ob.remove()}gPh('');applyMe();updateAusBtn()},720);
+}
+gate.addEventListener('click',ev=>{
+ const ph=gate.dataset.ph;
+ if(ev.target.closest('#gEnter'))return gateEnter();
+ const pw=ev.target.closest('[data-gpw]');
+ if(pw){const a=pw.dataset.gpw;
+  if(a==='ok')return gPwSubmit();
+  if(a==='no')return gBigClose();
+  if(a==='retry'&&G.pw){const id=G.pw.e.id;gBigClose();return setTimeout(()=>gatePick(id),380)}
+  if(a==='forgot'&&G.pw){G.pending=G.pw.e;G.pendMode='forgot';return openBoss('resetword')}
+  return;
+ }
+ if(ev.target.closest('#gPw'))return;
+ const c=ev.target.closest('[data-gcard]');if(c)return gatePick(c.dataset.gcard);
+ if(ph==='open'||ph==='zoom'||ph==='flash')return gateCards();
+ if(ph==='hello')return gateClose();
+ if(ph==='cards'&&G.big&&G.pw&&ev.target.closest('.g-bigwrap')&&!ev.target.closest('.g-big'))return gBigClose();
+});
+gate.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.closest&&ev.target.closest('#gPw')&&ev.target.tagName==='INPUT'){ev.preventDefault();gPwSubmit()}});
+/* ---- efectos: lluvia con salpicaduras, polvo en la luz y polillas en las farolas ---- */
+function gFx(on){
+ const cv=document.getElementById('gDust');if(!cv)return;
+ if(!on||gReduced()){if(G.fx){cancelAnimationFrame(G.fx.raf);G.fx=null}const x=cv.getContext('2d');x&&x.clearRect(0,0,cv.width,cv.height);return}
+ if(G.fx)return;
+ const x=cv.getContext('2d');if(!x)return;
+ const R=[], S=[], D=[], M=[], stage=document.getElementById('gStage');
+ for(let i=0;i<46;i++)D.push({x:Math.random(),y:.25+Math.random()*.65,r:.6+Math.random()*1.8,vx:(Math.random()-.5)*.00012,vy:-.00004-Math.random()*.00012,a:.15+Math.random()*.45,p:Math.random()*6.28});
+ for(let i=0;i<110;i++)R.push({x:Math.random(),y:Math.random(),l:10+Math.random()*18,v:.012+Math.random()*.01,a:.12+Math.random()*.22,t:.74+Math.random()*.26});
+ const LAMPS=[[.5,.396],[.032,.449],[.968,.449]];
+ LAMPS.forEach(([lx,ly],k)=>{for(let i=0;i<2+(k===0?1:0);i++)M.push({lx:lx,ly:ly,a:Math.random()*6.28,s:.03+Math.random()*.04,rr:.014+Math.random()*.02,j:Math.random()*6.28})});
+ const F=G.fx={raf:0};
+ const step=()=>{
+  const w=cv.clientWidth, hh=cv.clientHeight;if(cv.width!==w||cv.height!==hh){cv.width=w;cv.height=hh}
+  x.clearRect(0,0,w,hh);
+  const ph=gate.dataset.ph, out=ph==='scene'||ph==='open'||ph==='zoom', sr=stage.getBoundingClientRect();
+  if(out){
+   x.lineCap='round';
+   R.forEach(d=>{d.y+=d.v;const gy=d.t;
+    if(d.y>=gy){S.push({x:d.x*w,y:gy*hh,r:0,a:.45});d.y=-Math.random()*.2;d.x=Math.random()*1.1}
+    const px=d.x*w, py=d.y*hh;x.strokeStyle='rgba(205,220,240,'+d.a.toFixed(2)+')';x.lineWidth=1;x.beginPath();x.moveTo(px,py);x.lineTo(px-d.l*.18,py+d.l);x.stroke()});
+   for(let i=S.length-1;i>=0;i--){const s=S[i];s.r+=.55;s.a-=.018;if(s.a<=0){S.splice(i,1);continue}x.strokeStyle='rgba(225,210,180,'+s.a.toFixed(2)+')';x.beginPath();x.ellipse(s.x,s.y,s.r,s.r*.28,0,0,6.283);x.stroke()}
+   if(ph==='scene'&&sr.width)M.forEach(m=>{m.a+=m.s;m.j+=.3;const cx=sr.left+m.lx*sr.width, cy=sr.top+m.ly*sr.height, rad=m.rr*sr.height;
+    const mx=cx+Math.cos(m.a)*rad+Math.sin(m.j)*2, my=cy+Math.sin(m.a*1.3)*rad*.7+Math.cos(m.j*1.7)*2, wg=Math.abs(Math.sin(m.j*3))*2.2+.6;
+    x.fillStyle='rgba(255,236,190,.75)';x.beginPath();x.ellipse(mx-wg*.6,my,wg,1.2,.5,0,6.283);x.ellipse(mx+wg*.6,my,wg,1.2,-.5,0,6.283);x.fill()});
+  }
+  D.forEach(p=>{p.x+=p.vx*16;p.y+=p.vy*16;p.p+=.02;if(p.y<.15){p.y=.92;p.x=Math.random()}if(p.x<0)p.x=1;if(p.x>1)p.x=0;
+   const al=p.a*(.6+.4*Math.sin(p.p));x.beginPath();x.fillStyle='rgba(255,214,150,'+al.toFixed(3)+')';x.arc(p.x*w,p.y*hh,p.r,0,6.283);x.fill()});
+  F.raf=requestAnimationFrame(step);
+ };
+ step();
+}
+gateLoadImg();
+
 /* ===== Inicio ===== */
 restoreOrder();
 restoreSale();
+try{applyMe();gateCheck();if(meEmp())presencePing(true)}catch(e){}
 calc(false);
 filter();

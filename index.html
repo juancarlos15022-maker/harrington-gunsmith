@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
-<!-- HARRINGTON GUNSMITH · versión 20261008b · tres archivos: index.html, estilos.css y app.js -->
+<!-- HARRINGTON GUNSMITH · versión 20261009b · tres archivos: index.html, estilos.css y app.js -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#07140f">
@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
 <title>Harrington Gunsmith · Saint Denis</title>
-<link rel="stylesheet" href="estilos.css?v=20261008b">
+<link rel="stylesheet" href="estilos.css?v=20261009b">
 </head>
 <body>
 <div class="wrap">
@@ -28,9 +28,11 @@
 <section class="clock-bar" aria-label="Fichaje de empleados">
   <div class="clock-info"><b><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V9.5M12 13.5l3 2M10.5 3h3M12 3v3.5"/></svg>FICHAJE <span id="cloudSt" class="cloud-st">☁ …</span></b><span class="clock-status" id="clockStatus">Sin fichar</span></div>
   <div class="clock-actions">
+    <span class="me-chip" id="meChip" hidden></span>
     <button type="button" class="clock-link enc-btn" id="dirBtn" hidden>DIRECCIÓN</button>
     <button type="button" class="clock-link enc-btn only-venta" id="encBtn">ENCARGOS</button>
     <button type="button" class="clock-link enc-btn only-venta" id="pedBtn">PEDIDOS</button>
+    <button type="button" class="clock-link enc-btn" id="ausBtn">AUSENCIAS</button>
     <button type="button" class="clock-link boss-btn" id="bossBtn">JEFE</button>
     <div class="set-wrap"><button type="button" class="clock-link boss-btn" id="setBtn" aria-label="Ajustes" aria-expanded="false" title="Ajustes">⚙</button>
      <div class="set-pop" id="setPop" hidden role="dialog" aria-label="Ajustes">
@@ -47,6 +49,7 @@
   </div>
 </section>
 
+<button type="button" class="pay-plate" id="payPlate" hidden></button>
 <div class="emp-week" id="empWeek" hidden></div>
 
 <nav class="cat-nav" aria-label="Categorías">
@@ -376,6 +379,39 @@
   <button type="button" class="ob-go only-venta" id="obGo">FINALIZAR</button>
 </div>
 <button type="button" class="to-top" id="toTop" aria-label="Volver arriba" title="Volver arriba">↑</button>
+<div class="gate" id="gate" hidden>
+ <div class="g-stage" id="gStage">
+  <div class="g-img"></div>
+  <div class="g-sign" aria-hidden="true"><span id="gSignTxt">HARRINGTON GUNSMITH</span></div>
+  <div class="g-doorwrap" aria-hidden="true"><div class="g-interior"></div><div class="g-leaf l"><div class="g-leafimg"></div></div><div class="g-leaf r"><div class="g-leafimg"></div></div></div>
+  <div class="g-spill" aria-hidden="true"></div>
+  <i class="g-lamp" style="left:50%;top:39.6%"></i><i class="g-lamp" style="left:3.2%;top:44.9%"></i><i class="g-lamp" style="left:96.8%;top:44.9%"></i><i class="g-lamp sm" style="left:3%;top:34.8%"></i><i class="g-lamp sm" style="left:97%;top:34.8%"></i><i class="g-lamp sm" style="left:34.4%;top:45%"></i><i class="g-lamp sm" style="left:65.4%;top:45%"></i><i class="g-lamp win" style="left:21.5%;top:52%"></i><i class="g-lamp win" style="left:78.5%;top:52%"></i>
+  <i class="g-smoke" style="left:50%;top:37.4%"></i><i class="g-smoke d2" style="left:50%;top:37.4%"></i><i class="g-smoke" style="left:3.2%;top:42.6%"></i><i class="g-smoke d2" style="left:96.8%;top:42.6%"></i>
+ </div>
+ <div class="g-bolt" aria-hidden="true"></div><div class="g-fog" aria-hidden="true"></div><canvas class="g-dust" id="gDust" aria-hidden="true"></canvas><div class="g-grain" aria-hidden="true"></div><div class="g-vign" aria-hidden="true"></div>
+ <div class="g-felt" aria-hidden="true"></div>
+ <div class="g-room" aria-hidden="true"><svg class="gr-lamp" viewBox="0 0 200 330" aria-hidden="true"><defs><linearGradient id="grBr" x1="0" x2="1"><stop offset="0" stop-color="#6b4a14"/><stop offset=".45" stop-color="#f3d27a"/><stop offset="1" stop-color="#7a5418"/></linearGradient><radialGradient id="grGl" cx=".5" cy=".3" r=".8"><stop offset="0" stop-color="#3f9a68"/><stop offset=".6" stop-color="#17573a"/><stop offset="1" stop-color="#0a2a1b"/></radialGradient><linearGradient id="grCone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe2a0" stop-opacity=".55"/><stop offset="1" stop-color="#ffe2a0" stop-opacity="0"/></linearGradient></defs>
+<path d="M100 0v120" stroke="#8a6a32" stroke-width="3" stroke-dasharray="6 3"/><circle cx="100" cy="124" r="7" fill="url(#grBr)"/>
+<path d="M88 130h24l6 18H82z" fill="url(#grBr)"/><rect x="94" y="148" width="12" height="20" rx="3" fill="#fff4cf" opacity=".95"/>
+<path d="M30 214q4-50 70-56q66 6 70 56z" fill="url(#grGl)" stroke="#d9b45a" stroke-width="3"/><path d="M30 214h140" stroke="url(#grBr)" stroke-width="7" stroke-linecap="round"/>
+<path d="M44 196q56-26 112 0" stroke="#ffffff22" stroke-width="3" fill="none"/><ellipse cx="100" cy="222" rx="30" ry="7" fill="#fff1c4"/></svg><div class="gr-cone"></div><svg class="gr-rev" viewBox="0 0 320 140" aria-hidden="true"><defs><linearGradient id="grSt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c3cbd2"/><stop offset=".45" stop-color="#5a6169"/><stop offset="1" stop-color="#1c2024"/></linearGradient><linearGradient id="grWd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a5f2c"/><stop offset=".6" stop-color="#5a3216"/><stop offset="1" stop-color="#2e180a"/></linearGradient></defs>
+<path d="M8 34h158v18H8z" fill="url(#grSt)"/><path d="M10 34l5-8h6l3 8z" fill="#2a2e33"/><rect x="40" y="52" width="110" height="8" rx="4" fill="url(#grSt)"/>
+<path d="M160 26h78q14 0 18 12l8 22H160z" fill="url(#grSt)"/><rect x="168" y="24" width="56" height="38" rx="8" fill="url(#grSt)"/>
+<path d="M176 28v30M188 28v30M200 28v30M212 28v30" stroke="#1c2024" stroke-width="2" opacity=".55"/>
+<path d="M242 26l16-16q8-5 10 3l-10 19z" fill="#3a4047"/><path d="M210 62q4 30 34 26q10-2 10-14" fill="none" stroke="url(#grSt)" stroke-width="6"/>
+<path d="M232 62q3 13-4 20" stroke="#2a2e33" stroke-width="4" fill="none"/>
+<path d="M252 44q34 6 50 46q7 22-7 34q-16 10-30-5q-16-25-30-50z" fill="url(#grWd)"/>
+<path d="M266 66q14 14 18 36M258 72q10 14 12 30" stroke="#e8c26a" stroke-width="1.2" fill="none" opacity=".7"/><circle cx="280" cy="88" r="3.5" fill="#e8c26a"/>
+<path d="M30 40q20-4 40 0t40 0" stroke="#e8c26a" stroke-width="1" fill="none" opacity=".6"/></svg><svg class="gr-box" viewBox="0 0 220 150" aria-hidden="true"><defs><linearGradient id="grBx" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c79a55"/><stop offset="1" stop-color="#8a6232"/></linearGradient><linearGradient id="grBs" x1="0" x2="1"><stop offset="0" stop-color="#7a5418"/><stop offset=".5" stop-color="#f6d27c"/><stop offset="1" stop-color="#8a6420"/></linearGradient></defs>
+<path d="M18 40l120-22 60 22-120 24z" fill="#d9b06a"/><path d="M18 40v70l60 22V64z" fill="url(#grBx)"/><path d="M78 64l120-24v70L78 132z" fill="#a87a40"/>
+<path d="M30 58l38 13v32L30 90z" fill="#f1e2b8"/><text x="49" y="84" font-family="Georgia,serif" font-size="11" font-weight="700" fill="#5a2a12" text-anchor="middle" transform="skewY(18) translate(0 -16)">.45</text>
+<path d="M100 74l70-14" stroke="#5a2a12" stroke-width="3"/><path d="M100 86l70-14" stroke="#5a2a12" stroke-width="1.5"/>
+<g transform="translate(150 118) rotate(-18)"><rect width="30" height="9" rx="2" fill="url(#grBs)"/><path d="M30 0q10 4.5 0 9z" fill="#8a8f96"/></g>
+<g transform="translate(8 130) rotate(8)"><rect width="30" height="9" rx="2" fill="url(#grBs)"/><path d="M30 0q10 4.5 0 9z" fill="#8a8f96"/></g>
+<g transform="translate(176 132) rotate(32)"><rect width="22" height="9" rx="2" fill="url(#grBs)"/></g></svg></div>
+ <div class="g-flash" aria-hidden="true"></div>
+ <div class="g-ui" id="gUi"></div>
+</div>
 <div class="splash" id="splash" aria-hidden="true"><div class="sp-seal"><span>H</span></div><img class="emblem" src="emblema-harrington.png" alt=""><div class="sp-name">HARRINGTON GUNSMITH</div><div class="sp-sub">Saint Denis · 1880</div></div>
 <div class="toast" id="toast" role="status"></div>
 
@@ -481,6 +517,14 @@
   </div>
 </div>
 
+<!-- Ausencias -->
+<div class="modal-overlay" id="ausModal" hidden>
+  <div class="enc-panel" role="dialog" aria-modal="true" aria-labelledby="ausTitle">
+    <div class="enc-head"><span id="ausTitle">AUSENCIAS</span><button type="button" class="danger" id="ausClose">Cerrar</button></div>
+    <div id="ausBody"></div>
+  </div>
+</div>
+
 <!-- Pedidos a proveedores -->
 <div class="modal-overlay" id="pedModal" hidden>
   <div class="enc-panel" role="dialog" aria-modal="true" aria-labelledby="pedTitle">
@@ -558,6 +602,6 @@
   </div>
 </div>
 
-<script src="app.js?v=20261008b"></script>
+<script src="app.js?v=20261009b"></script>
 </body>
 </html>
