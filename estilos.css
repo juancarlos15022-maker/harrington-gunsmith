@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261009k
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261009m
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1410,3 +1410,16 @@ body.theme-day .hero-banner img{filter:brightness(1.06) saturate(1.04)}
 .emp-week b{display:block;color:#ffe9a8;font-size:19px}
 .emp-week span{color:#c9b27a;font-size:13px}
 @media(prefers-reduced-motion:reduce){.hero-banner:before,.sp-seal,.sp-name i,.sp-sub,.record-fx,.record-fx div{animation:none;opacity:1;transform:none}}
+/* PEGAR MENSAJE */
+.dir-form .pz-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.pz-row .pz-btn{padding:10px 14px}
+.pz-row .pz-btn{flex:0 0 auto}
+.pz-row small{flex:1 1 180px;color:#cbbf9c;font-size:13px;line-height:1.35}
+.pz-panel{margin:0 0 14px;padding:12px;border:1px dashed #b8913f;border-radius:8px;background:rgba(10,6,2,.45)}
+.pz-panel textarea{display:block;width:100%;min-height:130px;margin-top:6px;padding:10px;border-radius:6px;border:1px solid #5d4928;background:#040b08;color:#eee0bd;font:inherit;font-size:16px;line-height:1.4;resize:vertical;box-sizing:border-box}
+.pz-panel .bk-note{margin:6px 0 8px}
+.pz-msg{margin:0 0 12px;padding:9px 11px;border-radius:7px;border:1px solid #4f7a3c;background:rgba(40,70,30,.35);color:#dfeccd;font-size:14px;line-height:1.4}
+.pz-msg.bad{border-color:#8a3a2a;background:rgba(90,25,15,.35);color:#f1d2c6}
+.pz-hit{animation:pzHit 2.4s ease-out 1}
+@keyframes pzHit{0%,35%{box-shadow:0 0 0 2px #f0d278,0 0 14px rgba(240,210,120,.7)}100%{box-shadow:0 0 0 0 rgba(240,210,120,0)}}
+@media (prefers-reduced-motion:reduce){.pz-hit{animation:none;outline:2px solid #f0d278}}
