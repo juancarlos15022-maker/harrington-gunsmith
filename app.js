@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261009t
+/* HARRINGTON GUNSMITH · app.js · versión 20261009u
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -3107,33 +3107,58 @@ function markNoPrice(){
 }
 (function(){const _c=calc;calc=function(){const r=_c.apply(this,arguments);try{markNoPrice()}catch(e){}return r}})();
 setTimeout(()=>{try{markNoPrice()}catch(e){}},0);
-/* ===== Recetas de fabricación dictadas por la dirección: se ponen una sola vez (sustituyen a las anteriores de esos productos) ===== */
-const RECETAS_BASE={
- 'Cuchillo':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
- 'Machete':[['Barra de hierro',5],['Trozo de madera',3],['Mena de carbón',2]],
- 'Machete de coleccionista':[['Barra de hierro',5],['Tabla de madera',3],['Mena de carbón',2]],
- 'Cuchillo rústico':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
- 'Cuchillo rayado':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
- 'Cuchillo terrorífico':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
- 'Cuchillo tradicional':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
- 'Hacha de tala':[['Barra de hierro',1],['Mena de carbón',1],['Trozo de madera',2]]
-};
-const RECETAS_BASE_VER='1';
+/* ===== Recetas de fabricación dictadas por la dirección. Van por LOTES: cada lote se pone una sola vez entre todos los dispositivos
+   (sustituye a la receta anterior de esos productos); después, lo que cambie la dirección en FABRICACIÓN manda ===== */
+const RECETAS_LOTES=[
+ {v:'1',r:{
+  'Cuchillo':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
+  'Machete':[['Barra de hierro',5],['Trozo de madera',3],['Mena de carbón',2]],
+  'Machete de coleccionista':[['Barra de hierro',5],['Tabla de madera',3],['Mena de carbón',2]],
+  'Cuchillo rústico':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
+  'Cuchillo rayado':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
+  'Cuchillo terrorífico':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
+  'Cuchillo tradicional':[['Mena de hierro',5],['Trozo de madera',1],['Mena de carbón',1]],
+  'Hacha de tala':[['Barra de hierro',1],['Mena de carbón',1],['Trozo de madera',2]]}},
+ {v:'2',r:{ /* armas de fuego: pieza de arma (normal o especial), cañón y culata de su familia, y tornillos */
+  'Cattleman Revolver':[['Pieza de arma',1],['Cañón de revólver',2],['Culata de revólver',4],['Tornillo',5]],
+  'Doble Action Revolver':[['Pieza de arma',1],['Cañón de revólver',2],['Culata de revólver',4],['Tornillo',8]],
+  'Schofield Revolver':[['Pieza de arma',13],['Cañón de revólver',2],['Culata de revólver',4],['Tornillo',20]],
+  'Lemat Revolver':[['Pieza de arma especial',2],['Cañón de revólver',2],['Culata de revólver',2],['Tornillo',30]],
+  'Navy Revolver':[['Pieza de arma especial',3],['Cañón de revólver',2],['Culata de revólver',2],['Tornillo',20]],
+  'Navy Crossover Revolver':[['Pieza de arma especial',4],['Cañón de revólver',2],['Culata de revólver',2],['Tornillo',27]],
+  'Mauser Pistola':[['Pieza de arma',21],['Cañón de pistola',1],['Culata de pistola',2],['Tornillo',15]],
+  'Semiautomática Pistola':[['Pieza de arma',24],['Cañón de pistola',1],['Culata de pistola',1],['Tornillo',5]],
+  'Volcanic Pistola':[['Pieza de arma especial',5],['Cañón de pistola',1],['Culata de pistola',1],['Tornillo',1]],
+  'M1899 Pistola':[['Pieza de arma especial',4],['Cañón de pistola',1],['Culata de pistola',1],['Tornillo',20]],
+  'Carabina Repetición':[['Pieza de arma',15],['Cañón de repetidora',1],['Culata de repetidora',1],['Tornillo',2]],
+  'Evans Repetición':[['Pieza de arma especial',5],['Cañón de repetidora',1],['Culata de repetidora',1],['Tornillo',10]],
+  'Henry Repetición':[['Pieza de arma especial',6],['Cañón de repetidora',1],['Culata de repetidora',2],['Tornillo',20]],
+  'Winchester Repetición':[['Pieza de arma especial',7],['Cañón de repetidora',2],['Culata de repetidora',3],['Tornillo',15]],
+  'Varmint':[['Pieza de arma',2],['Cañón de rifle',1],['Culata de rifle',1],['Tornillo',8]],
+  'Springfield Rifle':[['Pieza de arma especial',10],['Cañón de rifle',1],['Culata de rifle',2],['Tornillo',20]],
+  'Cerrojo Rifle':[['Pieza de arma especial',11],['Cañón de rifle',1],['Culata de rifle',1],['Tornillo',35]],
+  'Recortada Escopeta':[['Pieza de arma especial',8],['Cañón de escopeta',2],['Culata de escopeta',1],['Tornillo',30]],
+  'Doble Cañón Escopeta':[['Pieza de arma especial',9],['Cañón de escopeta',2],['Culata de escopeta',1],['Tornillo',30]]}}
+];
 let recBaseBusy=false;
+function recLoteDone(v){try{return localStorage.getItem('harrington_recbase_'+v)==='1'||(v==='1'&&localStorage.getItem('harrington_recbase')==='1')}catch(e){return false}}
+function recLoteMark(v){try{localStorage.setItem('harrington_recbase_'+v,'1')}catch(e){}}
 async function recetasBase(){
  if(recBaseBusy||!cloud.ok||SANDBOX)return;
- try{if(localStorage.getItem('harrington_recbase')===RECETAS_BASE_VER)return}catch(e){}
+ const pend=RECETAS_LOTES.filter(l=>!recLoteDone(l.v));if(!pend.length)return;
  recBaseBusy=true;
  try{
-  /* se aplica UNA sola vez entre todos los dispositivos: después, lo que cambie la dirección en FABRICACIÓN manda */
-  if(!await claimRow('recetas-base-'+RECETAS_BASE_VER,{ts:Date.now()})){try{localStorage.setItem('harrington_recbase',RECETAS_BASE_VER)}catch(e){}recBaseBusy=false;return}
-  const names=inputs.map(i=>i.dataset.name), add={};
-  Object.keys(RECETAS_BASE).forEach(n=>{if(names.indexOf(n)>=0)add[n]=RECETAS_BASE[n].map(([m,q])=>({m:canonMat(m),q:q}))});
+  const names=inputs.map(i=>i.dataset.name), add={}, all={};
+  for(const l of pend){
+   /* reserva en la nube: solo el primer dispositivo lo aplica */
+   if(!await claimRow('recetas-base-'+l.v,{ts:Date.now()})){recLoteMark(l.v);continue}
+   Object.keys(l.r).forEach(n=>{all[n]=l.r[n];if(names.indexOf(n)>=0)add[n]=l.r[n].map(([m,q])=>({m:canonMat(m),q:q}))});
+   recLoteMark(l.v);
+  }
   /* los materiales que falten se crean en el almacén con 0 unidades, para que salgan en las listas */
-  const mats=Array.from(new Set(Object.keys(RECETAS_BASE).flatMap(n=>RECETAS_BASE[n].map(x=>canonMat(x[0]))))).filter(m=>stockMap[matKey(m)]===undefined);
+  const mats=Array.from(new Set(Object.keys(all).flatMap(n=>all[n].map(x=>canonMat(x[0]))))).filter(m=>stockMap[matKey(m)]===undefined);
   if(mats.length)await moverStock(mats.map(m=>({producto:matKey(m),delta:0})),'Materiales nuevos');
   if(Object.keys(add).length){Object.assign(recetas,add);store.set(KEY_RECETAS,JSON.stringify(recetas));if(!dirModal.hidden&&dirMod==='fabricacion')renderDir()}
-  try{localStorage.setItem('harrington_recbase',RECETAS_BASE_VER)}catch(e){}
  }catch(e){}
  recBaseBusy=false;
 }
