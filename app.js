@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261009u
+/* HARRINGTON GUNSMITH · app.js · versión 20261009v
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -928,13 +928,13 @@ function stepsHTML(e){
 function plainCaps(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()}
 function encItemsTxt(e){return (e.items||[]).map(i=>i.qty+' × '+i.name).join(', ')}
 function telegramText(e){
- return `Nos complace anunciarle, Sr./Sra. ${e.client}, que su encargo en Armería Harrington Gunsmith ya está fabricado (${encItemsTxt(e)}).${e.pendingCents>0?`\n\nImporte pendiente al recogerlo: ${money(e.pendingCents)}.`:''}\n\nPuede pasar a recogerlo cuando quiera. Dispone de un plazo de 10 días para hacerlo: transcurrido ese plazo, perderá el producto y el dinero depositado como fianza.\n\nEl precio de un apellido.`;
+ return `Nos complace anunciarle, Sr./Sra. ${e.client}, que su encargo en Armería Harrington Gunsmith ya está fabricado (${encItemsTxt(e)}).${e.pendingCents>0?`\n\nImporte pendiente al recogerlo: ${money(e.pendingCents)}.`:''}\n\nPuede pasar a recogerlo cuando quiera. Dispone de un plazo de 10 días para hacerlo: transcurrido ese plazo, perderá el producto y el dinero depositado como fianza.\n\nAtentamente, Vincent Harrington · Telegrama SD6112\n\nEl precio de un apellido.`;
 }
 function telegramConfirm(e){
  return `Sr./Sra. ${e.client}: le confirmamos su encargo en Armería Harrington Gunsmith, Saint Denis.\n\n${encItemsTxt(e)}\nTotal: ${money(e.totalCents)} · Fianza pagada: ${money(e.depositCents)} · Pendiente al recoger: ${money(e.pendingCents)}.${e.promise?`\nFecha prevista: ${fmtISO(e.promise)}.`:''}\n\nLe avisaremos por telegrama en cuanto esté listo.\n\nEl precio de un apellido.`;
 }
 function telegramRemind(e){
- return `Sr./Sra. ${e.client}: le recordamos que su encargo (${encItemsTxt(e)}) le espera en Armería Harrington Gunsmith, Saint Denis.${e.pendingCents>0?` Importe pendiente: ${money(e.pendingCents)}.`:''}\n\nRecuerde que dispone de 10 días desde el aviso para recogerlo; pasado ese plazo, perderá el producto y la fianza.\n\nEl precio de un apellido.`;
+ return `Sr./Sra. ${e.client}: le recordamos que su encargo (${encItemsTxt(e)}) le espera en Armería Harrington Gunsmith, Saint Denis.${e.pendingCents>0?` Importe pendiente: ${money(e.pendingCents)}.`:''}\n\nRecuerde que dispone de 10 días desde el aviso para recogerlo; pasado ese plazo, perderá el producto y la fianza.\n\nAtentamente, Vincent Harrington · Telegrama SD6112\n\nEl precio de un apellido.`;
 }
 function pedidoTelegram(prov,items,paid,code){
  const tot=items.reduce((a,x)=>a+x.qty*x.price,0);
@@ -4012,7 +4012,7 @@ const TUTORIAL=[
 <p>Si no deja finalizar, el aviso te dice qué falta: nombre, empleado, telegrama, pago adelantado o stock.</p>`],
 ['Presupuesto',`<p>La pestaña <b>PRESUPUESTO</b> sirve para decirle a un cliente cuánto costaría una compra, sin vender nada.</p>
 <ul><li>Usa el mismo catálogo, precios, convenios y ofertas.</li><li>No genera ticket, no se registra, <b>no toca el stock</b> y no limita por existencias.</li><li>Cada pestaña recuerda sus propias cantidades, así que puedes hacer un presupuesto sin estropear una venta a medias.</li><li>Solo tienes que comunicarle el <b>Total</b> al cliente.</li><li>Si el cliente se decide, pulsa <b>PASAR A VENTA ▸</b>: los productos, el cliente y el convenio pasan a la pestaña VENTA para finalizarla sin volver a meterlos.</li></ul>`],
-['Encargos',`<p><b>Mensajes listos para copiar</b>: en la ficha del encargo, <b>COPIAR CONFIRMACIÓN</b> (mientras está pendiente: lo encargado, total, fianza, lo que falta y la fecha prevista), <b>COPIAR AVISO</b> (cuando está fabricado, con lo que falta por pagar) y <b>COPIAR RECORDATORIO</b> (si ya se le avisó y no ha venido). Se copia el texto con sus datos y lo pegas en el telegrama.</p><p><b>Crear un encargo</b>: en Tipo de operación elige «Encargo».</p>
+['Encargos',`<p><b>Mensajes listos para copiar</b>: en la ficha del encargo, <b>COPIAR CONFIRMACIÓN</b> (mientras está pendiente: lo encargado, total, fianza, lo que falta y la fecha prevista), <b>COPIAR AVISO</b> (cuando está fabricado, con lo que falta por pagar y firmado por Vincent Harrington con su telegrama SD6112) y <b>COPIAR RECORDATORIO</b> (si ya se le avisó y no ha venido). Se copia el texto con sus datos y lo pegas en el telegrama.</p><p><b>Crear un encargo</b>: en Tipo de operación elige «Encargo».</p>
 <ul><li>Rellena cliente, <b>telegrama</b> (letras, números y guiones, máximo 10, se pone en mayúsculas), <b>pago por adelantado</b> (obligatorio y mayor que 0), y si quieres entrega prevista y nota.</li><li><b>FINALIZAR VENTA</b> guarda el encargo (suena un lápiz). No gasta stock.</li></ul>
 <p><b>Botón ENCARGOS</b>: lista con total, adelanto, pendiente, estado y fecha (en rojo si está vencido). Tócalo para abrir la ficha.</p>
 <ul><li>Estado de fabricación: <b>PENDIENTE / FABRICADO</b>. «¿Cliente avisado?» solo se puede poner en SÍ si está FABRICADO. Si vuelve a PENDIENTE, el aviso vuelve a NO.</li><li><b>GUARDAR CAMBIOS</b> guarda sin cargar ni finalizar.</li><li>Cuando lo marcas <b>FABRICADO</b> y aún no hay stock suficiente, la ficha te recuerda que el jefe tiene que sumar esas unidades en STOCK (así se gastan sus materiales) para poder entregarlo.</li><li>En la lista ves también <b>hace cuánto</b> se hizo cada encargo.</li><li><b>COPIAR AVISO (TELEGRAMA)</b> genera el mensaje para el cliente cuando está fabricado.</li><li><b>CANCELAR ENCARGO</b> pregunta si se devuelve el adelanto.</li></ul>
