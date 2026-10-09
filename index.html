@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
-<!-- HARRINGTON GUNSMITH · versión 20261009m · tres archivos: index.html, estilos.css y app.js -->
+<!-- HARRINGTON GUNSMITH · versión 20261009n · tres archivos: index.html, estilos.css y app.js -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#07140f">
@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
 <title>Harrington Gunsmith · Saint Denis</title>
-<link rel="stylesheet" href="estilos.css?v=20261009m">
+<link rel="stylesheet" href="estilos.css?v=20261009n">
 <link rel="preload" as="image" href="entrada-fachada.webp" media="(max-aspect-ratio: 23/20)">
 <link rel="preload" as="image" href="entrada-fachada-ancha.webp" media="(min-aspect-ratio: 23/20)">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -46,6 +46,7 @@
       <div class="set-row"><span>Ambiente</span><button type="button" class="clock-link boss-btn" id="themeBtn" aria-label="Ambiente día o noche">AUTO</button></div>
       <div class="set-row"><span>Sonido y vibración</span><button type="button" class="clock-link boss-btn" id="soundBtn" aria-label="Activar o silenciar sonidos" title="Sonidos">♪ SÍ</button></div>
       <div class="set-row"><span>Tamaño del texto</span><span class="set-g"><button type="button" class="clock-link boss-btn" id="fsDown" aria-label="Texto más pequeño" title="Texto más pequeño">A−</button><button type="button" class="clock-link boss-btn" id="fsUp" aria-label="Texto más grande" title="Texto más grande">A+</button></span></div>
+      <div class="set-row kb-help"><span>Atajos: <kbd>/</kbd> buscar · <kbd>1</kbd>…<kbd>9</kbd> categorías · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> finalizar · <kbd>?</kbd> tutorial · <kbd>Esc</kbd> cerrar</span></div>
       <div class="set-row"><span>Alto contraste</span><button type="button" class="clock-link boss-btn" id="hcBtn" aria-label="Alto contraste" title="Alto contraste">◐</button></div>
      </div></div>
     <button type="button" class="clock-link" id="lastShiftBtn" hidden>Último registro</button>
@@ -384,6 +385,14 @@
   <button type="button" class="ob-sum" id="obSum" aria-label="Ver el pedido"><span id="obCount">0 productos</span><b id="obTotal">$0.00</b></button>
   <button type="button" class="ob-go only-venta" id="obGo">FINALIZAR</button>
 </div>
+<nav class="mnav" id="mnav" aria-label="Accesos rápidos" hidden>
+  <button type="button" data-mn="top"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10l8-6 8 6v9a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg><span class="mn-l">VENTA</span></button>
+  <button type="button" data-mn="encBtn"><span class="mn-i"></span><span class="mn-l">ENCARGOS</span></button>
+  <button type="button" data-mn="pedBtn"><span class="mn-i"></span><span class="mn-l">PEDIDOS</span></button>
+  <button type="button" data-mn="ausBtn"><span class="mn-i"></span><span class="mn-l">AUSENCIAS</span></button>
+  <button type="button" data-mn="dirBtn"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V5l7-2 7 2v16M9 21v-5h6v5M9 9h.01M15 9h.01M9 12.5h.01M15 12.5h.01"/></svg><span class="mn-l">DIRECCIÓN</span></button>
+  <button type="button" class="mn-clock" data-mn="clock"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V9.5M12 13.5l3 2M10.5 3h3M12 3v3.5"/></svg><span class="mn-l">FICHAR</span></button>
+</nav>
 <button type="button" class="to-top" id="toTop" aria-label="Volver arriba" title="Volver arriba">↑</button>
 <div class="gate" id="gate" hidden>
  <div class="g-stage" id="gStage">
@@ -612,6 +621,6 @@
   </div>
 </div>
 
-<script src="app.js?v=20261009m"></script>
+<script src="app.js?v=20261009n"></script>
 </body>
 </html>
