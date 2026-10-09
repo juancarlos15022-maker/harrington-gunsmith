@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261009f
+/* HARRINGTON GUNSMITH · app.js · versión 20261009g
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -507,7 +507,7 @@ const categoryVisuals={
 };
 function updateCategoryVisual(){
  const v=categoryVisuals[cat]||categoryVisuals.todos;
- document.getElementById('categoryImage').src=v.image;
+ document.getElementById('categoryImage').src=catImg(v.image);
  document.getElementById('categoryImage').alt=v.title+' · Harrington Gunsmith';
  document.getElementById('categoryTitle').textContent=v.title;
 }
@@ -4520,6 +4520,11 @@ function renderModRevision(){
  return `<p class="bk-note">Revisa los datos de la armería y te dice qué no cuadra y cómo arreglarlo. No cambia nada por sí sola.</p>`+
   (I.length?`<div class="dir-sec-title" style="margin-top:0">${I.length} ${I.length===1?'COSA QUE REVISAR':'COSAS QUE REVISAR'}</div><div class="avisos">`+I.map(x=>`<div class="aviso ${x[0]}">${x[1]}<br><small>${esc(x[2])}</small></div>`).join('')+'</div>':'<div class="rev-ok">✓ Todo cuadra: no hay nada que revisar.</div>');
 }
+/* En el ordenador, las franjas de categoría usan su versión alargada (nombre-ancha.webp) */
+function catImg(src){return innerWidth>=1100&&/\.webp$/.test(src)?src.replace(/\.webp$/,'-ancha.webp'):src}
+(function(){const im=document.getElementById('categoryImage');if(!im)return;let base=im.getAttribute('src');
+ im.addEventListener('error',()=>{const s=im.getAttribute('src');if(/-ancha\.webp$/.test(s))im.src=s.replace('-ancha.webp','.webp')});
+ im.src=catImg(base);let wasW=innerWidth>=1100;window.addEventListener('resize',()=>{const w=innerWidth>=1100;if(w!==wasW){wasW=w;const s=im.getAttribute('src').replace('-ancha.webp','.webp');im.src=catImg(s)}})})();
 /* ===== Limpieza de la nube: borra marcas antiguas que ya no sirven para nada ===== */
 async function cloudJanitor(force){
  if(!bossActive)return;

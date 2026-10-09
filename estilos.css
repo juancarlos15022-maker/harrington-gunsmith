@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261009f
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261009g
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1145,7 +1145,8 @@ body.gate-open .toast{z-index:140}
  .hero-banner img{position:relative;width:auto;max-width:100%;height:min(34vh,340px);max-height:none;margin:0 auto;object-fit:contain;box-shadow:0 0 0 1px #000,0 0 40px #000c}
  .hero-banner img.ancha{width:100%;height:min(36vh,380px);object-fit:cover;object-position:50% 40%}
  .hero-banner:has(img.ancha) .hero-bg{display:none}
- .category-visual{height:150px}
+ .category-visual{height:clamp(200px,min(calc((100vw - 80px) / 2.9),44vh),560px)}
+ .category-visual img{object-position:50% 50%}
  .grid{grid-template-columns:minmax(0,1fr) minmax(400px,31%);gap:16px}
  .enc-panel{max-width:min(1100px,94vw)}
  #dirModal .enc-panel,#dirModal .enc-panel.wide{max-width:min(1320px,96vw)}
