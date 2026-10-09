@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261009e
+/* HARRINGTON GUNSMITH · app.js · versión 20261009f
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -159,9 +159,9 @@ const EMPTY_ART={
  crate:'<svg viewBox="0 0 64 40" aria-hidden="true"><path d="M12 12l20-8 20 8v18l-20 8-20-8z"/><path d="M12 12l20 8 20-8M32 20v18M22 8l20 8"/></svg>',
  anvil:'<svg viewBox="0 0 64 40" aria-hidden="true"><path d="M8 12h34l10-6h4v10h-8l-6 6H22l-2 8h8v4H12v-4h4l2-8H8z"/></svg>'
 };
-const EMPTY_IMG={rev:'vacio-pedido.png',scroll:'vacio-encargos.png',crate:'vacio-pedidos.png',anvil:'vacio-materiales.png'};
+const EMPTY_IMG={rev:'vacio-pedido.webp',scroll:'vacio-encargos.webp',crate:'vacio-pedidos.webp',anvil:'vacio-materiales.png'};
 /* Imagen propia si está subida; si no, el dibujo de líneas */
-function emptyArt(k){return '<span class="empty-art"><img src="'+EMPTY_IMG[k]+'" alt="" onerror="this.parentNode.classList.add(\'nofile\')">'+(EMPTY_ART[k]||'')+'</span>'}
+function emptyArt(k){return '<span class="empty-art"><img src="'+EMPTY_IMG[k]+'" alt="" loading="lazy" decoding="async" onerror="this.parentNode.classList.add(\'nofile\')">'+(EMPTY_ART[k]||'')+'</span>'}
 function bump(el){el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump')}
 /* Evita el doble toque: mientras una operación con la nube está en marcha, el botón no responde otra vez */
 const busyOps={};
@@ -338,7 +338,7 @@ function renderReceipt(s){
  $('rcClient').textContent=s.client||'';
  $('rcClientWrap').hidden=!s.client;
  $('rcEmp').textContent=s.employee||'';
- const st=$('paidStamp');st.textContent=s.op==='encargo'?'ANOTADO':'PAGADO';st.classList.toggle('img',document.body.classList.contains('has-pagado')&&s.op!=='encargo');st.classList.remove('hit');void st.offsetWidth;st.style.animationDelay=s.op==='encargo'?'1.2s':'.6s';st.classList.add('hit');
+ const st=$('paidStamp');st.textContent=s.op==='encargo'?'ANOTADO':'PAGADO';st.classList.toggle('img',document.body.classList.contains('has-pagado')&&s.op!=='encargo');st.classList.toggle('ent',!!(s.fromEncargo&&IMG_OK['sello-entregado.webp']));st.classList.remove('hit');void st.offsetWidth;st.style.animationDelay=s.op==='encargo'?'1.2s':'.6s';st.classList.add('hit');
  $('rcEmpWrap').hidden=!s.employee;
  $('rcTel').textContent=s.telegram||'';
  $('rcTelWrap').hidden=!s.telegram;
@@ -432,7 +432,7 @@ document.querySelector('.panel.order').addEventListener('change',()=>setTimeout(
 document.getElementById('finish').onclick=e=>once('finish',async()=>{
  const s=await ensureSaleCloud(); if(!s)return;
  renderReceipt(s);openModal(receiptModal);receiptModal.scrollTop=0;printFx();if(s.op==='encargo')playPencil();else playRegister();notifySale(s);setTimeout(playThump,s.op==='encargo'?1250:650);say((s.op==='encargo'?'Encargo guardado · ':'Venta finalizada · ')+s.id);
- if(s.op!=='encargo'){askSerials(s);setTimeout(()=>checkRecord(s),1600)}
+ if(s.op!=='encargo'){askSerials(s);setTimeout(()=>checkRecord(s),1600);setTimeout(coinsFx,200);setTimeout(renderGoal,1200)}
 },e.currentTarget);
 /* ¡Récord de la casa!: la mayor venta o el mejor día de todos */
 function checkRecord(s){
@@ -495,15 +495,15 @@ document.getElementById('rcClose').onclick=()=>closeModal(receiptModal);
 /* ===== Categorías y buscador ===== */
 let cat='todos';
 const categoryVisuals={
- todos:{image:'cabecera-harrington.png',title:'Catálogo Harrington'},
- revolveres:{image:'revolveres.png',title:'Revólveres'},
- pistolas:{image:'pistolas.png',title:'Pistolas'},
- repetidoras:{image:'repetidoras.png',title:'Repetidoras'},
- rifles:{image:'rifles.png',title:'Rifles'},
- escopetas:{image:'escopetas.png',title:'Escopetas'},
- blancas:{image:'armas-blancas.png',title:'Armas blancas'},
- municion:{image:'municion.png',title:'Munición'},
- suministros:{image:'suministros.png',title:'Suministros'}
+ todos:{image:'cabecera-harrington.webp',title:'Catálogo Harrington'},
+ revolveres:{image:'revolveres.webp',title:'Revólveres'},
+ pistolas:{image:'pistolas.webp',title:'Pistolas'},
+ repetidoras:{image:'repetidoras.webp',title:'Repetidoras'},
+ rifles:{image:'rifles.webp',title:'Rifles'},
+ escopetas:{image:'escopetas.webp',title:'Escopetas'},
+ blancas:{image:'armas-blancas.webp',title:'Armas blancas'},
+ municion:{image:'municion.webp',title:'Munición'},
+ suministros:{image:'suministros.webp',title:'Suministros'}
 };
 function updateCategoryVisual(){
  const v=categoryVisuals[cat]||categoryVisuals.todos;
@@ -960,7 +960,7 @@ async function finishEncargoNow(){
  if(!await askConfirm('Finalizar encargo','Se marcará el encargo '+loadedEnc.id+' como entregado y cobrado. Dejará de aparecer en pendientes.','Finalizar'))return;
  loadedEnc.finished=true;loadedEnc.finishedAt=Date.now();loadedEnc.deliverySale=sl.id;
  saveEncs();updateEncBtn();renderCustomer();
- renderReceipt(sl);openModal(receiptModal);receiptModal.scrollTop=0;printFx();playRegister();notifySale(sl);setTimeout(playThump,650);say('Encargo finalizado');
+ renderReceipt(sl);openModal(receiptModal);receiptModal.scrollTop=0;printFx();playRegister();notifySale(sl);setTimeout(()=>{if(!stampImgFx('entregado',2.57))playThump()},700);setTimeout(coinsFx,200);say('Encargo finalizado');
  askSerials(sl);
 }
 updateEncBtn();
@@ -1241,6 +1241,9 @@ const DIRECCION_MODULOS=[
  {id:'semanales',titulo:'REGISTROS SEMANALES',desc:'Resumen semanal de ventas y fichajes de cada empleado.',render:()=>renderModSemanales()},
  {id:'gastos',titulo:'GASTOS',desc:'Registrar gastos y descargar el registro.',render:()=>renderModGastos()},
  {id:'sueldos',titulo:'SUELDOS',desc:'Pago de los domingos según las horas echadas.',render:()=>renderModSueldos()},
+ {id:'objetivo',titulo:'OBJETIVO SEMANAL',desc:'Meta de ventas de la semana con su barra.',render:()=>renderModObjetivo()},
+ {id:'revision',titulo:'REVISIÓN DE DATOS',desc:'Comprueba que todo cuadra y qué arreglar.',render:()=>renderModRevision()},
+ {id:'empficha',titulo:'FICHA DEL EMPLEADO',desc:'',hidden:true,render:()=>renderModEmpFicha()},
  {id:'balance',titulo:'BALANCE DE CUENTAS',desc:'Ingresos, gastos y beneficios.',render:()=>renderModBalance()},
  {id:'cierre',titulo:'CIERRE DE CAJA',desc:'Contar la caja del día y ver la diferencia.',render:()=>renderModCierre()},
  {id:'proveedores',titulo:'PROVEEDORES',desc:'Crear y gestionar tus proveedores (herrerías, minas, talas…).',render:()=>renderModProveedores()},
@@ -2055,6 +2058,8 @@ function rankingHTML(list){
  return `<div class="enc-card dir-item"><div class="t">RANKING DE LA SEMANA</div>${r.map((x,i)=>`<div class="reg-line"><span><i class="medal m${i+1}" aria-label="${i+1}º">${i+1}</i>${esc(x.n)}</span><b>${money(x.c)}</b></div>`).join('')}</div>`;
 }
 const MOD_ICONS={
+ objetivo:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2"/>',
+ revision:'<path d="M9 4h6v3H9z"/><path d="M7 5H5v15h14V5h-2"/><path d="M8.5 13l2.5 2.5 4.5-5"/>',
  sueldos:'<rect x="3" y="7" width="18" height="11" rx="1.5"/><circle cx="12" cy="12.5" r="2.5"/><path d="M6 10v5M18 10v5"/>',
  ausencias:'<path d="M7 4h10M7 20h10M8 4c0 5 8 5 8 8s-8 3-8 8M16 4c0 5-8 5-8 8s8 3 8 8"/>',
  fabricacion:'<path d="M4 10h11l3-3h2v6h-3l-2 2H9l-1 5H6l1-5H4z"/><path d="M14 7V4M11 7V5"/>',
@@ -2088,6 +2093,7 @@ function avisosHTML(){
  pendingEncs().filter(x=>x.promise&&x.promise<hoy).forEach(x=>A.push(['bad',`Encargo de <b>${esc(x.client)}</b> vencido desde el ${fmtISO(x.promise)}.`]));
  pendingPed().filter(p=>!p.received&&Date.now()-p.ts>3*86400000).forEach(p=>A.push(['pend',`El pedido ${esc(p.code)} a <b>${esc(p.proveedor)}</b> lleva ${ago(p.ts).replace('hace ','')} sin recibirse.`]));
  lowMats().forEach(n=>A.push(['bad',`Material bajo mínimo: <b>${esc(n)}</b> (quedan ${stockMap[matKey(n)]||0}).`]));
+ stockForecast().slice(0,3).forEach(f=>A.push(['pend',`<b>${esc(f.n)}</b> se acaba en unos ${Math.max(1,Math.round(f.days))} días al ritmo de ventas (quedan ${f.q}).`]));
  lowStock().forEach(n=>A.push(['bad',`Stock bajo: <b>${esc(n)}</b> (quedan ${stockMap[n]||0}).`]));
  if(!A.length)return '';
  return `<div class="dir-sec-title">AVISOS (${A.length})</div><div class="avisos">`+A.slice(0,12).map(a=>`<div class="aviso ${a[0]}">${a[1]}</div>`).join('')+(A.length>12?`<div class="aviso">y ${A.length-12} más…</div>`:'')+'</div>';
@@ -2117,6 +2123,8 @@ webhook=Object.assign({url:''},webhook,{ev:Object.assign({},EV_DEF,webhook.ev||{
 const WH_RE=/^https:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+/;
 const KIND_COLOR={ventas:0xC9A24A,encargos:0x9A6B1C,fichajes:0x3F7A52,gastos:0xA8321C,balance:0x1B6A3A,pedidos:0x2E7D4F,empleados:0x7A5A22,clientes:0x3A5A8C,proveedores:0x6B5A2A,stock:0x6B8E23,materiales:0x8B5A2B,anulaciones:0x7A1608,cierres:0xB88931,resumen:0xE0B25C,ausencias:0x5A6E8C,sueldos:0x3E8E4E};
 function dcEsc(s){return String(s).replace(/([*_~|`])/g,'\\$1')}
+const DC_THUMB={ventas:'icono-revolveres.webp',encargos:'vacio-encargos.webp',pedidos:'vacio-pedidos.webp',materiales:'vacio-materiales.png',stock:'icono-municion.webp',gastos:'moneda-oro.webp',sueldos:'moneda-oro.webp',balance:'moneda-oro.webp',resumen:'moneda-oro.webp',cierres:'moneda-oro.webp',fichajes:'reloj-bolsillo.webp',ausencias:'reloj-bolsillo.webp',empleados:'tarjeta-empleado.webp',clientes:'cartel-se-busca.webp',proveedores:'vacio-pedidos.webp',anulaciones:'sello-pagado.png'};
+function dcThumb(k){try{return DC_THUMB[k]&&/^https?:/.test(location.protocol)?new URL(DC_THUMB[k],location.href).href:''}catch(e){return ''}}
 function dcIcon(){try{return /^https?:/.test(location.protocol)?new URL('emblema-harrington.png',location.href).href:''}catch(e){return ''}}
 /* Convierte el texto de siempre en una tarjeta: 1.ª línea = título; «Clave: valor» en negrita */
 const DC_SKIP={'HARRINGTON GUNSMITH':1,'Saint Denis · 1880':1,'El precio de un apellido.':1};
@@ -2128,6 +2136,7 @@ function dcEmbed(kind,text,img){
  const e={title:title.slice(0,250),description:(desc.length>3900?desc.slice(0,3890)+'…':desc)||'\u200b',color:KIND_COLOR[kind]||0xC9A24A,footer:{text:'Harrington Gunsmith · Saint Denis · 1880'},timestamp:new Date().toISOString()};
  const ic=dcIcon();if(ic)e.footer.icon_url=ic;
  if(img)e.image={url:'attachment://'+img};
+ else{const th=dcThumb(kind);if(th)e.thumbnail={url:th}}
  return e;
 }
 function dcPayload(kind,text,img){const p={username:'Harrington Gunsmith',embeds:[dcEmbed(kind,text,img)]},ic=dcIcon();if(ic)p.avatar_url=ic;return p}
@@ -2277,7 +2286,7 @@ async function savePedido(){
    const mv=Object.keys(mi).map(k=>({producto:k,delta:mi[k]}));
    try{await moverStock(mv,'Pedido '+rec.code);mv.forEach(x=>logStock(x.producto.slice(4)+' (material)',x.delta,'Pedido '+rec.code))}
    catch(e){sbFetch('/rest/v1/datos?clave=eq.'+encodeURIComponent('recibido-'+rec.id),{method:'DELETE'}).catch(()=>{});return say('Sin conexión: no se puede registrar la recepción ahora')}
-   stampFx('RECIBIDO');playChest();
+   if(!stampImgFx('recibido',2.43))stampFx('RECIBIDO');playChest();
   }
   rec.matIn=true;
  }
@@ -2684,7 +2693,7 @@ function renderModEmpleados(){
    <div class="enc-actions two"><button type="button" data-dir="emp-cancel">Cancelar</button><button type="button" class="primary" data-dir="emp-save:${esc(e.id)}">GUARDAR</button></div></div>`;
   const ok=empHasContract(e);
   return `<div class="enc-card dir-item"><div class="t">${esc(e.name)}</div><div class="it">${ok?`${esc(e.puesto.toUpperCase())} · ${money(e.sueldo)} a la semana · ${e.horas||10} h semanales<br>Inicio: ${fmtISO(e.inicio)} · ${e.sinPrueba?'sin periodo de prueba (ascendido)':'prueba hasta el '+fmtISO(e.prueba||isoAdd(e.inicio,6))}`:'<span class="lowtag">FALTAN LOS DATOS DEL CONTRATO</span> Pulsa EDITAR para completarlos.'}</div>
-   <div class="enc-actions emp3"><button type="button" data-dir="emp-edit:${esc(e.id)}">✎ EDITAR</button><button type="button" data-dir="emp-ct:${esc(e.id)}"${ok?'':' disabled'}>📜 CONTRATO</button><button type="button" class="warn" data-dir="emp-del:${esc(e.id)}">🗑 PAPELERA</button></div>${ok&&ASCENSO[e.puesto]?`<div class="enc-actions"><button type="button" class="gold" data-dir="emp-up:${esc(e.id)}">⬆ ASCENSO A ${esc(ASCENSO[e.puesto].toUpperCase())} · ${money(SUELDO_PUESTO[ASCENSO[e.puesto]])}</button></div>`:''}${empExtra(e)}</div>`;
+   <div class="enc-actions emp3"><button type="button" data-dir="emp-edit:${esc(e.id)}">✎ EDITAR</button><button type="button" data-dir="emp-ct:${esc(e.id)}"${ok?'':' disabled'}>📜 CONTRATO</button><button type="button" class="warn" data-dir="emp-del:${esc(e.id)}">🗑 PAPELERA</button></div><div class="enc-actions"><button type="button" data-dir="emp-ficha:${esc(e.id)}">📋 FICHA COMPLETA</button></div>${ok&&ASCENSO[e.puesto]?`<div class="enc-actions"><button type="button" class="gold" data-dir="emp-up:${esc(e.id)}">⬆ ASCENSO A ${esc(ASCENSO[e.puesto].toUpperCase())} · ${money(SUELDO_PUESTO[ASCENSO[e.puesto]])}</button></div>`:''}${empExtra(e)}</div>`;
  };
  return `<div class="dir-form enc-sec"><div class="dir-sec-title" style="margin-top:0">NUEVO EMPLEADO</div>${empFields(empDraft,'emp')}
   <div class="pay-err" id="empErr"${empErr?'':' hidden'}>${esc(empErr)}</div>
@@ -2845,7 +2854,7 @@ async function undoFab(){
  try{localStorage.removeItem('harrington_lastfab')}catch(e){}
  renderDir();calc(false);say('Fabricación deshecha');
 }
-const DIR_SECCIONES=[['VENTAS Y CAJA',['ventas','semanales','gastos','sueldos','balance','cierre']],['CATÁLOGO, PRECIOS Y CONVENIOS',['productos','convenios']],['ALMACÉN Y FABRICACIÓN',['stock','fabricacion','regstock']],['PROVEEDORES',['proveedores','nuevopedido','regpedidos']],['PERSONAL',['empleados','horarios','ausencias']],['CLIENTES',['clientes']],['SISTEMA',['discord','nube','copia','reset']]];
+const DIR_SECCIONES=[['VENTAS Y CAJA',['ventas','semanales','gastos','sueldos','objetivo','balance','cierre']],['CATÁLOGO, PRECIOS Y CONVENIOS',['productos','convenios']],['ALMACÉN Y FABRICACIÓN',['stock','fabricacion','regstock']],['PROVEEDORES',['proveedores','nuevopedido','regpedidos']],['PERSONAL',['empleados','horarios','ausencias']],['CLIENTES',['clientes']],['SISTEMA',['revision','discord','nube','copia','reset']]];
 let dirLast=null;
 document.getElementById('dirModal').addEventListener('toggle',e=>{const d=e.target;if(!d.matches||!d.matches('details.mod-sec'))return;let st={};try{st=JSON.parse(localStorage.getItem('harrington_dirsec')||'{}')}catch(x){}if(d.open)st[d.dataset.sec]=1;else delete st[d.dataset.sec];try{localStorage.setItem('harrington_dirsec',JSON.stringify(st))}catch(x){}},true);
 function renderDir(){
@@ -2857,8 +2866,8 @@ function renderDir(){
   const card=m=>`<button type="button" class="enc-card mod-card" data-dir="open:${m.id}"><svg class="mod-ico" viewBox="0 0 24 24" aria-hidden="true">${MOD_ICONS[m.id]||''}</svg><div><div class="t">${m.titulo}</div><div class="it">${m.desc}</div></div></button>`;
   let st={};try{st=JSON.parse(localStorage.getItem('harrington_dirsec')||'{}')}catch(e){}
   const used={}, secs=DIR_SECCIONES.map(([t,ids])=>{const L=ids.map(id=>DIRECCION_MODULOS.find(m=>m.id===id)).filter(Boolean);L.forEach(m=>used[m.id]=1);return [t,L]});
-  const rest=DIRECCION_MODULOS.filter(m=>!used[m.id]);if(rest.length)secs.push(['OTROS',rest]);
-  body.innerHTML=renderDashboard()+secs.filter(s=>s[1].length).map(([t,L])=>`<details class="mod-sec" data-sec="${esc(t)}"${st[t]?' open':''}><summary><span>${t}</span><small>${L.length}</small></summary><div class="mod-grid">${L.map(card).join('')}</div></details>`).join('')+
+  const rest=DIRECCION_MODULOS.filter(m=>!used[m.id]&&!m.hidden);if(rest.length)secs.push(['OTROS',rest]);
+  body.innerHTML=dirSearchHTML()+renderDashboard()+secs.filter(s=>s[1].length).map(([t,L])=>`<details class="mod-sec" data-sec="${esc(t)}"${st[t]?' open':''}><summary><span>${t}</span><small>${L.length}</small></summary><div class="mod-grid">${L.map(card).join('')}</div></details>`).join('')+
    '<div class="enc-actions" style="margin-top:6px"><button type="button" class="warn" data-dir="exit-boss">Salir del Modo Jefe</button></div>';
   return;
  }
@@ -2906,6 +2915,7 @@ async function deleteDisc(id){
  descuentos=descuentos.filter(x=>x.id!==id);saveDisc();
  renderDir();tickDiscounts();say('Eliminado');
 }
+dirModal.addEventListener('input',e=>{if(e.target.id==='dsQ'){dsQ=e.target.value;const r=document.getElementById('dsRes');if(r)r.innerHTML=dsQ.trim().length>=2?dirSearchResults(dsQ):''}});
 dirBtn.onclick=()=>{dirMod=null;dirForm=null;renderDir();openModal(dirModal);dirModal.scrollTop=0};
 document.getElementById('payPlate').onclick=()=>{if(bossActive){dirMod='sueldos';dirForm=null;sueOff=0;renderDir();openModal(dirModal);dirModal.scrollTop=0}else say('Los sueldos los paga la dirección los domingos')};
 document.getElementById('dirClose').onclick=()=>closeModal(dirModal);
@@ -3004,6 +3014,10 @@ dirModal.addEventListener('click',e=>{
  else if(act==='emp-del')empDelete(arg);
  else if(act==='emp-up')once('up-'+arg,()=>empAscenso(arg),b);
  else if(act==='emp-kick')once('kick-'+arg,()=>empKick(arg),b);
+ else if(act==='ds-open')dsOpen(b.dataset.dir.slice(8));
+ else if(act==='emp-ficha'){dirMod='empficha';fichaEmp=arg;renderDir();dirModal.scrollTop=0}
+ else if(act==='obj-save')saveObjetivo(false);
+ else if(act==='obj-off')saveObjetivo(true);
  else if(act==='emp-reset')once('rst-'+arg,()=>empResetClave(arg),b);
  else if(act==='emp-foto')empPickFoto(arg);
  else if(act==='emp-nofoto')once('nf-'+arg,()=>empNoFoto(arg),b);
@@ -3067,7 +3081,7 @@ dirModal.addEventListener('change',e=>empInput(e.target));
 /* ===== Selector de empleado, aviso "SIN STOCK" y pestañas Venta / Presupuesto ===== */
 empSel.onchange=()=>{customer.employee=empSel.value;customerChanged()};
 /* Un dibujo de grabado por categoría en cada producto (icono-<categoría>.png). Si falta, se queda el medallón ✦. */
-const CAT_IMG={revolveres:'icono-revolveres.png',pistolas:'icono-pistolas.png',repetidoras:'icono-repetidoras.png',rifles:'icono-rifles.png',escopetas:'icono-escopetas.png',blancas:'icono-armas-blancas.png',municion:'icono-municion.png',suministros:'icono-suministros.png'};
+const CAT_IMG={revolveres:'icono-revolveres.webp',pistolas:'icono-pistolas.webp',repetidoras:'icono-repetidoras.webp',rifles:'icono-rifles.webp',escopetas:'icono-escopetas.webp',blancas:'icono-armas-blancas.webp',municion:'icono-municion.webp',suministros:'icono-suministros.webp'};
 function iconErr(img){
  if(!img.dataset.r){img.dataset.r='1';img.src=img.getAttribute('src')+'.png';return} /* por si el archivo se subió como .png.png */
  img.onerror=null;
@@ -3075,7 +3089,7 @@ function iconErr(img){
 }
 document.querySelectorAll('.product').forEach(pr=>{
  const ic=pr.querySelector('.weapon-icon'), src=CAT_IMG[pr.dataset.cat];
- if(ic&&src)ic.innerHTML=`<img src="${src}" alt="" decoding="async" onload="this.parentNode.classList.add('has-icon')" onerror="iconErr(this)">`;
+ if(ic&&src)ic.innerHTML=`<img src="${src}" alt="" loading="lazy" decoding="async" onload="this.parentNode.classList.add('has-icon')" onerror="iconErr(this)">`;
 });
 const DESCRIPCIONES={
 'Cattleman Revolver':'Revólver de acción simple y seis disparos, robusto y fiable. El clásico de cualquier vaquero.',
@@ -3300,9 +3314,10 @@ const TUTORIAL=[
 <p>Haz una <b>copia de seguridad</b> de vez en cuando desde Dirección.</p>`],
 ['Novedades: deshacer, sin conexión y app',`<ul><li><b>Deshacer</b>: al borrar un gasto, anular o borrar una ausencia, o empezar una venta nueva con productos puestos, el aviso de abajo lleva un botón <b>DESHACER</b> durante unos segundos.</li><li><b>Sin conexión</b>: si se cae la conexión sale una franja roja arriba. Puedes seguir trabajando: lo que hagas se guarda y se envía al volver.</li><li><b>Cerrar sesión</b>: al fichar tu salida, la web te pregunta si quieres cerrar tu sesión en ese dispositivo.</li><li><b>👁</b> junto a las contraseñas sirve para ver lo que escribes.</li><li><b>Como una app</b>: la web se guarda en el móvil, así que se abre al instante y aunque no haya conexión. En el móvil puedes añadirla a la pantalla de inicio desde el menú del navegador («Añadir a pantalla de inicio»).</li><li>En el <b>ordenador</b> la web ocupa toda la pantalla: productos en columnas y el pedido siempre a la derecha.</li><li>Con poca batería o con el ahorro de datos activado, se quitan los efectos de lluvia para gastar menos.</li></ul>`],
 ['Modo prueba (Arthur Ayudante)',`<ul><li>En la entrada, la última tarjeta es <b>Arthur Ayudante</b>, con el sello «PRUEBA». Sirve para probar las novedades sin miedo.</li><li>La primera vez te pide crear su contraseña; después, siempre la misma (es la única cosa que se guarda de verdad).</li><li>Dentro entras como jefe, con DIRECCIÓN, y ves una copia de los datos reales del momento.</li><li><b>Nada de lo que hagas se guarda</b> en la base de datos ni afecta a la web de verdad, y <b>no se envía nada a Discord</b>. Arriba sale la franja amarilla «MODO PRUEBA».</li><li>El botón <b>DISCORD (n)</b> de la franja enseña los mensajes que se habrían enviado, para comprobar que salen bien.</li><li><b>SALIR</b> (o cerrar la pestaña) borra la prueba y vuelve a la entrada normal.</li><li>Arthur Ayudante no aparece en Empleados, Sueldos ni en ningún listado.</li></ul>`],
+['Objetivo, buscador y revisión',`<ul><li><b>Objetivo semanal</b> (Dirección → Ventas y caja → OBJETIVO SEMANAL): pon una meta de ventas para la semana (viernes a jueves). En la pantalla principal sale una barra dorada que se va llenando con lo cobrado; al llegar a la meta se pone verde y salta la celebración.</li><li><b>Buscador</b> (arriba en la consola de Dirección): escribe un cliente, un número de serie, un ticket, un encargo, un pedido o un empleado y pulsa ABRIR para ir a su apartado.</li><li><b>Revisión de datos</b> (Dirección → Sistema): comprueba stock negativo, turnos abiertos de hace mucho, ventas sin empleado, gastos o clientes repetidos, encargos y pedidos atascados y productos que se van a acabar, y te dice cómo arreglarlo. No cambia nada sola.</li><li><b>Productos que se acaban</b>: si al ritmo de ventas de las dos últimas semanas a un producto le quedan 5 días o menos, sale un aviso en Dirección.</li><li><b>Ficha completa</b> (Empleados → 📋 FICHA COMPLETA): ventas, cobrado, horas, sueldos, ausencias y ascensos de cada empleado.</li><li>Detalles nuevos: monedas de oro que caen al total al cobrar, el reloj de bolsillo junto a tu nombre mientras estás fichado, el cartel de «SE BUSCA» del empleado de la semana, los sellos ENTREGADO y RECIBIDO, la tablilla de AGOTADO y los mensajes de Discord con su imagen.</li></ul>`],
 ['Si algo no funciona',`<ul><li><b>No deja finalizar</b>: lee el aviso; suele faltar cliente, empleado, telegrama, pago adelantado o stock.</li><li><b>Producto SIN STOCK</b>: el jefe debe sumar existencias.</li><li><b>No suena</b>: en ⚙ comprueba que el sonido diga «♪ SÍ» y el volumen del móvil.</li><li><b>Un botón no responde</b>: si muestra ⏳, está guardando; espera a que termine.</li><li><b>No suena la música</b>: los navegadores no dejan sonar nada hasta que tocas la pantalla; toca cualquier sitio. Si sigue sin sonar, en ⚙ comprueba que «Música de fondo» diga «♫ SÍ».</li><li><b>Se lee poco</b>: usa A+ o el alto contraste ◐.</li><li><b>No ves un cambio reciente</b>: abre la web en una pestaña privada.</li></ul>`]];
 const tutModal=document.getElementById('tutModal');
-const HELP_MAP={sueldos:'Sueldos',ausencias:'Ausencias',convenios:'Convenios',empleados:'Empleados y contratos',clientes:'Clientes',productos:'Modo Jefe',stock:'Fabricación y recetas',fabricacion:'Fabricación y recetas',regstock:'Modo Jefe',horarios:'Fichaje',ventas:'Modo Jefe',semanales:'Ticket, copias y Discord',gastos:'Empleados y contratos',balance:'Ticket, copias y Discord',cierre:'Modo Jefe',proveedores:'Proveedores y pedidos',nuevopedido:'Proveedores y pedidos',regpedidos:'Proveedores y pedidos',discord:'Ticket, copias y Discord',nube:'Datos y dispositivos',reset:'Datos y dispositivos',copia:'Datos y dispositivos'};
+const HELP_MAP={objetivo:'Objetivo, buscador y revisión',revision:'Objetivo, buscador y revisión',empficha:'Empleados y contratos',sueldos:'Sueldos',ausencias:'Ausencias',convenios:'Convenios',empleados:'Empleados y contratos',clientes:'Clientes',productos:'Modo Jefe',stock:'Fabricación y recetas',fabricacion:'Fabricación y recetas',regstock:'Modo Jefe',horarios:'Fichaje',ventas:'Modo Jefe',semanales:'Ticket, copias y Discord',gastos:'Empleados y contratos',balance:'Ticket, copias y Discord',cierre:'Modo Jefe',proveedores:'Proveedores y pedidos',nuevopedido:'Proveedores y pedidos',regpedidos:'Proveedores y pedidos',discord:'Ticket, copias y Discord',nube:'Datos y dispositivos',reset:'Datos y dispositivos',copia:'Datos y dispositivos'};
 function openTutorial(focus){
  if(typeof focus!=='string')focus='';
  document.getElementById('tutBody').innerHTML='<div class="tour-wrap"><button type="button" class="tour-start" id="tourStart">▶ VISITA GUIADA</button><span>Un recorrido rápido que te señala cada botón.</span></div><p class="tut-intro">Toca cada apartado para ver cómo funciona. Puedes abrir esta guía cuando quieras con el botón «? TUTORIAL» de arriba a la derecha.</p>'+TUTORIAL.map((t,i)=>`<details class="tut"${i===0&&!focus?' open':''}><summary><span class="tut-n">${i+1}</span>${t[0]}</summary><div class="tut-c">${t[1]}</div></details>`).join('');
@@ -3420,7 +3435,7 @@ function fmtDuration(a,b){const m=Math.max(0,Math.round((b-a)/60000));return `${
 function renderClock(){
  const el=m=>{const mm=Math.max(0,Math.floor(m/60000));return mm<60?mm+' min':Math.floor(mm/60)+' h '+pad(mm%60)+' min'};
  clockStatus.innerHTML=shifts.length?shifts.map(x=>{const lg=Date.now()-x.start>MAX_SHIFT_H*3600000;return `<span class="shift-chip${lg?' long':''}" title="Entrada: ${esc(fmtTime(x.start))}"><i></i>${lg?'⚠ ':''}${esc(x.name)} · ${el(Date.now()-x.start)}${lg?' · ¿olvidó fichar la salida?':''}</span>`}).join(''):'Sin fichar';
- {const me=meEmp(), mine=me&&shifts.some(x=>x.empId===me.id);clockOutBtn.hidden=me?!mine:!shifts.length;clockBtn.hidden=!!mine}
+ {const me=meEmp(), mine=me&&shifts.some(x=>x.empId===me.id);clockOutBtn.hidden=me?!mine:!shifts.length;clockBtn.hidden=!!mine;try{paintPocket()}catch(e){}}
  lastShiftBtn.hidden=!lastShift;
 }
 setInterval(()=>{if(shifts.length)renderClock()},30000);
@@ -3430,7 +3445,9 @@ function renderEmpWeek(){
  loadLog(KEY_SALELOG).forEach(r=>{if(r.voided||!r.employee)return;const d=saleDay(r);if(d<ws||d>ws+6)return;tot[r.employee]=(tot[r.employee]||0)+collected(r)});
  const top=Object.keys(tot).sort((a,b)=>tot[b]-tot[a])[0];
  if(!top||tot[top]<=0){el.hidden=true;return}
- const html=`<span class="ew-medal" aria-hidden="true">★</span><div><small>EMPLEADO DE LA SEMANA</small><b>${esc(top)}</b><span>${money(tot[top])} cobrados · semana ${dayStr(ws).slice(0,5)} – ${dayStr(ws+6).slice(0,5)}</span></div>`;
+ const emp=empleados.find(x=>x.name===top), ph=emp&&typeof PHOTOS!=='undefined'?PHOTOS[emp.id]:null, wanted=IMG_OK['cartel-se-busca.webp'];
+ el.classList.toggle('wanted',!!wanted);
+ const html=(wanted?`<span class="ew-poster" aria-hidden="true"><span class="ew-ph">${ph?`<img src="${ph}" alt="">`:esc(top.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase())}</span><span class="ew-nm">${esc(top)}</span><span class="ew-rw">${money(tot[top])}</span></span>`:`<span class="ew-medal" aria-hidden="true">★</span>`)+`<div><small>EMPLEADO DE LA SEMANA</small><b>${esc(top)}</b><span>${money(tot[top])} cobrados · semana ${dayStr(ws).slice(0,5)} – ${dayStr(ws+6).slice(0,5)}</span></div>`;
  if(el.innerHTML!==html)el.innerHTML=html;el.hidden=false;
 }
 function fillEmployeeSelect(list,last){
@@ -3567,7 +3584,7 @@ renderClock();
 
 /* ===== Imágenes decorativas opcionales: si el archivo existe se usa, si no se mantiene el dibujo en código ===== */
 function probeImg(src,ok){const t=new Image();t.onload=()=>ok(t);t.src=src}
-probeImg('sello-lacre.png',()=>document.body.classList.add('has-lacre'));
+probeImg('sello-lacre.webp',()=>document.body.classList.add('has-lacre'));
 probeImg('sello-pagado.png',()=>document.body.classList.add('has-pagado'));
 probeImg('esquina-ornamento.png',img=>{
  try{
@@ -3801,6 +3818,8 @@ function applyRecord(clave,valor){
   pedidos.sort((a,b)=>(a.ts||0)-(b.ts||0));
   try{localStorage.setItem(KEY_PEDIDOS,JSON.stringify(pedidos))}catch(e){}
   updatePedBtn();
+ }else if(type==='cfg'&&id==='objetivo'){
+  OBJ=del?{}:(valor||{});try{localStorage.setItem('harrington_objetivo_v1',JSON.stringify(OBJ))}catch(e){}renderGoal();
  }else if(type==='expulsion'){
   onExpulsion(id,valor);
  }else if(type==='fichaje'){
@@ -3888,11 +3907,11 @@ async function cloudPoll(force){
   }
   if(cloud.outbox.length)cloudFlushOutbox();
   cloud.last=Date.now();
-  autoWeekly();renderEmpWeek();renderPayPlate();
+  autoWeekly();renderEmpWeek();renderPayPlate();renderGoal();
  }catch(e){setCloudState(false)}
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){cloudPoll();rtConnect()}});
-setTimeout(()=>{try{updateFinish();renderEmpWeek();updateAusBtn();renderPayPlate()}catch(e){}},400);
+setTimeout(()=>{try{updateFinish();renderEmpWeek();updateAusBtn();renderPayPlate();renderGoal()}catch(e){}},400);
 /* Aviso instantáneo: Supabase avisa en el momento en que cambia algo y este móvil se actualiza al instante.
    Si ese canal no funciona, se sigue preguntando a la nube cada 6 segundos como siempre. */
 const rt={ws:null,ref:0,hb:null,ok:false,got:0,retry:0,timer:null};
@@ -4028,13 +4047,13 @@ function gApplyLayout(k){
 /* Prueba las imágenes en orden (.jpg comprimida primero, luego .png) y se queda con la primera que cargue */
 function gTry(list,ok,ko){const next=i=>{if(i>=list.length)return ko&&ko();const im=new Image();im.onload=()=>ok(list[i]);im.onerror=()=>next(i+1);im.src=list[i]};next(0)}
 function gateLoadImg(){
- const wide=gWide(), names=n=>[n+'.jpg',n+'.png',n+'.png.png'];
+ const wide=gWide(), names=n=>[n+'.webp',n+'.jpg',n+'.png'];
  G.wantWide=wide;
  if(!G.lk||G.lk!==(wide?'w':'v'))gApplyLayout(wide?'w':'v');
  const useV=()=>gTry(names('entrada-fachada'),u=>{gApplyLayout('v');gate.style.setProperty('--gimg','url("'+u+'")');gate.classList.add('img-ok');gate.classList.remove('no-img');G.img=true},()=>{gApplyLayout('v');gate.classList.add('no-img')});
  if(wide)gTry(names('entrada-fachada-ancha'),u=>{gApplyLayout('w');gate.style.setProperty('--gimg','url("'+u+'")');gate.classList.add('img-ok');gate.classList.remove('no-img');G.img=true},useV);
  else useV();
- gTry(['tarjeta-empleado.png'],()=>gate.classList.add('card-img'),()=>{});
+ gTry(['tarjeta-empleado.webp'],()=>gate.classList.add('card-img'),()=>{});
  const intV=()=>gTry(names('entrada-interior'),u=>{gate.style.setProperty('--iimg','url("'+u+'")');gate.classList.add('int-ok')});
  if(wide)gTry(names('entrada-interior-ancha'),u=>{gate.style.setProperty('--iimg','url("'+u+'")');gate.classList.add('int-ok')},intV);
  else intV();
@@ -4363,7 +4382,7 @@ try{pwEyes(document.getElementById('bossModal'))}catch(e){}
 
 /* En el ordenador, si existe la cabecera alargada (cabecera-web-ancha), se usa esa */
 (function(){const img=document.querySelector('.hero-banner img');if(!img)return;let done=false;
- const tryW=()=>{if(done||innerWidth<1100)return;done=true;gTry(['cabecera-web-ancha.jpg','cabecera-web-ancha.png'],u=>{img.src=u;img.classList.add('ancha')},()=>{})};
+ const tryW=()=>{if(done||innerWidth<1100)return;done=true;gTry(['cabecera-web-ancha.webp','cabecera-web-ancha.webp'],u=>{img.src=u;img.classList.add('ancha')},()=>{})};
  tryW();window.addEventListener('resize',tryW)})();
 /* ===== Modo prueba: barra, visor de Discord y entrada automática como Arthur Ayudante ===== */
 function sbxPaint(){const b=document.getElementById('sbxDc');if(b)b.textContent='DISCORD ('+SBX.dc.length+')'}
@@ -4379,6 +4398,127 @@ if(SANDBOX){
  document.getElementById('sbxOut').onclick=async()=>{if(await askConfirm('Salir del modo prueba','Se borrará todo lo que hayas hecho en la prueba y volverás a la entrada de la web de verdad.','Salir'))SBX.exit()};
  try{ME={id:'prueba',at:Date.now()};if(!bossActive)setBoss(true)}catch(e){}
  setTimeout(()=>{try{applyMe();say('Modo prueba: puedes tocarlo todo, nada se guarda de verdad')}catch(e){}},500);
+}
+/* ===== Imágenes nuevas (si no cargan, se queda lo de antes) ===== */
+probeImg('tablilla-agotado.webp',()=>document.body.classList.add('has-agotado'));
+probeImg('tarjeta-reverso.webp',()=>{try{gate.classList.add('back-img')}catch(e){}});
+var IMG_OK={};['moneda-oro.webp','reloj-bolsillo.webp','cartel-se-busca.webp','sello-entregado.webp','sello-recibido.webp'].forEach(s=>probeImg(s,()=>{IMG_OK[s]=1;if(s==='cartel-se-busca.webp')renderEmpWeek();if(s==='reloj-bolsillo.webp')paintPocket()}));
+/* monedas que caen hacia el total al cobrar */
+function coinsFx(){
+ if(!IMG_OK['moneda-oro.webp']||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))return;
+ const vis=el=>{if(!el)return null;const r=el.getBoundingClientRect();return r.width&&r.bottom>0&&r.top<innerHeight?r:null};
+ const ob=document.getElementById('obTotal'), gr=document.getElementById('grand'), rr=document.getElementById('receiptModal')&&!receiptModal.hidden?vis(document.querySelector('#receiptModal .receipt-paper')):null;
+ const g=vis(gr)?gr:vis(ob)?ob:gr;if(!g)return;let r=vis(g)||{left:innerWidth/2-40,top:innerHeight-60,width:80,height:30};if(rr)r={left:rr.left+rr.width/2-40,top:rr.top+60,width:80,height:30};const tx=r.left+r.width/2, ty=r.top+r.height/2;
+ for(let i=0;i<18;i++){const c=document.createElement('i');c.className='coin';const sx=tx+(Math.random()-.5)*Math.min(innerWidth,600), sy=-40-Math.random()*120;
+  c.style.left=(sx-17)+'px';c.style.top=sy+'px';c.style.setProperty('--dx',(tx-sx)+'px');c.style.setProperty('--dy',(ty-sy-17)+'px');c.style.setProperty('--t',(0.8+Math.random()*.6).toFixed(2)+'s');c.style.setProperty('--ry',(360+Math.round(Math.random()*4)*180)+'deg');c.style.animationDelay=(i*0.05).toFixed(2)+'s';
+  document.body.appendChild(c);setTimeout(()=>c.remove(),2200)}
+ setTimeout(()=>{g.classList.remove('bump');void g.offsetWidth;g.classList.add('bump');try{playCoins()}catch(e){}},900);
+}
+function playCoins(){if(!soundOn)return;const c=ac();if(!c)return;const t0=c.currentTime+.02;for(let i=0;i<7;i++){const t=t0+i*.07+Math.random()*.03;[[2800,.06],[4100,.03]].forEach(([f,v])=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f*(1+Math.random()*.08);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.004);g.gain.exponentialRampToValueAtTime(.0001,t+.25);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.3)})}}
+/* reloj de bolsillo: aparece mientras tú estás fichado, con la hora de España */
+function paintPocket(){
+ const el=document.getElementById('pocket');if(!el)return;
+ const me=typeof meEmp==='function'?meEmp():null, on=IMG_OK['reloj-bolsillo.webp']&&(me?shifts.some(x=>x.empId===me.id):shifts.length>0);
+ el.hidden=!on;if(!on)return;
+ const m=madridParts(Date.now()), s=new Date().getSeconds(), mm=+m.minute, hh=(+m.hour)%12;
+ el.querySelector('.h').style.rotate=(hh*30+mm/2)+'deg';el.querySelector('.m').style.rotate=(mm*6+s/10)+'deg';el.querySelector('.s').style.rotate=(s*6)+'deg';
+ const sh=me&&shifts.find(x=>x.empId===me.id);el.title=sh?'Fichado desde las '+fmtTime(sh.start):'';
+}
+setInterval(paintPocket,1000);
+/* sello grande de imagen (ENTREGADO, RECIBIDO) con su golpe */
+function stampImgFx(name,ar){
+ const src='sello-'+name+'.webp';if(!IMG_OK[src])return false;
+ const el=document.createElement('div');el.className='stamp-fx img';el.style.setProperty('--st','url('+src+')');el.style.setProperty('--ar',ar);el.innerHTML='<span></span>';
+ document.body.appendChild(el);setTimeout(()=>el.remove(),1500);try{playThump()}catch(e){}return true;
+}
+/* ===== Objetivo de ventas de la semana (viernes a jueves) ===== */
+var OBJ=loadObj('harrington_objetivo_v1',{});
+function goalWeekCash(){const ws=weekStart(0);return loadLog(KEY_SALELOG).reduce((a,r)=>{if(r.voided)return a;const d=saleDay(r);return d>=ws&&d<=ws+6?a+collected(r):a},0)}
+function renderGoal(){
+ const el=document.getElementById('goalBar');if(!el)return;
+ if(!(OBJ.cents>0)){el.hidden=true;return}
+ const v=goalWeekCash(), p=Math.min(100,v/OBJ.cents*100), done=v>=OBJ.cents, ws=weekStart(0);
+ el.className='goal-bar'+(done?' done':'');
+ el.innerHTML=`<div class="gl-t"><small>OBJETIVO DE LA SEMANA · ${esc(dayStr(ws).slice(0,5))} – ${esc(dayStr(ws+6).slice(0,5))}</small><div class="gl-track"><div class="gl-fill" style="width:${p.toFixed(1)}%"></div></div></div><b>${money(v)} / ${money(OBJ.cents)}${done?' ✓':''}</b>`;
+ el.hidden=false;
+ if(done){let f='';try{f=localStorage.getItem('harrington_goal_done')||''}catch(e){}if(f!==String(ws)){try{localStorage.setItem('harrington_goal_done',String(ws))}catch(e){}if(v>0&&f!=='')recordFx('¡OBJETIVO CONSEGUIDO!','Esta semana: '+money(v)+' de '+money(OBJ.cents));else if(f==='')try{localStorage.setItem('harrington_goal_done',String(ws))}catch(e){}}}
+}
+document.getElementById('goalBar').onclick=()=>{if(bossActive){dirMod='objetivo';dirForm=null;renderDir();openModal(dirModal);dirModal.scrollTop=0}};
+setInterval(renderGoal,60000);
+function renderModObjetivo(){
+ const v=goalWeekCash();
+ return `<div class="dir-form enc-sec"><div class="dir-sec-title" style="margin-top:0">OBJETIVO DE VENTAS DE LA SEMANA</div>
+  <label>META SEMANAL ($)<div class="money"><i>$</i><input id="objAmt" inputmode="decimal" placeholder="Ej.: 1500" autocomplete="off" value="${OBJ.cents>0?esc(String(OBJ.cents/100)):''}"></div></label>
+  <div class="enc-note">Semana de cuentas (viernes a jueves). Esta semana llevamos <b>${money(v)}</b> cobrados. En la pantalla principal saldrá una barra que se va llenando; al llegar a la meta, todos verán la celebración.</div>
+  <div class="enc-actions two" style="margin-top:8px"><button type="button" class="warn" data-dir="obj-off">QUITAR OBJETIVO</button><button type="button" class="primary" data-dir="obj-save">GUARDAR</button></div></div>`;
+}
+function saveObjetivo(off){
+ const c=off?0:parseMoney((document.getElementById('objAmt')||{}).value||'');
+ if(!off&&!(c>0))return say('Escribe la meta en dólares');
+ OBJ={cents:c,ts:Date.now()};store.set('harrington_objetivo_v1',JSON.stringify(OBJ));cloudPut('cfg:objetivo',OBJ);
+ try{localStorage.removeItem('harrington_goal_done')}catch(e){}renderGoal();try{localStorage.setItem('harrington_goal_done',goalWeekCash()>=c&&c>0?String(weekStart(0)):'0')}catch(e){}
+ say(off?'Objetivo quitado':'Objetivo guardado: '+money(c));renderDir();
+}
+/* ===== Productos que se acaban: al ritmo de las dos últimas semanas ===== */
+function stockForecast(){
+ const t=todayNum(), sold={};
+ loadLog(KEY_SALELOG).forEach(r=>{if(r.voided||r.op==='encargo'||!r.items)return;const d=saleDay(r);if(d<t-13||d>t)return;r.items.forEach(x=>{sold[x.name]=(sold[x.name]||0)+(+x.qty||0)})});
+ const out=[];Object.keys(sold).forEach(n=>{const q=stockMap[n];if(!(q>0))return;const rate=sold[n]/14, days=q/rate;if(rate>0&&days<=5)out.push({n:n,q:q,days:days})});
+ return out.sort((a,b)=>a.days-b.days);
+}
+/* ===== Buscador de Dirección ===== */
+var dsQ='';
+function dirSearchHTML(){return `<div class="dir-search"><input id="dsQ" type="search" placeholder="Buscar cliente, nº de serie, ticket, pedido, encargo o empleado…" value="${esc(dsQ)}" autocomplete="off"></div><div class="ds-res" id="dsRes">${dsQ.trim().length>=2?dirSearchResults(dsQ):''}</div>`}
+function dirSearchResults(q){
+ const n=norm(q.trim()), R=[], has=v=>norm(String(v||'')).indexOf(n)>=0;
+ clientes.forEach(c=>{const ser=(c.series||[]).filter(r=>has(r.s)||has(r.a));if(has(c.name)||has(c.telegram)||has(c.ident)||ser.length)R.push(['CLIENTE',c.name,(c.telegram?'Telegrama '+c.telegram:'')+(ser.length?' · Nº de serie: '+ser.map(r=>r.s+(r.a?' ('+r.a+')':'')).join(', '):''),'cl:'+c.id])});
+ empleados.forEach(e=>{if(has(e.name)||has(e.puesto))R.push(['EMPLEADO',e.name,(e.puesto||'')+(e.sueldo?' · '+money(e.sueldo)+' a la semana':''),'emp:'+e.id])});
+ loadLog(KEY_SALELOG).slice().reverse().forEach(r=>{if(R.length>60)return;if(has(r.id)||has(r.client))R.push(['VENTA',r.id,`${r.date} ${r.time} · ${r.client||'—'} · ${money(collected(r))}${r.voided?' · ANULADA':''}`,'mod:ventas'])});
+ encargos.forEach(e=>{if(has(e.id)||has(e.client))R.push(['ENCARGO',e.id,`${e.client||'—'} · ${e.finished?(e.cancelled?'cancelado':'entregado'):'pendiente'}`,'mod:semanales'])});
+ pedidos.forEach(p=>{if(has(p.code)||has(p.id)||has(p.proveedor))R.push(['PEDIDO',p.code||p.id,`${p.proveedor||''} · ${p.received?'recibido':'por recibir'} · ${p.paid?'pagado':'sin pagar'}`,'mod:regpedidos'])});
+ proveedores.forEach(p=>{if(has(p.name)||has(p.tipo))R.push(['PROVEEDOR',p.name,p.tipo||'','mod:proveedores'])});
+ if(!R.length)return '<div class="enc-empty">No hay nada que coincida.</div>';
+ return `<div class="dir-sec-title" style="margin-top:0">RESULTADOS (${R.length>60?'60+':R.length})</div>`+R.slice(0,60).map(r=>`<div class="enc-card dir-item"><div class="t">${esc(r[1])}<small>${r[0]}</small></div><div class="it">${esc(r[2])}</div><div class="enc-actions"><button type="button" data-dir="ds-open:${esc(r[3])}">ABRIR</button></div></div>`).join('');
+}
+function dsOpen(a){
+ const i=a.indexOf(':'), k=a.slice(0,i), v=a.slice(i+1);dsQ='';
+ if(k==='cl'){dirMod='clientes';clView=v;clEdit=null}
+ else if(k==='emp'){dirMod='empficha';fichaEmp=v}
+ else dirMod=v;
+ dirForm=null;renderDir();dirModal.scrollTop=0;
+}
+/* ===== Ficha completa de un empleado ===== */
+var fichaEmp=null;
+function renderModEmpFicha(){
+ const e=empleados.find(x=>x.id===fichaEmp);if(!e)return '<div class="enc-empty">Ese empleado ya no existe.</div>';
+ const t=todayNum(), sales=loadLog(KEY_SALELOG).filter(r=>!r.voided&&r.employee===e.name), d30=sales.filter(r=>saleDay(r)>t-30);
+ const cash30=d30.reduce((a,r)=>a+collected(r),0), cashAll=sales.reduce((a,r)=>a+collected(r),0);
+ const wNow=payMonday(0), hNow=workedMs(e,wNow), hPrev=workedMs(e,wNow-7), req=weekRequired(e.name,wNow).h;
+ const sue=gastos.filter(g=>g.sueldo&&g.sueldo.emp===e.id).slice().reverse(), aus=ausencias.filter(a=>a.empId===e.id).slice().reverse(), asc=(e.ascensos||[]).slice().reverse();
+ const last=sales.slice(-8).reverse();
+ const box=(k,v)=>`<div><small>${k}</small><b>${v}</b></div>`;
+ return `<div class="enc-card dir-item"><div class="t">${esc(e.name)}</div><div class="it">${esc((e.puesto||'—').toUpperCase())}${e.sueldo?' · '+money(e.sueldo)+' a la semana':''} · ${e.horas||10} h semanales${e.inicio?' · desde el '+esc(fmtISO(e.inicio)):''}</div></div>
+  <div class="ficha-grid">${box('VENTAS (30 DÍAS)',d30.length)}${box('COBRADO (30 DÍAS)',money(cash30))}${box('COBRADO EN TOTAL',money(cashAll))}${box('HORAS ESTA SEMANA',esc(hm(hNow))+(req?' / '+req+' h':''))}${box('HORAS SEMANA PASADA',esc(hm(hPrev)))}${box('SUELDOS COBRADOS',money(sue.reduce((a,g)=>a+g.cents,0)))}</div>
+  <div class="dir-sec-title">ÚLTIMAS VENTAS</div>${last.length?last.map(r=>`<div class="dir-log"><b>${esc(r.id)}</b> · ${esc(r.date)} ${esc(r.time)} · ${esc(r.client||'—')} · <b>${money(collected(r))}</b></div>`).join(''):'<div class="enc-empty">Sin ventas.</div>'}
+  <div class="dir-sec-title">SUELDOS</div>${sue.length?sue.slice(0,12).map(g=>`<div class="dir-log">${esc(g.date)} · <b>${money(g.cents)}</b>${g.sueldo.desc?' · descuento '+money(g.sueldo.desc):''}${g.sueldo.worked!=null?' · '+esc(hm(g.sueldo.worked))+' de '+g.sueldo.req+' h':''}</div>`).join(''):'<div class="enc-empty">Todavía no ha cobrado ningún sueldo.</div>'}
+  <div class="dir-sec-title">AUSENCIAS</div>${aus.length?aus.slice(0,12).map(a=>`<div class="dir-log">${esc(ausWhen(a.start))} · ${esc(ausLen(a))} · <b>${esc(a.cat||'')}</b>${a.cancelled?' · anulada':a.returned?' · volvió':''}<br>${esc(a.motivo||'')}</div>`).join(''):'<div class="enc-empty">Sin ausencias.</div>'}
+  <div class="dir-sec-title">ASCENSOS</div>${asc.length?asc.map(x=>`<div class="dir-log">${esc(dayStr(x.desde))} · ${esc(x.de)} → <b>${esc(x.a)}</b> · ${money(x.antes)} → ${money(x.nuevo)}</div>`).join(''):'<div class="enc-empty">Sin ascensos.</div>'}`;
+}
+/* ===== Revisión de datos: comprueba que todo cuadra ===== */
+function renderModRevision(){
+ const I=[], t=todayNum(), add=(lvl,txt,fix)=>I.push([lvl,txt,fix]);
+ Object.keys(stockMap).forEach(k=>{if(stockMap[k]<0)add('bad',`Stock negativo: <b>${esc(k.replace(/^mat:/,''))}</b> (${stockMap[k]}).`,'Corrígelo en STOCK.')});
+ shifts.forEach(s=>{if(Date.now()-s.start>12*3600000)add('bad',`<b>${esc(s.name)}</b> lleva fichado desde el ${esc(fmtDate(s.start))} a las ${esc(fmtTime(s.start))}.`,'Ciérralo en REGISTROS HORARIOS con la hora real.')});
+ const noEmp=loadLog(KEY_SALELOG).filter(r=>!r.voided&&!r.employee&&saleDay(r)>t-30);if(noEmp.length)add('pend',`${noEmp.length} ${noEmp.length===1?'venta':'ventas'} de los últimos 30 días sin empleado (${noEmp.slice(0,4).map(r=>esc(r.id)).join(', ')}${noEmp.length>4?'…':''}).`,'No cuentan para el empleado de la semana ni para su ficha.');
+ const seen={};gastos.forEach(g=>{const k=g.cat+'|'+norm(g.concepto)+'|'+g.cents+'|'+g.day;(seen[k]=seen[k]||[]).push(g)});Object.values(seen).filter(L=>L.length>1).forEach(L=>add('pend',`Gasto repetido ${L.length} veces el ${esc(L[0].date)}: «${esc(L[0].concepto)}» (${money(L[0].cents)}).`,'Si es un error, borra el sobrante en GASTOS.'));
+ empleados.filter(e=>!empHasContract(e)).forEach(e=>add('pend',`<b>${esc(e.name)}</b> no tiene los datos del contrato completos.`,'Complétalo en EMPLEADOS (sin contrato no cobra sueldo).'));
+ pendingEncs().filter(e=>e.ts&&Date.now()-e.ts>14*86400000).forEach(e=>add('pend',`El encargo ${esc(e.id)} de <b>${esc(e.client||'—')}</b> lleva más de 14 días pendiente.`,'Entrégalo o cancélalo.'));
+ pendingPed().filter(p=>!p.received&&Date.now()-p.ts>7*86400000).forEach(p=>add('pend',`El pedido ${esc(p.code)} a <b>${esc(p.proveedor)}</b> lleva más de una semana sin recibirse.`,'Márcalo como recibido o cancélalo.'));
+ const cn={};clientes.forEach(c=>{const k=norm(c.name);(cn[k]=cn[k]||[]).push(c)});Object.values(cn).filter(L=>L.length>1).forEach(L=>add('pend',`Cliente repetido: <b>${esc(L[0].name)}</b> (${L.length} fichas).`,'Junta los datos en una ficha y borra las demás en CLIENTES.'));
+ stockForecast().forEach(f=>add('pend',`<b>${esc(f.n)}</b> se acaba en unos ${Math.max(1,Math.round(f.days))} ${Math.round(f.days)===1?'día':'días'} al ritmo de ventas (quedan ${f.q}).`,'Haz un pedido o fabrica más.'));
+ if(cloud.outbox&&cloud.outbox.length)add('pend',`Hay ${cloud.outbox.length} ${cloud.outbox.length===1?'cambio':'cambios'} de este dispositivo sin subir a la nube.`,'Comprueba la conexión; se suben solos al volver.');
+ return `<p class="bk-note">Revisa los datos de la armería y te dice qué no cuadra y cómo arreglarlo. No cambia nada por sí sola.</p>`+
+  (I.length?`<div class="dir-sec-title" style="margin-top:0">${I.length} ${I.length===1?'COSA QUE REVISAR':'COSAS QUE REVISAR'}</div><div class="avisos">`+I.map(x=>`<div class="aviso ${x[0]}">${x[1]}<br><small>${esc(x[2])}</small></div>`).join('')+'</div>':'<div class="rev-ok">✓ Todo cuadra: no hay nada que revisar.</div>');
 }
 /* ===== Limpieza de la nube: borra marcas antiguas que ya no sirven para nada ===== */
 async function cloudJanitor(force){

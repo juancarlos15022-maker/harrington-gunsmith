@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
-<!-- HARRINGTON GUNSMITH · versión 20261009e · tres archivos: index.html, estilos.css y app.js -->
+<!-- HARRINGTON GUNSMITH · versión 20261009f · tres archivos: index.html, estilos.css y app.js -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#07140f">
@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
 <title>Harrington Gunsmith · Saint Denis</title>
-<link rel="stylesheet" href="estilos.css?v=20261009e">
+<link rel="stylesheet" href="estilos.css?v=20261009f">
 </head>
 <body>
 <div class="wrap">
@@ -23,12 +23,13 @@
 <header class="hero-banner">
   <h1 class="sr-only">Harrington Gunsmith · Saint Denis 1880 · El precio de un apellido</h1>
   <span class="hero-bg" aria-hidden="true"></span>
-  <img src="cabecera-web.png" alt="Harrington Gunsmith · Saint Denis 1880 · El precio de un apellido.">
+  <img src="cabecera-web.webp" alt="Harrington Gunsmith · Saint Denis 1880 · El precio de un apellido.">
 </header>
 
 <section class="clock-bar" aria-label="Fichaje de empleados">
   <div class="clock-info"><b><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V9.5M12 13.5l3 2M10.5 3h3M12 3v3.5"/></svg>FICHAJE <span id="cloudSt" class="cloud-st">☁ …</span></b><span class="clock-status" id="clockStatus">Sin fichar</span></div>
   <div class="clock-actions">
+    <span class="pocket" id="pocket" hidden aria-hidden="true"><i class="ph h"></i><i class="ph m"></i><i class="ph s"></i></span>
     <span class="me-chip" id="meChip" hidden></span>
     <button type="button" class="clock-link enc-btn" id="dirBtn" hidden>DIRECCIÓN</button>
     <button type="button" class="clock-link enc-btn only-venta" id="encBtn">ENCARGOS</button>
@@ -51,22 +52,23 @@
 </section>
 
 <button type="button" class="pay-plate" id="payPlate" hidden></button>
+<div class="goal-bar" id="goalBar" hidden></div>
 <div class="emp-week" id="empWeek" hidden></div>
 
 <nav class="cat-nav" aria-label="Categorías">
-  <button type="button" class="cat-btn active" data-cat="todos" aria-pressed="true" title="Todos"><img src="boton-todos.png" alt="Todos"></button>
-  <button type="button" class="cat-btn" data-cat="revolveres" aria-pressed="false" title="Revólveres"><img src="boton-revolveres.png" alt="Revólveres"></button>
-  <button type="button" class="cat-btn" data-cat="pistolas" aria-pressed="false" title="Pistolas"><img src="boton-pistolas.png" alt="Pistolas"></button>
-  <button type="button" class="cat-btn" data-cat="repetidoras" aria-pressed="false" title="Repetidoras"><img src="boton-repetidoras.png" alt="Repetidoras"></button>
-  <button type="button" class="cat-btn" data-cat="rifles" aria-pressed="false" title="Rifles"><img src="boton-rifles.png" alt="Rifles"></button>
-  <button type="button" class="cat-btn" data-cat="escopetas" aria-pressed="false" title="Escopetas"><img src="boton-escopetas.png" alt="Escopetas"></button>
-  <button type="button" class="cat-btn" data-cat="blancas" aria-pressed="false" title="Armas blancas"><img src="boton-armas-blancas.png" alt="Armas blancas"></button>
-  <button type="button" class="cat-btn" data-cat="municion" aria-pressed="false" title="Munición"><img src="boton-municion.png" alt="Munición"></button>
-  <button type="button" class="cat-btn" data-cat="suministros" aria-pressed="false" title="Suministros"><img src="boton-suministros.png" alt="Suministros"></button>
+  <button type="button" class="cat-btn active" data-cat="todos" aria-pressed="true" title="Todos"><img src="boton-todos.webp" alt="Todos"></button>
+  <button type="button" class="cat-btn" data-cat="revolveres" aria-pressed="false" title="Revólveres"><img src="boton-revolveres.webp" alt="Revólveres"></button>
+  <button type="button" class="cat-btn" data-cat="pistolas" aria-pressed="false" title="Pistolas"><img src="boton-pistolas.webp" alt="Pistolas"></button>
+  <button type="button" class="cat-btn" data-cat="repetidoras" aria-pressed="false" title="Repetidoras"><img src="boton-repetidoras.webp" alt="Repetidoras"></button>
+  <button type="button" class="cat-btn" data-cat="rifles" aria-pressed="false" title="Rifles"><img src="boton-rifles.webp" alt="Rifles"></button>
+  <button type="button" class="cat-btn" data-cat="escopetas" aria-pressed="false" title="Escopetas"><img src="boton-escopetas.webp" alt="Escopetas"></button>
+  <button type="button" class="cat-btn" data-cat="blancas" aria-pressed="false" title="Armas blancas"><img src="boton-armas-blancas.webp" alt="Armas blancas"></button>
+  <button type="button" class="cat-btn" data-cat="municion" aria-pressed="false" title="Munición"><img src="boton-municion.webp" alt="Munición"></button>
+  <button type="button" class="cat-btn" data-cat="suministros" aria-pressed="false" title="Suministros"><img src="boton-suministros.webp" alt="Suministros"></button>
 </nav>
 
 <div class="category-visual" id="categoryVisual">
-  <img id="categoryImage" src="cabecera-harrington.png" alt="Catálogo Harrington Gunsmith">
+  <img id="categoryImage" src="cabecera-harrington.webp" alt="Catálogo Harrington Gunsmith">
   <div class="visual-title" id="categoryTitle">Catálogo Harrington</div>
 </div>
 
@@ -352,7 +354,7 @@
     <label class="fld wide only-venta" id="promiseWrap" hidden><span>Entrega prevista (opcional)</span><input id="promiseDate" type="date"></label>
     <div class="client-note" id="clientNote" hidden></div>
   </div>
-  <div class="cart" id="cart"><div class="empty"><span class="empty-art"><img src="vacio-pedido.png" alt="" onerror="this.parentNode.classList.add('nofile')"><svg viewBox="0 0 64 40" aria-hidden="true"><path d="M6 14h34l4-4h10v8H44l-3 3h-7l-2 12h-9l2-12H6z"/><circle cx="27" cy="17" r="3.5"/><path d="M50 10V6M30 21l-1 4"/></svg></span>Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div></div>
+  <div class="cart" id="cart"><div class="empty"><span class="empty-art"><img src="vacio-pedido.webp" alt="" onerror="this.parentNode.classList.add('nofile')"><svg viewBox="0 0 64 40" aria-hidden="true"><path d="M6 14h34l4-4h10v8H44l-3 3h-7l-2 12h-9l2-12H6z"/><circle cx="27" cy="17" r="3.5"/><path d="M50 10V6M30 21l-1 4"/></svg></span>Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div></div>
   <div class="summary" id="summary">0 productos · 0 unidades</div>
   <div class="pay-box only-venta" id="depositBox" hidden>
     <div class="pay-title">PAGO POR ADELANTADO</div>
@@ -605,6 +607,6 @@
   </div>
 </div>
 
-<script src="app.js?v=20261009e"></script>
+<script src="app.js?v=20261009f"></script>
 </body>
 </html>
