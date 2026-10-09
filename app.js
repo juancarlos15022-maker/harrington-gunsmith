@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261009b
+/* HARRINGTON GUNSMITH · app.js · versión 20261009c
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== Referencias ===== */
 /* Productos añadidos y precios editados desde Dirección: se aplican antes de leer el catálogo */
@@ -89,7 +89,9 @@ function stampFx(text){
 }
 let toastTimer;
 const ERR_RE=/^(Sin conexión|No se pudo|No se puede|Falta|Faltan|No hay(?! cambios)|Selecciona|Escribe|Introduce|Indica|Otro empleado|Configura|Ya no se puede|Este pedido ya|Contraseña incorrecta|Las contraseñas|Añade algún|Para hacer un encargo|El presupuesto está vacío|Ningún empleado)/;
-function say(t,kind){const bad=kind==='err'||(kind===undefined&&ERR_RE.test(String(t)));toast.textContent=t;toast.classList.toggle('err',bad);toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),bad?4200:kind==='long'?4500:2000)}
+function say(t,kind,undo){const bad=kind==='err'||(kind===undefined&&ERR_RE.test(String(t)));toast.textContent=t;toast.classList.toggle('err',bad);toast.classList.toggle('has-undo',!!undo);
+ if(undo){const b=document.createElement('button');b.type='button';b.className='t-undo';b.textContent='DESHACER';b.onclick=ev=>{ev.stopPropagation();clearTimeout(toastTimer);toast.classList.remove('show','has-undo');try{undo()}catch(e){}};toast.appendChild(b)}
+ toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show','has-undo'),undo?5500:bad?4200:kind==='long'?4500:2000)}
 
 /* ===== Pedido ===== */
 function selected(){
@@ -307,10 +309,14 @@ async function doDownload(){
  say('Comprobante descargado');
 }
 function clearQuantities(){inputs.forEach(i=>i.value=0)}
+function printFx(){receiptModal.classList.remove('printing');void receiptModal.offsetWidth;receiptModal.classList.add('printing');try{playPrint()}catch(e){}}
+function playPrint(){if(!soundOn)return;const c=ac();if(!c)return;const t0=c.currentTime+.05;for(let i=0;i<22;i++){const t=t0+i*.055+Math.random()*.01, len=Math.floor(c.sampleRate*.012), b=c.createBuffer(1,len,c.sampleRate), d=b.getChannelData(0);for(let k=0;k<len;k++)d[k]=(Math.random()*2-1)*(1-k/len);const s=c.createBufferSource(), f=c.createBiquadFilter(), g=c.createGain();s.buffer=b;f.type='bandpass';f.frequency.value=2400+Math.random()*600;g.gain.value=.05;s.connect(f);f.connect(g);g.connect(c.destination);s.start(t)}}
 async function doNew(){
  const hasData=selected().length>0||sale;
  if(hasData&&!await askConfirm('Nueva venta','Se borrarán las cantidades y el comprobante actual. Los productos y precios no cambian.','Nueva venta'))return;
- clearQuantities();resetSale();resetCustomer();calc(false);closeModal(receiptModal);say('Nueva venta preparada');
+ const snap=!sale&&!loadedEnc&&selected().length?{q:[...inputs].map(i=>[i,i.value]),c:JSON.parse(JSON.stringify(customer))}:null;
+ clearQuantities();resetSale();resetCustomer();calc(false);closeModal(receiptModal);
+ say('Nueva venta preparada',undefined,snap?()=>{snap.q.forEach(([i,v])=>i.value=v);customer=Object.assign(defaultCustomer(),snap.c);renderCustomer();customerChanged();calc();say('Venta recuperada')}:null);
 }
 document.querySelectorAll('.plus').forEach(b=>b.onclick=()=>{const i=b.parentElement.querySelector('input');i.value=Math.min(MAX_QTY,readQty(i)+1);calc()});
 document.querySelectorAll('.minus').forEach(b=>b.onclick=()=>{const i=b.parentElement.querySelector('input');i.value=Math.max(0,readQty(i)-1);calc()});
@@ -329,7 +335,7 @@ document.querySelector('.panel.order').addEventListener('input',()=>setTimeout(u
 document.querySelector('.panel.order').addEventListener('change',()=>setTimeout(updateFinish,0));
 document.getElementById('finish').onclick=e=>once('finish',async()=>{
  const s=await ensureSaleCloud(); if(!s)return;
- renderReceipt(s);openModal(receiptModal);receiptModal.scrollTop=0;if(s.op==='encargo')playPencil();else playRegister();notifySale(s);setTimeout(playThump,s.op==='encargo'?1250:650);say((s.op==='encargo'?'Encargo guardado · ':'Venta finalizada · ')+s.id);
+ renderReceipt(s);openModal(receiptModal);receiptModal.scrollTop=0;printFx();if(s.op==='encargo')playPencil();else playRegister();notifySale(s);setTimeout(playThump,s.op==='encargo'?1250:650);say((s.op==='encargo'?'Encargo guardado · ':'Venta finalizada · ')+s.id);
  if(s.op!=='encargo'){askSerials(s);setTimeout(()=>checkRecord(s),1600)}
 },e.currentTarget);
 /* ¡Récord de la casa!: la mayor venta o el mejor día de todos */
@@ -858,7 +864,7 @@ async function finishEncargoNow(){
  if(!await askConfirm('Finalizar encargo','Se marcará el encargo '+loadedEnc.id+' como entregado y cobrado. Dejará de aparecer en pendientes.','Finalizar'))return;
  loadedEnc.finished=true;loadedEnc.finishedAt=Date.now();loadedEnc.deliverySale=sl.id;
  saveEncs();updateEncBtn();renderCustomer();
- renderReceipt(sl);openModal(receiptModal);receiptModal.scrollTop=0;playRegister();notifySale(sl);setTimeout(playThump,650);say('Encargo finalizado');
+ renderReceipt(sl);openModal(receiptModal);receiptModal.scrollTop=0;printFx();playRegister();notifySale(sl);setTimeout(playThump,650);say('Encargo finalizado');
  askSerials(sl);
 }
 updateEncBtn();
@@ -1546,7 +1552,11 @@ async function deleteGasto(id){
  if(!await askConfirm('Eliminar gasto',`«${x.concepto}» (${money(x.cents)}) se borrará del registro.`,'Eliminar'))return;
  gastos=gastos.filter(g=>g.id!==id);saveGastos();cloudDel('gasto:'+id);
  if(x.sueldo){['sueldo-'+x.sueldo.ws+'-'+x.sueldo.emp,'sueldos-resumen-'+x.sueldo.ws].forEach(k=>sbFetch('/rest/v1/datos?clave=eq.'+encodeURIComponent(k),{method:'DELETE'}).catch(()=>{}))}
- renderDir();renderPayPlate();say('Gasto eliminado');
+ renderDir();renderPayPlate();
+ say('Gasto eliminado',undefined,async()=>{
+  if(x.sueldo){try{if(!await claimRow('sueldo-'+x.sueldo.ws+'-'+x.sueldo.emp,{ts:Date.now(),cents:x.cents}))return say('Ese sueldo ya se ha vuelto a pagar: no se puede deshacer')}catch(e){return say('Sin conexión: no se ha podido deshacer')}}
+  gastos.push(x);gastos.sort((a,b)=>String(a.id).localeCompare(String(b.id)));saveGastos();cloudPut('gasto:'+x.id,x);if(!dirModal.hidden)renderDir();renderPayPlate();say('Gasto recuperado');
+ });
 }
 function gastosDoc(){
  const pi=periodInfo('g'), a=accounts(pi.r), line='────────────────────', now=Date.now();
@@ -2290,8 +2300,10 @@ function ausEndNow(id,silent){
  const a=ausencias.find(x=>x.id===id);if(!a)return;
  const fut=a.start>Date.now(), rec=Object.assign({},a,fut?{cancelled:true,cancelledAt:Date.now()}:{returned:true,returnedAt:Date.now()});
  saveAus(rec);
- discordSend('ausencias',(fut?'AUSENCIA ANULADA · ':'REGRESO · ')+a.name+'\n'+(fut?'Ya no se ausentará desde el '+ausWhen(a.start):'Ha vuelto el '+ausWhen(Date.now())+(a.end&&a.end>Date.now()?' (antes de lo previsto)':'')));
- if(!silent){renderAus();say(fut?'Ausencia anulada':'¡Bienvenido de vuelta, '+a.name+'!')}
+ const msg=(fut?'AUSENCIA ANULADA · ':'REGRESO · ')+a.name+'\n'+(fut?'Ya no se ausentará desde el '+ausWhen(a.start):'Ha vuelto el '+ausWhen(Date.now())+(a.end&&a.end>Date.now()?' (antes de lo previsto)':''));
+ /* el aviso a Discord espera a que pase el tiempo de «Deshacer» */
+ const tm=setTimeout(()=>discordSend('ausencias',msg),silent?0:5800);
+ if(!silent){renderAus();say(fut?'Ausencia anulada':'¡Bienvenido de vuelta, '+a.name+'!',undefined,()=>{clearTimeout(tm);saveAus(a);if(!ausModal.hidden)renderAus();if(!dirModal.hidden)renderDir();say('Ausencia recuperada')})}
  if(!dirModal.hidden)renderDir();
 }
 ausBtn.onclick=()=>{ausView='list';ausDraft=null;renderAus();openModal(ausModal);ausModal.scrollTop=0};
@@ -2336,7 +2348,7 @@ function renderModAusencias(){
 async function delAusencia(id){
  const a=ausencias.find(x=>x.id===id);if(!a)return;
  if(!await askConfirm('Borrar ausencia','La ausencia de '+a.name+' desaparecerá del registro y dejará de contar para sus horas.','Borrar'))return;
- ausencias=ausencias.filter(x=>x.id!==id);store.set(KEY_AUS,JSON.stringify(ausencias));cloudDel('ausencia:'+id);updateAusBtn();renderDir();say('Ausencia borrada');
+ ausencias=ausencias.filter(x=>x.id!==id);store.set(KEY_AUS,JSON.stringify(ausencias));cloudDel('ausencia:'+id);updateAusBtn();renderDir();say('Ausencia borrada',undefined,()=>{saveAus(a);if(!dirModal.hidden)renderDir();say('Ausencia recuperada')});
 }
 /* --- Proveedores (jefe) --- */
 const TIPOS_PROV=['Herrería','Mina','Tala','Aserradero','Ganadería','Granja','Otro'];
@@ -3190,6 +3202,7 @@ const TUTORIAL=[
 <ul><li><b>Configuración</b>: empleados, clientes, proveedores, convenios y ofertas, precios, productos nuevos, Discord, mínimos de stock y la contraseña del jefe.</li><li><b>Operación</b>: stock, ventas, encargos, pedidos a proveedores, fichajes, gastos y cierres. Los números de venta y el stock los controla la nube, así que nunca se repiten ni se vende lo que ya no hay.</li></ul>
 <p>Los cambios llegan a los demás móviles <b>al instante</b>: la nube avisa en cuanto algo cambia. Si ese aviso no funcionara, cada móvil sigue comprobando la nube cada pocos segundos. Arriba, junto a FICHAJE, ves «☁ conectado», «☁ guardando…», «☁ guardado ✓» o «☁ sin conexión». <b>Sin conexión</b> puedes mirar el catálogo y hacer presupuestos, pero no finalizar ventas ni cambiar el stock. Los cambios de configuración se suben solos al volver la conexión.</p>
 <p>Haz una <b>copia de seguridad</b> de vez en cuando desde Dirección.</p>`],
+['Novedades: deshacer, sin conexión y app',`<ul><li><b>Deshacer</b>: al borrar un gasto, anular o borrar una ausencia, o empezar una venta nueva con productos puestos, el aviso de abajo lleva un botón <b>DESHACER</b> durante unos segundos.</li><li><b>Sin conexión</b>: si se cae la conexión sale una franja roja arriba. Puedes seguir trabajando: lo que hagas se guarda y se envía al volver.</li><li><b>Cerrar sesión</b>: al fichar tu salida, la web te pregunta si quieres cerrar tu sesión en ese dispositivo.</li><li><b>👁</b> junto a las contraseñas sirve para ver lo que escribes.</li><li><b>Como una app</b>: la web se guarda en el móvil, así que se abre al instante y aunque no haya conexión. En el móvil puedes añadirla a la pantalla de inicio desde el menú del navegador («Añadir a pantalla de inicio»).</li><li>En el <b>ordenador</b> la web ocupa toda la pantalla: productos en columnas y el pedido siempre a la derecha.</li><li>Con poca batería o con el ahorro de datos activado, se quitan los efectos de lluvia para gastar menos.</li></ul>`],
 ['Si algo no funciona',`<ul><li><b>No deja finalizar</b>: lee el aviso; suele faltar cliente, empleado, telegrama, pago adelantado o stock.</li><li><b>Producto SIN STOCK</b>: el jefe debe sumar existencias.</li><li><b>No suena</b>: en ⚙ comprueba que el sonido diga «♪ SÍ» y el volumen del móvil.</li><li><b>Un botón no responde</b>: si muestra ⏳, está guardando; espera a que termine.</li><li><b>No suena la música</b>: los navegadores no dejan sonar nada hasta que tocas la pantalla; toca cualquier sitio. Si sigue sin sonar, en ⚙ comprueba que «Música de fondo» diga «♫ SÍ».</li><li><b>Se lee poco</b>: usa A+ o el alto contraste ◐.</li><li><b>No ves un cambio reciente</b>: abre la web en una pestaña privada.</li></ul>`]];
 const tutModal=document.getElementById('tutModal');
 const HELP_MAP={sueldos:'Sueldos',ausencias:'Ausencias',convenios:'Convenios',empleados:'Empleados y contratos',clientes:'Clientes',productos:'Modo Jefe',stock:'Fabricación y recetas',fabricacion:'Fabricación y recetas',regstock:'Modo Jefe',horarios:'Fichaje',ventas:'Modo Jefe',semanales:'Ticket, copias y Discord',gastos:'Empleados y contratos',balance:'Ticket, copias y Discord',cierre:'Modo Jefe',proveedores:'Proveedores y pedidos',nuevopedido:'Proveedores y pedidos',regpedidos:'Proveedores y pedidos',discord:'Ticket, copias y Discord',nube:'Datos y dispositivos',reset:'Datos y dispositivos',copia:'Datos y dispositivos'};
@@ -3374,6 +3387,13 @@ function doExit(empId){
  endShift(sh,Date.now(),false);showShift(lastShift);
  const s=todaySalesOf(sh.name);
  say(s.n?`Buen trabajo, ${sh.name}: hoy has vendido ${money(s.c)} en ${s.n} ${plural(s.n,'operación','operaciones')}.`:`Buen trabajo, ${sh.name}. ¡Hasta la próxima jornada!`,'long');
+ const me=meEmp();
+ if(me&&me.id===empId)setTimeout(async()=>{if(await askConfirm('Cerrar sesión','Has fichado la salida. ¿Quieres cerrar también tu sesión en este dispositivo? Así nadie podrá usar la web a tu nombre.','Cerrar sesión'))logoutToGate('Sesión cerrada. ¡Hasta la próxima jornada, '+me.name.split(' ')[0]+'!')},700);
+}
+function logoutToGate(msg){
+ document.querySelectorAll('.modal-overlay:not([hidden])').forEach(m=>closeModal(m));
+ setMe(null);if(bossActive)setBoss(false);
+ gateOpen({quick:true,msg:msg||''});
 }
 const MAX_SHIFT_H=8;
 function longShifts(){return shifts.filter(x=>Date.now()-x.start>MAX_SHIFT_H*3600000)}
@@ -3480,7 +3500,8 @@ function paintCloud(){
  else if(cloud.ok){t='☁ conectado';c='ok'}else{t='☁ …';c=''}
  if(el.textContent!==t)el.textContent=t;el.className='cloud-st '+c;
 }
-function setCloudState(ok){cloud.ok=ok;paintCloud()}
+function setCloudState(ok){cloud.ok=ok;paintCloud();const nb=document.getElementById('netBar');if(!nb)return;
+ if(ok){clearTimeout(cloud.netT);cloud.netT=0;nb.hidden=true}else if(!cloud.netT&&nb.hidden)cloud.netT=setTimeout(()=>{cloud.netT=0;if(!cloud.ok)nb.hidden=false},4000)}
 function cloudPush(clave){
  cloud.dirty[clave]=true;saveDirty();
  clearTimeout(cloud.timers[clave]);cloud.timers[clave]=setTimeout(()=>cloudFlush(clave),400);
@@ -3794,7 +3815,9 @@ function rtConnect(){
  }catch(e){rt.ws=null}
 }
 /* Sondeo de respaldo: cada 6 s; si el aviso instantáneo ya ha demostrado que funciona, cada 20 s */
-setInterval(()=>{if(document.visibilityState!=='visible')return;const every=(rt.ok&&rt.got)?20000:6000;if(Date.now()-(cloud.last||0)>=every-500)cloudPoll()},3000);
+var LAST_TOUCH=Date.now();['pointerdown','keydown','scroll','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{LAST_TOUCH=Date.now()},{passive:true,capture:true}));
+/* sin tocar la web en 3 minutos se pregunta a la nube con menos frecuencia (el aviso instantáneo sigue funcionando) */
+setInterval(()=>{if(document.visibilityState!=='visible')return;const idle=Date.now()-LAST_TOUCH>180000, every=idle?45000:(rt.ok&&rt.got)?20000:6000;if(Date.now()-(cloud.last||0)>=every-500)cloudPoll()},3000);
 setTimeout(rtConnect,1500);
 setTimeout(()=>cloudPoll(),300);
 
@@ -3876,19 +3899,52 @@ function empExtra(e){
 
 /* ===== Entrada: fachada, puerta, «¿Quién entra hoy?» y saludo ===== */
 const gate=document.getElementById('gate'), gUi=document.getElementById('gUi');
-var G={open:false,pending:null,pendMode:'',timers:[],img:false,fx:null,fails:{},lock:{},big:null,pw:null};
+var G={low:false,open:false,pending:null,pendMode:'',timers:[],img:false,fx:null,fails:{},lock:{},big:null,pw:null};
 var PHOTOS={};try{PHOTOS=JSON.parse(localStorage.getItem('harrington_fotos_v1')||'{}')||{}}catch(e){PHOTOS={}}
 var CLAVES={};try{CLAVES=JSON.parse(localStorage.getItem('harrington_claves_v1')||'{}')||{}}catch(e){CLAVES={}}
 function gT(fn,ms){G.timers.push(setTimeout(fn,ms))}
 function gClear(){G.timers.forEach(clearTimeout);G.timers=[]}
 function gPh(p){gate.dataset.ph=p}
 const gReduced=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
-function gateLoadImg(){
- const tryU=(u,next)=>{const im=new Image();im.onload=()=>{gate.style.setProperty('--gimg','url("'+u+'")');gate.classList.add('img-ok');gate.classList.remove('no-img');G.img=true};im.onerror=()=>{if(next)tryU(next,null);else gate.classList.add('no-img')};im.src=u};
- tryU('entrada-fachada.png','entrada-fachada.png.png');
+/* Ahorro: con poca batería (sin cargar) o con «ahorro de datos» se quitan la lluvia, las polillas y las gotas */
+try{if(navigator.connection&&navigator.connection.saveData)G.low=true;if(navigator.getBattery)navigator.getBattery().then(b=>{const f=()=>{G.low=(b.level<.2&&!b.charging)||!!(navigator.connection&&navigator.connection.saveData)};f();b.addEventListener('levelchange',f);b.addEventListener('chargingchange',f)}).catch(()=>{})}catch(e){}
+/* Medidas de cada fachada (en % de la imagen): puerta, letrero, farolas, humo, polillas y suelo para la lluvia */
+const G_LAYOUT={
+ v:{ar:'2/3',door:[38.57,47.33,22.95,26.04],ll:49.36,lx:[38.57,49.9],sign:[29.3,32.25,42,5.1],sf:'2.15cqh',origin:[50,60.35],spill:[30,73.37,40],ground:.74,
+  lamps:[[50,39.6,''],[3.2,44.9,''],[96.8,44.9,''],[3,34.8,'sm'],[97,34.8,'sm'],[34.4,45,'sm'],[65.4,45,'sm'],[21.5,52,'win'],[78.5,52,'win']],
+  smoke:[[50,37.4,''],[50,37.4,'d2'],[3.2,42.6,''],[96.8,42.6,'d2']],moths:[[.5,.396],[.032,.449],[.968,.449]]},
+ w:{ar:'3/2',door:[43.29,43.55,13.09,31.84],ll:50.25,lx:[43.29,49.87],sign:[38.74,26.07,22.6,6.84],sf:'2.5cqh',origin:[49.87,59.5],spill:[40.5,75.4,19],ground:.77,
+  lamps:[[50,35.8,''],[41.2,41,'sm'],[58.8,41,'sm'],[21.4,34.1,''],[77.8,34.1,''],[21.4,44.2,'sm'],[78.7,48.8,'sm'],[5.5,45.6,'sm'],[96.2,45.6,'sm'],[34.3,50.8,'win'],[66.4,50.8,'win']],
+  smoke:[[50,33.4,''],[50,33.4,'d2'],[21.4,31.6,''],[77.8,31.6,'d2']],moths:[[.5,.358],[.214,.341],[.778,.341]]}
+};
+function gWide(){return innerWidth>innerHeight*1.15}
+function gApplyLayout(k){
+ const L=G_LAYOUT[k];G.layout=L;G.lk=k;gate.classList.toggle('lw',k==='w');
+ const s=gate.style, set=(n,v)=>s.setProperty(n,v);
+ set('--ar',L.ar);set('--dl',L.door[0]+'%');set('--dt',L.door[1]+'%');set('--dw',L.door[2]+'%');set('--dh',L.door[3]+'%');
+ set('--ll',L.ll+'%');set('--lx1',L.lx[0]);set('--lx2',L.lx[1]);set('--ly',L.door[1]);
+ set('--sl',L.sign[0]+'%');set('--st',L.sign[1]+'%');set('--sw',L.sign[2]+'%');set('--sh',L.sign[3]+'%');set('--sf',L.sf);
+ set('--ox',L.origin[0]+'%');set('--oy',L.origin[1]+'%');set('--pl',L.spill[0]+'%');set('--pt',L.spill[1]+'%');set('--pw',L.spill[2]+'%');
+ const box=document.getElementById('gLamps');
+ if(box)box.innerHTML=L.lamps.map(([x,y,c])=>`<i class="g-lamp ${c}" style="left:${x}%;top:${y}%"></i>`).join('')+L.smoke.map(([x,y,c])=>`<i class="g-smoke ${c}" style="left:${x}%;top:${y}%"></i>`).join('');
 }
+/* Prueba las imágenes en orden (.jpg comprimida primero, luego .png) y se queda con la primera que cargue */
+function gTry(list,ok,ko){const next=i=>{if(i>=list.length)return ko&&ko();const im=new Image();im.onload=()=>ok(list[i]);im.onerror=()=>next(i+1);im.src=list[i]};next(0)}
+function gateLoadImg(){
+ const wide=gWide(), names=n=>[n+'.jpg',n+'.png',n+'.png.png'];
+ G.wantWide=wide;
+ if(!G.lk||G.lk!==(wide?'w':'v'))gApplyLayout(wide?'w':'v');
+ const useV=()=>gTry(names('entrada-fachada'),u=>{gApplyLayout('v');gate.style.setProperty('--gimg','url("'+u+'")');gate.classList.add('img-ok');gate.classList.remove('no-img');G.img=true},()=>{gApplyLayout('v');gate.classList.add('no-img')});
+ if(wide)gTry(names('entrada-fachada-ancha'),u=>{gApplyLayout('w');gate.style.setProperty('--gimg','url("'+u+'")');gate.classList.add('img-ok');gate.classList.remove('no-img');G.img=true},useV);
+ else useV();
+ const intV=()=>gTry(names('entrada-interior'),u=>{gate.style.setProperty('--iimg','url("'+u+'")');gate.classList.add('int-ok')});
+ if(wide)gTry(names('entrada-interior-ancha'),u=>{gate.style.setProperty('--iimg','url("'+u+'")');gate.classList.add('int-ok')},intV);
+ else intV();
+}
+window.addEventListener('resize',()=>{clearTimeout(G.rsz);G.rsz=setTimeout(()=>{if(G.open&&gWide()!==G.wantWide)gateLoadImg()},300)});
 function gateCheck(){if(window.__HG_NOGATE||G.open||meEmp())return;if(empleados.length)gateOpen()}
 function gateOpen(opt){
+ G.msgOk=!!(opt&&opt.msg&&/^Sesión cerrada/.test(opt.msg));
  opt=opt||{};G.open=true;gClear();G.pending=null;G.msg=opt.msg||'';G.big=null;
  const sp=document.getElementById('splash');if(sp)sp.remove();
  document.body.classList.add('gate-open');gate.hidden=false;
@@ -3950,7 +4006,7 @@ function gateCards(){
  const L=empleados.slice().sort((a,b)=>rank(a)-rank(b)||a.name.localeCompare(b.name,'es'));
  const abs=new Set(ausNowList().map(a=>a.empId));
  const ROT=[-2.2,1.6,-1.2,2.4,-1.8,1.1,2,-2.6];
- gUi.innerHTML=`<div class="g-panel">${G.msg?`<div class="g-msg">${esc(G.msg)}</div>`:''}<h2 class="g-title">¿Quién entra hoy?</h2><p class="g-sub">Toca tu tarjeta. Quedará a tu nombre hasta que cierres la web.</p>
+ gUi.innerHTML=`<div class="g-panel">${G.msg?`<div class="g-msg${G.msgOk?' ok':''}">${esc(G.msg)}</div>`:''}<h2 class="g-title">¿Quién entra hoy?</h2><p class="g-sub">Toca tu tarjeta. Quedará a tu nombre hasta que cierres la web.</p>
   <div class="g-cards" id="gCards">${L.map((e,i)=>`<button type="button" class="g-card${isJefe(e)?' jefe':''}" data-gcard="${esc(e.id)}" style="--r:${ROT[i%ROT.length]}deg;--dx:${(i%2?1:-1)*24}px;animation-delay:${(0.25+i*0.13).toFixed(2)}s" aria-label="${esc(e.name)}${e.puesto?', '+esc(e.puesto):''}">${cardInner(e,abs.has(e.id))}</button>`).join('')}</div></div>`;
  gUi.scrollTop=0;
 }
@@ -4063,8 +4119,10 @@ function gPwShow(e,mode,extra){
   <div class="gp-err" id="gPwErr"></div>
   <div class="gp-btns"><button type="button" class="gp-no" data-gpw="no" id="gPwCancel">Cancelar</button><button type="button" class="gp-ok" data-gpw="ok" id="gPwOk">ENTRAR</button></div>
   ${mode==='boss'&&bossCreds()&&bossCreds().word?'<button type="button" class="gp-forgot" data-gpw="forgot">¿Has olvidado la contraseña?</button>':''}`;
+ pwEyes(p);
  setTimeout(()=>{const i=document.getElementById('gPw1');if(i)try{i.focus({preventScroll:true})}catch(x){}},320);
 }
+function pwEyes(root){(root||document).querySelectorAll('input[type=password]:not([data-eye])').forEach(i=>{i.dataset.eye='1';const w=document.createElement('span');w.className='pw-box';i.parentNode.insertBefore(w,i);w.appendChild(i);const b=document.createElement('button');b.type='button';b.className='pw-eye';b.setAttribute('aria-label','Ver la contraseña');b.textContent='👁';b.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const on=i.type==='password';i.type=on?'text':'password';b.textContent=on?'🙈':'👁';b.setAttribute('aria-label',on?'Ocultar la contraseña':'Ver la contraseña');i.focus()};w.appendChild(b)})}
 function gPwErr(t){const el=document.getElementById('gPwErr');if(el)el.textContent=t}
 async function gPwSubmit(){
  const s=G.pw;if(!s||s.busy)return;const e=s.e, v1=(document.getElementById('gPw1')||{}).value||'', v2=(document.getElementById('gPw2')||{}).value||'';
@@ -4140,7 +4198,7 @@ function gateClose(){
  if(!G.open||gate.dataset.ph==='close')return;
  gClear();
  gPh('close');
- setTimeout(()=>{gate.hidden=true;G.open=false;G.big=null;gFx(false);document.body.classList.remove('gate-open');gUi.innerHTML='';{const ob=document.getElementById('gBig');if(ob)ob.remove()}gPh('');applyMe();updateAusBtn()},720);
+ setTimeout(()=>{glassDrops();gate.hidden=true;G.open=false;G.big=null;gFx(false);document.body.classList.remove('gate-open');gUi.innerHTML='';{const ob=document.getElementById('gBig');if(ob)ob.remove()}gPh('');applyMe();updateAusBtn()},720);
 }
 gate.addEventListener('click',ev=>{
  const ph=gate.dataset.ph;
@@ -4160,6 +4218,12 @@ gate.addEventListener('click',ev=>{
  if(ph==='cards'&&G.big&&G.pw&&ev.target.closest('.g-bigwrap')&&!ev.target.closest('.g-big'))return gBigClose();
 });
 gate.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.closest&&ev.target.closest('#gPw')&&ev.target.tagName==='INPUT'){ev.preventDefault();gPwSubmit()}});
+function glassDrops(){
+ if(gReduced()||G.low)return;
+ const g=document.createElement('div');g.className='glass';g.setAttribute('aria-hidden','true');
+ let s='';for(let i=0;i<30;i++){const sz=4+Math.random()*10, t=2.5+Math.random()*5;s+=`<i style="left:${(Math.random()*100).toFixed(1)}%;top:${(Math.random()*70).toFixed(1)}%;width:${sz.toFixed(1)}px;height:${(sz*1.25).toFixed(1)}px;--dy:${(40+Math.random()*160).toFixed(0)}px;animation-duration:${t.toFixed(1)}s;animation-delay:${(Math.random()*1.2).toFixed(1)}s"></i>`}
+ g.innerHTML=s;document.body.appendChild(g);setTimeout(()=>g.remove(),7200);
+}
 /* ---- efectos: lluvia con salpicaduras, polvo en la luz y polillas en las farolas ---- */
 function gFx(on){
  const cv=document.getElementById('gDust');if(!cv)return;
@@ -4169,16 +4233,17 @@ function gFx(on){
  const R=[], S=[], D=[], M=[], stage=document.getElementById('gStage');
  for(let i=0;i<46;i++)D.push({x:Math.random(),y:.25+Math.random()*.65,r:.6+Math.random()*1.8,vx:(Math.random()-.5)*.00012,vy:-.00004-Math.random()*.00012,a:.15+Math.random()*.45,p:Math.random()*6.28});
  for(let i=0;i<110;i++)R.push({x:Math.random(),y:Math.random(),l:10+Math.random()*18,v:.012+Math.random()*.01,a:.12+Math.random()*.22,t:.74+Math.random()*.26});
- const LAMPS=[[.5,.396],[.032,.449],[.968,.449]];
+ const LAMPS=(G.layout||G_LAYOUT.v).moths;
  LAMPS.forEach(([lx,ly],k)=>{for(let i=0;i<2+(k===0?1:0);i++)M.push({lx:lx,ly:ly,a:Math.random()*6.28,s:.03+Math.random()*.04,rr:.014+Math.random()*.02,j:Math.random()*6.28})});
  const F=G.fx={raf:0};
  const step=()=>{
   const w=cv.clientWidth, hh=cv.clientHeight;if(cv.width!==w||cv.height!==hh){cv.width=w;cv.height=hh}
   x.clearRect(0,0,w,hh);
-  const ph=gate.dataset.ph, out=ph==='scene'||ph==='open'||ph==='zoom', sr=stage.getBoundingClientRect();
+  if(document.hidden){F.raf=requestAnimationFrame(step);return}
+  const ph=gate.dataset.ph, out=(ph==='scene'||ph==='open'||ph==='zoom')&&!G.low, sr=stage.getBoundingClientRect();
   if(out){
    x.lineCap='round';
-   R.forEach(d=>{d.y+=d.v;const gy=d.t;
+   const gl=(G.layout||G_LAYOUT.v).ground;R.forEach(d=>{d.y+=d.v;const gy=gl+(d.t-.74)/.26*(1-gl);
     if(d.y>=gy){S.push({x:d.x*w,y:gy*hh,r:0,a:.45});d.y=-Math.random()*.2;d.x=Math.random()*1.1}
     const px=d.x*w, py=d.y*hh;x.strokeStyle='rgba(205,220,240,'+d.a.toFixed(2)+')';x.lineWidth=1;x.beginPath();x.moveTo(px,py);x.lineTo(px-d.l*.18,py+d.l);x.stroke()});
    for(let i=S.length-1;i>=0;i--){const s=S[i];s.r+=.55;s.a-=.018;if(s.a<=0){S.splice(i,1);continue}x.strokeStyle='rgba(225,210,180,'+s.a.toFixed(2)+')';x.beginPath();x.ellipse(s.x,s.y,s.r,s.r*.28,0,0,6.283);x.stroke()}
@@ -4193,7 +4258,29 @@ function gFx(on){
  step();
 }
 gateLoadImg();
+try{pwEyes(document.getElementById('bossModal'))}catch(e){}
 
+/* En el ordenador, si existe la cabecera alargada (cabecera-web-ancha), se usa esa */
+(function(){const img=document.querySelector('.hero-banner img');if(!img)return;let done=false;
+ const tryW=()=>{if(done||innerWidth<1100)return;done=true;gTry(['cabecera-web-ancha.jpg','cabecera-web-ancha.png'],u=>{img.src=u;img.classList.add('ancha')},()=>{})};
+ tryW();window.addEventListener('resize',tryW)})();
+/* ===== Limpieza de la nube: borra marcas antiguas que ya no sirven para nada ===== */
+async function cloudJanitor(force){
+ if(!bossActive)return;
+ const day=String(todayNum());try{if(!force&&localStorage.getItem('harrington_janitor')===day)return;localStorage.setItem('harrington_janitor',day)}catch(e){}
+ const RULES=[['presencia-',14],['semanal-',35],['recibido-',60],['sueldo-',70],['sueldos-',70]], now=Date.now();let n=0;
+ for(const [pre,days] of RULES){
+  try{
+   const r=await sbFetch('/rest/v1/datos?select=clave,actualizado&clave=like.'+encodeURIComponent(pre+'*'));if(!r.ok)continue;
+   const rows=await r.json();
+   for(const x of rows){if(n>=40)return n;if(pre==='sueldo-'&&x.clave.indexOf('sueldos-')===0)continue;if(now-Date.parse(x.actualizado)>days*86400000){await sbFetch('/rest/v1/datos?clave=eq.'+encodeURIComponent(x.clave),{method:'DELETE'}).catch(()=>{});n++}}
+  }catch(e){}
+ }
+ return n;
+}
+setTimeout(()=>{try{cloudJanitor()}catch(e){}},20000);
+/* ===== App: guarda la web en el móvil para que abra al instante y sin conexión ===== */
+if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
 /* ===== Inicio ===== */
 restoreOrder();
 restoreSale();

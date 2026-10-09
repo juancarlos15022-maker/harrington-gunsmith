@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
-<!-- HARRINGTON GUNSMITH · versión 20261009b · tres archivos: index.html, estilos.css y app.js -->
+<!-- HARRINGTON GUNSMITH · versión 20261009c · tres archivos: index.html, estilos.css y app.js -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#07140f">
@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
 <title>Harrington Gunsmith · Saint Denis</title>
-<link rel="stylesheet" href="estilos.css?v=20261009b">
+<link rel="stylesheet" href="estilos.css?v=20261009c">
 </head>
 <body>
 <div class="wrap">
@@ -22,6 +22,7 @@
 
 <header class="hero-banner">
   <h1 class="sr-only">Harrington Gunsmith · Saint Denis 1880 · El precio de un apellido</h1>
+  <span class="hero-bg" aria-hidden="true"></span>
   <img src="cabecera-web.png" alt="Harrington Gunsmith · Saint Denis 1880 · El precio de un apellido.">
 </header>
 
@@ -385,8 +386,7 @@
   <div class="g-sign" aria-hidden="true"><span id="gSignTxt">HARRINGTON GUNSMITH</span></div>
   <div class="g-doorwrap" aria-hidden="true"><div class="g-interior"></div><div class="g-leaf l"><div class="g-leafimg"></div></div><div class="g-leaf r"><div class="g-leafimg"></div></div></div>
   <div class="g-spill" aria-hidden="true"></div>
-  <i class="g-lamp" style="left:50%;top:39.6%"></i><i class="g-lamp" style="left:3.2%;top:44.9%"></i><i class="g-lamp" style="left:96.8%;top:44.9%"></i><i class="g-lamp sm" style="left:3%;top:34.8%"></i><i class="g-lamp sm" style="left:97%;top:34.8%"></i><i class="g-lamp sm" style="left:34.4%;top:45%"></i><i class="g-lamp sm" style="left:65.4%;top:45%"></i><i class="g-lamp win" style="left:21.5%;top:52%"></i><i class="g-lamp win" style="left:78.5%;top:52%"></i>
-  <i class="g-smoke" style="left:50%;top:37.4%"></i><i class="g-smoke d2" style="left:50%;top:37.4%"></i><i class="g-smoke" style="left:3.2%;top:42.6%"></i><i class="g-smoke d2" style="left:96.8%;top:42.6%"></i>
+  <div class="g-lamps" id="gLamps"></div>
  </div>
  <div class="g-bolt" aria-hidden="true"></div><div class="g-fog" aria-hidden="true"></div><canvas class="g-dust" id="gDust" aria-hidden="true"></canvas><div class="g-grain" aria-hidden="true"></div><div class="g-vign" aria-hidden="true"></div>
  <div class="g-felt" aria-hidden="true"></div>
@@ -414,6 +414,7 @@
 </div>
 <div class="splash" id="splash" aria-hidden="true"><div class="sp-seal"><span>H</span></div><img class="emblem" src="emblema-harrington.png" alt=""><div class="sp-name">HARRINGTON GUNSMITH</div><div class="sp-sub">Saint Denis · 1880</div></div>
 <div class="toast" id="toast" role="status"></div>
+<div class="net-bar" id="netBar" role="alert" hidden>☁ Sin conexión: lo que hagas se guarda en este móvil y se enviará en cuanto vuelva la conexión.</div>
 
 <!-- Comprobante de venta -->
 <div class="modal-overlay" id="receiptModal" hidden>
@@ -465,11 +466,11 @@
     <div class="confirm-title" id="bossTitle">ACCESO JEFE</div>
     <div id="bossWrap1">
       <label class="boss-lbl" id="bossLbl1" for="bossPw1">Contraseña</label>
-      <input class="name-input" id="bossPw1" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <input class="name-input" id="bossPw1" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
     </div>
     <div id="bossWrap2" hidden>
       <label class="boss-lbl" for="bossPw2">Repetir contraseña</label>
-      <input class="name-input" id="bossPw2" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <input class="name-input" id="bossPw2" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
     </div>
     <div id="bossWrapWord" hidden>
       <label class="boss-lbl" for="bossWord">Palabra de seguridad</label>
@@ -602,6 +603,6 @@
   </div>
 </div>
 
-<script src="app.js?v=20261009b"></script>
+<script src="app.js?v=20261009c"></script>
 </body>
 </html>
