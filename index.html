@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
-<!-- HARRINGTON GUNSMITH · versión 20261009p · tres archivos: index.html, estilos.css y app.js -->
+<!-- HARRINGTON GUNSMITH · versión 20261009r · tres archivos: index.html, estilos.css y app.js -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#07140f">
@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
 <title>Harrington Gunsmith · Saint Denis</title>
-<link rel="stylesheet" href="estilos.css?v=20261009p">
+<link rel="stylesheet" href="estilos.css?v=20261009r">
 <link rel="preload" as="image" href="entrada-fachada.webp" media="(max-aspect-ratio: 23/20)">
 <link rel="preload" as="image" href="entrada-fachada-ancha.webp" media="(min-aspect-ratio: 23/20)">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,6 +38,7 @@
     <button type="button" class="clock-link enc-btn only-venta" id="encBtn">ENCARGOS</button>
     <button type="button" class="clock-link enc-btn only-venta" id="pedBtn">PEDIDOS</button>
     <button type="button" class="clock-link enc-btn" id="ausBtn">AUSENCIAS</button>
+    <button type="button" class="clock-link enc-btn" id="libroBtn">NOTAS</button>
     <button type="button" class="clock-link boss-btn" id="bossBtn">JEFE</button>
     <div class="set-wrap"><button type="button" class="clock-link boss-btn" id="setBtn" aria-label="Ajustes" aria-expanded="false" title="Ajustes">⚙</button>
      <div class="set-pop" id="setPop" hidden role="dialog" aria-label="Ajustes">
@@ -47,6 +48,7 @@
       <div class="set-row"><span>Sonido y vibración</span><button type="button" class="clock-link boss-btn" id="soundBtn" aria-label="Activar o silenciar sonidos" title="Sonidos">♪ SÍ</button></div>
       <div class="set-row"><span>Tamaño del texto</span><span class="set-g"><button type="button" class="clock-link boss-btn" id="fsDown" aria-label="Texto más pequeño" title="Texto más pequeño">A−</button><button type="button" class="clock-link boss-btn" id="fsUp" aria-label="Texto más grande" title="Texto más grande">A+</button></span></div>
       <div class="set-row kb-help"><span>Atajos: <kbd>/</kbd> buscar · <kbd>1</kbd>…<kbd>9</kbd> categorías · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> finalizar · <kbd>?</kbd> tutorial · <kbd>Esc</kbd> cerrar</span></div>
+      <div class="set-row"><span>Avisos del navegador</span><button type="button" class="clock-link boss-btn" id="notifBtn" aria-label="Avisos del navegador">NO</button></div>
       <div class="set-row"><span>Animaciones</span><button type="button" class="clock-link boss-btn" id="fxBtn" aria-label="Animaciones: automáticas, completas o ligeras">AUTO</button></div>
       <div class="set-row"><span>Alto contraste</span><button type="button" class="clock-link boss-btn" id="hcBtn" aria-label="Alto contraste" title="Alto contraste">◐</button></div>
      </div></div>
@@ -391,6 +393,7 @@
   <button type="button" data-mn="encBtn"><span class="mn-i"></span><span class="mn-l">ENCARGOS</span></button>
   <button type="button" data-mn="pedBtn"><span class="mn-i"></span><span class="mn-l">PEDIDOS</span></button>
   <button type="button" data-mn="ausBtn"><span class="mn-i"></span><span class="mn-l">AUSENCIAS</span></button>
+  <button type="button" data-mn="libroBtn"><span class="mn-i"></span><span class="mn-l">NOTAS</span></button>
   <button type="button" data-mn="dirBtn"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V5l7-2 7 2v16M9 21v-5h6v5M9 9h.01M15 9h.01M9 12.5h.01M15 12.5h.01"/></svg><span class="mn-l">DIRECCIÓN</span></button>
   <button type="button" class="mn-clock" data-mn="clock"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V9.5M12 13.5l3 2M10.5 3h3M12 3v3.5"/></svg><span class="mn-l">FICHAR</span></button>
 </nav>
@@ -538,6 +541,12 @@
 </div>
 
 <!-- Ausencias -->
+<div class="modal-overlay" id="libroModal" hidden>
+  <div class="enc-panel" role="dialog" aria-modal="true" aria-labelledby="libroTitle">
+    <div class="enc-head"><span id="libroTitle">LIBRO DE TURNO</span><button type="button" class="danger" id="libroClose">Cerrar</button></div>
+    <div id="libroBody"></div>
+  </div>
+</div>
 <div class="modal-overlay" id="ausModal" hidden>
   <div class="enc-panel" role="dialog" aria-modal="true" aria-labelledby="ausTitle">
     <div class="enc-head"><span id="ausTitle">AUSENCIAS</span><button type="button" class="danger" id="ausClose">Cerrar</button></div>
@@ -622,6 +631,6 @@
   </div>
 </div>
 
-<script src="app.js?v=20261009p"></script>
+<script src="app.js?v=20261009r"></script>
 </body>
 </html>

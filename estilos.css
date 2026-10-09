@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261009p
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261009r
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1521,3 +1521,67 @@ html.lite .pay-plate.due::after,html.lite .hero-banner:before{animation:none!imp
 .hz-note span{flex:1 1 200px}
 .hz-note button{flex:0 0 auto;padding:9px 12px;border-radius:6px;border:1px solid #b88931;background:linear-gradient(#1b2a1a,#0a1812);color:#f3e2b0;font-weight:bold;font-family:inherit;cursor:pointer}
 .cf-paper .hz-note{background:rgba(255,248,225,.5);color:#3d2a12;border-color:#8a6a3a}
+/* Libro de turno y «Para hoy» */
+#libroBody{padding:10px}
+.lb-new textarea{display:block;width:100%;min-height:70px;margin-top:4px;padding:10px;border-radius:6px;border:1px solid #5d4928;background:#040b08;color:#eee0bd;font:inherit;font-size:16px;resize:vertical;box-sizing:border-box}
+.lb-note{position:relative;margin-top:8px;padding:10px 12px 10px 14px;border:1px solid #8b6a2e;border-left:4px solid #c9a24a;border-radius:6px;background:linear-gradient(#efe0b4,#dcc28a);color:#2a1a0d;box-shadow:0 3px 8px #0008}
+.lb-note .lb-t{font-family:'IM Fell English',Georgia,serif;font-size:17px;line-height:1.35;white-space:pre-wrap;overflow-wrap:anywhere}
+.lb-note .lb-m{margin-top:4px;font-size:12px;color:#6b4c1d}
+.lb-note .enc-actions{margin-top:8px}
+.lb-note.done{opacity:.6;border-left-color:#4f7a3c}
+.lb-note.done .lb-t{text-decoration:line-through}
+.br-sec{margin-top:10px}
+.br-sec .dir-sec-title{margin-bottom:4px}
+.br-line{padding:7px 10px;margin-top:5px;border:1px solid #2f4536;border-radius:6px;background:#0a1712;color:#e9d9ad;font-size:14.5px;line-height:1.35}
+.br-line.bad{border-color:#8a3a2a;background:#2a0f0a;color:#f1d2c6}
+.br-hi{font:bold 19px var(--f-sc);color:#f0d278;margin:2px 0 4px}
+/* Estadísticas */
+.st-paper{padding:12px 14px;border-radius:4px;background:linear-gradient(#efe0b4,#dcc28a);color:#2a1a0d;box-shadow:inset 0 0 0 1px #7a5a22,inset 0 0 0 4px #efe0b4,inset 0 0 0 5px #7a5a22,0 6px 18px #000a;margin-bottom:12px}
+.st-paper .dir-sec-title{color:#6b4c1d;border-color:#7a5a22;text-shadow:none;background:linear-gradient(90deg,#7a5a22,#7a5a2200) left bottom/100% 1px no-repeat;margin-top:12px}
+.st-paper .dir-sec-title:first-child{margin-top:0}
+.st-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+@media(min-width:700px){.st-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.st-kpi{padding:8px;border:1px solid #b89a5a;border-radius:6px;background:rgba(255,248,225,.45);text-align:center}
+.st-kpi small{display:block;font-size:11px;letter-spacing:.06em;color:#6b4c1d}
+.st-kpi b{display:block;font-size:19px;color:#1b3022;margin-top:2px}
+.st-kpi i{display:block;font-style:normal;font-size:12px;margin-top:2px}
+.st-up{color:#2e6b1f}.st-dn{color:#8a1d10}.st-eq{color:#6b4c1d}
+.st-bar{display:grid;grid-template-columns:minmax(0,9em) 1fr auto;align-items:center;gap:8px;padding:4px 0;font-size:14px}
+.st-bar .l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'IM Fell English',Georgia,serif;color:#24324a}
+.st-bar .b{height:14px;border:1px solid #3b2a14;border-radius:2px;background:linear-gradient(90deg,#8a6414,#b8892a);min-width:2px}
+.st-bar .v{font-weight:bold;white-space:nowrap;color:#2a1a0d;font-size:13px}
+.st-hours{display:flex;align-items:flex-end;gap:2px;height:110px;padding:4px 0 0;border-bottom:1.5px solid #3b2a14}
+.st-hours div{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}
+.st-hours span{display:block;width:100%;background:linear-gradient(#b8892a,#8a6414);border:1px solid #3b2a14;border-bottom:0;border-radius:2px 2px 0 0}
+.st-hl{display:flex;gap:2px;font-size:10px;color:#6b4c1d}
+.st-hl span{flex:1;text-align:center}
+.st-note{font-size:12.5px;font-style:italic;color:#6b4c1d;margin:4px 0 0}
+/* Buscador del tutorial */
+.tut-search{position:sticky;top:0;z-index:3;margin:0 0 10px;padding:6px 0;background:inherit}
+.tut-search input{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:8px;border:1px solid #b88931;background:#0b0704ee;color:#f3e2b0;font:inherit;font-size:16px}
+.tut-search small{display:block;margin-top:4px;color:#d9ccaa;font-size:12.5px;min-height:1em}
+#tutBody details.tut[hidden]{display:none}
+#tutBody mark{background:#f0d27866;color:inherit;border-radius:2px;padding:0 1px}
+@media(min-width:700px){.seg.seg4{grid-template-columns:repeat(4,1fr)}}
+/* Estado de Discord */
+.dch-box{margin:0 0 12px;padding:10px 12px;border:1px solid #8a3a2a;border-radius:7px;background:#2a0f0a;color:#f1d2c6}
+.dch-box b{color:#ffd9c9}
+.dch-line{padding:5px 0;border-bottom:1px dashed #8a3a2a66;font-size:14px;line-height:1.35}
+.dch-line:last-of-type{border-bottom:0}
+.dch-ok{margin:0 0 12px;padding:8px 12px;border:1px solid #4f7a3c;border-radius:7px;background:rgba(40,70,30,.35);color:#dfeccd;font-size:14px}
+/* Márgenes */
+.mg-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:7px 0;border-bottom:1px dashed #2f4536;font-size:14px}
+.mg-row:last-child{border-bottom:0}
+.mg-row .n{font-weight:bold;color:#f0e2bd;overflow-wrap:anywhere}
+.mg-row .p{text-align:right;font-weight:bold;white-space:nowrap}
+.mg-row small{grid-column:1/-1;color:#bfae86;font-size:12.5px;line-height:1.35}
+.mg-bad{color:#ff9d8a}.mg-low{color:#f0c27a}.mg-ok{color:#9fd884}
+/* Historial de cambios */
+.au-row{padding:9px 11px;margin-top:6px;border:1px solid #2f4536;border-left:4px solid #8b6a2e;border-radius:6px;background:#0a1712}
+.au-row .au-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12.5px;color:#bfae86}
+.au-row .au-h b{color:#f0d278;font-size:14px}
+.au-row ul{margin:4px 0 0;padding-left:18px;color:#e9d9ad;font-size:14px;line-height:1.4}
+.au-cat{display:inline-block;padding:1px 7px;border-radius:9px;border:1px solid #8b6a2e;font-size:11px;letter-spacing:.04em;color:#f3d79a}
+.au-filt{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.au-filt button{padding:7px 10px;border-radius:14px;border:1px solid #76633e;background:#242522;color:#eee1c6;font:inherit;font-size:12.5px;cursor:pointer}
+.au-filt button.on{background:#5a4213;border-color:#d2a733;color:#fff3c4}
