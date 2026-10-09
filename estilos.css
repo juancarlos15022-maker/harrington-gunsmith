@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261009g
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261009h
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1288,6 +1288,19 @@ body.has-agotado .nostock{width:74px;height:36px;margin:2px 0 0;font-size:0;colo
 .ficha-grid small{display:block;color:#b8a77e;font-size:11px;letter-spacing:.1em}
 .ficha-grid b{color:#f3dfa6;font-size:17px}
 .rev-ok{padding:14px;border:1px solid #2f7a52;border-radius:8px;background:#0b2416;color:#bff5c8;text-align:center}
+/* ===== Imagen de cada producto: placa grabada integrada (sin círculo beige) ===== */
+.table-head,.product{grid-template-columns:76px minmax(170px,1fr) 105px 160px 105px}
+.weapon-icon.has-icon{position:relative;width:68px;height:46px;margin:0;padding:0;border:0;border-radius:6px;overflow:hidden;background:#07100b;
+ box-shadow:0 0 0 1px #000,0 0 0 2px #8a6a32,0 0 0 3px #1a120a,0 3px 8px #000c}
+.weapon-icon.has-icon img{width:100%;height:100%;padding:0;border-radius:0;object-fit:cover;object-position:50% 50%;transform:scale(1.18);filter:saturate(1.05) contrast(1.05);transition:transform .35s ease}
+.weapon-icon.has-icon::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:6px;background:radial-gradient(ellipse at 50% 45%,transparent 45%,#000a 100%),linear-gradient(160deg,#fff2c41f 0,transparent 35%)}
+.product:hover .weapon-icon.has-icon img{transform:scale(1.28)}
+.product.has-qty .weapon-icon.has-icon{box-shadow:0 0 0 1px #000,0 0 0 2px #e3c26a,0 0 0 3px #1a120a,0 0 14px #d7ae5488}
+.product.no-stock .weapon-icon.has-icon img{filter:grayscale(.8) brightness(.7)}
+.prod-sheet .weapon-icon.has-icon{width:96px;height:64px}
+@media(min-width:1400px){#products .product{grid-template-columns:70px minmax(120px,1fr) 92px 136px 84px;column-gap:6px}#products .weapon-icon.has-icon{width:62px;height:42px}}
+@media(max-width:900px){.product{grid-template-columns:62px 1fr 80px}.weapon-icon.has-icon{width:56px;height:38px}}
+@media(max-width:650px){.product{grid-template-columns:58px 1fr 80px}.weapon-icon.has-icon{width:52px;height:36px}}
 /* placa de día de pago */
 .pay-plate{position:relative;display:flex;align-items:center;gap:12px;width:100%;margin:10px 0 0;padding:11px 14px;border:2px double #e8b923;border-radius:8px;background:linear-gradient(100deg,#3a2606,#1a1206 55%,#0e1a12);box-shadow:0 6px 18px #0008,inset 0 0 22px #e8b92333;color:inherit;font:inherit;text-align:left;cursor:pointer;overflow:hidden}
 .pay-plate[hidden]{display:none}
