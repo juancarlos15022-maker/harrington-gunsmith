@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261009h
+/* HARRINGTON GUNSMITH · app.js · versión 20261009i
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -3256,7 +3256,7 @@ try{const m={name:'Harrington Gunsmith · Saint Denis',short_name:'Harrington',s
  const l=document.createElement('link');l.rel='manifest';l.href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));document.head.appendChild(l)}catch(e){}
 const TUTORIAL=[
 ['Entrada y usuario',`<p>Al abrir la web aparece la <b>fachada de la tienda</b>. Pulsa <b>ENTRAR</b>: suena la campanilla, se abre la puerta y pasas dentro.</p>
-<ul><li>Toca <b>tu tarjeta</b> en «¿Quién entra hoy?» (las estrellas y galones indican el puesto; el sello rojo, que es jefe). La tarjeta se acerca y te pide <b>tu contraseña</b>; al acertarla se da la vuelta y te saluda.</li><li><b>La primera vez</b> que entras, la tarjeta te pide que <b>crees tu contraseña</b> (dos veces, mínimo 4 caracteres). A partir de ahí, solo tú puedes entrar con tu tarjeta. Si la olvidas, pídele a la dirección que te la resetee y la próxima vez crearás una nueva. Si fallas 5 veces seguidas, la tarjeta se bloquea un minuto.</li><li>Los jefes entran con la contraseña de jefe, que es compartida. La web te saluda por tu nombre con un resumen: tus horas de esta semana, si es día de pago, los encargos pendientes y quién está ausente.</li><li>La entrada dura unos 4 segundos. Si tienes prisa, toca la pantalla y pasas directamente a las tarjetas.</li><li><b>Tu usuario queda fijo</b> hasta que cierres la pestaña o la web. Sale arriba, junto a Dirección. Todo lo que hagas va a tu nombre: ventas, fichajes, ausencias y pedidos recibidos. No se puede cambiar de usuario sin cerrar y volver a abrir. Si recargas la página, sigues siendo tú.</li><li><b>Jefes</b>: las fichas con el puesto «Jefe» piden la <b>contraseña de jefe</b> (la misma para todos los jefes) cada vez que se entra. Con ella, el modo jefe y DIRECCIÓN quedan activados hasta que cierres la web; no se cierran por inactividad.</li><li>Si la dirección te <b>expulsa</b> (por ejemplo, si se te queda la sesión pillada), vuelves a la entrada con un aviso y tienes que elegir tu ficha otra vez. Si estabas fichado, se te ficha la salida en ese momento.</li></ul>`],
+<ul><li>Toca <b>tu tarjeta</b> en «¿Quién entra hoy?» (las estrellas y galones indican el puesto; el sello rojo, que es jefe). La tarjeta se acerca y te pide <b>tu contraseña</b>; al acertarla se da la vuelta y te saluda.</li><li><b>La primera vez</b> que entras, la tarjeta te pide que <b>crees tu contraseña</b> (dos veces, mínimo 4 caracteres). A partir de ahí, solo tú puedes entrar con tu tarjeta. Si la olvidas, pídele a la dirección que te la resetee y la próxima vez crearás una nueva. Si fallas 5 veces seguidas, la tarjeta se bloquea un minuto.</li><li>Los jefes entran con la contraseña de jefe, que es compartida. La web te saluda por tu nombre con un resumen: tus horas de esta semana, si es día de pago, los encargos pendientes y quién está ausente.</li><li><b>Tu foto</b>: toca <b>tu nombre</b> arriba para abrir tu ficha y pulsa <b>📷 SUBIR MI FOTO</b> (por ejemplo, una captura de tu personaje). Saldrá en tu tarjeta de la entrada en tono sepia. Puedes cambiarla o quitarla cuando quieras.</li><li>La entrada dura unos 4 segundos. Si tienes prisa, toca la pantalla y pasas directamente a las tarjetas.</li><li><b>Tu usuario queda fijo</b> hasta que cierres la pestaña o la web. Sale arriba, junto a Dirección. Todo lo que hagas va a tu nombre: ventas, fichajes, ausencias y pedidos recibidos. No se puede cambiar de usuario sin cerrar y volver a abrir. Si recargas la página, sigues siendo tú.</li><li><b>Jefes</b>: las fichas con el puesto «Jefe» piden la <b>contraseña de jefe</b> (la misma para todos los jefes) cada vez que se entra. Con ella, el modo jefe y DIRECCIÓN quedan activados hasta que cierres la web; no se cierran por inactividad.</li><li>Si la dirección te <b>expulsa</b> (por ejemplo, si se te queda la sesión pillada), vuelves a la entrada con un aviso y tienes que elegir tu ficha otra vez. Si estabas fichado, se te ficha la salida en ese momento.</li></ul>`],
 ['Primeros pasos',`<p>Esta web es la calculadora de ventas, presupuestos y encargos de <b>Harrington Gunsmith</b>. Funciona igual en móvil y en ordenador.</p>
 <ul><li><b>FICHAJE</b> (barra de arriba): ▸ Fichar entrada y ◂ Fichar salida.</li><li><b>ENCARGOS</b>: los encargos guardados que aún no se han entregado.</li><li><b>Tu nombre</b> (arriba): el usuario con el que has entrado. Si eres jefe, sale «· JEFE» y el botón <b>DIRECCIÓN</b>.</li><li>La placa <b>DÍA DE PAGO</b> (dorada) sale desde el domingo hasta que se pagan todos los sueldos; luego cambia a <b>SUELDOS PAGADOS</b> (verde) hasta el jueves. Cada uno ve en ella su propio sueldo.</li><li><b>PEDIDOS</b>: los pedidos a proveedores pendientes. La pestaña <b>MATERIALES</b> (junto a Venta y Presupuesto) muestra el almacén de materiales.</li><li><b>⚙</b> abre los ajustes: <b>música de fondo</b> (un piano de saloon, activado de serie; empieza a sonar en cuanto tocas la pantalla y se apaga aquí), <b>ambiente</b> (AUTO cambia solo entre día y noche según la hora española; también puedes dejar ☀ DÍA o ☾ NOCHE fijo), sonido y vibración, tamaño del texto (A− / A+) y alto contraste (◐). Cada móvil recuerda sus ajustes.</li><li>La placa dorada <b>EMPLEADO DE LA SEMANA</b> muestra quién más cobró la semana anterior.</li><li>En el tutorial, <b>▶ VISITA GUIADA</b> hace un recorrido rápido señalando cada botón.</li><li>Junto a FICHAJE ves cada empleado fichado con el tiempo que lleva, y el estado de la nube: «☁ guardando…» mientras se guarda algo y «☁ guardado ✓» cuando ya está.</li><li>Los avisos de error salen en <b>rojo</b> y duran más en pantalla; los normales, en verde.</li><li><b>? TUTORIAL</b> (esquina superior derecha) abre esta guía cuando la necesites.</li><li>El botón <b>↑</b> aparece al bajar mucho y te devuelve arriba.</li></ul>
 <p>Si recargas la página o se cierra el navegador, <b>la venta que tenías en curso se conserva</b>. Se borra solo con Vaciar o Nueva venta, y siempre pidiendo confirmación.</p>
@@ -4197,14 +4197,14 @@ async function empSaveFoto(id,file){
   if(!r.ok)throw new Error(r.status);
  }catch(err){return say('Sin conexión: la foto no se ha guardado')}
  PHOTOS[id]=url;try{localStorage.setItem('harrington_fotos_v1',JSON.stringify(PHOTOS))}catch(x){}
- renderDir();say('Foto de '+e.name+' guardada');
+ renderDir();if(!miModal.hidden)renderMi();say('Foto de '+e.name+' guardada');
 }
 async function empNoFoto(id){
  const e=empleados.find(x=>x.id===id);if(!e)return;
  if(!await askConfirm('Quitar foto','La tarjeta de '+e.name+' volverá a mostrar sus iniciales.','Quitar'))return;
  try{const r=await sbFetch('/rest/v1/datos?clave=eq.'+encodeURIComponent('foto-'+id),{method:'DELETE'});if(!r.ok)throw new Error(r.status)}catch(err){return say('Sin conexión: no se ha quitado')}
  delete PHOTOS[id];try{localStorage.setItem('harrington_fotos_v1',JSON.stringify(PHOTOS))}catch(x){}
- renderDir();say('Foto quitada');
+ renderDir();if(!miModal.hidden)renderMi();say('Foto quitada');
 }
 /* ---- la tarjeta elegida se acerca, pide la contraseña y se da la vuelta ---- */
 function gBigOpen(e,src){
@@ -4525,6 +4525,22 @@ function catImg(src){return innerWidth>=1100&&/\.webp$/.test(src)?src.replace(/\
 (function(){const im=document.getElementById('categoryImage');if(!im)return;let base=im.getAttribute('src');
  im.addEventListener('error',()=>{const s=im.getAttribute('src');if(/-ancha\.webp$/.test(s))im.src=s.replace('-ancha.webp','.webp')});
  im.src=catImg(base);let wasW=innerWidth>=1100;window.addEventListener('resize',()=>{const w=innerWidth>=1100;if(w!==wasW){wasW=w;const s=im.getAttribute('src').replace('-ancha.webp','.webp');im.src=catImg(s)}})})();
+/* ===== Mi ficha: cada empleado puede poner o quitar su propia foto (tocando su nombre arriba) ===== */
+const miModal=document.getElementById('miModal');
+function renderMi(){
+ const e=meEmp();if(!e)return closeModal(miModal);
+ const ph=PHOTOS[e.id], ini=(e.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+ document.getElementById('miBody').innerHTML=`<div class="mi-photo">${ph?`<img src="${ph}" alt="">`:`<b>${esc(ini)}</b>`}</div><div class="mi-name">${esc(e.name)}</div><div class="mi-role">${esc(e.puesto||'Empleado')}</div>
+  <div class="enc-actions"><button type="button" class="primary" id="miFoto">📷 ${ph?'CAMBIAR MI FOTO':'SUBIR MI FOTO'}</button>${ph?'<button type="button" class="warn" id="miNoFoto">QUITAR MI FOTO</button>':''}</div>
+  <p class="bk-note" style="margin:4px 0 0">Sale en tu tarjeta de la entrada en tono sepia, como un retrato antiguo. Por ejemplo, una captura de tu personaje.</p>`;
+ document.getElementById('miFoto').onclick=()=>empPickFoto(e.id);
+ const nf=document.getElementById('miNoFoto');if(nf)nf.onclick=()=>empNoFoto(e.id);
+}
+function openMi(){if(!meEmp()||meEmp().id==='prueba'&&!SANDBOX)return;loadPhotos().then(()=>{if(!miModal.hidden)renderMi()});renderMi();openModal(miModal)}
+document.getElementById('meChip').addEventListener('click',openMi);
+document.getElementById('meChip').addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();openMi()}});
+document.getElementById('miClose').onclick=()=>closeModal(miModal);
+miModal.addEventListener('click',ev=>{if(ev.target===miModal)closeModal(miModal)});
 /* ===== Limpieza de la nube: borra marcas antiguas que ya no sirven para nada ===== */
 async function cloudJanitor(force){
  if(!bossActive)return;

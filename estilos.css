@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261009h
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261009i
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1301,6 +1301,15 @@ body.has-agotado .nostock{width:74px;height:36px;margin:2px 0 0;font-size:0;colo
 @media(min-width:1400px){#products .product{grid-template-columns:70px minmax(120px,1fr) 92px 136px 84px;column-gap:6px}#products .weapon-icon.has-icon{width:62px;height:42px}}
 @media(max-width:900px){.product{grid-template-columns:62px 1fr 80px}.weapon-icon.has-icon{width:56px;height:38px}}
 @media(max-width:650px){.product{grid-template-columns:58px 1fr 80px}.weapon-icon.has-icon{width:52px;height:36px}}
+.me-chip{cursor:pointer}
+.me-chip:hover,.me-chip:focus-visible{border-color:#f3d27a;outline:none;box-shadow:0 0 10px #e8b92355}
+#miModal{z-index:75}
+.mi-box{max-width:360px;text-align:center}
+.mi-photo{width:150px;height:188px;margin:6px auto 10px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:radial-gradient(ellipse at 45% 38%,#6b4a2a 0,#3a2413 48%,#170c05 100%);box-shadow:0 0 0 3px #c9a14a,0 0 0 6px #1a120a,0 0 0 7px #8a6a32,inset 0 0 20px #000c}
+.mi-photo img{width:100%;height:100%;object-fit:cover;filter:sepia(.8) contrast(1.08)}
+.mi-photo b{font:700 54px 'Cinzel Decorative',Georgia,serif;color:#e9bf5c}
+.mi-name{font:700 22px 'IM Fell English',Georgia,serif;color:#f3dfa6}.mi-role{color:#b8a77e;font-style:italic;margin-bottom:10px}
+.mi-box .enc-actions{display:grid;gap:8px;margin:8px 0}
 /* placa de día de pago */
 .pay-plate{position:relative;display:flex;align-items:center;gap:12px;width:100%;margin:10px 0 0;padding:11px 14px;border:2px double #e8b923;border-radius:8px;background:linear-gradient(100deg,#3a2606,#1a1206 55%,#0e1a12);box-shadow:0 6px 18px #0008,inset 0 0 22px #e8b92333;color:inherit;font:inherit;text-align:left;cursor:pointer;overflow:hidden}
 .pay-plate[hidden]{display:none}
