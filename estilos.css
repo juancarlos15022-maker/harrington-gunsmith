@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261009d
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261009e
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1230,6 +1230,17 @@ body::after{content:"";position:fixed;left:50%;top:-30vh;width:min(1400px,160vw)
 .gate.lw.card-img .g-card:not(.gb-front){width:clamp(140px,10.2vw,210px)}
 .gate.lw.card-img .g-panel{width:min(1560px,98vw)}
 .gate.lw.card-img[data-ph="cards"] .g-ui{padding-top:max(38vh,220px)}
+.sbx-bar{position:fixed;left:0;right:0;top:0;z-index:149;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:7px 12px;background:repeating-linear-gradient(135deg,#5a3a00 0 14px,#3a2600 14px 28px);border-bottom:2px solid #f3b53a;color:#ffe9b0;font-size:13px;box-shadow:0 4px 14px #000a}
+.sbx-bar[hidden]{display:none}
+.sbx-bar b{letter-spacing:.12em;color:#ffd36a}
+.sbx-bar button{padding:5px 10px;border:1px solid #f3b53a;border-radius:5px;background:#2a1a00;color:#ffd36a;font:700 12px Georgia,serif;letter-spacing:.08em;cursor:pointer}
+body.sandbox{padding-top:44px}
+body.sandbox .modal-overlay{padding-top:58px}
+body.sandbox .set-pop{margin-top:44px}
+body.sandbox .net-bar{top:44px}
+.sbx-msg{margin:0 0 10px;padding:10px;border:1px solid #5d4928;border-radius:6px;background:#0a1610;white-space:pre-wrap;font-size:13px;color:#e9dcb8;overflow-wrap:anywhere}
+.sbx-msg small{display:block;margin-bottom:4px;color:#d9b45a;letter-spacing:.08em}
+.gc-stamp.prueba{border-color:#9a6a00;color:#9a6a00;background:#fff3c8dd}
 /* placa de día de pago */
 .pay-plate{position:relative;display:flex;align-items:center;gap:12px;width:100%;margin:10px 0 0;padding:11px 14px;border:2px double #e8b923;border-radius:8px;background:linear-gradient(100deg,#3a2606,#1a1206 55%,#0e1a12);box-shadow:0 6px 18px #0008,inset 0 0 22px #e8b92333;color:inherit;font:inherit;text-align:left;cursor:pointer;overflow:hidden}
 .pay-plate[hidden]{display:none}

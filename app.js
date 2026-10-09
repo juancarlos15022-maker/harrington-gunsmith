@@ -1,5 +1,101 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261009d
+/* HARRINGTON GUNSMITH · app.js · versión 20261009e
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
+/* ===== MODO PRUEBA (Arthur Ayudante) =====
+   Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
+   Al entrar se copia una vez lo que hay en la nube (solo lectura) para probar con datos reales;
+   todo lo que se hace después se queda aquí y desaparece al salir o cerrar la pestaña. */
+var SANDBOX=false;try{SANDBOX=sessionStorage.getItem('harrington_sandbox')==='1'}catch(e){}
+var SBX={dc:[]};
+if(SANDBOX)(function(){
+ const PRUEBA={id:'prueba',name:'Arthur Ayudante',puesto:'Jefe',sueldo:5000,horas:10,inicio:'2026-01-01',prueba:'',sinPrueba:true,alta:Date.now()};
+ /* 1) almacenamiento local: una copia en memoria; el de verdad no se toca */
+ const mem={};
+ try{for(let i=0;i<window.localStorage.length;i++){const k=window.localStorage.key(i);mem[k]=window.localStorage.getItem(k)}}catch(e){}
+ delete mem['harrington_cloud_outbox'];delete mem['harrington_cloud_dirty'];
+ try{const em=JSON.parse(mem['harrington_empleados_v1']||'[]');if(Array.isArray(em)&&!em.some(x=>x.id==='prueba')){em.push(PRUEBA);mem['harrington_empleados_v1']=JSON.stringify(em)}}catch(e){mem['harrington_empleados_v1']=JSON.stringify([PRUEBA])}
+ const fakeLS={getItem:k=>Object.prototype.hasOwnProperty.call(mem,k)?mem[k]:null,setItem:(k,v)=>{mem[k]=String(v)},removeItem:k=>{delete mem[k]},clear:()=>{for(const k in mem)delete mem[k]},key:i=>Object.keys(mem)[i]||null,get length(){return Object.keys(mem).length}};
+ try{Object.defineProperty(window,'localStorage',{configurable:true,get:()=>fakeLS})}catch(e){}
+ /* 2) sin avisos instantáneos de la nube real */
+ try{window.WebSocket=undefined}catch(e){}
+ /* 3) la nube y Discord simulados */
+ const realFetch=window.fetch.bind(window), DB={}, ST={};let CNT=0, seeded=null;
+ const J=(o,st)=>Promise.resolve(new Response(o===null?null:JSON.stringify(o),{status:st||200,headers:{'Content-Type':'application/json'}}));
+ const now=()=>new Date().toISOString();
+ const SB='https://mrlpvjxuifvspeaqtscm.supabase.co', KEY='sb_publishable_OvDXH0UuWJMMBd6fYgOxtg_IsVBZKTz';
+ function seed(){
+  if(seeded)return seeded;
+  const h={apikey:KEY};
+  seeded=Promise.all([
+   realFetch(SB+'/rest/v1/datos?select=clave,valor,actualizado',{headers:h}).then(r=>r.ok?r.json():[]).catch(()=>[]),
+   realFetch(SB+'/rest/v1/stock?select=producto,cantidad',{headers:h}).then(r=>r.ok?r.json():[]).catch(()=>[]),
+   realFetch(SB+'/rest/v1/contador?select=valor&id=eq.1',{headers:h}).then(r=>r.ok?r.json():[]).catch(()=>[])
+  ]).then(([d,s,c])=>{
+   (d||[]).forEach(x=>{if(!/^(presencia-|expulsion:)/.test(x.clave))DB[x.clave]={valor:x.valor,actualizado:x.actualizado}});
+   const em=DB.empleados&&Array.isArray(DB.empleados.valor)?DB.empleados.valor:[];
+   if(!em.some(x=>x.id==='prueba'))DB.empleados={valor:em.concat([PRUEBA]),actualizado:now()};
+   (s||[]).forEach(x=>{ST[x.producto]=x.cantidad});
+   CNT=(c&&c[0]&&c[0].valor)||0;
+  });
+  return seeded;
+ }
+ const pre=f=>decodeURIComponent(f.slice(5)).replace(/\*/g,'');
+ function rowsFor(q){
+  let rows=Object.keys(DB).map(k=>({clave:k,valor:DB[k].valor,actualizado:DB[k].actualizado}));
+  const f=q.get('clave');
+  if(f){
+   if(f.startsWith('in.('))rows=rows.filter(r=>f.slice(4,-1).split(',').includes(r.clave));
+   else if(f.startsWith('eq.'))rows=rows.filter(r=>r.clave===f.slice(3));
+   else if(f.startsWith('like.')){const p=decodeURIComponent(f.slice(5));rows=p==='*:*'?rows.filter(r=>r.clave.includes(':')):rows.filter(r=>r.clave.startsWith(pre(f)))}
+  }
+  const a=q.get('actualizado');if(a&&a.startsWith('gt.')){const t=Date.parse(a.slice(3));rows=rows.filter(r=>Date.parse(r.actualizado)>t)}
+  if(q.get('order')==='actualizado.asc')rows.sort((x,y)=>Date.parse(x.actualizado)-Date.parse(y.actualizado));
+  if(q.get('limit'))rows=rows.slice(0,+q.get('limit'));
+  const sel=q.get('select');if(sel&&sel!=='*'){const c=sel.split(',');rows=rows.map(r=>{const o={};c.forEach(k=>{if(k in r)o[k]=r[k]});return o})}
+  return rows;
+ }
+ async function fakeSB(url,init){
+  await seed();
+  const u=new URL(url), path=u.pathname.replace('/rest/v1/',''), q=u.searchParams, m=((init&&init.method)||'GET').toUpperCase();
+  const body=init&&init.body?JSON.parse(init.body):null, pref=String(((init&&init.headers)||{}).Prefer||((init&&init.headers)||{}).prefer||'');
+  if(path.startsWith('rpc/')){
+   const fn=path.slice(4);
+   if(fn==='siguiente_numero'){CNT++;return J(CNT)}
+   if(fn==='mover_stock'){const n=Object.assign({},ST);for(const it of (body&&body.p_items)||[]){let v=n[it.producto];if(v==null){if(it.delta<0)return J({message:'STOCK_INSUFICIENTE',code:'P0001'},400);v=0}v+=it.delta;if(v<0)return J({message:'STOCK_INSUFICIENTE',code:'P0001'},400);n[it.producto]=v}Object.assign(ST,n);return J(Object.assign({},ST))}
+   return J({},200);
+  }
+  if(path==='datos'){
+   if(m==='GET')return J(rowsFor(q));
+   if(m==='POST'){const ins=[];(body||[]).forEach(r=>{if(/ignore-duplicates/.test(pref)&&DB[r.clave])return;DB[r.clave]={valor:r.valor,actualizado:r.actualizado||now()};ins.push({clave:r.clave,valor:r.valor,actualizado:DB[r.clave].actualizado})});return /return=representation/.test(pref)?J(ins,201):J(null,201)}
+   if(m==='DELETE'){const f=q.get('clave')||'';if(f.startsWith('eq.'))delete DB[decodeURIComponent(f.slice(3))];else if(f.startsWith('like.')){const p=pre(f);Object.keys(DB).forEach(k=>{if(k.startsWith(p))delete DB[k]})}return J(null,204)}
+  }
+  if(path==='stock'){
+   if(m==='GET')return J(Object.keys(ST).map(k=>({producto:k,cantidad:ST[k]})));
+   if(m==='POST'){(body||[]).forEach(r=>{ST[r.producto]=r.cantidad});return J(null,201)}
+   if(m==='PATCH'){const f=decodeURIComponent(q.get('producto')||'');Object.keys(ST).forEach(k=>{if(f.startsWith('not.like.mat:')&&k.startsWith('mat:'))return;if(f.startsWith('like.mat:')&&!k.startsWith('mat:'))return;ST[k]=body.cantidad});return J(null,204)}
+  }
+  if(path==='contador'){if(m==='GET')return J([{valor:CNT}]);if(m==='PATCH'){CNT=body.valor;return J(null,204)}}
+  return J({},200);
+ }
+ let mid=900000;
+ function fakeDiscord(url,init){
+  let text='';
+  try{const b=init&&init.body;const pj=b instanceof FormData?JSON.parse(b.get('payload_json')||'{}'):JSON.parse(b||'{}');const e=(pj.embeds||[])[0];text=pj.content||(e?((e.title||'')+'\n'+(e.description||'')):'');text=text.replace(/\*\*/g,'')}catch(e){}
+  let ch='general';try{const W=typeof webhook!=='undefined'?webhook:null;if(W)ch=Object.keys(W.urls||{}).find(k=>W.urls[k]&&url.indexOf(W.urls[k].split('?')[0])===0)||'general'}catch(e){}
+  const edit=/\/messages\//.test(url);
+  SBX.dc.push({ch:ch,text:text,edit:edit,ts:Date.now(),file:!!(init&&init.body instanceof FormData&&init.body.get('files[0]'))});
+  try{sbxPaint()}catch(e){}
+  if(edit){const m=url.match(/messages\/(\d+)/);return J({id:m?m[1]:String(++mid)})}
+  if(url.indexOf('wait=true')>=0)return J({id:String(++mid)});
+  return J(null,204);
+ }
+ window.fetch=function(u,init){
+  const url=typeof u==='string'?u:((u&&u.url)||'');
+  if(url.indexOf(SB)===0)return fakeSB(url,init);
+  if(/discord(app)?\.com\/api\/webhooks/.test(url))return fakeDiscord(url,init);
+  return realFetch(u,init);
+ };
+ SBX.exit=function(){try{['harrington_sandbox','harrington_me_v1','harrington_boss_active_v1','harrington_tab'].forEach(k=>sessionStorage.removeItem(k))}catch(e){}location.reload()};
+})();
 /* ===== Referencias ===== */
 /* Productos añadidos y precios editados desde Dirección: se aplican antes de leer el catálogo */
 (function(){
@@ -3203,6 +3299,7 @@ const TUTORIAL=[
 <p>Los cambios llegan a los demás móviles <b>al instante</b>: la nube avisa en cuanto algo cambia. Si ese aviso no funcionara, cada móvil sigue comprobando la nube cada pocos segundos. Arriba, junto a FICHAJE, ves «☁ conectado», «☁ guardando…», «☁ guardado ✓» o «☁ sin conexión». <b>Sin conexión</b> puedes mirar el catálogo y hacer presupuestos, pero no finalizar ventas ni cambiar el stock. Los cambios de configuración se suben solos al volver la conexión.</p>
 <p>Haz una <b>copia de seguridad</b> de vez en cuando desde Dirección.</p>`],
 ['Novedades: deshacer, sin conexión y app',`<ul><li><b>Deshacer</b>: al borrar un gasto, anular o borrar una ausencia, o empezar una venta nueva con productos puestos, el aviso de abajo lleva un botón <b>DESHACER</b> durante unos segundos.</li><li><b>Sin conexión</b>: si se cae la conexión sale una franja roja arriba. Puedes seguir trabajando: lo que hagas se guarda y se envía al volver.</li><li><b>Cerrar sesión</b>: al fichar tu salida, la web te pregunta si quieres cerrar tu sesión en ese dispositivo.</li><li><b>👁</b> junto a las contraseñas sirve para ver lo que escribes.</li><li><b>Como una app</b>: la web se guarda en el móvil, así que se abre al instante y aunque no haya conexión. En el móvil puedes añadirla a la pantalla de inicio desde el menú del navegador («Añadir a pantalla de inicio»).</li><li>En el <b>ordenador</b> la web ocupa toda la pantalla: productos en columnas y el pedido siempre a la derecha.</li><li>Con poca batería o con el ahorro de datos activado, se quitan los efectos de lluvia para gastar menos.</li></ul>`],
+['Modo prueba (Arthur Ayudante)',`<ul><li>En la entrada, la última tarjeta es <b>Arthur Ayudante</b>, con el sello «PRUEBA». Sirve para probar las novedades sin miedo.</li><li>La primera vez te pide crear su contraseña; después, siempre la misma (es la única cosa que se guarda de verdad).</li><li>Dentro entras como jefe, con DIRECCIÓN, y ves una copia de los datos reales del momento.</li><li><b>Nada de lo que hagas se guarda</b> en la base de datos ni afecta a la web de verdad, y <b>no se envía nada a Discord</b>. Arriba sale la franja amarilla «MODO PRUEBA».</li><li>El botón <b>DISCORD (n)</b> de la franja enseña los mensajes que se habrían enviado, para comprobar que salen bien.</li><li><b>SALIR</b> (o cerrar la pestaña) borra la prueba y vuelve a la entrada normal.</li><li>Arthur Ayudante no aparece en Empleados, Sueldos ni en ningún listado.</li></ul>`],
 ['Si algo no funciona',`<ul><li><b>No deja finalizar</b>: lee el aviso; suele faltar cliente, empleado, telegrama, pago adelantado o stock.</li><li><b>Producto SIN STOCK</b>: el jefe debe sumar existencias.</li><li><b>No suena</b>: en ⚙ comprueba que el sonido diga «♪ SÍ» y el volumen del móvil.</li><li><b>Un botón no responde</b>: si muestra ⏳, está guardando; espera a que termine.</li><li><b>No suena la música</b>: los navegadores no dejan sonar nada hasta que tocas la pantalla; toca cualquier sitio. Si sigue sin sonar, en ⚙ comprueba que «Música de fondo» diga «♫ SÍ».</li><li><b>Se lee poco</b>: usa A+ o el alto contraste ◐.</li><li><b>No ves un cambio reciente</b>: abre la web en una pestaña privada.</li></ul>`]];
 const tutModal=document.getElementById('tutModal');
 const HELP_MAP={sueldos:'Sueldos',ausencias:'Ausencias',convenios:'Convenios',empleados:'Empleados y contratos',clientes:'Clientes',productos:'Modo Jefe',stock:'Fabricación y recetas',fabricacion:'Fabricación y recetas',regstock:'Modo Jefe',horarios:'Fichaje',ventas:'Modo Jefe',semanales:'Ticket, copias y Discord',gastos:'Empleados y contratos',balance:'Ticket, copias y Discord',cierre:'Modo Jefe',proveedores:'Proveedores y pedidos',nuevopedido:'Proveedores y pedidos',regpedidos:'Proveedores y pedidos',discord:'Ticket, copias y Discord',nube:'Datos y dispositivos',reset:'Datos y dispositivos',copia:'Datos y dispositivos'};
@@ -3943,7 +4040,7 @@ function gateLoadImg(){
  else intV();
 }
 window.addEventListener('resize',()=>{clearTimeout(G.rsz);G.rsz=setTimeout(()=>{if(G.open&&gWide()!==G.wantWide)gateLoadImg()},300)});
-function gateCheck(){if(window.__HG_NOGATE||G.open||meEmp())return;if(empleados.length)gateOpen()}
+function gateCheck(){if(window.__HG_NOGATE||SANDBOX||G.open||meEmp())return;if(empleados.length)gateOpen()}
 function gateOpen(opt){
  G.msgOk=!!(opt&&opt.msg&&/^Sesión cerrada/.test(opt.msg));
  opt=opt||{};G.open=true;gClear();G.pending=null;G.msg=opt.msg||'';G.big=null;
@@ -3992,13 +4089,14 @@ function gateEnter(){
  gT(()=>gateCards(),3900);
 }
 /* ---- tarjetas ---- */
+const G_PRUEBA={id:'prueba',name:'Arthur Ayudante',puesto:'Modo prueba'};
 const G_STAR='<svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 20.9l1.6-7L2 9.2l7.1-.6z"/></svg>', G_CHEV='<svg viewBox="0 0 24 24"><path d="M3 15l9-7 9 7-2.4 2.6L12 12.4l-6.6 5.2z"/></svg>';
 const G_RANK={'Jefe':'','Gerente':G_STAR+G_STAR,'Armero experto':G_CHEV+G_CHEV+G_CHEV,'Armero':G_CHEV+G_CHEV,'Aprendiz de armero':G_CHEV};
 const G_KEY='<svg viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 0-1.5 7.7L9 21h6l-1.5-10.3A4 4 0 0 0 12 3z"/></svg>';
 const G_CN='<svg viewBox="0 0 24 24"><path d="M2 22V9Q2 2 9 2h13"/><path d="M5.5 22V11q0-5.5 5.5-5.5H22"/><path d="M9 14q1.5-5 7-5"/><circle cx="9" cy="9" r="1.4"/></svg>';
 function cardInner(e,abs){
  const ini=(e.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(), ph=PHOTOS[e.id];
- return `${isJefe(e)?`<span class="gc-wax" title="Pide la contraseña de jefe">${G_KEY}</span>`:''}<i class="gc-cn tl">${G_CN}</i><i class="gc-cn tr">${G_CN}</i><i class="gc-cn bl">${G_CN}</i><i class="gc-cn br">${G_CN}</i><span class="gc-oval${ph?' has-photo':''}">${ph?`<img class="gc-photo" src="${ph}" alt="">`:''}<span class="gc-mono">${esc(ini)}</span></span><span class="gc-name" style="--nl:${Math.max(8,(e.name||'').length)}">${esc(e.name)}</span><span class="gc-role" style="--rl:${Math.max(8,(e.puesto||'Empleado').length)}">${esc(e.puesto||'Empleado')}</span><span class="gc-rank">${G_RANK[e.puesto]||''}</span><span class="gc-studio">Saint Denis, 1880</span>${abs?'<span class="gc-stamp">AUSENTE</span>':''}`;
+ return `${isJefe(e)?`<span class="gc-wax" title="Pide la contraseña de jefe">${G_KEY}</span>`:''}<i class="gc-cn tl">${G_CN}</i><i class="gc-cn tr">${G_CN}</i><i class="gc-cn bl">${G_CN}</i><i class="gc-cn br">${G_CN}</i><span class="gc-oval${ph?' has-photo':''}">${ph?`<img class="gc-photo" src="${ph}" alt="">`:''}<span class="gc-mono">${esc(ini)}</span></span><span class="gc-name" style="--nl:${Math.max(8,(e.name||'').length)}">${esc(e.name)}</span><span class="gc-role" style="--rl:${Math.max(8,(e.puesto||'Empleado').length)}">${esc(e.puesto||'Empleado')}</span><span class="gc-rank">${G_RANK[e.puesto]||''}</span><span class="gc-studio">Saint Denis, 1880</span>${abs?'<span class="gc-stamp">AUSENTE</span>':''}${e.id==='prueba'?'<span class="gc-stamp prueba">PRUEBA</span>':''}`;
 }
 function gateCards(){
  gClear();G.big=null;{const ob=document.getElementById('gBig');if(ob)ob.remove()}
@@ -4007,6 +4105,7 @@ function gateCards(){
  const L=empleados.slice().sort((a,b)=>rank(a)-rank(b)||a.name.localeCompare(b.name,'es'));
  const abs=new Set(ausNowList().map(a=>a.empId));
  const ROT=[-2.2,1.6,-1.2,2.4,-1.8,1.1,2,-2.6];
+ L.push(G_PRUEBA);
  gUi.innerHTML=`<div class="g-panel">${G.msg?`<div class="g-msg${G.msgOk?' ok':''}">${esc(G.msg)}</div>`:''}<h2 class="g-title">¿Quién entra hoy?</h2><p class="g-sub">Toca tu tarjeta. Quedará a tu nombre hasta que cierres la web.</p>
   <div class="g-cards" id="gCards">${L.map((e,i)=>`<button type="button" class="g-card${isJefe(e)?' jefe':''}" data-gcard="${esc(e.id)}" style="--r:${ROT[i%ROT.length]}deg;--dx:${(i%2?1:-1)*24}px;animation-delay:${(0.25+i*0.13).toFixed(2)}s" aria-label="${esc(e.name)}${e.puesto?', '+esc(e.puesto):''}">${cardInner(e,abs.has(e.id))}</button>`).join('')}</div></div>`;
  gUi.scrollTop=0;
@@ -4151,7 +4250,7 @@ async function gPwSubmit(){
 }
 async function gatePick(id){
  if(G.big)return;
- const e=empleados.find(x=>x.id===id);if(!e)return;
+ const e=id==='prueba'?G_PRUEBA:empleados.find(x=>x.id===id);if(!e)return;
  if(G.lock[id]>Date.now())return say('Demasiados intentos: espera un minuto para volver a probar con '+e.name);
  try{playClick()}catch(x){}
  gBigOpen(e,gUi.querySelector('[data-gcard="'+id+'"]'));
@@ -4166,6 +4265,7 @@ async function gatePick(id){
  gPwShow(e,r.hash?'login':'create',r.hash);
 }
 function gateHello(e){
+ if(e.id==='prueba'&&!SANDBOX){try{sessionStorage.setItem('harrington_sandbox','1');sessionStorage.setItem('harrington_me_v1',JSON.stringify({id:'prueba',at:Date.now()}));sessionStorage.setItem('harrington_boss_active_v1','1')}catch(x){}gPh('close');setTimeout(()=>location.reload(),300);return}
  gClear();
  setMe(e);if(!isJefe(e)&&bossActive)setBoss(false);
  gPh('hello');
@@ -4265,6 +4365,21 @@ try{pwEyes(document.getElementById('bossModal'))}catch(e){}
 (function(){const img=document.querySelector('.hero-banner img');if(!img)return;let done=false;
  const tryW=()=>{if(done||innerWidth<1100)return;done=true;gTry(['cabecera-web-ancha.jpg','cabecera-web-ancha.png'],u=>{img.src=u;img.classList.add('ancha')},()=>{})};
  tryW();window.addEventListener('resize',tryW)})();
+/* ===== Modo prueba: barra, visor de Discord y entrada automática como Arthur Ayudante ===== */
+function sbxPaint(){const b=document.getElementById('sbxDc');if(b)b.textContent='DISCORD ('+SBX.dc.length+')'}
+function sbxShow(){
+ const body=document.getElementById('sbxBody');
+ body.innerHTML=SBX.dc.length?SBX.dc.slice().reverse().map(m=>`<div class="sbx-msg"><small>CANAL: ${esc(String(m.ch).toUpperCase())} · ${esc(fmtTime(m.ts))}${m.edit?' · ACTUALIZACIÓN':''}${m.file?' · CON ARCHIVO':''}</small>${esc(m.text||'(sin texto)')}</div>`).join(''):'<div class="enc-empty">Todavía no se ha intentado enviar nada a Discord.</div>';
+ openModal(document.getElementById('sbxModal'));
+}
+if(SANDBOX){
+ document.body.classList.add('sandbox');document.getElementById('sbxBar').hidden=false;
+ document.getElementById('sbxDc').onclick=sbxShow;
+ document.getElementById('sbxClose').onclick=()=>closeModal(document.getElementById('sbxModal'));
+ document.getElementById('sbxOut').onclick=async()=>{if(await askConfirm('Salir del modo prueba','Se borrará todo lo que hayas hecho en la prueba y volverás a la entrada de la web de verdad.','Salir'))SBX.exit()};
+ try{ME={id:'prueba',at:Date.now()};if(!bossActive)setBoss(true)}catch(e){}
+ setTimeout(()=>{try{applyMe();say('Modo prueba: puedes tocarlo todo, nada se guarda de verdad')}catch(e){}},500);
+}
 /* ===== Limpieza de la nube: borra marcas antiguas que ya no sirven para nada ===== */
 async function cloudJanitor(force){
  if(!bossActive)return;
