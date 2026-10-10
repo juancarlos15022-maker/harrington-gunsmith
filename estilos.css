@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261010t
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261010u
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1702,3 +1702,10 @@ body.has-mnav #dirModal .enc-actions:has(> [data-dir="cl-save"]),body.has-mnav #
 .rc-ic b{color:#a8321c}
 .ph-tag{display:block;font-size:11px;font-weight:700;margin-top:2px}.ph-tag.up{color:var(--st-bad-s)}.ph-tag.down{color:#1e7a45}
 .repo-box{margin:8px 0 12px;padding:10px;border:1px dashed #b8862f;border-radius:8px}
+.mi-week{margin:10px 0 12px;padding:10px;border:1px solid #5d4928;border-radius:8px;background:#0a1712;text-align:left}
+.mw-bar{height:12px;border-radius:6px;background:#1f2e25;overflow:hidden;margin:4px 0 8px}
+.mw-bar i{display:block;height:100%;background:linear-gradient(90deg,#b8862f,#e0a33a)}
+.mw-bar i.ok{background:linear-gradient(90deg,#2e9e5b,#5ccf86)}
+.mw-row{display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:13.5px;color:#e9d49a}
+.mw-row.tot{border-top:1px dashed #5d4928;margin-top:4px;padding-top:6px;font-size:15px}
+.mw-row.tot b{color:#ffe08a}
