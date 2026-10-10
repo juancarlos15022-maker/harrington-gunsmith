@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261010b
+/* HARRINGTON GUNSMITH · app.js · versión 20261010c
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -3219,7 +3219,8 @@ const RECETAS_LOTES=[
 /* Proveedores dictados por la dirección: se crean una sola vez (si ya existe uno con ese nombre, no se toca) */
 const PROVEEDORES_BASE=[
  {k:'roanoke',name:'Roanoke Mining Company',tipo:'Mina',ubic:'Annesburg',tel:'ER6080',prods:[['Mena de hierro',0.50],['Mena de carbón',0.10],['Azufre',0.10],['Sal',0.07],['Piedra',0.07]]},
- {k:'tala-annesburg',name:'Tala Annesburg',tipo:'Tala',ubic:'Annesburg',tel:'AN5025',prods:[['Fibra',0.07],['Trozo de madera',1.33],['Tablones',0.74]]}
+ {k:'tala-annesburg',name:'Tala Annesburg',tipo:'Tala',ubic:'Annesburg',tel:'AN5025',prods:[['Fibra',0.07],['Trozo de madera',1.33],['Tablones',0.74]]},
+ {k:'foster',name:'Herrería Foster',tipo:'Herrería',ubic:'',tel:'VL2508',extra:[{k:'Nota',v:'«Cuchillo A» y «El chapo A»: nombres por confirmar'},{k:'Precio provisional',v:'Culata de pistola y de revólver a $2.88'}],prods:[['Pieza de arma',2.52],['Pieza de arma especial',20.45],['Cañón de pistola',2.52],['Cañón de revólver',2.52],['Culata de pistola',2.88],['Culata de revólver',2.88],['Cañón de repetidora',4.86],['Culata de repetidora',5.22],['Cañón de rifle',7.20],['Culata de rifle',7.56],['Cañón de escopeta',7.20],['Culata de escopeta',7.56],['Barra de hierro',2.34],['Tornillo',0.23],['Hojalata',0.42],['Herradura',0.72],['Kit de reparación de arma',26.87],['Kit de reparación de carros',5.14],['Cuchillo A',4.14],['Corbillo',0.96],['Rastrillo',3.24],['Hacha',3.24],['Martillo',3.24],['Pico',3.24],['Batea de rocas',3.52],['Fundidora',12.53],['Alambique nuevo',11.61],['Alambique tradicional',11.61],['Regadera de hojalata',0.88],['Regadera de cobre',1.06],['Pala',2.88],['Tijeras de podar',1.20],['Cubo vacío',1.62],['Linterna (tipo 1)',3.06],['Linterna (tipo 2)',3.06],['Binoculares mejorados',6.90],['Encendedor',1.10],['Dardos',6.48],['El chapo A',2.52]]}
 ];
 async function proveedoresBase(){
  for(const b of PROVEEDORES_BASE){
@@ -3227,7 +3228,7 @@ async function proveedoresBase(){
   if(!await claimRow('proveedor-base-'+b.k,{ts:Date.now()})){try{localStorage.setItem('harrington_provbase_'+b.k,'1')}catch(e){}continue}
   if(!proveedores.some(v=>norm(v.name)===norm(b.name))){
    const id='v'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
-   proveedores.push({id:id,name:b.name,tel:b.tel,tipo:b.tipo,ubic:b.ubic,prods:b.prods.map(([n,p])=>({name:n,price:Math.round(p*100)}))});
+   proveedores.push({id:id,name:b.name,tel:b.tel,tipo:b.tipo,ubic:b.ubic,extra:(b.extra||[]).map(x=>({k:x.k,v:x.v})),prods:b.prods.map(([n,p])=>({name:n,price:Math.round(p*100)}))});
    saveProveedores();publishProveedor(id);if(!dirModal.hidden&&dirMod==='proveedores')renderDir();
   }
   try{localStorage.setItem('harrington_provbase_'+b.k,'1')}catch(e){}
