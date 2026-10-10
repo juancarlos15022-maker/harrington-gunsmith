@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261010r
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261010s
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1700,3 +1700,4 @@ body.has-mnav #dirModal .enc-actions:has(> [data-dir="cl-save"]),body.has-mnav #
 .tb-chip.bad.on{background:var(--st-bad-s)}
 .tb-chip.on,.ph-card .ph-n{background:var(--st-gold);border-color:var(--st-gold)}
 .rc-ic b{color:#a8321c}
+.ph-tag{display:block;font-size:11px;font-weight:700;margin-top:2px}.ph-tag.up{color:var(--st-bad-s)}.ph-tag.down{color:#1e7a45}
