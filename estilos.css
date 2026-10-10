@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261010a
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261010b
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -720,6 +720,8 @@ body{background:radial-gradient(ellipse at 50% -8%,#8a4f2133,transparent 44%),ra
 .np-sub{grid-column:1/-1;margin:-4px 0 4px;color:#c9b27a;font-size:13px;text-align:right}
 .serie-row,.pv-prod{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;margin-bottom:8px}
 .pv-prod{grid-template-columns:minmax(0,1fr) 112px}
+.ex-row{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}
+.cp-btn.add-btn{color:#f0c27a;border-color:#a0741e}
 .serie-row input,.serie-row select,.pv-prod input,.pv-prod .money{margin:0;min-width:0}
 .np-prod.on{background:rgba(184,137,49,.12)}
 .np-prod.on b{color:var(--gold2)}

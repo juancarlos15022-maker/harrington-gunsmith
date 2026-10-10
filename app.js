@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261010a
+/* HARRINGTON GUNSMITH · app.js · versión 20261010b
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -1740,6 +1740,14 @@ dirModal.addEventListener('input',e=>{
  else if(id==='clName'&&clWork)clWork.name=t.value;
  else if(id==='clTel'&&clWork){const v=sanitizeTelegram(t.value);t.value=v;clWork.telegram=v}
  else if(id==='clIdent'&&clWork)clWork.ident=t.value;
+ else if(d.ex){
+  const o=d.exo==='cl'?clWork:pvDraft; if(!o)return;
+  const i=+d.i, L=o.extra||(o.extra=[]);while(L.length<=i)L.push({k:'',v:''});
+  L[i][d.ex]=t.value;
+  const box=document.getElementById('exList'+d.exo), n=box?box.children.length:0;
+  if(box&&i===n-1&&(L[i].k||L[i].v)&&n<MAX_EXTRA){L.push({k:'',v:''});box.insertAdjacentHTML('beforeend',exRowHTML({k:'',v:''},n,d.exo))}
+  const cnt=document.getElementById('exCount'+d.exo);if(cnt)cnt.textContent=L.filter(r=>String(r.k).trim()&&String(r.v).trim()).length;
+ }
  else if(d.ser&&clWork){
   const i=+d.i, L=clWork.series||(clWork.series=[]);while(L.length<=i)L.push({s:'',a:''});
   if(d.ser==='s'){const v=t.value.toUpperCase().replace(/[^A-Z0-9\-\/.]/g,'').slice(0,20);if(v!==t.value)t.value=v;L[i].s=v}
@@ -1860,6 +1868,32 @@ async function delCustomProduct(name){
  store.set(KEY_CUSTPROD,JSON.stringify(loadObj(KEY_CUSTPROD,[]).filter(x=>x.name!==name)));
  say('Producto eliminado · recargando…');setTimeout(()=>location.reload(),700);
 }
+/* --- Otros datos (libres) de las fichas de cliente y proveedor: [{k:'Dueño',v:'Pedro'}] --- */
+const MAX_EXTRA=12;
+const EXTRA_SUG={cl:['Dueño','Empresa','Ocupación','Dirección','Horario','Otro telegrama','Contacto','Nota'],pv:['Dueño','Encargado','Horario','Otro telegrama','Pedido mínimo','Forma de pago','Contacto','Nota']};
+function exRows(o){const L=(o.extra||[]).filter(r=>r&&(r.k||r.v)).map(r=>({k:r.k||'',v:r.v||''}));if(L.length<MAX_EXTRA)L.push({k:'',v:''});o.extra=L;return L}
+function exRowHTML(r,i,w){return `<div class="serie-row ex-row"><input data-ex="k" data-exo="${w}" data-i="${i}" type="text" maxlength="24" list="exSug${w}" autocomplete="off" placeholder="Dato" value="${esc(r.k)}"><input data-ex="v" data-exo="${w}" data-i="${i}" type="text" maxlength="60" autocomplete="off" placeholder="Valor" value="${esc(r.v)}"></div>`}
+function exSecHTML(o,w){return `<div class="dir-sec-title" id="exSec${w}">OTROS DATOS (<span id="exCount${w}">${exRows(o).filter(r=>r.k&&r.v).length}</span>)</div>
+  <p class="bk-note" style="margin:0 0 8px">Para lo que no tiene casilla: el dueño, el horario, otro telegrama… Escribe el nombre del dato y su valor. Al rellenar uno aparece otro hueco, hasta ${MAX_EXTRA}.</p>
+  <datalist id="exSug${w}">${EXTRA_SUG[w].map(t=>`<option value="${esc(t)}"></option>`).join('')}</datalist>
+  <div id="exList${w}">${exRows(o).map((r,i)=>exRowHTML(r,i,w)).join('')}</div>`}
+/* Limpia la lista; devuelve el texto del error o la lista limpia */
+function exClean(L){
+ const out=[], seen={};
+ for(const r of (L||[])){
+  const k=String(r.k||'').trim().replace(/\s+/g,' ').slice(0,24), v=String(r.v||'').trim().replace(/\s+/g,' ').slice(0,60);
+  if(!k&&!v)continue;
+  if(!k)return 'Falta el nombre del dato «'+v+'» (por ejemplo «Dueño»)';
+  if(!v)return 'Falta el valor de «'+k+'»';
+  if(seen[norm(k)])return '«'+k+'» está repetido en otros datos';
+  seen[norm(k)]=1;out.push({k:k.charAt(0).toUpperCase()+k.slice(1),v:v});
+ }
+ return out.slice(0,MAX_EXTRA);
+}
+function exLines(o){return (o.extra||[]).filter(r=>r.k&&r.v).map(r=>r.k+': '+r.v)}
+/* Al pulsar ✚ AÑADIR en una ficha: abre EDITAR y pone el cursor en ese dato */
+function focusField(id){setTimeout(()=>{let el=null;if(id.indexOf('exSec')===0){const L=dirModal.querySelectorAll('#exList'+id.slice(5)+' [data-ex="k"]');el=L[L.length-1]}else el=document.getElementById(id);if(el){el.scrollIntoView({block:'center'});try{el.focus()}catch(e){}el.classList.add('pz-hit');setTimeout(()=>el.classList.remove('pz-hit'),2400)}},60)}
+function addBtn(w,id,f){return `<button type="button" class="cp-btn add-btn" data-dir="${w}-fill:${esc(id)}~${f}" title="Añadir este dato">✚ AÑADIR</button>`}
 /* --- Clientes guardados --- */
 let clEdit=null, clWork=null, clQ='';
 const MAX_SERIES=20;
@@ -1869,6 +1903,7 @@ function serieRowHTML(r,i){return `<div class="serie-row"><input data-ser="s" da
 function clientText(c,title){
  const L=[title||'FICHA DE CLIENTE','Nombre: '+c.name,'Tipo: '+(c.type==='empresa'?'Empresa':'Particular'),'Telegrama: '+(c.telegram||'—')];
  if(c.ident)L.push('N.º de identificación: '+c.ident);
+ exLines(c).forEach(x=>L.push(x));
  const pk=Object.keys(c.precios||{});
  if(pk.length){L.push('','Precios especiales:');pk.forEach(n=>L.push('  '+n+' · '+money(Math.round(c.precios[n]*100))))}
  const S=(c.series||[]).filter(r=>r.s);
@@ -1903,10 +1938,12 @@ function clientHistHTML(c){
   (L.length>8?`<div class="enc-actions" style="margin-top:8px"><button type="button" data-dir="cl-hist">${clHistAll?'VER SOLO LAS ÚLTIMAS':'VER LAS '+L.length+' COMPRAS'}</button></div>`:'');
 }
 function renderClientFicha(c){
- const S=(c.series||[]).filter(r=>r.s), line=(k,v,copy)=>`<div class="cf-line"><div><small>${k}</small><b>${v?esc(v):'—'}</b></div>${v&&copy?cpBtn(v):''}</div>`;
+ const S=(c.series||[]).filter(r=>r.s), line=(k,v,copy,f)=>`<div class="cf-line"><div><small>${k}</small><b>${v?esc(v):'—'}</b></div>${v&&copy?cpBtn(v):!v&&f?addBtn('cl',c.id,f):''}</div>`, X=(c.extra||[]).filter(r=>r.k&&r.v);
  return `<div class="cf-wrap"><div class="cf-paper cf-folder"><div class="cf-head"><small>HARRINGTON GUNSMITH · REGISTRO DE CLIENTES</small><div class="cf-name">${esc(c.name)}</div><div class="cf-type">${c.type==='empresa'?'Empresa':'Particular'}</div></div>
   <div class="dir-sec-title" style="margin-top:0">FICHA DEL CLIENTE</div>
-  ${line('N.º DE IDENTIFICACIÓN',c.ident,1)}${line('TELEGRAMA',c.telegram,1)}
+  ${line('N.º DE IDENTIFICACIÓN',c.ident,1,'clIdent')}${line('TELEGRAMA',c.telegram,1,'clTel')}
+  ${X.map(r=>line(esc(r.k).toUpperCase(),r.v,1)).join('')}
+  <div class="enc-actions" style="margin:4px 0 2px"><button type="button" data-dir="cl-fill:${esc(c.id)}~exSeccl">✚ AÑADIR OTRO DATO</button></div>
   <div class="dir-sec-title">ARMAS VENDIDAS (${S.length})</div>
   ${S.length?S.map((r,i)=>`<div class="cf-arma"><div class="cf-n">${i+1}</div><div class="cf-col">${line('N.º DE SERIE',r.s,1)}${line('ARMA',r.a,1)}</div></div>`).join(''):'<div class="enc-empty">Sin armas registradas.</div>'}
   ${clientHistHTML(c)}
@@ -1922,6 +1959,7 @@ function renderModClientes(){
    <label>TIPO<select id="clType"><option value="particular"${c.type==='particular'?' selected':''}>PARTICULAR</option><option value="empresa"${c.type==='empresa'?' selected':''}>EMPRESA</option></select></label>
    <label>N.º DE IDENTIFICACIÓN (OPCIONAL)<input id="clIdent" type="text" maxlength="30" autocomplete="off" spellcheck="false" placeholder="Ej.: 4821-SD" value="${esc(c.ident||'')}"></label>
    <label>TELEGRAMA<input id="clTel" type="text" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Ej.: JS-458" value="${esc(c.telegram||'')}"></label>
+   ${exSecHTML(c,'cl')}
    <div class="dir-sec-title">ARMAS VENDIDAS · NÚMEROS DE SERIE (<span id="serCount">${serieRows(c).filter(r=>r.s).length}</span>/${MAX_SERIES})</div>
    <p class="bk-note" style="margin:0 0 8px">No es obligatorio. Al escribir un número aparece otro hueco, hasta ${MAX_SERIES}. Al lado puedes indicar qué arma es.</p>
    <div id="serList">${serieRows(c).map((r,i)=>serieRowHTML(r,i)).join('')}</div>
@@ -1941,7 +1979,9 @@ function saveClient(){
  const err=t=>{const e=document.getElementById('clErr');e.textContent=t;e.hidden=false;e.scrollIntoView({block:'nearest'})}, name=clWork.name.trim().replace(/\s+/g,' ');
  if(!name)return err('Escribe el nombre del cliente');
  if(clientes.some(x=>x.id!==clEdit&&norm(x.name)===norm(name)))return err('Ya existe un cliente con ese nombre');
- if(!clWork.telegram)return err('Escribe el telegrama del cliente');
+ if(!clWork.telegram&&clEdit==='new')return err('Escribe el telegrama del cliente');
+ const X=exClean(clWork.extra); if(typeof X==='string')return err(X);
+ clWork.extra=X;
  const S=(clWork.series||[]).map(r=>({s:String(r.s||'').trim(),a:r.a||''}));
  const bad=S.find(r=>!r.s&&r.a); if(bad)return err('Falta el número de serie de «'+bad.a+'»');
  const seen={};for(const r of S.filter(r=>r.s)){if(seen[r.s])return err('El número de serie '+r.s+' está repetido');seen[r.s]=1}
@@ -2302,7 +2342,7 @@ async function restoreBackup(file){
 }
 /* ===== Pedidos a proveedores ===== */
 per.p={mode:'dia',off:0};
-let pvEdit=null, pvDraft={name:'',tel:'',tipo:'',ubic:'',prods:[]}, npDraft={prov:'',rows:[{m:'',q:'',p:''}],paid:'0',lq:{}};
+let pvEdit=null, pvDraft={name:'',tel:'',tipo:'',ubic:'',extra:[],prods:[]}, npDraft={prov:'',rows:[{m:'',q:'',p:''}],paid:'0',lq:{}};
 const MAX_PPROD=40;
 const pedBtn=document.getElementById('pedBtn'), pedModal=document.getElementById('pedModal');
 let pedView=null, pedDraft=null;
@@ -2621,8 +2661,18 @@ function pzSerial(s){
  const k=s.match(/\b(?=[A-Za-z0-9\-\/]*\d{3})[A-Za-z0-9][A-Za-z0-9\-\/]{2,19}\b/);
  return k?k[0].toUpperCase().slice(0,20):'';
 }
+/* «Dueño: Pedro», «Horario: de 9 a 5»… al principio de una línea → otros datos */
+const PZ_EXTRA={cl:[['Dueño','due[ñn]o|propietari[oa]'],['Ocupación','ocupaci[oó]n|profesi[oó]n|oficio|trabajo'],['Dirección','direcci[oó]n|domicilio|residencia'],['Horario','horario'],['Otro telegrama','otro telegrama|telegrama 2|segundo telegrama'],['Contacto','contacto'],['Nota','notas?|observaci[oó]n(?:es)?']],
+ pv:[['Dueño','due[ñn]o|propietari[oa]'],['Encargado','encargad[oa]|responsable|capataz'],['Horario','horario'],['Otro telegrama','otro telegrama|telegrama 2|segundo telegrama'],['Pedido mínimo','pedido m[ií]nimo|m[ií]nimo'],['Forma de pago','forma de pago|pago'],['Contacto','contacto'],['Nota','notas?|observaci[oó]n(?:es)?']]};
+function pzExtras(st,w){
+ const out=[];
+ PZ_EXTRA[w].forEach(([k,re])=>{const m=new RegExp('(^|\\n)[ \\t]*(?:'+re+')[ \\t]*[:=][ \\t]*([^\\n]{1,60})','iu').exec(st.t);if(m){const v=m[2].trim().replace(/[.;,]+$/,'');if(v){out.push({k:k,v:v});st.t=st.t.slice(0,m.index)+m[1]+st.t.slice(m.index+m[0].length)}}});
+ return out;
+}
+function pzMergeExtra(o,X){let n=0;const L=(o.extra||[]).filter(r=>r&&(r.k||r.v));X.forEach(x=>{const e=L.find(r=>norm(String(r.k).trim())===norm(x.k));if(e){if(e.v!==x.v){e.v=x.v;n++}}else if(L.length<MAX_EXTRA){L.push({k:x.k,v:x.v});n++}});o.extra=L;return n}
 function pzClient(text){
  const st={t:pzClean(text)}, r={};
+ r.extra=pzExtras(st,'cl');
  r.telegram=pzTelegram(st);
  r.ident=pzIdent(st).toUpperCase().slice(0,30);
  const tipo=/\b(empresa|compa[ñn][ií]a|negocio|sociedad|hermanos)\b/i.test(st.t)?'empresa':'';
@@ -2646,6 +2696,7 @@ function pzTipoFix(t){
 }
 function pzProveedor(text){
  const st={t:pzClean(text)}, r={};
+ r.extra=pzExtras(st,'pv');
  r.tel=pzTelegram(st);
  let tipo=pzTake(st,'tipo de negocio|tipo de empresa|tipo|sector|actividad|se dedica a|nos dedicamos a|dedicad[oa]s? a','line');
  r.name=pzName(st,'|empresa|compa[ñn][ií]a|negocio|proveedor');
@@ -2691,7 +2742,7 @@ function pzBox(k){
 function pzList(a){return a.length>1?a.slice(0,-1).join(', ')+' y '+a[a.length-1]:a[0]||''}
 function pzFillClient(){
  const r=pzClient(pzText), got=[], hit=[];let note='';
- if(!r.name&&!r.telegram&&!r.ident&&!r.series.length){pzMsg={k:'cl',bad:1,t:'No he encontrado datos en ese mensaje. Revisa que tenga el nombre o el telegrama, o rellena la ficha a mano.'};renderDir();return}
+ if(!r.name&&!r.telegram&&!r.ident&&!r.series.length&&!r.extra.length){pzMsg={k:'cl',bad:1,t:'No he encontrado datos en ese mensaje. Revisa que tenga el nombre o el telegrama, o rellena la ficha a mano.'};renderDir();return}
  if(clEdit==='new'&&r.name){const ex=clientes.find(x=>norm(x.name)===norm(r.name));if(ex){clEdit=ex.id;clWork=JSON.parse(JSON.stringify(ex));note=' Ya existía la ficha de <b>'+esc(ex.name)+'</b>: se han añadido los datos nuevos a la suya.'}}
  const c=clWork;
  if(r.name&&(clEdit==='new'||!c.name)){c.name=r.name;got.push('nombre');hit.push('clName')}
@@ -2701,14 +2752,15 @@ function pzFillClient(){
  const L=(c.series||[]).filter(x=>x&&(x.s||x.a));let ns=0;
  r.series.forEach(x=>{const o=L.find(y=>y.s===x.s);if(o){if(!o.a&&x.a){o.a=x.a;ns++}}else if(L.length<MAX_SERIES){L.push({s:x.s,a:x.a});ns++}});
  c.series=L;if(ns){got.push(ns+(ns===1?' arma con su número de serie':' armas con su número de serie'));hit.push('serList')}
+ {const ne=pzMergeExtra(c,r.extra);if(ne){got.push('otros datos ('+r.extra.map(x=>esc(x.k).toLowerCase()).join(', ')+')');hit.push('exListcl')}}
  pzOpen='';pzText='';pzHit=hit;
  pzMsg={k:'cl',t:(got.length?'✓ Rellenado: '+pzList(got)+'.':'El mensaje no traía nada nuevo para esta ficha.')+note+' Revisa los datos y pulsa <b>GUARDAR CLIENTE</b>.'+(!c.telegram?' <b>Falta el telegrama</b>, que es obligatorio.':'')};
  renderDir();
 }
 function pzFillProv(){
  const r=pzProveedor(pzText), got=[], hit=[];let note='';
- if(!r.name&&!r.tel&&!r.prods.length){pzMsg={k:'pv',bad:1,t:'No he encontrado datos en ese mensaje. Revisa que tenga el nombre de la empresa, el telegrama o la lista de precios, o rellena la ficha a mano.'};renderDir();return}
- if(!pvEdit&&r.name){const v=proveedores.find(x=>norm(x.name)===norm(r.name));if(v){pvEdit=v.id;pvDraft={name:v.name,tel:v.tel||'',tipo:v.tipo||'',ubic:v.ubic||'',prods:(v.prods||[]).map(x=>({n:x.name,p:(x.price/100).toFixed(2)}))};note=' <b>'+esc(v.name)+'</b> ya estaba en la lista: se ha abierto su ficha para actualizarla.'}}
+ if(!r.name&&!r.tel&&!r.prods.length&&!r.extra.length){pzMsg={k:'pv',bad:1,t:'No he encontrado datos en ese mensaje. Revisa que tenga el nombre de la empresa, el telegrama o la lista de precios, o rellena la ficha a mano.'};renderDir();return}
+ if(!pvEdit&&r.name){const v=proveedores.find(x=>norm(x.name)===norm(r.name));if(v){pvEdit=v.id;pvDraft={name:v.name,tel:v.tel||'',tipo:v.tipo||'',ubic:v.ubic||'',extra:(v.extra||[]).map(x=>({k:x.k,v:x.v})),prods:(v.prods||[]).map(x=>({n:x.name,p:(x.price/100).toFixed(2)}))};note=' <b>'+esc(v.name)+'</b> ya estaba en la lista: se ha abierto su ficha para actualizarla.'}}
  const d=pvDraft;
  if(r.name&&(!pvEdit||!d.name)&&r.name!==d.name){d.name=r.name;got.push('nombre de la empresa');hit.push('pvName')}
  if(r.tel&&r.tel!==d.tel){d.tel=r.tel;got.push('telegrama');hit.push('pvTel')}
@@ -2717,6 +2769,7 @@ function pzFillProv(){
  const L=(d.prods||[]).filter(x=>x&&(x.n||x.p));let nn=0,nu=0,sinP=0;
  r.prods.forEach(x=>{const o=L.find(y=>norm(String(y.n).trim())===norm(x.n));if(o){if(x.p&&parsePrice(o.p)!==parsePrice(x.p)){o.p=x.p;nu++}}else if(L.length<MAX_PPROD){L.push({n:x.n,p:x.p});nn++;if(!x.p)sinP++}});
  d.prods=L;
+ {const ne=pzMergeExtra(d,r.extra);if(ne){got.push('otros datos ('+r.extra.map(x=>esc(x.k).toLowerCase()).join(', ')+')');hit.push('exListpv')}}
  if(nn)got.push(nn+(nn===1?' producto':' productos'));
  if(nu)got.push(nu+(nu===1?' precio actualizado':' precios actualizados'));
  if(nn||nu)hit.push('pvList');
@@ -2743,7 +2796,7 @@ dirModal.addEventListener('click',e=>{
   if(!pzText.trim()){pzMsg={k:arg,bad:1,t:'Pega primero el mensaje en el recuadro.'};renderDir();e.stopImmediatePropagation();return}
   if(arg==='cl'&&clWork)pzFillClient();else if(arg==='pv')pzFillProv();
   e.stopImmediatePropagation();return}
- if(act==='cl-paste'){clEdit='new';clView=null;clWork={name:'',type:'particular',telegram:'',ident:'',precios:{},series:[]};pzOpen='cl';pzText='';pzMsg=null;renderDir();dirModal.scrollTop=0;
+ if(act==='cl-paste'){clEdit='new';clView=null;clWork={name:'',type:'particular',telegram:'',ident:'',precios:{},series:[],extra:[]};pzOpen='cl';pzText='';pzMsg=null;renderDir();dirModal.scrollTop=0;
   const ta=document.getElementById('pzText');if(ta)ta.focus({preventScroll:true});
   if(navigator.clipboard&&navigator.clipboard.readText)navigator.clipboard.readText().then(t=>{t=String(t||'').trim();const x=document.getElementById('pzText');if(t&&t.length<4000&&x&&!x.value){x.value=t;pzText=t}}).catch(()=>{});
   e.stopImmediatePropagation();return}
@@ -3243,7 +3296,7 @@ const PUEBLOS=['Saint Denis','Rhodes','Valentine','Annesburg','Van Horn','Strawb
 function provUbics(){return Array.from(new Set(PUEBLOS.concat(proveedores.map(v=>v.ubic).filter(Boolean)))).sort((a,b)=>a.localeCompare(b,'es'))}
 function provTipos(){return Array.from(new Set(TIPOS_PROV.concat(proveedores.map(v=>v.tipo).filter(Boolean)))).sort((a,b)=>a.localeCompare(b,'es'))}
 function provText(v,title){
- const L=[title||'PROVEEDOR','Empresa: '+v.name,'Tipo de negocio: '+(v.tipo||'—'),'Telegrama: '+(v.tel||'—')].concat(v.ubic?['Ubicación: '+v.ubic]:[]).concat(['','LISTA DE PRECIOS ('+(v.prods||[]).length+')']);
+ const L=[title||'PROVEEDOR','Empresa: '+v.name,'Tipo de negocio: '+(v.tipo||'—'),'Telegrama: '+(v.tel||'—')].concat(v.ubic?['Ubicación: '+v.ubic]:[]).concat(exLines(v)).concat(['','LISTA DE PRECIOS ('+(v.prods||[]).length+')']);
  (v.prods||[]).forEach(x=>L.push('  '+x.name+' · '+money(x.price)+' / ud.'));
  if(!(v.prods||[]).length)L.push('  (sin productos todavía)');
  L.push('','Actualizado: '+fmtDate(Date.now())+' '+fmtTime(Date.now()));
@@ -3257,10 +3310,12 @@ async function publishProveedor(id){
 }
 let pvView=null;
 function renderProvFicha(v){
- const L=v.prods||[], CM=priceMap(), line=(k,val,copy)=>`<div class="cf-line"><div><small>${k}</small><b>${val?esc(val):'—'}</b></div>${val&&copy?cpBtn(val):''}</div>`;
+ const L=v.prods||[], CM=priceMap(), line=(k,val,copy,f)=>`<div class="cf-line"><div><small>${k}</small><b>${val?esc(val):'—'}</b></div>${val&&copy?cpBtn(val):!val&&f?addBtn('pv',v.id,f):''}</div>`, X=(v.extra||[]).filter(r=>r.k&&r.v);
  return `<div class="pf-wrap"><div class="pf-paper"><div class="pf-name">${esc(v.name)}</div>
   <div class="pf-sub">Contrato de suministro · ${esc(v.tipo||'Proveedor')}${v.ubic?' · '+esc(v.ubic):''}</div>
-  ${line('TELEGRAMA',v.tel,1)}${line('UBICACIÓN',v.ubic)}
+  ${v.tipo?'':line('TIPO DE NEGOCIO','',0,'pvTipo')}${line('TELEGRAMA',v.tel,1,'pvTel')}${line('UBICACIÓN',v.ubic,0,'pvUbic')}
+  ${X.map(r=>line(esc(r.k).toUpperCase(),r.v,1)).join('')}
+  <div class="enc-actions" style="margin:4px 0 2px"><button type="button" data-dir="pv-fill:${esc(v.id)}~exSecpv">✚ AÑADIR OTRO DATO</button></div>
   <div class="dir-sec-title">LISTA DE PRECIOS (${L.length})</div>
   ${L.length?L.map((x,i)=>`<div class="pf-row"><span class="n">${i+1}</span><span class="nm">${esc(x.name)}${cmpTag(v.id,x.name,CM)}</span><span class="pr">${money(x.price)}<small>por unidad</small></span></div>`).join(''):'<div class="enc-empty">Sin lista de precios todavía.</div>'}
   <div class="enc-actions emp3"><button type="button" data-dir="pv-close">◂ Volver</button><button type="button" data-dir="pv-edit:${esc(v.id)}">✎ EDITAR</button><button type="button" class="primary" data-dir="pv-order:${esc(v.id)}">HACER PEDIDO</button></div></div></div>`;
@@ -3273,6 +3328,7 @@ function renderModProveedores(){
   <label>TIPO DE NEGOCIO<input id="pvTipo" type="text" maxlength="30" list="tipoList" autocomplete="off" value="${esc(pvDraft.tipo)}" placeholder="Herrería, mina, tala… o escribe uno nuevo"><datalist id="tipoList">${provTipos().map(t=>`<option value="${esc(t)}"></option>`).join('')}</datalist></label>
   <label>TELEGRAMA<input id="pvTel" type="text" maxlength="10" autocomplete="off" value="${esc(pvDraft.tel)}" placeholder="Ej.: HV-12"></label>
   <label>UBICACIÓN (OPCIONAL)<input id="pvUbic" type="text" maxlength="30" list="ubicList" autocomplete="off" value="${esc(pvDraft.ubic||'')}" placeholder="Ej.: Annesburg"><datalist id="ubicList">${provUbics().map(t=>`<option value="${esc(t)}"></option>`).join('')}</datalist></label>
+  ${exSecHTML(pvDraft,'pv')}
   <div class="dir-sec-title">PRODUCTOS Y PRECIOS (<span id="pvCount">${pvRows(pvDraft).filter(r=>r.n).length}</span>)</div>
   <p class="bk-note" style="margin:0 0 8px">Precio por unidad. Al escribir un producto aparece otro hueco. Puedes ampliar o cambiar la lista cuando quieras.</p>
   <div id="pvList">${pvRows(pvDraft).map((r,i)=>pvRowHTML(r,i)).join('')}</div>
@@ -3295,11 +3351,12 @@ function saveProveedor(){
   if(seen[norm(n)])return err('«'+n+'» está repetido en la lista');
   seen[norm(n)]=1;prods.push({name:n,price:Math.round(pr*100)});
  }
- const data={name:name,tel:pvDraft.tel.trim(),tipo:pvDraft.tipo.trim().replace(/\s+/g,' '),ubic:String(pvDraft.ubic||'').trim().replace(/\s+/g,' '),prods:prods};
+ const X=exClean(pvDraft.extra); if(typeof X==='string')return err(X);
+ const data={name:name,extra:X,tel:pvDraft.tel.trim(),tipo:pvDraft.tipo.trim().replace(/\s+/g,' '),ubic:String(pvDraft.ubic||'').trim().replace(/\s+/g,' '),prods:prods};
  let id=pvEdit;
  if(pvEdit){const k=proveedores.findIndex(x=>x.id===pvEdit);if(k>=0)proveedores[k]=Object.assign({},proveedores[k],data)}
  else{id='v'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);proveedores.push(Object.assign({id:id},data))}
- pzMsg=null;pzOpen='';saveProveedores();pvEdit=null;pvDraft={name:'',tel:'',tipo:'',ubic:'',prods:[]};renderDir();say('Proveedor guardado');
+ pzMsg=null;pzOpen='';saveProveedores();pvEdit=null;pvDraft={name:'',tel:'',tipo:'',ubic:'',extra:[],prods:[]};renderDir();say('Proveedor guardado');
  publishProveedor(id);
 }
 async function delProveedor(id){
@@ -3759,8 +3816,9 @@ dirModal.addEventListener('click',e=>{
  else if(act==='price-save')savePrices();
  else if(act==='cp-add')addCustomProduct();
  else if(act==='cp-del')delCustomProduct(decodeURIComponent(arg));
- else if(act==='cl-new'){clEdit='new';clView=null;clWork={name:'',type:'particular',telegram:'',ident:'',precios:{},series:[]};renderDir()}
+ else if(act==='cl-new'){clEdit='new';clView=null;clWork={name:'',type:'particular',telegram:'',ident:'',precios:{},series:[],extra:[]};renderDir()}
  else if(act==='cl-edit'){const c=clientes.find(x=>x.id===arg);if(c){clEdit=arg;clWork=JSON.parse(JSON.stringify(c));renderDir()}}
+ else if(act==='cl-fill'){const [cid,f]=String(arg||'').split('~'), c=clientes.find(x=>x.id===cid);if(c){clEdit=cid;clView=cid;clWork=JSON.parse(JSON.stringify(c));renderDir();focusField(f)}}
  else if(act==='cl-cancel'){clEdit=null;renderDir()}
  else if(act==='cl-view'){clView=arg;clEdit=null;renderDir();dirModal.scrollTop=0}
  else if(act==='cl-close'){clView=null;clHistAll=false;renderDir()}
@@ -3781,8 +3839,9 @@ dirModal.addEventListener('click',e=>{
  else if(act==='sh-fix'){const i=dirModal.querySelector('[data-shfix="'+arg+'"]');closeShiftAt(arg,i?i.value:'')}
  else if(act==='help')openTutorial(HELP_MAP[arg]||'Modo Jefe');
  else if(act==='pv-save')saveProveedor();
- else if(act==='pv-edit'){const v=proveedores.find(x=>x.id===arg);if(v){pvEdit=arg;pvDraft={name:v.name,tel:v.tel||'',tipo:v.tipo||'',ubic:v.ubic||'',prods:(v.prods||[]).map(x=>({n:x.name,p:(x.price/100).toFixed(2)}))};renderDir();dirModal.scrollTop=0}}
- else if(act==='pv-cancel'){pvEdit=null;pvDraft={name:'',tel:'',tipo:'',ubic:'',prods:[]};renderDir()}
+ else if(act==='pv-edit'){const v=proveedores.find(x=>x.id===arg);if(v){pvEdit=arg;pvDraft={name:v.name,tel:v.tel||'',tipo:v.tipo||'',ubic:v.ubic||'',extra:(v.extra||[]).map(x=>({k:x.k,v:x.v})),prods:(v.prods||[]).map(x=>({n:x.name,p:(x.price/100).toFixed(2)}))};renderDir();dirModal.scrollTop=0}}
+ else if(act==='pv-fill'){const [vid,f]=String(arg||'').split('~'), v=proveedores.find(x=>x.id===vid);if(v){pvEdit=vid;pvView=vid;pvDraft={name:v.name,tel:v.tel||'',tipo:v.tipo||'',ubic:v.ubic||'',extra:(v.extra||[]).map(x=>({k:x.k,v:x.v})),prods:(v.prods||[]).map(x=>({n:x.name,p:(x.price/100).toFixed(2)}))};renderDir();focusField(f)}}
+ else if(act==='pv-cancel'){pvEdit=null;pvDraft={name:'',tel:'',tipo:'',ubic:'',extra:[],prods:[]};renderDir()}
  else if(act==='pv-del')delProveedor(arg);
  else if(act==='np-addrow'){npDraft.rows.push({m:'',q:'',p:''});renderDir()}
  else if(act==='np-delrow'){npDraft.rows.splice(+arg,1);if(!npDraft.rows.length)npDraft.rows.push({m:'',q:'',p:''});renderDir()}
@@ -4108,13 +4167,13 @@ const TUTORIAL=[
 <ul><li>Elige un <b>material</b> en el desplegable y escribe cuántas <b>unidades</b> gasta una unidad del producto. Al elegirlo aparece otro desplegable para el siguiente material.</li><li>Pulsa <b>ACEPTAR</b>. «Quitar receta» la borra.</li><li>En la lista ves la receta de cada producto y cuántas unidades se pueden fabricar con el almacén actual.</li></ul>
 <p><b>Fabricar</b> = sumar unidades en <b>Dirección → STOCK</b>: se suman al stock de productos y se restan sus materiales, todo a la vez. Antes te muestra un <b>resumen para confirmar</b> («vas a fabricar 3 Cattleman y se gastarán 12 Hierro…»). Si falta algún material, <b>no se suma nada</b> y te dice qué falta y cuánto. Los productos sin receta se suman sin gastar materiales. Al fabricar suena un yunque y cae el sello FABRICADO.</p>
 <ul><li><b>↶ Deshacer última fabricación</b>: durante 10 minutos aparece arriba en STOCK; quita esas unidades y devuelve los materiales (si ya se vendieron, no se puede).</li><li><b>Hierro y carbón</b>: en el almacén y en las recetas se llaman <b>Hierro</b> y <b>Carbón</b>. A la mina se le piden como «Mena de hierro» y «Mena de carbón»: al recibir el pedido entran solos en el almacén como Hierro y Carbón, y para costes y comparar precios cuentan como lo mismo.</li><li><b>Recetas con otro producto</b>: algunas recetas llevan un producto de la tienda ya fabricado (la munición y el aceite llevan <b>pólvora</b>, el arco mejorado lleva un <b>arco</b>, el lazo reforzado un <b>lazo</b>). Al fabricarlas se gastan del stock de productos, no del almacén, y en la receta salen como «(producto)». En el editor están al final del desplegable, en «Productos de la tienda». Su coste se calcula con la receta de ese producto.</li><li><b>Coste y margen</b>: con los precios de los pedidos recibidos (o de la lista del proveedor), cada producto con receta muestra cuánto cuesta fabricarlo, su precio de venta y el margen.</li><li><b>Márgenes de cada producto</b> (arriba en FABRICACIÓN): todos los productos con receta, del que menos deja al que más, con el margen en dólares y en %: en rojo si se vende por debajo del coste, en dorado si deja menos del 15 %. Si comprando los materiales al proveedor más barato costaría menos, te dice a quién y cuánto ganarías de más.</li><li><b>Avisos de margen</b> (en la consola de Dirección): si un producto pasa a costar más de fabricar porque ha subido algún material (sale durante 7 días), si deja menos del 10 % o si se vende por debajo de su coste.</li><li><b>¿Qué me falta?</b>: dentro de la receta, escribe cuántas quieres fabricar y te dice qué materiales faltan. Con <b>PREPARAR PEDIDO A…</b> te deja el pedido al proveedor que los vende ya rellenado, para revisarlo y emitirlo.</li><li><b>Almacén y mínimos de materiales</b>: arriba en FABRICACIÓN puedes fijar el mínimo de cada material; los que bajen de él salen como avisos.</li><li>El buscador encuentra productos y recetas.</li></ul>`],
-['Proveedores y pedidos <span class="tag boss">SOLO JEFE</span>',`<ul><li><b>Dirección → PROVEEDORES</b>: crea cada proveedor con el <b>nombre de la empresa</b>, su <b>tipo de negocio</b> (herrería, mina, tala… elige uno de la lista o escribe uno nuevo y quedará guardado para los siguientes), su <b>telegrama</b> y su <b>lista de productos con el precio por unidad</b>. Al escribir un producto aparece otro hueco. Puedes ampliar o cambiar la lista cuando quieras con EDITAR.</li><li><b>FICHA</b>: cada proveedor tiene su ficha con forma de <b>contrato de suministro</b>: el nombre en la cabecera, su telegrama (con ⧉ COPIAR), la ubicación y la lista de precios. Desde ahí puedes pulsar <b>HACER PEDIDO</b> para ir directamente a pedirle con él ya elegido.</li><li><b>Ubicación</b> (opcional): el pueblo donde está el proveedor (Annesburg, Rhodes…). Elige uno de la lista o escribe otro.</li><li><b>Comparar precios</b>: si dos o más proveedores venden lo mismo (por ejemplo «Hierro»), al final de PROVEEDORES sale <b>COMPARAR PRECIOS</b> con todos ordenados del más barato al más caro. Al hacer un pedido, cada producto lleva una etiqueta: <b>✓ el más barato</b> en verde, o en dorado el proveedor que lo vende más barato y a qué precio. Para que los compare, el producto tiene que llamarse igual en los dos.</li><li><b>📋 PEGAR MENSAJE</b> (opcional): en lo alto de la ficha del proveedor, pega el mensaje que te manda (por ejemplo «Mina Rock Roy, de Annesburg. Telegrama MRR-21. Lista de precios: oro 5$, hierro 1,20$, carbón 0,80$, sal 0,50$, azufre 2$») y pulsa <b>RELLENAR LA FICHA</b>. La web pone sola el nombre de la empresa, el telegrama, el tipo de negocio (mina, herrería, aserradero…) y cada producto con su precio. Si un producto viene sin precio, lo deja para que lo escribas tú. Si el proveedor ya estaba en la lista, abre su ficha y actualiza los precios. Revísalo y pulsa CREAR NUEVO PROVEEDOR o GUARDAR CAMBIOS. La forma de siempre, a mano, sigue igual.</li><li>La ficha del proveedor con su lista de precios se publica en el canal de Discord «Proveedores» y <b>se actualiza en el mismo mensaje</b> cada vez que la cambias.</li><li><b>COPIAR TELEGRAMA</b> (en REALIZAR NUEVO PEDIDO, y COPIAR PEDIDO en la ventana PEDIDOS): copia el pedido listo para mandarlo al proveedor, con cada material, cantidad, precio, total y si está pagado.</li><li><b>Dirección → REALIZAR NUEVO PEDIDO</b>: elige el proveedor y te sale <b>su lista de productos y precios</b>. Igual que en la calculadora, usa <b>−</b> y <b>+</b> o escribe la cantidad: el subtotal y el total se calculan solos. Si necesitas algo que no está en su lista, añádelo en «Otros materiales». Indica si ya está <b>pagado</b> y pulsa <b>EMITIR PEDIDO</b>: se publica en el canal «Pedidos» con cada producto, el precio por unidad, el total de cada línea y el total, y aparece a todos los empleados en PEDIDOS.</li><li>Cambiar los precios de un proveedor no cambia los pedidos ya emitidos.</li><li>Al emitir un pedido, en Discord sale también como <b>imagen de albarán</b>.</li><li>Con muchos proveedores aparece un buscador (por nombre, tipo o producto).</li><li><b>Dirección → REGISTRO DE PEDIDOS</b>: pedidos completados, por día o por semana, con descarga y <b>ENVIAR A DISCORD</b>.</li><li>Para <b>cancelar</b> un pedido pendiente, ábrelo en PEDIDOS estando en Modo Jefe y pulsa CANCELAR PEDIDO. Si mientras tanto otro empleado ya lo había completado, no se cancela y se te avisa.</li><li>Al emitir, completar o cancelar un pedido se avisa solo al canal de Discord «Pedidos».</li></ul>`],
+['Proveedores y pedidos <span class="tag boss">SOLO JEFE</span>',`<ul><li><b>Dirección → PROVEEDORES</b>: crea cada proveedor con el <b>nombre de la empresa</b>, su <b>tipo de negocio</b> (herrería, mina, tala… elige uno de la lista o escribe uno nuevo y quedará guardado para los siguientes), su <b>telegrama</b> y su <b>lista de productos con el precio por unidad</b>. Al escribir un producto aparece otro hueco. Puedes ampliar o cambiar la lista cuando quieras con EDITAR.</li><li><b>FICHA</b>: cada proveedor tiene su ficha con forma de <b>contrato de suministro</b>: el nombre en la cabecera, su telegrama (con ⧉ COPIAR), la ubicación y la lista de precios. Desde ahí puedes pulsar <b>HACER PEDIDO</b> para ir directamente a pedirle con él ya elegido.</li><li><b>Datos que faltan</b>: en la FICHA, al lado del tipo de negocio, el telegrama o la ubicación vacíos sale <b>✚ AÑADIR</b>, que te lleva a EDITAR con el cursor puesto en ese dato.</li><li><b>OTROS DATOS</b>: para lo que no tiene casilla (el dueño, el encargado, el horario, otro telegrama, el pedido mínimo, la forma de pago…). Escribe el nombre del dato y su valor; hasta 12. Salen en la ficha con su ⧉ COPIAR y en el mensaje de Discord. En la FICHA, <b>✚ AÑADIR OTRO DATO</b> te lleva directo. Si pegas un mensaje con líneas como «Dueño: …» o «Pedido mínimo: …», también se apuntan solas.</li><li><b>Ubicación</b> (opcional): el pueblo donde está el proveedor (Annesburg, Rhodes…). Elige uno de la lista o escribe otro.</li><li><b>Comparar precios</b>: si dos o más proveedores venden lo mismo (por ejemplo «Hierro»), al final de PROVEEDORES sale <b>COMPARAR PRECIOS</b> con todos ordenados del más barato al más caro. Al hacer un pedido, cada producto lleva una etiqueta: <b>✓ el más barato</b> en verde, o en dorado el proveedor que lo vende más barato y a qué precio. Para que los compare, el producto tiene que llamarse igual en los dos.</li><li><b>📋 PEGAR MENSAJE</b> (opcional): en lo alto de la ficha del proveedor, pega el mensaje que te manda (por ejemplo «Mina Rock Roy, de Annesburg. Telegrama MRR-21. Lista de precios: oro 5$, hierro 1,20$, carbón 0,80$, sal 0,50$, azufre 2$») y pulsa <b>RELLENAR LA FICHA</b>. La web pone sola el nombre de la empresa, el telegrama, el tipo de negocio (mina, herrería, aserradero…) y cada producto con su precio. Si un producto viene sin precio, lo deja para que lo escribas tú. Si el proveedor ya estaba en la lista, abre su ficha y actualiza los precios. Revísalo y pulsa CREAR NUEVO PROVEEDOR o GUARDAR CAMBIOS. La forma de siempre, a mano, sigue igual.</li><li>La ficha del proveedor con su lista de precios se publica en el canal de Discord «Proveedores» y <b>se actualiza en el mismo mensaje</b> cada vez que la cambias.</li><li><b>COPIAR TELEGRAMA</b> (en REALIZAR NUEVO PEDIDO, y COPIAR PEDIDO en la ventana PEDIDOS): copia el pedido listo para mandarlo al proveedor, con cada material, cantidad, precio, total y si está pagado.</li><li><b>Dirección → REALIZAR NUEVO PEDIDO</b>: elige el proveedor y te sale <b>su lista de productos y precios</b>. Igual que en la calculadora, usa <b>−</b> y <b>+</b> o escribe la cantidad: el subtotal y el total se calculan solos. Si necesitas algo que no está en su lista, añádelo en «Otros materiales». Indica si ya está <b>pagado</b> y pulsa <b>EMITIR PEDIDO</b>: se publica en el canal «Pedidos» con cada producto, el precio por unidad, el total de cada línea y el total, y aparece a todos los empleados en PEDIDOS.</li><li>Cambiar los precios de un proveedor no cambia los pedidos ya emitidos.</li><li>Al emitir un pedido, en Discord sale también como <b>imagen de albarán</b>.</li><li>Con muchos proveedores aparece un buscador (por nombre, tipo o producto).</li><li><b>Dirección → REGISTRO DE PEDIDOS</b>: pedidos completados, por día o por semana, con descarga y <b>ENVIAR A DISCORD</b>.</li><li>Para <b>cancelar</b> un pedido pendiente, ábrelo en PEDIDOS estando en Modo Jefe y pulsa CANCELAR PEDIDO. Si mientras tanto otro empleado ya lo había completado, no se cancela y se te avisa.</li><li>Al emitir, completar o cancelar un pedido se avisa solo al canal de Discord «Pedidos».</li></ul>`],
 ['Empleados y contratos <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → EMPLEADOS</b>. Para incorporar a alguien rellena todos los datos:</p>
 <ul><li><b>Nombre</b> del empleado.</li><li><b>Puesto</b>: Jefe, Gerente, Armero experto, Armero o Aprendiz de armero.</li><li><b>Sueldo semanal</b> en dólares (por ejemplo 20 o 40).</li><li><b>Horas semanales</b>: viene puesto 10; cámbialo si hace falta.</li><li><b>Fecha de inicio</b> del contrato. El <b>periodo de prueba</b> es de una semana desde ese día y se calcula solo.</li></ul>
 <p>Al pulsar <b>ACEPTAR Y CREAR CONTRATO</b> el empleado aparece en todas las listas (ventas, fichaje, pedidos…) y se publica en el canal de Discord «Empleados» la <b>imagen del contrato</b> con todos sus datos.</p>
 <ul><li><b>✎ EDITAR</b>: cambia sus datos. Marca «Publicar el contrato actualizado» si quieres que salga otra vez en Discord. Los empleados que ya tenías aparecen con «Faltan los datos del contrato» hasta que los completes.</li><li><b>📜 CONTRATO</b>: descarga la imagen del contrato.</li><li><b>🗑 PAPELERA</b>: lo quita de las listas, sin borrar sus ventas ni fichajes.</li><li>Los sueldos se pagan en <b>Dirección → SUELDOS</b> (mira la sección «Sueldos» de este tutorial).</li><li>Las fotos de los empleados se guardan más ligeras y cada móvil solo baja las que han cambiado, así la entrada carga las tarjetas antes.</li><li>Cada empleado muestra si está <b>conectado ahora</b> o cuándo se le vio por última vez, y si ya ha creado su contraseña.</li><li><b>🔑 RESET CONTRASEÑA</b>: borra la contraseña del empleado; la próxima vez que entre tendrá que crear una nueva. Nadie puede ver las contraseñas, ni siquiera la dirección.</li><li><b>📷 FOTO</b>: sube una foto del personaje (por ejemplo una captura del juego). Sale en el óvalo de su tarjeta de la entrada, en tono sepia, como un retrato antiguo. Sin foto, salen sus iniciales.</li><li><b>⏏ EXPULSAR</b>: cierra su sesión en todos sus dispositivos (por ejemplo, si se le ha quedado pillada) y, si estaba fichado, le ficha la salida en ese momento (sale en Discord como «fichada por la dirección al expulsarle»). Tendrá que volver a elegir su ficha. Los jefes también se pueden expulsar entre sí; a uno mismo, no.</li><li><b>⬆ ASCENSO</b>: sube al empleado al siguiente puesto con su sueldo: Aprendiz de armero ($20) → Armero ($25) → Armero experto ($30) → Gerente ($40, el tope). Se publica el contrato nuevo en Discord, sin periodo de prueba. El día del ascenso cobra todavía el sueldo antiguo y el nuevo cuenta desde el día siguiente.</li><li>Al crear un empleado, el sueldo se rellena solo según el puesto (Jefe $50, Gerente $40, Armero experto $30, Armero $25, Aprendiz $20). Puedes cambiarlo.</li><li>En <b>Registros semanales → Fichaje</b> ves las horas fichadas frente a las contratadas («8 h de 10 h»).</li><li>En el resumen de Dirección te avisa cuando termina el periodo de prueba de alguien.</li></ul>`],
 ['Clientes <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → CLIENTES → AÑADIR CLIENTE</b>: escribe su <b>nombre</b>, el tipo (particular o empresa) y su <b>telegrama</b> (obligatorio). El <b>número de identificación</b>, los <b>números de serie</b> y el <b>arma</b> son opcionales.</p>
-<ul><li><b>Armas vendidas · números de serie</b>: no es obligatorio rellenarlo al crearlo. Al escribir un número aparece otro hueco, hasta <b>20 por cliente</b>. Al lado puedes elegir qué arma es (opcional).</li><li><b>FICHA</b>: se abre como un <b>expediente</b> de archivo con su hoja sujeta por un clip. Además de sus datos, muestra su <b>historial de compras</b>: el total que se ha gastado, cuántas compras lleva, cuándo fue la última y cada compra con la fecha, lo que se llevó, quién le atendió y el ticket. Las anuladas salen tachadas y no cuentan. Se apunta solo al cobrar una venta con su nombre de cliente.</li><li><b>FICHA</b>: muestra todos sus datos. Al lado del número de identificación, del telegrama, de cada número de serie y de cada arma hay un botón <b>⧉ COPIAR</b> que lo copia al portapapeles para pegarlo donde quieras.</li><li>Con <b>EDITAR</b> puedes añadir más números de serie, cambiar datos o ponerle <b>precios especiales</b>.</li><li><b>📋 PEGAR MENSAJE</b> (opcional): dentro de la ficha, o con <b>📋 DESDE UN MENSAJE</b> en la lista, pega el mensaje o telegrama del cliente tal cual te llega (por ejemplo «Pascual Martínez, telegrama 4521, identificación 88231. Armas: Lemat n.º 55123, Schofield n.º 77810») y pulsa <b>RELLENAR LA FICHA</b>. La web pone sola el nombre, el telegrama, el número de identificación y los números de serie con su arma, y te dice qué ha rellenado. Revísalo y pulsa GUARDAR CLIENTE. Si el cliente ya existía, añade lo nuevo a su ficha. Puedes seguir rellenándola a mano como siempre.</li><li>Al crearlo se publica su ficha en el canal de Discord «Clientes» (con identificación, armas y números de serie) y, cada vez que le añades algo, <b>se actualiza ese mismo mensaje</b>.</li><li>Los clientes que se guardan solos al vender aparecen en la lista; su ficha sale en Discord la primera vez que los editas o que se les apunta un número de serie.</li><li>Los números de serie también se pueden apuntar <b>al vender</b>: al finalizar una venta con armas sale una ventana para escribirlos.</li><li>La ficha se ve como una <b>tarjeta de registro</b> de papel.</li></ul>`],
+<ul><li><b>Armas vendidas · números de serie</b>: no es obligatorio rellenarlo al crearlo. Al escribir un número aparece otro hueco, hasta <b>20 por cliente</b>. Al lado puedes elegir qué arma es (opcional).</li><li><b>FICHA</b>: se abre como un <b>expediente</b> de archivo con su hoja sujeta por un clip. Además de sus datos, muestra su <b>historial de compras</b>: el total que se ha gastado, cuántas compras lleva, cuándo fue la última y cada compra con la fecha, lo que se llevó, quién le atendió y el ticket. Las anuladas salen tachadas y no cuentan. Se apunta solo al cobrar una venta con su nombre de cliente.</li><li><b>FICHA</b>: muestra todos sus datos. Al lado del número de identificación, del telegrama, de cada número de serie y de cada arma hay un botón <b>⧉ COPIAR</b> que lo copia al portapapeles para pegarlo donde quieras.</li><li>Con <b>EDITAR</b> puedes añadir más números de serie, cambiar datos o ponerle <b>precios especiales</b>.</li><li><b>Datos que faltan</b>: en la FICHA, al lado de cada dato vacío (telegrama, n.º de identificación) sale <b>✚ AÑADIR</b>: te lleva a EDITAR con el cursor puesto en ese dato. Así completas la ficha cuando el cliente te lo dé, aunque no lo tuvieras al principio. Las fichas que se crearon solas en una venta se pueden guardar aunque aún no tengan telegrama.</li><li><b>OTROS DATOS</b>: para todo lo que no tiene casilla (el dueño, su empresa, la dirección, el horario, otro telegrama…). Escribe el nombre del dato y su valor; al rellenar uno aparece otro hueco, hasta 12. Salen en la ficha con su ⧉ COPIAR y en Discord. En la FICHA, <b>✚ AÑADIR OTRO DATO</b> te lleva directo. Si pegas un mensaje con líneas como «Dueño: Pedro» o «Horario: de 9 a 5», también se apuntan solas.</li><li><b>📋 PEGAR MENSAJE</b> (opcional): dentro de la ficha, o con <b>📋 DESDE UN MENSAJE</b> en la lista, pega el mensaje o telegrama del cliente tal cual te llega (por ejemplo «Pascual Martínez, telegrama 4521, identificación 88231. Armas: Lemat n.º 55123, Schofield n.º 77810») y pulsa <b>RELLENAR LA FICHA</b>. La web pone sola el nombre, el telegrama, el número de identificación y los números de serie con su arma, y te dice qué ha rellenado. Revísalo y pulsa GUARDAR CLIENTE. Si el cliente ya existía, añade lo nuevo a su ficha. Puedes seguir rellenándola a mano como siempre.</li><li>Al crearlo se publica su ficha en el canal de Discord «Clientes» (con identificación, armas y números de serie) y, cada vez que le añades algo, <b>se actualiza ese mismo mensaje</b>.</li><li>Los clientes que se guardan solos al vender aparecen en la lista; su ficha sale en Discord la primera vez que los editas o que se les apunta un número de serie.</li><li>Los números de serie también se pueden apuntar <b>al vender</b>: al finalizar una venta con armas sale una ventana para escribirlos.</li><li>La ficha se ve como una <b>tarjeta de registro</b> de papel.</li></ul>`],
 ['Estadísticas <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → Ventas y caja → ESTADÍSTICAS</b>. Elige <b>esta semana</b>, <b>la semana pasada</b>, <b>este mes</b> o <b>el mes pasado</b>:</p>
 <ul><li><b>Resumen mensual a Discord</b>: el día 1 de cada mes se publica solo el resumen del mes anterior (ventas, gastos, beneficio, mejor vendedor, lo más vendido, mejor cliente y pedidos, comparado con el mes anterior) en el canal «Resumen mensual» o en el general. Con ESTE MES o MES PASADO también puedes enviarlo a mano.</li><li><b>Resumen</b>: lo cobrado, las operaciones, el ticket medio y las unidades, con una flecha ▲▼ que compara con el periodo anterior (si el periodo aún no ha terminado, se compara hasta el mismo día).</li><li><b>Lo más vendido</b>: los 10 productos con más unidades.</li><li><b>Ventas de cada empleado</b>, <b>horas con más ventas</b> (y cuál es la más fuerte), <b>días de la semana</b> y los <b>mejores clientes</b>.</li><li>Las semanas van de viernes a jueves, como las cuentas.</li></ul>`],
 ['Sueldos',`<p>Los sueldos van por <b>semanas de lunes a domingo</b> y se pagan <b>el domingo</b>. Están en <b>Dirección → Ventas y caja → SUELDOS</b>.</p>
