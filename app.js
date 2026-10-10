@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261010u
+/* HARRINGTON GUNSMITH · app.js · versión 20261010v
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -915,7 +915,8 @@ function renderEnc(){
   <div class="cartrow carthead"><span>Producto</span><span>Cant.</span><span>P. unit.</span><span>Subtotal</span></div>${e.items.map(cartRow).join('')}
   <div style="margin-top:8px">${rows.map(r=>`<div class="brow ${r[2]||''}"><span>${esc(r[0])}</span><span>${r[1]}</span></div>`).join('')}<div class="brow due"><span>PENDIENTE</span><span>${money(e.pendingCents)}</span></div></div>
   <div class="enc-sec">
-   ${dr.fab==='FABRICADO'&&e.items.some(i=>(stockMap[i.name]||0)<i.qty)?'<div class="enc-note warnote">Recuerda: para poder entregarlo, el jefe tiene que sumar estas unidades en STOCK (así se gastan sus materiales). Ahora no hay suficientes.</div>':''}
+   ${dr.fab==='FABRICADO'&&e.fab!=='FABRICADO'&&e.items.some(i=>recipeOf(i.name).length)?'<div class="enc-note">Recuerda: al pulsar GUARDAR CAMBIOS, las unidades con receta ('+e.items.filter(i=>recipeOf(i.name).length).map(i=>i.qty+' × '+esc(i.name)).join(', ')+') se sumarán solas al stock y se gastarán sus materiales del almacén.</div>':''}
+   ${dr.fab==='FABRICADO'&&e.items.some(i=>!recipeOf(i.name).length&&(stockMap[i.name]||0)<i.qty)?'<div class="enc-note warnote">Recuerda: para poder entregarlo, el jefe tiene que sumar en STOCK los productos sin receta. Ahora no hay suficientes.</div>':''}
    <label>ESTADO DE FABRICACIÓN<select id="encFab"><option value="PENDIENTE"${dr.fab==='PENDIENTE'?' selected':''}>PENDIENTE</option><option value="FABRICADO"${dr.fab==='FABRICADO'?' selected':''}>FABRICADO</option></select></label>
    <label>¿CLIENTE AVISADO?<select id="encAv"><option value="NO"${!dr.avisado?' selected':''}>NO</option><option value="SI"${dr.avisado?' selected':''}${dr.fab==='PENDIENTE'?' disabled':''}>SÍ</option></select></label>
    ${dr.fab==='PENDIENTE'?'<div class="enc-note">Podrás marcar «avisado» cuando el encargo esté FABRICADO.</div>':''}
@@ -923,12 +924,39 @@ function renderEnc(){
   </div>
   <div class="enc-actions"><button type="button" class="gold" data-act="save">GUARDAR CAMBIOS</button>${e.fab==='FABRICADO'?'<button type="button" data-act="tele">COPIAR AVISO (TELEGRAMA)</button>':'<button type="button" data-act="tele-conf">COPIAR CONFIRMACIÓN (TELEGRAMA)</button>'}${e.fab==='FABRICADO'&&e.avisado?'<button type="button" data-act="tele-rec">COPIAR RECORDATORIO (TELEGRAMA)</button>':''}<button type="button" class="primary" data-act="load">CARGAR ENCARGO</button><button type="button" class="warn" data-act="finish">FINALIZAR ENCARGO</button><button type="button" class="warn" data-act="cancel">CANCELAR ENCARGO</button></div>`;
 }
-function saveEncDraft(){
- const e=pendingEncs().find(x=>x.id===encView);
- if(!e||!encDraft||encDraft.id!==e.id)return;
+let encSaving=false;
+async function saveEncDraft(){
+ let e=pendingEncs().find(x=>x.id===encView);
+ if(!e||!encDraft||encDraft.id!==e.id||encSaving)return;
  if(encDraft.fab===e.fab&&encDraft.avisado===e.avisado)return say('No hay cambios que guardar');
+ encSaving=true;let fsSet;try{
+ /* FABRICADO: se suman solas las unidades al stock y se gastan los materiales de su receta (una sola vez) */
+ if(encDraft.fab==='FABRICADO'&&e.fab!=='FABRICADO'&&!e.fabStock){
+  const items=(e.items||[]).filter(x=>recipeOf(x.name).length&&x.qty>0).map(x=>({producto:x.name,delta:x.qty}));
+  if(items.length){
+   try{await refreshStock()}catch(x){}
+   const need=needMaterials(items), miss=missingMaterials(need);
+   if(miss.length)return say('No se puede marcar FABRICADO: faltan materiales · '+miss.join(' · '),'err');
+   if(!await askConfirm('Fabricar el encargo','Se sumarán al stock '+items.map(x=>x.delta+' × '+x.producto).join(', ')+' y se gastarán del almacén: '+Object.keys(need).map(k=>need[k]+' '+k).join(', ')+'.','Fabricar'))return;
+   try{await moverStock(items.concat(Object.keys(need).map(k=>({producto:ingKey(k),delta:-need[k]}))),'Fabricación');items.forEach(x=>logStock(x.producto,x.delta,'Fabricación'));Object.keys(need).forEach(k=>logStock(isProdIng(k)?k:k+' (material)',-need[k],'Fabricación'))}
+   catch(err){if(String(err.message).indexOf('STOCK_INSUFICIENTE')>=0)return say('Faltan materiales (otro dispositivo los acaba de gastar)','err');return say('Sin conexión: no se puede fabricar ahora','err')}
+   e.fabStock={ts:Date.now(),items:items,need:need};fsSet=e.fabStock;try{stampFx('FABRICADO');playAnvil()}catch(x){}try{fbAuto(items)}catch(x){}
+  }
+ }
+ /* vuelve a PENDIENTE: se deshace esa fabricación */
+ else if(encDraft.fab==='PENDIENTE'&&e.fab==='FABRICADO'&&e.fabStock){
+  const f=e.fabStock;
+  if(!await askConfirm('Deshacer fabricación','Se quitarán del stock '+f.items.map(x=>x.delta+' × '+x.producto).join(', ')+' y se devolverán los materiales al almacén.','Deshacer'))return;
+  const mv=f.items.map(x=>({producto:x.producto,delta:-x.delta})).concat(Object.keys(f.need).map(k=>({producto:ingKey(k),delta:f.need[k]})));
+  try{await moverStock(mv,'Fabricación deshecha');mv.forEach(x=>logStock(isMat(x.producto)?x.producto.slice(4)+' (material)':x.producto,x.delta,'Fabricación deshecha'))}
+  catch(err){if(String(err.message).indexOf('STOCK_INSUFICIENTE')>=0)return say('No se puede deshacer: alguna de esas unidades ya se ha vendido','err');return say('Sin conexión: no se puede deshacer ahora','err')}
+  e.fabStock=null;fsSet=null;try{fbAuto(f.items,true)}catch(x){}
+ }
+ /* mientras se fabricaba pudo llegar la copia de la nube: se aplica sobre la actual */
+ {const cur=encargos.find(x=>x.id===e.id);if(cur&&cur!==e){if(fsSet!==undefined)cur.fabStock=fsSet;e=cur}}
  e.fab=encDraft.fab;e.avisado=encDraft.fab==='FABRICADO'&&encDraft.avisado; /* coherencia: pendiente nunca puede estar avisado */
- saveEncs();encDraft=null;encView=null;renderEnc();say('Cambios guardados');
+ saveEncs();encDraft=null;encView=null;renderEnc();say(e.fab==='FABRICADO'&&e.fabStock?'Encargo fabricado: unidades sumadas al stock':'Cambios guardados');
+ }finally{encSaving=false}
 }
 function openEnc(){encView=null;encDraft=null;renderEnc();openModal(encModal);encModal.scrollTop=0}
 async function loadEncargo(id){
@@ -4275,7 +4303,7 @@ const TUTORIAL=[
 ['Encargos',`<p><b>Mensajes listos para copiar</b>: en la ficha del encargo, <b>COPIAR CONFIRMACIÓN</b> (mientras está pendiente: lo encargado, total, fianza, lo que falta y la fecha prevista), <b>COPIAR AVISO</b> (cuando está fabricado, con lo que falta por pagar y firmado por Vincent Harrington con su telegrama SD8112) y <b>COPIAR RECORDATORIO</b> (si ya se le avisó y no ha venido). Se copia el texto con sus datos y lo pegas en el telegrama.</p><p><b>Crear un encargo</b>: en Tipo de operación elige «Encargo».</p>
 <ul><li>Rellena cliente, <b>telegrama</b> (letras, números y guiones, máximo 10, se pone en mayúsculas), <b>pago por adelantado</b> (obligatorio y mayor que 0), y si quieres entrega prevista y nota.</li><li><b>FINALIZAR VENTA</b> guarda el encargo (suena un lápiz). No gasta stock.</li></ul>
 <p><b>Botón ENCARGOS</b>: lista con total, adelanto, pendiente, estado y fecha (en rojo si está vencido). Tócalo para abrir la ficha.</p>
-<ul><li>Estado de fabricación: <b>PENDIENTE / FABRICADO</b>. «¿Cliente avisado?» solo se puede poner en SÍ si está FABRICADO. Si vuelve a PENDIENTE, el aviso vuelve a NO.</li><li><b>GUARDAR CAMBIOS</b> guarda sin cargar ni finalizar.</li><li>Cuando lo marcas <b>FABRICADO</b> y aún no hay stock suficiente, la ficha te recuerda que el jefe tiene que sumar esas unidades en STOCK (así se gastan sus materiales) para poder entregarlo.</li><li>En la lista ves también <b>hace cuánto</b> se hizo cada encargo.</li><li><b>COPIAR AVISO (TELEGRAMA)</b> genera el mensaje para el cliente cuando está fabricado.</li><li><b>CANCELAR ENCARGO</b> pregunta si se devuelve el adelanto.</li></ul>
+<ul><li><b>Al marcarlo FABRICADO y guardar</b>, las unidades que tienen receta se <b>suman solas al stock</b> y se gastan sus materiales del almacén (como al fabricar en STOCK, con su balance de fabricación en Discord). Si faltan materiales, te dice cuáles y no lo marca. Si lo vuelves a poner en PENDIENTE, se deshace esa fabricación.</li><li>Estado de fabricación: <b>PENDIENTE / FABRICADO</b>. «¿Cliente avisado?» solo se puede poner en SÍ si está FABRICADO. Si vuelve a PENDIENTE, el aviso vuelve a NO.</li><li><b>GUARDAR CAMBIOS</b> guarda sin cargar ni finalizar.</li><li>Cuando lo marcas <b>FABRICADO</b> y aún no hay stock suficiente, la ficha te recuerda que el jefe tiene que sumar esas unidades en STOCK (así se gastan sus materiales) para poder entregarlo.</li><li>En la lista ves también <b>hace cuánto</b> se hizo cada encargo.</li><li><b>COPIAR AVISO (TELEGRAMA)</b> genera el mensaje para el cliente cuando está fabricado.</li><li><b>CANCELAR ENCARGO</b> pregunta si se devuelve el adelanto.</li></ul>
 <p><b>Entregarlo</b>: en la ficha, <b>CARGAR ENCARGO</b>. Se cargan productos, precios, convenio y adelanto. Puedes añadir más cosas. El adelanto se descuenta <b>una sola vez</b> y no es un descuento. Al terminar, <b>FINALIZAR ENCARGO</b>.</p>`],
 ['Convenios, ofertas y precios especiales',`<ul><li><b>Convenio</b> (lo crea el jefe): para un tipo de cliente y un grupo (suministros, municiones o ambos). Puede dar un <b>porcentaje</b> a partir de X unidades (no se multiplica por bloques) o <b>unidades gratis</b> por cada X (se repiten por bloque completo; son las más baratas de las elegidas, y salen del stock igualmente).</li><li><b>Oferta</b>: un porcentaje del 1 al 5 % sobre toda la compra.</li><li>Caducan solas y en el desplegable ves «caduca en N días».</li><li><b>Precio especial</b> de un cliente: se aplica al elegirlo.</li></ul>`],
 ['Ticket, copias y Discord',`<p>Al finalizar se abre el <b>ticket</b>: número de venta (HG-fecha-contador), fecha y hora de España, empleado, cliente, productos, desglose y el sello PAGADO (o ANOTADO en un encargo).</p>
@@ -4924,6 +4952,8 @@ function upsertList(type,id,val,del){
  a.sort(L[2]);try{localStorage.setItem(key,JSON.stringify(a.slice(-5000)))}catch(e){}
 }
 function applyRecord(clave,valor){
+ /* si este dispositivo tiene un cambio de ese registro sin subir todavía, el suyo es el más nuevo */
+ if(cloud.outbox&&cloud.outbox.some(o=>o.clave===clave))return;
  const i=clave.indexOf(':'), type=clave.slice(0,i), id=clave.slice(i+1), del=!!(valor&&valor.deleted);
  if(type==='nota'){applyNota(id,valor,del);return}
  if(type==='evento'){applyEvento(id,valor,del);return}
@@ -6139,7 +6169,8 @@ const PARCHES=[
  {f:'10/10/2026',t:'Aviso de registro IC en el ticket',i:['El ticket, su imagen y su mensaje de Discord avisan de las armas de fuego pendientes de registrar IC a nombre del cliente']},
  {f:'10/10/2026',t:'Historial de precios de proveedores',i:['Cada cambio de precio queda apuntado con su fecha y quién lo hizo (pestaña Cambios de la ficha del proveedor)','«▲ subió desde…» y «▼ bajó desde…» en la lista de precios durante un mes','Aviso cuando un proveedor sube un precio']},
  {f:'10/10/2026',t:'Reponer mínimos con un botón',i:['Con los mínimos del almacén, la web prepara el pedido de lo que falta (hasta el doble del mínimo), repartido al proveedor más barato de cada material','Está en Fabricación y en Realizar nuevo pedido']},
- {f:'10/10/2026',t:'Mi semana',i:['En la ficha de cada empleado (tocando su nombre arriba): barra de horas de la semana, lo que le falta, horas extra y lo que cobraría si la semana acabara ahora']}
+ {f:'10/10/2026',t:'Mi semana',i:['En la ficha de cada empleado (tocando su nombre arriba): barra de horas de la semana, lo que le falta, horas extra y lo que cobraría si la semana acabara ahora']},
+ {f:'10/10/2026',t:'Encargo fabricado = stock sumado',i:['Al marcar un encargo como FABRICADO se suman solas al stock sus unidades con receta y se gastan los materiales','Si vuelve a PENDIENTE, se deshace']}
 ];
 let phQ='';
 function renderModParches(){
