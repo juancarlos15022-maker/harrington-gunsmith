@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261010o
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261010p
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -750,7 +750,7 @@ body{background:radial-gradient(ellipse at 50% -8%,#8a4f2133,transparent 44%),ra
 .cf-arma .cf-line:last-child{border-bottom:0}
 @media(max-width:650px){.np-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px}.np-row .np-mat{grid-column:1/-1}}
 /* ===== Parche N: colores de estado comunes ===== */
-:root{--st-pend:#e8b85c;--st-ok:#8fd6a0;--st-bad:#ef8b73}
+:root{--st-pend:#e8b85c;--st-ok:#8fd6a0;--st-bad:#ef8b73;--st-bad-s:#c0392b;--st-pend-s:#e0a33a;--st-ok-s:#2e9e5b;--st-gold:#c9a24a}
 .neg,.reg-line b.zero,.mat-line span.zero{color:var(--st-bad)}
 .okc{color:var(--st-ok)}
 .badge.pend{color:var(--st-pend);border-color:#a8742f;background:#3a2a0c}
@@ -1687,3 +1687,15 @@ body.has-mnav #dirModal .enc-actions:has(> [data-dir="cl-save"]),body.has-mnav #
 .ftab.on i{background:#c9a24a;color:#2a1a0d}
 .ftab.bad{color:#a8321c}.ftab.bad i{background:#c0392b;color:#fff}.ftab.bad.on{background:#7a1608;color:#fff}
 .fpane[hidden]{display:none}
+/* Un solo código de colores: rojo = urgente o pérdida, ámbar = pendiente, verde = hecho o ganancia, dorado = acción principal */
+.neg,.pay-err,.mg-bad,.void-tag,.lowtag{color:var(--st-bad)}
+.void-tag,.lowtag{border-color:var(--st-bad-s)}
+.mg-low{color:var(--st-pend)}.mg-ok{color:var(--st-ok)}
+.dot.g{background:var(--st-ok-s);color:var(--st-ok-s)}.dot.a{background:var(--st-pend-s);color:var(--st-pend-s)}.dot.r{background:var(--st-bad-s);color:var(--st-bad-s)}
+.mod-b.bad,.sec-b.bad,.rec-btn.bad i,.bell-btn.bad b,.ftab.bad i,.ic-plate .ic-warn{background:var(--st-bad-s)}
+.mod-b.pend,.sec-b.pend,.rec-btn i,.bell-btn b{background:var(--st-pend-s)}
+.mod-b.info,.sec-b.info,.rec-btn.info i{background:var(--st-ok-s)}
+.mod-card.has-b.bad,.tb-chip.bad,.ic-plate,.cf-arma.ic-no{border-color:var(--st-bad-s)}
+.mod-card.has-b.pend{border-color:var(--st-pend-s)}
+.tb-chip.bad.on{background:var(--st-bad-s)}
+.tb-chip.on,.ph-card .ph-n{background:var(--st-gold);border-color:var(--st-gold)}
