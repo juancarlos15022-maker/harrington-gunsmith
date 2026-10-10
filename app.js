@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261010f
+/* HARRINGTON GUNSMITH · app.js · versión 20261010i
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -490,15 +490,16 @@ function askSerials(s){
  const L=weaponUnits(s); if(!L.length)return;
  s.serialsAsked=true;try{store.set(KEY_SALE,JSON.stringify(s))}catch(e){}
  serSale={id:s.id,client:s.client,units:L};
- document.getElementById('serBody').innerHTML=`<p class="bk-note">Opcional: apunta el número de serie de cada arma vendida a <b>${esc(s.client)}</b>. Se guardan en su ficha de cliente (y en su mensaje de Discord).</p>`+
-  L.map((n,i)=>`<label class="ser-l">${esc(n)}<input data-sv="${i}" type="text" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="N.º de serie (opcional)"></label>`).join('')+
+ document.getElementById('serBody').innerHTML=`<p class="bk-note">Apunta el número de serie de cada arma de fuego vendida a <b>${esc(s.client)}</b>. Se guardan en su ficha de cliente (y en su mensaje de Discord).</p><div class="ic-note">⚠ <b>Cada arma de fuego hay que registrarla IC</b> (dentro del juego) con su número de serie a nombre del cliente. No hacerlo es sancionable. Marca la casilla cuando la hayas registrado; si no, la web te lo recordará.</div>`+
+  L.map((n,i)=>`<div class="ser-l"><label>${esc(n)}<input data-sv="${i}" type="text" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="N.º de serie"></label><label class="ser-ic pend"><input type="checkbox" data-svic="${i}"> Registrada IC</label></div>`).join('')+
   '<div class="enc-actions two" style="margin-top:10px"><button type="button" id="serSkip">Ahora no</button><button type="button" class="primary" id="serSave">GUARDAR EN SU FICHA</button></div>';
  setTimeout(()=>{openModal(serModal);serModal.scrollTop=0},700);
 }
+serModal.addEventListener('change',e=>{const t=e.target;if(t.dataset.svic!==undefined){const lb=t.closest('.ser-ic');if(lb)lb.classList.toggle('pend',!t.checked)}});
 serModal.addEventListener('input',e=>{const t=e.target;if(t.dataset.sv!==undefined){const v=t.value.toUpperCase().replace(/[^A-Z0-9\-\/.]/g,'').slice(0,20);if(v!==t.value)t.value=v}});
 async function saveSerials(){
  if(!serSale)return closeModal(serModal);
- const vals=[...serModal.querySelectorAll('[data-sv]')].map(i=>({s:i.value.trim(),a:serSale.units[+i.dataset.sv]})).filter(x=>x.s);
+ const vals=[...serModal.querySelectorAll('[data-sv]')].map(i=>{const k=serModal.querySelector('[data-svic="'+i.dataset.sv+'"]');return {s:i.value.trim(),a:serSale.units[+i.dataset.sv],ic:!!(k&&k.checked)}}).filter(x=>x.s);
  if(!vals.length){closeModal(serModal);return say('No se ha apuntado ningún número')}
  let base=clientes;
  try{const r=await sbFetch('/rest/v1/datos?select=valor&clave=eq.clientes');const rows=r.ok?await r.json():[];if(rows[0]&&Array.isArray(rows[0].valor))base=rows[0].valor}catch(e){}
@@ -506,14 +507,15 @@ async function saveSerials(){
  let c=clientes.find(x=>norm(x.name)===norm(serSale.client));
  if(!c){c={id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:serSale.client,type:'particular',telegram:'',precios:{}};clientes.push(c)}
  const S=(c.series||[]).slice(), have={};S.forEach(r=>have[r.s]=1);
- let add=0,full=0;vals.forEach(v=>{if(have[v.s])return;if(S.length>=MAX_SERIES){full++;return}S.push(v);have[v.s]=1;add++});
- c.series=S;saveClientes();refreshClientList();closeModal(serModal);
+ let add=0,full=0;vals.forEach(v=>{if(have[v.s]){const o=S.find(r=>r.s===v.s);if(o&&v.ic&&!o.ic){o.ic=true;add++}return}if(S.length>=MAX_SERIES){full++;return}S.push(v);have[v.s]=1;add++});
+ c.series=S;saveClientes();refreshClientList();closeModal(serModal);icPaint();
  say(add?`${add} ${add===1?'número guardado':'números guardados'} en la ficha de ${c.name}`+(full?` (ficha llena: máximo ${MAX_SERIES})`:''):'Esos números ya estaban en su ficha');
  if(add)publishClient(c.id);
+ {const np=vals.filter(v=>!v.ic).length;if(np)setTimeout(()=>say('⚠ Recuerda registrar IC '+(np===1?'el arma':'las '+np+' armas')+' de '+c.name+' con su número de serie: no hacerlo es sancionable','err'),1800)}
  serSale=null;
 }
 document.getElementById('serClose').onclick=()=>closeModal(serModal);
-serModal.addEventListener('click',e=>{if(e.target===serModal)closeModal(serModal);else if(e.target.id==='serSkip')closeModal(serModal);else if(e.target.id==='serSave')once('ser',saveSerials,e.target)});
+serModal.addEventListener('click',e=>{if(e.target===serModal)closeModal(serModal);else if(e.target.id==='serSkip'){closeModal(serModal);say('⚠ Recuerda registrar IC las armas vendidas a '+(serSale?serSale.client:'este cliente')+' con su número de serie','err')}else if(e.target.id==='serSave')once('ser',saveSerials,e.target)});
 
 
 document.getElementById('rcCopy').onclick=doCopy;
@@ -603,7 +605,7 @@ if(!Array.isArray(proveedores))proveedores=[];
 let pedidos=loadObj(KEY_PEDIDOS,[]);
 if(!Array.isArray(pedidos))pedidos=[];
 function saveProveedores(){store.set(KEY_PROVEEDORES,JSON.stringify(proveedores))}
-function refreshClientList(){clientList.innerHTML=clientes.map(c=>`<option value="${esc(c.name)}"></option>`).join('')}
+function refreshClientList(){try{icPaint()}catch(e){}clientList.innerHTML=clientes.map(c=>`<option value="${esc(c.name)}"></option>`).join('')}
 function fmtISO(v){const t=String(v||'').split('-');return t.length===3?`${t[2]}/${t[1]}/${t[0]}`:String(v||'')}
 function todayISO(){const m=madridParts(Date.now());return `${m.year}-${m.month}-${m.day}`}
 /* Clientes: se guardan solos al finalizar una venta y se pueden elegir al escribir el nombre */
@@ -1586,9 +1588,9 @@ function segTxt(seg){return seg.length>1?seg.map(x=>x.n+' '+(x.n===1?'día':'dí
 function sueCalc(e,ws){
  const p=suePaid(e,ws);if(p&&p.sueldo.pay!=null)return Object.assign({paid:p},p.sueldo);
  const c=e.horas||10, req=weekRequired(e.name,ws), need=req.h*3600000, w=workedMs(e,ws), base=sueBase(e,ws), seg=sueSegs(e,ws);
- const miss=Math.max(0,need-w), extra=need?Math.max(0,w-need):0, desc=Math.min(base,Math.round(base*miss/(c*3600000)));
+ const miss=Math.max(0,need-w), extra=need?Math.max(0,w-need):0, desc=Math.min(base,Math.round(base*miss/(c*3600000))), ext=Math.round(base*extra/(c*3600000));
  const o=shifts.find(x=>x.empId===e.id);
- return {c:c,req:req.h,abs:req.d,worked:w,miss:miss,extra:extra,base:base,seg:seg,rate:Math.round(base/c),desc:desc,pay:base-desc,nuevo:!!(e.inicio&&e.inicio>isoDay(ws)),open:!!o,name:e.name,puesto:e.puesto};
+ return {c:c,req:req.h,abs:req.d,worked:w,miss:miss,extra:extra,base:base,seg:seg,rate:Math.round(base/c),desc:desc,ext:ext,pay:base-desc+ext,nuevo:!!(e.inicio&&e.inicio>isoDay(ws)),open:!!o,name:e.name,puesto:e.puesto};
 }
 function hm(ms){const m=Math.round(ms/60000);return Math.floor(m/60)+' h'+(m%60?' '+pad(m%60)+' min':'')}
 function sueLab(ws){return dayStr(ws).slice(0,5)+' – '+dayStr(ws+6).slice(0,5)}
@@ -1622,7 +1624,7 @@ function renderModSueldos(){
   const sg=segTxt(k.seg||[]);
   return `<div class="enc-card dir-item"><div class="t">${esc(e.name)} ${st}</div>
    <div class="it">${esc((e.puesto||'').toUpperCase())} · Horas echadas: <b>${esc(hm(k.worked))}</b> de ${k.req} h${k.req<k.c?` (ausente ${k.abs} días${k.req?': la mitad':': exento'})`:''}${k.open&&!p?'<br>Está fichado ahora: cuenta hasta este momento.':''}${k.nuevo?`<br>Empezó el ${esc(fmtISO(e.inicio))} (semana incompleta)`:''}</div>
-   <div class="enc-money"><span>Sueldo: ${money(k.base)}${sg?' ('+esc(sg)+')':''}</span>${k.desc?`<span>Descuento: −${money(k.desc)} (${esc(hm(k.miss))} × ${money(k.rate)}/h)</span>`:''}${k.extra>=60000&&!k.miss?`<span>Horas extra: ${esc(hm(k.extra))} (sin pagar)</span>`:''}</div>
+   <div class="enc-money"><span>Sueldo: ${money(k.base)}${sg?' ('+esc(sg)+')':''}</span>${k.desc?`<span>Descuento: −${money(k.desc)} (${esc(hm(k.miss))} × ${money(k.rate)}/h)</span>`:''}${k.ext?`<span>Horas extra: ${esc(hm(k.extra))} × ${money(k.rate)}/h = <b>+${money(k.ext)}</b></span>`:''}</div>
    <div class="brow due"><span>${p?'PAGADO':'A PAGAR'}</span><span>${money(p?p.cents:k.pay)}</span></div>
    ${p?`<div class="enc-note">✓ Pagado el ${esc(p.date)} a las ${esc(p.time)}${k.by?' por '+esc(k.by):''} · está en GASTOS.</div>`:cur?`<div class="enc-note">Semana en curso: se paga el domingo ${esc(dayStr(sun).slice(0,5))}.</div>`:k.pay>0?`<div class="enc-actions"><button type="button" class="primary" data-dir="su-pay:${esc(e.id)}">PAGAR ${money(k.pay)}</button></div>`:'<div class="enc-note">No ha echado ninguna hora: no hay nada que pagar.</div>'}</div>`;
  }).join('');
@@ -1642,13 +1644,13 @@ async function paySueldo(id){
  if(suePaid(e,ws))return say('El sueldo de '+e.name+' de esa semana ya está pagado');
  const k=sueCalc(e,ws), lab=sueLab(ws);
  if(!(k.pay>0))return;
- if(!await askConfirm('Pagar sueldo',e.name+' · semana '+lab+': '+hm(k.worked)+' de '+k.req+' h.'+(k.open?' Está fichado ahora: cuenta hasta este momento.':'')+(k.desc?' Sueldo '+money(k.base)+' − descuento '+money(k.desc)+'.':'')+' Se apuntará en GASTOS: '+money(k.pay)+'.','Pagar'))return;
+ if(!await askConfirm('Pagar sueldo',e.name+' · semana '+lab+': '+hm(k.worked)+' de '+k.req+' h.'+(k.open?' Está fichado ahora: cuenta hasta este momento.':'')+(k.desc?' Sueldo '+money(k.base)+' − descuento '+money(k.desc)+'.':'')+(k.ext?' Sueldo '+money(k.base)+' + '+money(k.ext)+' por '+hm(k.extra)+' de horas extra.':'')+' Se apuntará en GASTOS: '+money(k.pay)+'.','Pagar'))return;
  const now=Date.now();
  try{if(!await claimRow('sueldo-'+ws+'-'+e.id,{ts:now,cents:k.pay})){await cloudPullRecords();renderDir();return say('Ese sueldo ya lo pagó otro dispositivo')}}
  catch(err){return say('Sin conexión: no se ha pagado. Inténtalo de nuevo')}
  const m=madridParts(now), by=meEmp()?meEmp().name:'';
- const snap={ws:ws,emp:e.id,at:now,by:by,name:e.name,puesto:e.puesto,c:k.c,req:k.req,abs:k.abs,worked:k.worked,miss:k.miss,extra:k.extra,base:k.base,seg:k.seg,rate:k.rate,desc:k.desc,pay:k.pay};
- const g={id:'g'+now.toString(36)+Math.random().toString(36).slice(2,5),cat:'sueldos',concepto:'Sueldo · '+e.name+' ('+lab+')'+(k.desc?' · −'+money(k.desc)+' por '+hm(k.miss)+' sin echar':''),cents:k.pay,day:dayNum(+m.year,+m.month,+m.day),date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`,sueldo:snap};
+ const snap={ws:ws,emp:e.id,at:now,by:by,name:e.name,puesto:e.puesto,c:k.c,req:k.req,abs:k.abs,worked:k.worked,miss:k.miss,extra:k.extra,ext:k.ext||0,base:k.base,seg:k.seg,rate:k.rate,desc:k.desc,pay:k.pay};
+ const g={id:'g'+now.toString(36)+Math.random().toString(36).slice(2,5),cat:'sueldos',concepto:'Sueldo · '+e.name+' ('+lab+')'+(k.desc?' · −'+money(k.desc)+' por '+hm(k.miss)+' sin echar':'')+(k.ext?' · +'+money(k.ext)+' por '+hm(k.extra)+' extra':''),cents:k.pay,day:dayNum(+m.year,+m.month,+m.day),date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`,sueldo:snap};
  gastos.push(g);saveGastos();cloudPut('gasto:'+g.id,g);
  renderDir();renderPayPlate();
  const left=suePending(ws).length;
@@ -1664,7 +1666,7 @@ function paySummaryText(ws){
   out.push('  Horas: '+hm(k.worked)+' de '+k.req+' h'+(k.req<k.c?' (ausente '+k.abs+' días'+(k.req?': la mitad':': exento')+')':''));
   if(k.paid){
    tot+=k.pay;dsc+=k.desc;if(k.by)by=k.by;
-   out.push('  Sueldo: '+money(k.base)+(sg?' ('+sg+')':'')+(k.desc?' · Descuento: −'+money(k.desc)+' ('+hm(k.miss)+' sin echar)':' · íntegro')+(k.extra>=60000&&!k.miss?' · +'+hm(k.extra)+' extra (sin pagar)':''));
+   out.push('  Sueldo: '+money(k.base)+(sg?' ('+sg+')':'')+(k.desc?' · Descuento: −'+money(k.desc)+' ('+hm(k.miss)+' sin echar)':k.ext?'':' · íntegro')+(k.ext?' · Horas extra: +'+money(k.ext)+' ('+hm(k.extra)+' × '+money(k.rate)+'/h)':(k.extra>=60000&&!k.miss?' · +'+hm(k.extra)+' extra':'')));
    out.push('  Pagado: '+money(k.pay));
   }else out.push('  No ha echado horas: no cobra esta semana');
   out.push('');
@@ -1763,8 +1765,9 @@ dirModal.addEventListener('input',e=>{
  else if(d.ser&&clWork){
   const i=+d.i, L=clWork.series||(clWork.series=[]);while(L.length<=i)L.push({s:'',a:''});
   if(d.ser==='s'){const v=t.value.toUpperCase().replace(/[^A-Z0-9\-\/.]/g,'').slice(0,20);if(v!==t.value)t.value=v;L[i].s=v}
+  if(d.ser==='ic'){L[i].ic=!!t.checked;const lb=t.closest('.ser-ic');if(lb)lb.classList.toggle('pend',!t.checked&&!!L[i].s)}
   const box=document.getElementById('serList'), n=box?box.children.length:0;
-  if(box&&i===n-1&&L[i].s&&n<MAX_SERIES){L.push({s:'',a:''});box.insertAdjacentHTML('beforeend',serieRowHTML({s:'',a:''},n))}
+  if(box&&i===n-1&&L[i].s&&n<MAX_SERIES){L.push({s:'',a:'',ic:false});box.insertAdjacentHTML('beforeend',serieRowHTML({s:'',a:'',ic:false},n))}
   const cnt=document.getElementById('serCount');if(cnt)cnt.textContent=L.filter(r=>r.s).length;
  }
  else if(id==='clPrice'||id==='whUrl'&&false){t.value=t.value.replace(/[^0-9.,]/g,'')}
@@ -1910,9 +1913,16 @@ function addBtn(w,id,f){return `<button type="button" class="cp-btn add-btn" dat
 /* --- Clientes guardados --- */
 let clEdit=null, clWork=null, clQ='';
 const MAX_SERIES=20;
-function weaponNames(){return inputs.filter(i=>['municion','suministros'].indexOf(i.closest('.product').dataset.cat)<0).map(i=>i.dataset.name)}
-function serieRows(c){const L=(c.series||[]).filter(r=>r&&(r.s||r.a)).map(r=>({s:r.s||'',a:r.a||''}));if(L.length<MAX_SERIES)L.push({s:'',a:''});c.series=L;return L}
-function serieRowHTML(r,i){return `<div class="serie-row"><input data-ser="s" data-i="${i}" type="text" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="N.º de serie ${i+1}" value="${esc(r.s)}"><select data-ser="a" data-i="${i}" aria-label="Arma"><option value="">Arma (opcional)</option>${weaponNames().map(n=>`<option value="${esc(n)}"${r.a===n?' selected':''}>${esc(n)}</option>`).join('')}${r.a&&weaponNames().indexOf(r.a)<0?`<option value="${esc(r.a)}" selected>${esc(r.a)}</option>`:''}</select></div>`}
+/* Armas que hay que registrar (con número de serie): solo las de fuego */
+const FIREARM_CATS=['revolveres','pistolas','repetidoras','rifles','escopetas'];
+function weaponNames(){return inputs.filter(i=>FIREARM_CATS.indexOf(i.closest('.product').dataset.cat)>=0).map(i=>i.dataset.name)}
+function allWeaponNames(){return inputs.filter(i=>['municion','suministros'].indexOf(i.closest('.product').dataset.cat)<0).map(i=>i.dataset.name)}
+/* Registro IC: ic===true registrada, ic===false pendiente (se recuerda), sin dato = fichas antiguas sin marcar */
+function icPending(){const L=[];(clientes||[]).forEach(c=>(c.series||[]).forEach((r,i)=>{if(r&&r.s&&r.ic===false)L.push({c:c,r:r,i:i})}));return L}
+function icMark(cid,i){const c=clientes.find(x=>x.id===cid);if(!c||!c.series||!c.series[i])return;c.series[i]=Object.assign({},c.series[i],{ic:true});saveClientes();publishClient(cid);icPaint();say('Marcada como registrada IC: '+(c.series[i].a||'arma')+' n.º '+c.series[i].s+' de '+c.name);if(!dirModal.hidden&&dirMod==='clientes')renderDir();if(!libroModal.hidden&&libroView==='brief')renderLibro()}
+function icPaint(){const el=document.getElementById('icPlate');if(!el)return;const n=icPending().length;el.hidden=!n;if(n){const h=`<span class="ic-warn" aria-hidden="true">!</span><div><small>REGISTRO DE ARMAS PENDIENTE</small><b>${n} ${n===1?'arma sin registrar IC':'armas sin registrar IC'}</b><span>Hay que registrarlas dentro del juego a nombre del cliente: no hacerlo es sancionable. Toca para verlas.</span></div>`;if(el.innerHTML!==h)el.innerHTML=h}}
+function serieRows(c){const L=(c.series||[]).filter(r=>r&&(r.s||r.a)).map(r=>Object.assign({s:r.s||'',a:r.a||''},r.ic!==undefined?{ic:!!r.ic}:{}));if(L.length<MAX_SERIES)L.push({s:'',a:'',ic:false});c.series=L;return L}
+function serieRowHTML(r,i){return `<div class="serie-row"><input data-ser="s" data-i="${i}" type="text" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="N.º de serie ${i+1}" value="${esc(r.s)}"><select data-ser="a" data-i="${i}" aria-label="Arma"><option value="">Arma (opcional)</option>${weaponNames().map(n=>`<option value="${esc(n)}"${r.a===n?' selected':''}>${esc(n)}</option>`).join('')}${r.a&&weaponNames().indexOf(r.a)<0?`<option value="${esc(r.a)}" selected>${esc(r.a)}</option>`:''}</select><label class="ser-ic${r.s&&!r.ic?' pend':''}"><input type="checkbox" data-ser="ic" data-i="${i}"${r.ic?' checked':''}> Registrada IC (dentro del juego)</label></div>`}
 function clientText(c,title){
  const L=[title||'FICHA DE CLIENTE','Nombre: '+c.name,'Tipo: '+(c.type==='empresa'?'Empresa':'Particular'),'Telegrama: '+(c.telegram||'—')];
  if(c.ident)L.push('N.º de identificación: '+c.ident);
@@ -1921,7 +1931,7 @@ function clientText(c,title){
  if(pk.length){L.push('','Precios especiales:');pk.forEach(n=>L.push('  '+n+' · '+money(Math.round(c.precios[n]*100))))}
  const S=(c.series||[]).filter(r=>r.s);
  L.push('','Armas vendidas (n.º de serie): '+S.length);
- S.forEach((r,i)=>L.push('  '+(i+1)+'. '+r.s+(r.a?' · '+r.a:'')));
+ S.forEach((r,i)=>L.push('  '+(i+1)+'. '+r.s+(r.a?' · '+r.a:'')+(r.ic===true?' · registrada IC':r.ic===false?' · ⚠ SIN REGISTRAR IC':'')));
  L.push('','Actualizado: '+fmtDate(Date.now())+' '+fmtTime(Date.now()));
  return L.join('\n');
 }
@@ -1959,7 +1969,7 @@ function renderClientFicha(c){
   <div class="enc-actions" style="margin:4px 0 2px"><button type="button" data-dir="cl-fill:${esc(c.id)}~exSeccl">✚ AÑADIR OTRO DATO</button></div>
   ${evClientHTML(c)}
   <div class="dir-sec-title">ARMAS VENDIDAS (${S.length})</div>
-  ${S.length?S.map((r,i)=>`<div class="cf-arma"><div class="cf-n">${i+1}</div><div class="cf-col">${line('N.º DE SERIE',r.s,1)}${line('ARMA',r.a,1)}</div></div>`).join(''):'<div class="enc-empty">Sin armas registradas.</div>'}
+  ${S.length?S.map((r,i)=>{const k=(c.series||[]).indexOf(r);return `<div class="cf-arma${r.ic===false?' ic-no':''}"><div class="cf-n">${i+1}</div><div class="cf-col">${line('N.º DE SERIE',r.s,1)}${line('ARMA',r.a,1)}<div class="cf-line"><div><small>REGISTRO IC</small><b>${r.ic===true?'✓ Registrada dentro del juego':r.ic===false?'⚠ SIN REGISTRAR · hay que registrarla IC':'Sin marcar'}</b></div>${r.ic===true?'':`<button type="button" class="cp-btn add-btn" data-dir="cl-ic:${esc(c.id)}~${k}">✓ YA REGISTRADA</button>`}</div></div></div>`}).join(''):'<div class="enc-empty">Sin armas registradas.</div>'}
   ${clientHistHTML(c)}
   ${Object.keys(c.precios||{}).length?`<div class="dir-sec-title">PRECIOS ESPECIALES</div>`+Object.keys(c.precios).map(n=>`<div class="reg-line"><span>${esc(n)}</span><b>${money(Math.round(c.precios[n]*100))}</b></div>`).join(''):''}
   <div class="enc-actions two" style="margin-top:10px"><button type="button" data-dir="cl-close">◂ Volver</button><button type="button" class="primary" data-dir="cl-edit:${esc(c.id)}">✎ EDITAR</button></div></div></div>`;
@@ -1996,14 +2006,14 @@ function saveClient(){
  if(!clWork.telegram&&clEdit==='new')return err('Escribe el telegrama del cliente');
  const X=exClean(clWork.extra); if(typeof X==='string')return err(X);
  clWork.extra=X;
- const S=(clWork.series||[]).map(r=>({s:String(r.s||'').trim(),a:r.a||''}));
+ const S=(clWork.series||[]).map(r=>Object.assign({s:String(r.s||'').trim(),a:r.a||''},r.ic!==undefined?{ic:!!r.ic}:{}));
  const bad=S.find(r=>!r.s&&r.a); if(bad)return err('Falta el número de serie de «'+bad.a+'»');
  const seen={};for(const r of S.filter(r=>r.s)){if(seen[r.s])return err('El número de serie '+r.s+' está repetido');seen[r.s]=1}
  clWork.name=name;clWork.ident=String(clWork.ident||'').trim();clWork.series=S.filter(r=>r.s).slice(0,MAX_SERIES);
  let id=clEdit;
  if(clEdit==='new'){id='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);clientes.push(Object.assign({id:id},clWork))}
  else{const k=clientes.findIndex(x=>x.id===clEdit);if(k>=0)clientes[k]=Object.assign({},clientes[k],clWork)}
- pzMsg=null;pzOpen='';saveClientes();refreshClientList();clEdit=null;if(clView)clView=id;calc(false);renderDir();say('Cliente guardado');
+ pzMsg=null;pzOpen='';saveClientes();refreshClientList();clEdit=null;if(clView)clView=id;calc(false);renderDir();icPaint();{const np=clWork.series.filter(r=>r.ic===false).length;if(np)say('Cliente guardado · ⚠ '+np+(np===1?' arma sin registrar IC':' armas sin registrar IC')+': no te olvides de registrarla'+(np===1?'':'s')+' dentro del juego','err');else say('Cliente guardado')}
  publishClient(id);
 }
 async function delClient(id){
@@ -2196,6 +2206,7 @@ const MOD_ICONS={
 function avisosHTML(){
  const A=[], hoy=todayISO();
  (()=>{const P=dcProblems();Object.keys(P).forEach(k=>A.push(['bad',`Discord: el canal <b>${esc(DC_LABELS[k]||k)}</b> falla (${esc(dcWhy(P[k].st))}). Revísalo en <b>DISCORD</b>.`]));if(DCQ.length)A.push(['pend',`Hay ${DCQ.length} ${DCQ.length===1?'mensaje':'mensajes'} de Discord sin enviar en este dispositivo: reinténtalo en <b>DISCORD</b>.`])})();
+ icPending().forEach(x=>A.push(['bad',`Arma sin registrar IC: <b>${esc(x.r.a||'Arma')}</b> n.º ${esc(x.r.s)} de <b>${esc(x.c.name)}</b>. Regístrala dentro del juego (es sancionable no hacerlo) y márcala en su ficha de CLIENTES.`]));
  (eventos||[]).forEach(ev=>{if(ev.status!=='finalizado'||!ev.winner)return;if(!ev.entregado)A.push(['pend',`Sorteo del <b>${esc(ev.arma)}</b>: falta entregar el arma a <b>${esc(ev.winner.client)}</b> (n.º ${ev.winner.n}). Márcalo en <b>EVENTOS</b>.`]);else if(!ev.reembolso)A.push(['pend',`Sorteo del <b>${esc(ev.arma)}</b>: pendiente la devolución de Administración (${money(ev.premioCents||0)}). Márcala en <b>EVENTOS</b> cuando llegue.`])});
  ausNowList().forEach(a=>A.push(['pend',`<b>${esc(a.name)}</b> está ausente ${esc(ausUntil(a))} (${esc(a.cat||'')}).`]));
  ausencias.filter(a=>ausFuture(a)&&a.start-Date.now()<2*86400000).forEach(a=>A.push(['pend',`<b>${esc(a.name)}</b> estará ausente desde el ${esc(ausWhen(a.start))}.`]));
@@ -2242,6 +2253,8 @@ function dcIcon(){try{return /^https?:/.test(location.protocol)?new URL('emblema
 /* Convierte el texto de siempre en una tarjeta: 1.ª línea = título; «Clave: valor» en negrita */
 const DC_SKIP={'HARRINGTON GUNSMITH':1,'Saint Denis · 1880':1,'El precio de un apellido.':1};
 function dcEmbed(kind,text,img){
+ if(String(text).indexOf('\u0001EMB')===0){try{const t=String(text), j=t.indexOf('\u0001',4), e=JSON.parse(t.slice(4,j)), rest=t.slice(j+1).trim();
+  if(rest)e.description=(e.description||'')+'\n'+dcEsc(rest);e.footer={text:'Harrington Gunsmith · Saint Denis · 1880'};e.timestamp=new Date().toISOString();const ic=dcIcon();if(ic)e.footer.icon_url=ic;const th=dcThumb(kind);if(th)e.thumbnail={url:th};return e}catch(z){}}
  const L=String(text).split('\n').filter(l=>!DC_SKIP[l.trim()]&&!/^─{4,}$/.test(l.trim()));
  while(L.length&&!L[0].trim())L.shift();
  const title=L.shift()||'Harrington Gunsmith';
@@ -2767,7 +2780,7 @@ function pzFillClient(){
  if(r.ident&&r.ident!==c.ident){c.ident=r.ident;got.push('n.º de identificación');hit.push('clIdent')}
  if(r.type==='empresa'&&c.type!=='empresa'){c.type='empresa';got.push('tipo empresa');hit.push('clType')}
  const L=(c.series||[]).filter(x=>x&&(x.s||x.a));let ns=0;
- r.series.forEach(x=>{const o=L.find(y=>y.s===x.s);if(o){if(!o.a&&x.a){o.a=x.a;ns++}}else if(L.length<MAX_SERIES){L.push({s:x.s,a:x.a});ns++}});
+ r.series.forEach(x=>{const o=L.find(y=>y.s===x.s);if(o){if(!o.a&&x.a){o.a=x.a;ns++}}else if(L.length<MAX_SERIES){L.push({s:x.s,a:x.a,ic:false});ns++}});
  c.series=L;if(ns){got.push(ns+(ns===1?' arma con su número de serie':' armas con su número de serie'));hit.push('serList')}
  {const ne=pzMergeExtra(c,r.extra);if(ne){got.push('otros datos ('+r.extra.map(x=>esc(x.k).toLowerCase()).join(', ')+')');hit.push('exListcl')}}
  pzOpen='';pzText='';pzHit=hit;
@@ -2919,11 +2932,13 @@ function briefItems(){
  const hoy=todayISO(), E=pendingEncs(), A=[];
  const venc=E.filter(x=>x.promise&&x.promise<hoy), hoyE=E.filter(x=>x.promise===hoy), listos=E.filter(x=>x.fab==='FABRICADO'&&!x.avisado);
  const P=pendingPed().filter(p=>!p.received), N=openNotas();
- return {venc:venc,hoyE:hoyE,listos:listos,P:P,N:N,n:venc.length+hoyE.length+listos.length+P.length+N.length};
+ const IC=icPending();
+ return {venc:venc,hoyE:hoyE,listos:listos,P:P,N:N,IC:IC,n:venc.length+hoyE.length+listos.length+P.length+N.length+IC.length};
 }
 function briefHTML(name){
  const b=briefItems(), it=x=>x.items.map(i=>i.qty+' × '+esc(i.name)).join(', ');
  let o=`<div class="br-hi">${esc(saludo())}${name?', '+esc(name.split(' ')[0]):''}</div><p class="bk-note" style="margin:0 0 4px">Esto es lo que te espera hoy:</p>`;
+ if(b.IC.length)o+=`<div class="br-sec"><div class="dir-sec-title">⚠ ARMAS SIN REGISTRAR IC (${b.IC.length})</div><p class="bk-note" style="margin:0 0 6px">Regístralas dentro del juego a nombre del cliente con su número de serie (es sancionable no hacerlo) y márcalas aquí.</p>${b.IC.map(x=>`<div class="br-line bad"><b>${esc(x.c.name)}</b> · ${esc(x.r.a||'Arma')} · n.º ${esc(x.r.s)}${x.c.telegram?' · Telegrama '+esc(x.c.telegram):''}<div class="enc-actions" style="margin-top:6px"><button type="button" data-lb="ic:${esc(x.c.id)}~${x.i}">✓ YA LA HE REGISTRADO IC</button></div></div>`).join('')}</div>`;
  if(b.N.length)o+=`<div class="br-sec"><div class="dir-sec-title">NOTAS DEL LIBRO DE TURNO (${b.N.length})</div>${b.N.slice(-3).reverse().map(notaHTML).join('')}${b.N.length>3?`<p class="bk-note">y ${b.N.length-3} más en NOTAS.</p>`:''}</div>`;
  if(b.venc.length)o+=`<div class="br-sec"><div class="dir-sec-title">ENCARGOS VENCIDOS (${b.venc.length})</div>${b.venc.map(x=>`<div class="br-line bad"><b>${esc(x.client)}</b> · ${it(x)} · era para el ${esc(fmtISO(x.promise))}</div>`).join('')}</div>`;
  if(b.hoyE.length)o+=`<div class="br-sec"><div class="dir-sec-title">ENCARGOS PARA HOY (${b.hoyE.length})</div>${b.hoyE.map(x=>`<div class="br-line"><b>${esc(x.client)}</b> · ${it(x)} · ${x.fab==='FABRICADO'?'ya fabricado':'aún sin fabricar'}</div>`).join('')}</div>`;
@@ -2956,6 +2971,7 @@ libroModal.addEventListener('click',e=>{
  const [a,id]=b.dataset.lb.split(':');
  if(a==='add')addNota();else if(a==='done')doneNota(id);else if(a==='del')delNota(id);
  else if(a==='close'){closeModal(libroModal);libroView='libro'}
+ else if(a==='ic'){const [cid,k]=String(id||'').split('~');icMark(cid,+k);if(!briefItems().n){closeModal(libroModal);libroView='libro'}}
  else if(a==='go'){closeModal(libroModal);libroView='libro';if(id==='enc')openEnc()}
 });
 libroModal.addEventListener('input',e=>{if(e.target.id==='lbText')libroDraft=e.target.value});
@@ -3568,6 +3584,25 @@ function isoToday(){const m=madridParts(Date.now());return `${m.year}-${m.month}
 function isoAdd(iso,days){const t=String(iso).split('-').map(Number);return new Date(Date.UTC(t[0],t[1]-1,t[2]+days)).toISOString().slice(0,10)}
 let empDraft={name:'',puesto:'',sueldo:'',inicio:'',horas:'10'}, eeDraft=null;
 function empHasContract(e){return !!(e&&e.puesto&&e.sueldo>0&&e.inicio)}
+/* Al terminar el periodo de prueba (si sigue en la lista), pasa solo a trabajador FIJO y se publica su contrato nuevo.
+   El puesto no cambia. Después, el contrato solo se vuelve a publicar con un ascenso. */
+let fijoBusy=false;
+async function autoFijos(){
+ if(fijoBusy||!cloud.ok||SANDBOX)return;fijoBusy=true;
+ try{
+  const hoy=todayISO();let ch=false;
+  for(const e of empleados){
+   if(!empHasContract(e)||e.fijo)continue;
+   if(e.sinPrueba){e.fijo=true;e.fijoDesde=e.fijoDesde||'';ch=true;continue}
+   const fin=e.prueba||isoAdd(e.inicio,6);if(!(fin<hoy))continue;
+   let mine=false;try{mine=await claimRow('fijo-'+e.id,{ts:Date.now()})}catch(x){break}
+   e.fijo=true;e.fijoDesde=isoAdd(fin,1);ch=true;
+   if(mine){e.alta=Date.now();saveEmp();sendContract(e,false,true);say(e.name+' ha superado el periodo de prueba: ya es trabajador fijo')}
+  }
+  if(ch){saveEmp();if(!dirModal.hidden&&dirMod==='empleados')renderDir()}
+ }finally{fijoBusy=false}
+}
+setInterval(()=>{if(!document.hidden)autoFijos()},3600000);
 function empFields(d,p){
  return `<label>NOMBRE DEL EMPLEADO<input id="${p}Name" type="text" maxlength="40" autocomplete="off" placeholder="Nombre y apellido" value="${esc(d.name)}"></label>
   <label>PUESTO<select id="${p}Puesto"><option value="">Seleccionar puesto…</option>${PUESTOS.map(x=>`<option value="${x}"${d.puesto===x?' selected':''}>${x.toUpperCase()}</option>`).join('')}</select></label>
@@ -3586,7 +3621,7 @@ function renderModEmpleados(){
    <div class="pay-err" id="eeErr" hidden></div>
    <div class="enc-actions two"><button type="button" data-dir="emp-cancel">Cancelar</button><button type="button" class="primary" data-dir="emp-save:${esc(e.id)}">GUARDAR</button></div></div>`;
   const ok=empHasContract(e);
-  return `<div class="enc-card dir-item"><div class="t">${esc(e.name)}</div><div class="it">${ok?`${esc(e.puesto.toUpperCase())} · ${money(e.sueldo)} a la semana · ${e.horas||10} h semanales<br>Inicio: ${fmtISO(e.inicio)} · ${e.sinPrueba?'sin periodo de prueba (ascendido)':'prueba hasta el '+fmtISO(e.prueba||isoAdd(e.inicio,6))}`:'<span class="lowtag">FALTAN LOS DATOS DEL CONTRATO</span> Pulsa EDITAR para completarlos.'}</div>
+  return `<div class="enc-card dir-item"><div class="t">${esc(e.name)}</div><div class="it">${ok?`${esc(e.puesto.toUpperCase())} · ${money(e.sueldo)} a la semana · ${e.horas||10} h semanales<br>Inicio: ${fmtISO(e.inicio)} · ${e.fijo?'<b>FIJO</b>'+(e.fijoDesde?' desde el '+fmtISO(e.fijoDesde):''):e.sinPrueba?'sin periodo de prueba (ascendido)':'prueba hasta el '+fmtISO(e.prueba||isoAdd(e.inicio,6))}`:'<span class="lowtag">FALTAN LOS DATOS DEL CONTRATO</span> Pulsa EDITAR para completarlos.'}</div>
    <div class="enc-actions emp3"><button type="button" data-dir="emp-edit:${esc(e.id)}">✎ EDITAR</button><button type="button" data-dir="emp-ct:${esc(e.id)}"${ok?'':' disabled'}>📜 CONTRATO</button><button type="button" class="warn" data-dir="emp-del:${esc(e.id)}">🗑 PAPELERA</button></div><div class="enc-actions"><button type="button" data-dir="emp-ficha:${esc(e.id)}">📋 FICHA COMPLETA</button></div>${ok&&ASCENSO[e.puesto]?`<div class="enc-actions"><button type="button" class="gold" data-dir="emp-up:${esc(e.id)}">⬆ ASCENSO A ${esc(ASCENSO[e.puesto].toUpperCase())} · ${money(SUELDO_PUESTO[ASCENSO[e.puesto]])}</button></div>`:''}${empExtra(e)}</div>`;
  };
  return `<div class="dir-form enc-sec"><div class="dir-sec-title" style="margin-top:0">NUEVO EMPLEADO</div>${empFields(empDraft,'emp')}
@@ -3629,13 +3664,13 @@ async function empDelete(id){
  empleados=empleados.filter(x=>x.id!==id);saveEmp();renderDir();renderCustomer();say('Empleado eliminado');
 }
 function contractText(e){
- return ['CONTRATO DE TRABAJO · HARRINGTON GUNSMITH','Empleado: '+e.name,'Puesto: '+e.puesto,'Sueldo semanal: '+money(e.sueldo),'Horas semanales: '+(e.horas||10),'Inicio del contrato: '+fmtISO(e.inicio),e.sinPrueba?'Periodo de prueba: no (contrato por ascenso)':'Periodo de prueba: 1 semana (del '+fmtISO(e.inicio)+' al '+fmtISO(e.prueba||isoAdd(e.inicio,6))+')'].join('\n');
+ return ['CONTRATO DE TRABAJO · HARRINGTON GUNSMITH','Empleado: '+e.name,'Puesto: '+e.puesto,'Sueldo semanal: '+money(e.sueldo),'Horas semanales: '+(e.horas||10),'Inicio del contrato: '+fmtISO(e.inicio),'Tipo de contrato: '+(e.fijo?'FIJO'+(e.fijoDesde?' (desde el '+fmtISO(e.fijoDesde)+')':''):'en periodo de prueba'),e.sinPrueba?'Periodo de prueba: no (contrato por ascenso)':'Periodo de prueba: 1 semana (del '+fmtISO(e.inicio)+' al '+fmtISO(e.prueba||isoAdd(e.inicio,6))+')'+(e.fijo?' · superado':'')].join('\n');
 }
-async function sendContract(e,asc){
+async function sendContract(e,asc,fijo){
  if(!(webhook.urls.empleados||webhook.url)||!webhook.ev.empleados)return;
  let blob=null;try{blob=await contractBlob(e)}catch(x){}
  const up=asc&&e.ascensos&&e.ascensos[e.ascensos.length-1];
- discordSend('empleados',(up?'ASCENSO · '+e.name+': '+up.de+' → '+up.a+'\nNuevo sueldo: '+money(up.nuevo)+' (desde el '+dayStr(up.desde)+')\n\n':'')+contractText(e),blob,'Contrato_'+e.name.replace(/[^A-Za-z0-9áéíóúüñÁÉÍÓÚÜÑ_-]+/g,'_')+'.png',true);
+ discordSend('empleados',(up?'ASCENSO · '+e.name+': '+up.de+' → '+up.a+'\nNuevo sueldo: '+money(up.nuevo)+' (desde el '+dayStr(up.desde)+')\n\n':fijo?'TRABAJADOR FIJO · '+e.name+'\nHa superado el periodo de prueba: desde el '+fmtISO(e.fijoDesde)+' es trabajador fijo de la casa como '+e.puesto+'.\n\n':'')+contractText(e),blob,'Contrato_'+e.name.replace(/[^A-Za-z0-9áéíóúüñÁÉÍÓÚÜÑ_-]+/g,'_')+'.png',true);
 }
 async function downloadContract(id){
  const e=empleados.find(x=>x.id===id); if(!e||!empHasContract(e))return;
@@ -3669,11 +3704,12 @@ async function contractBlob(e){
   kv('SUELDO SEMANAL',money(e.sueldo)+' a la semana');
   kv('HORAS SEMANALES',(e.horas||10)+' horas a la semana');
   kv('INICIO DEL CONTRATO',fmtISO(e.inicio));
-  kv('PERIODO DE PRUEBA',e.sinPrueba?'Sin periodo de prueba':'1 semana · hasta el '+fmtISO(e.prueba||isoAdd(e.inicio,6)));
+  kv('TIPO DE CONTRATO',e.fijo?'Fijo'+(e.fijoDesde?' · desde el '+fmtISO(e.fijoDesde):''):'En periodo de prueba');
+  kv('PERIODO DE PRUEBA',e.sinPrueba?'Sin periodo de prueba':(e.fijo?'Superado · ':'1 semana · ')+'hasta el '+fmtISO(e.prueba||isoAdd(e.inicio,6)));
   y+=6;
   wrap('El empleado se compromete a desempeñar su oficio con diligencia, honradez y lealtad a la casa, y a guardar el debido cuidado con las armas, la munición y la caja. La casa abonará el sueldo pactado cada semana.','18px '+ff,ink,26);
   y+=6;
-  {const up=e.sinPrueba&&e.ascensos&&e.ascensos[e.ascensos.length-1];wrap(up?'Contrato por ascenso de '+up.de+' a '+up.a+'. Sustituye al anterior y rige desde el '+dayStr(up.desde)+'.':'Durante el periodo de prueba, cualquiera de las partes podrá dar por terminada esta relación sin más aviso.','italic 18px '+ff,'#4a3417',26)}
+  {const up=e.sinPrueba&&e.ascensos&&e.ascensos[e.ascensos.length-1];wrap(up?'Contrato por ascenso de '+up.de+' a '+up.a+'. Sustituye al anterior y rige desde el '+dayStr(up.desde)+'.':e.fijo?'Superado el periodo de prueba, el empleado pasa a formar parte de la casa como trabajador fijo'+(e.fijoDesde?' desde el '+fmtISO(e.fijoDesde):'')+'. Este contrato sustituye al anterior.':'Durante el periodo de prueba, cualquiera de las partes podrá dar por terminada esta relación sin más aviso.','italic 18px '+ff,'#4a3417',26)}
   y+=18;
   const f=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',day:'numeric',month:'long',year:'numeric'}).format(e.alta||Date.now());
   ctr('En Saint Denis, a '+f+'.','18px '+ff,ink,64);
@@ -3847,6 +3883,7 @@ dirModal.addEventListener('click',e=>{
  else if(act==='cl-copy'){const v=decodeURIComponent(arg);copyText(v).then(ok=>{if(ok)say('Copiado: '+v);else prompt('Copia este dato:',v)})}
  else if(act==='cl-save')saveClient();
  else if(act==='cl-del')delClient(arg);
+ else if(act==='cl-ic'){const [cid,k]=String(arg||'').split('~');icMark(cid,+k)}
  else if(act==='cl-padd')addClientPrice();
  else if(act==='cl-pdel'){delete clWork.precios[decodeURIComponent(arg)];renderDir()}
  else if(act==='cc-save')saveCierre();
@@ -4162,7 +4199,7 @@ const TUTORIAL=[
 <p>Si recargas la página o se cierra el navegador, <b>la venta que tenías en curso se conserva</b>. Se borra con Vaciar o Nueva venta (siempre pidiendo confirmación) y, sola, <b>al finalizar la venta</b>.</p>
 <p>Para tenerla como una app: en el menú del navegador, <b>Añadir a pantalla de inicio</b>.</p>`],
 ['Catálogo y categorías',`<ul><li><b>SIN PRECIO</b>: un producto que aún no tiene precio sale en el catálogo con ese aviso y no se puede añadir a la venta. La dirección le pone el precio en <b>Dirección → PRODUCTOS Y PRECIOS</b> y desde ese momento se vende normal.</li><li>Los <b>botones con imagen</b> filtran los productos por categoría y cambian la imagen grande de arriba. «Todos» los muestra todos.</li><li>El <b>buscador</b> encuentra productos por su nombre, sin importar las tildes.</li><li>Cada fila tiene el dibujo de su categoría, el <b>nombre</b> (tócalo para ver su ficha con descripción, precio y si está disponible), el precio, la <b>cantidad</b> y el subtotal.</li><li>Para la cantidad usa <b>−</b> y <b>+</b>, o escribe el número. En la munición hay además <b>+10, +50 y +100</b>.</li><li>Los productos con cantidad se resaltan en dorado.</li><li><b>SIN STOCK</b>: no se puede añadir. Si intentas pasarte de lo que hay, la cantidad se corrige sola y te avisa. <b>Nunca</b> se muestra cuántas unidades quedan.</li><li>Los productos recién añadidos llevan la etiqueta <b>NUEVO</b>.</li></ul>`],
-['Hacer una venta',`<ol><li>Elige productos y cantidades.</li><li>En <b>Tipo de operación</b> deja «Venta normal».</li><li><b>Tipo de cliente</b>: particular, empresa o Departamento del Sheriff (este último no pide nombre).</li><li>Escribe el <b>nombre</b>. Si el cliente ya está guardado, sale como sugerencia y se cargan sus datos y sus precios especiales.</li><li>Elige <b>Convenio</b> u <b>Oferta</b> si corresponde. Solo aparecen los vigentes y compatibles con el cliente. No se suman: al elegir uno se quita el otro.</li><li>Elige el <b>Empleado</b> que hace la venta. Es obligatorio.</li><li>Si quieres, añade una <b>Nota</b>: saldrá en el ticket y en el aviso de Discord.</li><li>Revisa el desglose: Subtotal, descuento y Total.</li><li>El botón de abajo <b>te dice qué falta</b> («Falta elegir el empleado», «Falta el telegrama»…). Cuando está todo, se pone verde con <b>FINALIZAR VENTA</b> (o GUARDAR ENCARGO): púlsalo y se abre el ticket y se descuenta el stock. Mientras se guarda, el botón queda bloqueado para que un doble toque no haga dos ventas.</li><li>Si una venta o el día superan el mejor registro de la casa, sale <b>¡RÉCORD DE LA CASA!</b> con campanas.</li><li>Si has vendido <b>armas</b> a un cliente con nombre, se abre una ventana para apuntar sus <b>números de serie</b> (opcional): se guardan en su ficha de cliente y en su mensaje de Discord. «Ahora no» la cierra.</li></ol>
+['Hacer una venta',`<ol><li>Elige productos y cantidades.</li><li>En <b>Tipo de operación</b> deja «Venta normal».</li><li><b>Tipo de cliente</b>: particular, empresa o Departamento del Sheriff (este último no pide nombre).</li><li>Escribe el <b>nombre</b>. Si el cliente ya está guardado, sale como sugerencia y se cargan sus datos y sus precios especiales.</li><li>Elige <b>Convenio</b> u <b>Oferta</b> si corresponde. Solo aparecen los vigentes y compatibles con el cliente. No se suman: al elegir uno se quita el otro.</li><li>Elige el <b>Empleado</b> que hace la venta. Es obligatorio.</li><li>Si quieres, añade una <b>Nota</b>: saldrá en el ticket y en el aviso de Discord.</li><li>Revisa el desglose: Subtotal, descuento y Total.</li><li>El botón de abajo <b>te dice qué falta</b> («Falta elegir el empleado», «Falta el telegrama»…). Cuando está todo, se pone verde con <b>FINALIZAR VENTA</b> (o GUARDAR ENCARGO): púlsalo y se abre el ticket y se descuenta el stock. Mientras se guarda, el botón queda bloqueado para que un doble toque no haga dos ventas.</li><li>Si una venta o el día superan el mejor registro de la casa, sale <b>¡RÉCORD DE LA CASA!</b> con campanas.</li><li>Si has vendido <b>armas de fuego</b> (revólveres, pistolas, repetidoras, rifles y escopetas; las armas blancas no) a un cliente con nombre, se abre una ventana para apuntar sus <b>números de serie</b>: se guardan en su ficha de cliente y en su mensaje de Discord. «Ahora no» la cierra.</li><li><b>Registro IC</b>: al lado de cada número de serie hay una casilla <b>Registrada IC</b>. Cada arma de fuego hay que registrarla <b>dentro del juego</b> a nombre del cliente con su número de serie (no hacerlo es <b>sancionable</b>). Márcala cuando la hayas registrado. Si la dejas sin marcar, la web te lo recuerda: sale un cartel rojo <b>REGISTRO DE ARMAS PENDIENTE</b> en la pantalla principal, aparece en «Para hoy» al fichar y en los avisos de Dirección, hasta que pulses <b>✓ YA LA HE REGISTRADO IC</b>.</li></ol>
 <p><b>Al finalizar la venta, el carrito se vacía solo</b>: los productos, el cliente y el convenio se borran y queda listo para el siguiente cliente, sin pulsar nada. El ticket sigue abierto con todos sus botones. Si después ves un error en una venta ya finalizada, la dirección la anula en Dirección → Registros de ventas y se hace de nuevo.</p><p><b>Vaciar</b> y <b>Nueva venta</b> son para cuando el cliente <b>se echa atrás a mitad</b>: borran lo que hayas puesto. Vaciar quita los productos; Nueva venta lo borra todo para empezar de cero. En el móvil, una <b>barra fija abajo</b> te muestra el total y tiene el botón FINALIZAR.</p>
 <p>Si no deja finalizar, el aviso te dice qué falta: nombre, empleado, telegrama, pago adelantado o stock.</p>`],
 ['Presupuesto',`<p>La pestaña <b>PRESUPUESTO</b> sirve para decirle a un cliente cuánto costaría una compra, sin vender nada.</p>
@@ -4188,23 +4225,23 @@ const TUTORIAL=[
 ['Fabricación y recetas <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → FABRICACIÓN</b>: sale la lista de todos los productos (armas, munición y suministros). Toca uno para crear su <b>receta</b>:</p>
 <ul><li>Elige un <b>material</b> en el desplegable y escribe cuántas <b>unidades</b> gasta una unidad del producto. Al elegirlo aparece otro desplegable para el siguiente material.</li><li>Pulsa <b>ACEPTAR</b>. «Quitar receta» la borra.</li><li>En la lista ves la receta de cada producto y cuántas unidades se pueden fabricar con el almacén actual.</li></ul>
 <p><b>Fabricar</b> = sumar unidades en <b>Dirección → STOCK</b>: se suman al stock de productos y se restan sus materiales, todo a la vez. Antes te muestra un <b>resumen para confirmar</b> («vas a fabricar 3 Cattleman y se gastarán 12 Hierro…»). Si falta algún material, <b>no se suma nada</b> y te dice qué falta y cuánto. Los productos sin receta se suman sin gastar materiales. Al fabricar suena un yunque y cae el sello FABRICADO.</p>
-<ul><li><b>↶ Deshacer última fabricación</b>: durante 10 minutos aparece arriba en STOCK; quita esas unidades y devuelve los materiales (si ya se vendieron, no se puede).</li><li><b>Hierro y carbón</b>: en el almacén y en las recetas se llaman <b>Hierro</b> y <b>Carbón</b>. A la mina se le piden como «Mena de hierro» y «Mena de carbón»: al recibir el pedido entran solos en el almacén como Hierro y Carbón, y para costes y comparar precios cuentan como lo mismo.</li><li><b>Recetas con otro producto</b>: algunas recetas llevan un producto de la tienda ya fabricado (la munición y el aceite llevan <b>pólvora</b>, el arco mejorado lleva un <b>arco</b>, el lazo reforzado un <b>lazo</b>). Al fabricarlas se gastan del stock de productos, no del almacén, y en la receta salen como «(producto)». En el editor están al final del desplegable, en «Productos de la tienda». Su coste se calcula con la receta de ese producto.</li><li><b>Coste y margen</b>: con los precios de los pedidos recibidos (o de la lista del proveedor), cada producto con receta muestra cuánto cuesta fabricarlo, su precio de venta y el margen.</li><li><b>BALANCE DE FABRICACIÓN</b> (Dirección → Almacén y fabricación): cada producto fabricado con sus unidades, lo que cuesta fabricar uno, su precio de venta, lo que ganas o pierdes por unidad y el total, aunque aún no se haya vendido. Arriba eliges <b>esta semana</b>, <b>este mes</b>, <b>el mes pasado</b> o <b>todo</b>. Abajo salen las pérdidas, las ganancias y el balance total, y cada fabricación con su fecha. <b>⧉ COPIAR</b> copia el informe redactado por productos y <b>ENVIAR A DISCORD</b> lo manda al canal «Balance de fabricación» (ponle su enlace en Dirección → Discord). Además, <b>cada vez que se fabrica</b> algo (1, 20 o 50 unidades) se publica solo en ese canal el balance de esa fabricación, y sale un aviso con lo que ganas o pierdes. Se calcula con las recetas y los precios actuales: si corriges una receta o un precio, el historial se recalcula.</li><li><b>Corregir un coste que está mal</b>: en MÁRGENES DE CADA PRODUCTO, abre <b>¿De dónde sale el coste?</b> debajo del producto. Ves cada material de la receta con su cantidad, su precio y de dónde sale (último pedido recibido, lista del proveedor o precio corregido). Si la receta está mal, pulsa <b>✎ CORREGIR RECETA</b>. Si es el precio de un proveedor, pulsa <b>✎ PRECIOS DE…</b>: se abre la ficha de ese proveedor con el cursor en el precio de ese material; lo cambias y pulsas GUARDAR CAMBIOS. Al corregir un precio en la ficha del proveedor, el coste pasa a usar el precio corregido aunque el último pedido se recibiera con el precio viejo. El aviso de margen se quita solo en cuanto el coste es correcto.</li><li><b>Márgenes de cada producto</b> (arriba en FABRICACIÓN): todos los productos con receta, del que menos deja al que más, con el margen en dólares y en %: en rojo si se vende por debajo del coste, en dorado si deja menos del 15 %. Si comprando los materiales al proveedor más barato costaría menos, te dice a quién y cuánto ganarías de más.</li><li><b>Avisos de margen</b> (en la consola de Dirección): si un producto pasa a costar más de fabricar porque ha subido algún material (sale durante 7 días), si deja menos del 10 % o si se vende por debajo de su coste.</li><li><b>¿Qué me falta?</b>: dentro de la receta, escribe cuántas quieres fabricar y te dice qué materiales faltan. Con <b>PREPARAR PEDIDO A…</b> te deja el pedido al proveedor que los vende ya rellenado, para revisarlo y emitirlo.</li><li><b>Almacén y mínimos de materiales</b>: arriba en FABRICACIÓN puedes fijar el mínimo de cada material; los que bajen de él salen como avisos.</li><li>El buscador encuentra productos y recetas.</li></ul>`],
+<ul><li><b>↶ Deshacer última fabricación</b>: durante 10 minutos aparece arriba en STOCK; quita esas unidades y devuelve los materiales (si ya se vendieron, no se puede).</li><li><b>Hierro y carbón</b>: en el almacén y en las recetas se llaman <b>Hierro</b> y <b>Carbón</b>. A la mina se le piden como «Mena de hierro» y «Mena de carbón»: al recibir el pedido entran solos en el almacén como Hierro y Carbón, y para costes y comparar precios cuentan como lo mismo.</li><li><b>Recetas con otro producto</b>: algunas recetas llevan un producto de la tienda ya fabricado (la munición y el aceite llevan <b>pólvora</b>, el arco mejorado lleva un <b>arco</b>, el lazo reforzado un <b>lazo</b>). Al fabricarlas se gastan del stock de productos, no del almacén, y en la receta salen como «(producto)». En el editor están al final del desplegable, en «Productos de la tienda». Su coste se calcula con la receta de ese producto.</li><li><b>Coste y margen</b>: con los precios de los pedidos recibidos (o de la lista del proveedor), cada producto con receta muestra cuánto cuesta fabricarlo, su precio de venta y el margen.</li><li><b>BALANCE DE FABRICACIÓN</b> (Dirección → Almacén y fabricación): cada producto fabricado con sus unidades, lo que cuesta fabricar uno, su precio de venta, lo que ganas o pierdes por unidad y el total, aunque aún no se haya vendido. Arriba eliges <b>esta semana</b>, <b>este mes</b>, <b>el mes pasado</b> o <b>todo</b>. Abajo salen las pérdidas, las ganancias y el balance total, y cada fabricación con su fecha. <b>⧉ COPIAR</b> copia el informe redactado por productos y <b>ENVIAR A DISCORD</b> lo manda al canal «Balance de fabricación» (ponle su enlace en Dirección → Discord). Además, <b>cada vez que se fabrica</b> algo (1, 20 o 50 unidades) se publica solo en ese canal el balance de esa fabricación, y sale un aviso con lo que ganas o pierdes. En Discord sale como una tarjeta con la franja <b>roja</b> si pierdes y <b>verde</b> si ganas, cada producto con sus materiales (cantidad, precio y total) y las cifras en rojo (−) o en verde (+). En la web, debajo de cada producto, <b>¿De dónde sale el coste?</b> te dice de dónde sale el precio de cada material (último pedido, lista del proveedor o precio corregido). Se calcula con las recetas y los precios actuales: si corriges una receta o un precio, el historial se recalcula.</li><li><b>Corregir un coste que está mal</b>: en MÁRGENES DE CADA PRODUCTO, abre <b>¿De dónde sale el coste?</b> debajo del producto. Ves cada material de la receta con su cantidad, su precio y de dónde sale (último pedido recibido, lista del proveedor o precio corregido). Si la receta está mal, pulsa <b>✎ CORREGIR RECETA</b>. Si es el precio de un proveedor, pulsa <b>✎ PRECIOS DE…</b>: se abre la ficha de ese proveedor con el cursor en el precio de ese material; lo cambias y pulsas GUARDAR CAMBIOS. Al corregir un precio en la ficha del proveedor, el coste pasa a usar el precio corregido aunque el último pedido se recibiera con el precio viejo. El aviso de margen se quita solo en cuanto el coste es correcto.</li><li><b>Márgenes de cada producto</b> (arriba en FABRICACIÓN): todos los productos con receta, del que menos deja al que más, con el margen en dólares y en %: en rojo si se vende por debajo del coste, en dorado si deja menos del 15 %. Si comprando los materiales al proveedor más barato costaría menos, te dice a quién y cuánto ganarías de más.</li><li><b>Avisos de margen</b> (en la consola de Dirección): si un producto pasa a costar más de fabricar porque ha subido algún material (sale durante 7 días), si deja menos del 10 % o si se vende por debajo de su coste.</li><li><b>¿Qué me falta?</b>: dentro de la receta, escribe cuántas quieres fabricar y te dice qué materiales faltan. Con <b>PREPARAR PEDIDO A…</b> te deja el pedido al proveedor que los vende ya rellenado, para revisarlo y emitirlo.</li><li><b>Almacén y mínimos de materiales</b>: arriba en FABRICACIÓN puedes fijar el mínimo de cada material; los que bajen de él salen como avisos.</li><li>El buscador encuentra productos y recetas.</li></ul>`],
 ['Proveedores y pedidos <span class="tag boss">SOLO JEFE</span>',`<ul><li><b>Dirección → PROVEEDORES</b>: crea cada proveedor con el <b>nombre de la empresa</b>, su <b>tipo de negocio</b> (herrería, mina, tala… elige uno de la lista o escribe uno nuevo y quedará guardado para los siguientes), su <b>telegrama</b> y su <b>lista de productos con el precio por unidad</b>. Al escribir un producto aparece otro hueco. Puedes ampliar o cambiar la lista cuando quieras con EDITAR.</li><li><b>FICHA</b>: cada proveedor tiene su ficha con forma de <b>contrato de suministro</b>: el nombre en la cabecera, su telegrama (con ⧉ COPIAR), la ubicación y la lista de precios. Desde ahí puedes pulsar <b>HACER PEDIDO</b> para ir directamente a pedirle con él ya elegido.</li><li><b>Corregir precios</b>: si un proveedor te da precios nuevos, o alguno estaba mal, pulsa <b>✎ EDITAR</b> en su ficha, cambia el precio y pulsa GUARDAR CAMBIOS. Los costes de fabricación pasan a usar el precio nuevo (aunque el último pedido se recibiera con el viejo) y la ficha de Discord se actualiza sola.</li><li><b>Datos que faltan</b>: en la FICHA, al lado del tipo de negocio, el telegrama o la ubicación vacíos sale <b>✚ AÑADIR</b>, que te lleva a EDITAR con el cursor puesto en ese dato.</li><li><b>OTROS DATOS</b>: para lo que no tiene casilla (el dueño, el encargado, el horario, otro telegrama, el pedido mínimo, la forma de pago…). Escribe el nombre del dato y su valor; hasta 12. Salen en la ficha con su ⧉ COPIAR y en el mensaje de Discord. En la FICHA, <b>✚ AÑADIR OTRO DATO</b> te lleva directo. Si pegas un mensaje con líneas como «Dueño: …» o «Pedido mínimo: …», también se apuntan solas.</li><li><b>Ubicación</b> (opcional): el pueblo donde está el proveedor (Annesburg, Rhodes…). Elige uno de la lista o escribe otro.</li><li><b>Comparar precios</b>: si dos o más proveedores venden lo mismo (por ejemplo «Hierro»), al final de PROVEEDORES sale <b>COMPARAR PRECIOS</b> con todos ordenados del más barato al más caro. Al hacer un pedido, cada producto lleva una etiqueta: <b>✓ el más barato</b> en verde, o en dorado el proveedor que lo vende más barato y a qué precio. Para que los compare, el producto tiene que llamarse igual en los dos.</li><li><b>📋 PEGAR MENSAJE</b> (opcional): en lo alto de la ficha del proveedor, pega el mensaje que te manda (por ejemplo «Mina Rock Roy, de Annesburg. Telegrama MRR-21. Lista de precios: oro 5$, hierro 1,20$, carbón 0,80$, sal 0,50$, azufre 2$») y pulsa <b>RELLENAR LA FICHA</b>. La web pone sola el nombre de la empresa, el telegrama, el tipo de negocio (mina, herrería, aserradero…) y cada producto con su precio. Si un producto viene sin precio, lo deja para que lo escribas tú. Si el proveedor ya estaba en la lista, abre su ficha y actualiza los precios. Revísalo y pulsa CREAR NUEVO PROVEEDOR o GUARDAR CAMBIOS. La forma de siempre, a mano, sigue igual.</li><li>La ficha del proveedor con su lista de precios se publica en el canal de Discord «Proveedores» y <b>se actualiza en el mismo mensaje</b> cada vez que la cambias.</li><li><b>COPIAR TELEGRAMA</b> (en REALIZAR NUEVO PEDIDO, y COPIAR PEDIDO en la ventana PEDIDOS): copia el pedido listo para mandarlo al proveedor, con cada material, cantidad, precio, total y si está pagado.</li><li><b>Dirección → REALIZAR NUEVO PEDIDO</b>: elige el proveedor y te sale <b>su lista de productos y precios</b>. Igual que en la calculadora, usa <b>−</b> y <b>+</b> o escribe la cantidad: el subtotal y el total se calculan solos. Si necesitas algo que no está en su lista, añádelo en «Otros materiales». Indica si ya está <b>pagado</b> y pulsa <b>EMITIR PEDIDO</b>: se publica en el canal «Pedidos» con cada producto, el precio por unidad, el total de cada línea y el total, y aparece a todos los empleados en PEDIDOS.</li><li>Cambiar los precios de un proveedor no cambia los pedidos ya emitidos.</li><li>Al emitir un pedido, en Discord sale también como <b>imagen de albarán</b>.</li><li>Con muchos proveedores aparece un buscador (por nombre, tipo o producto).</li><li><b>Dirección → REGISTRO DE PEDIDOS</b>: pedidos completados, por día o por semana, con descarga y <b>ENVIAR A DISCORD</b>.</li><li>Para <b>cancelar</b> un pedido pendiente, ábrelo en PEDIDOS estando en Modo Jefe y pulsa CANCELAR PEDIDO. Si mientras tanto otro empleado ya lo había completado, no se cancela y se te avisa.</li><li>Al emitir, completar o cancelar un pedido se avisa solo al canal de Discord «Pedidos».</li></ul>`],
 ['Empleados y contratos <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → EMPLEADOS</b>. Para incorporar a alguien rellena todos los datos:</p>
 <ul><li><b>Nombre</b> del empleado.</li><li><b>Puesto</b>: Jefe, Gerente, Armero experto, Armero o Aprendiz de armero.</li><li><b>Sueldo semanal</b> en dólares (por ejemplo 20 o 40).</li><li><b>Horas semanales</b>: viene puesto 10; cámbialo si hace falta.</li><li><b>Fecha de inicio</b> del contrato. El <b>periodo de prueba</b> es de una semana desde ese día y se calcula solo.</li></ul>
 <p>Al pulsar <b>ACEPTAR Y CREAR CONTRATO</b> el empleado aparece en todas las listas (ventas, fichaje, pedidos…) y se publica en el canal de Discord «Empleados» la <b>imagen del contrato</b> con todos sus datos.</p>
-<ul><li><b>✎ EDITAR</b>: cambia sus datos. Marca «Publicar el contrato actualizado» si quieres que salga otra vez en Discord. Los empleados que ya tenías aparecen con «Faltan los datos del contrato» hasta que los completes.</li><li><b>📜 CONTRATO</b>: descarga la imagen del contrato.</li><li><b>🗑 PAPELERA</b>: lo quita de las listas, sin borrar sus ventas ni fichajes.</li><li>Los sueldos se pagan en <b>Dirección → SUELDOS</b> (mira la sección «Sueldos» de este tutorial).</li><li>Las fotos de los empleados se guardan más ligeras y cada móvil solo baja las que han cambiado, así la entrada carga las tarjetas antes.</li><li>Cada empleado muestra si está <b>conectado ahora</b> o cuándo se le vio por última vez, y si ya ha creado su contraseña.</li><li><b>🔑 RESET CONTRASEÑA</b>: borra la contraseña del empleado; la próxima vez que entre tendrá que crear una nueva. Nadie puede ver las contraseñas, ni siquiera la dirección.</li><li><b>📷 FOTO</b>: sube una foto del personaje (por ejemplo una captura del juego). Sale en el óvalo de su tarjeta de la entrada, en tono sepia, como un retrato antiguo. Sin foto, salen sus iniciales.</li><li><b>⏏ EXPULSAR</b>: cierra su sesión en todos sus dispositivos (por ejemplo, si se le ha quedado pillada) y, si estaba fichado, le ficha la salida en ese momento (sale en Discord como «fichada por la dirección al expulsarle»). Tendrá que volver a elegir su ficha. Los jefes también se pueden expulsar entre sí; a uno mismo, no.</li><li><b>⬆ ASCENSO</b>: sube al empleado al siguiente puesto con su sueldo: Aprendiz de armero ($20) → Armero ($25) → Armero experto ($30) → Gerente ($40, el tope). Se publica el contrato nuevo en Discord, sin periodo de prueba. El día del ascenso cobra todavía el sueldo antiguo y el nuevo cuenta desde el día siguiente.</li><li>Al crear un empleado, el sueldo se rellena solo según el puesto (Jefe $50, Gerente $40, Armero experto $30, Armero $25, Aprendiz $20). Puedes cambiarlo.</li><li>En <b>Registros semanales → Fichaje</b> ves las horas fichadas frente a las contratadas («8 h de 10 h»).</li><li>En el resumen de Dirección te avisa cuando termina el periodo de prueba de alguien.</li></ul>`],
+<ul><li><b>Trabajador fijo</b>: cuando termina su semana de prueba y sigue en la lista, la web le pasa sola a <b>FIJO</b>: se actualiza su contrato (tipo de contrato «Fijo», prueba «Superado») y se publica en el canal «Empleados» de Discord. Su puesto y su sueldo no cambian. A partir de ahí, el contrato solo se vuelve a publicar con un <b>ascenso</b>.</li><li><b>✎ EDITAR</b>: cambia sus datos. Marca «Publicar el contrato actualizado» si quieres que salga otra vez en Discord. Los empleados que ya tenías aparecen con «Faltan los datos del contrato» hasta que los completes.</li><li><b>📜 CONTRATO</b>: descarga la imagen del contrato.</li><li><b>🗑 PAPELERA</b>: lo quita de las listas, sin borrar sus ventas ni fichajes.</li><li>Los sueldos se pagan en <b>Dirección → SUELDOS</b> (mira la sección «Sueldos» de este tutorial).</li><li>Las fotos de los empleados se guardan más ligeras y cada móvil solo baja las que han cambiado, así la entrada carga las tarjetas antes.</li><li>Cada empleado muestra si está <b>conectado ahora</b> o cuándo se le vio por última vez, y si ya ha creado su contraseña.</li><li><b>🔑 RESET CONTRASEÑA</b>: borra la contraseña del empleado; la próxima vez que entre tendrá que crear una nueva. Nadie puede ver las contraseñas, ni siquiera la dirección.</li><li><b>📷 FOTO</b>: sube una foto del personaje (por ejemplo una captura del juego). Sale en el óvalo de su tarjeta de la entrada, en tono sepia, como un retrato antiguo. Sin foto, salen sus iniciales.</li><li><b>⏏ EXPULSAR</b>: cierra su sesión en todos sus dispositivos (por ejemplo, si se le ha quedado pillada) y, si estaba fichado, le ficha la salida en ese momento (sale en Discord como «fichada por la dirección al expulsarle»). Tendrá que volver a elegir su ficha. Los jefes también se pueden expulsar entre sí; a uno mismo, no.</li><li><b>⬆ ASCENSO</b>: sube al empleado al siguiente puesto con su sueldo: Aprendiz de armero ($20) → Armero ($25) → Armero experto ($30) → Gerente ($40, el tope). Se publica el contrato nuevo en Discord, sin periodo de prueba. El día del ascenso cobra todavía el sueldo antiguo y el nuevo cuenta desde el día siguiente.</li><li>Al crear un empleado, el sueldo se rellena solo según el puesto (Jefe $50, Gerente $40, Armero experto $30, Armero $25, Aprendiz $20). Puedes cambiarlo.</li><li>En <b>Registros semanales → Fichaje</b> ves las horas fichadas frente a las contratadas («8 h de 10 h»).</li><li>En el resumen de Dirección te avisa cuando termina el periodo de prueba de alguien.</li></ul>`],
 ['Eventos y sorteos',`<p>Cuando la dirección organiza un <b>sorteo</b>, sale un <b>cartel</b> en la pantalla principal («EVENTO DE ESTA SEMANA»): el arma que se sortea, desde cuánto hay que gastar para participar, cuándo termina y cuántos números se han repartido. Tócalo para ver todos los detalles.</p>
 <ul><li><b>Cada compra da un número</b> al cliente (si compra 3 veces, tiene 3 números). Solo cuentan las compras desde el mínimo que haya puesto la dirección.</li><li>Mientras hay sorteo, en la venta sale la casilla <b>Telegrama de contacto</b> y es <b>obligatoria</b> (el botón te dirá «Falta el telegrama (sorteo)»). Si el cliente ya tiene ficha, se rellena sola. Es para poder avisarle si gana.</li><li>El número sale en el <b>ticket</b> («Sorteo: n.º 12»), en el mensaje de Discord de la venta y en la <b>ficha del cliente</b> («NÚMEROS DE SORTEO»).</li><li>Los <b>encargos</b> cuentan cuando se entregan y se cobran (al pulsar FINALIZAR ENCARGO), no al crearlos.</li><li>Si se anula una venta, su número deja de participar.</li><li>Al llegar la hora de fin, la web <b>hace el sorteo sola</b> (si nadie tiene la web abierta en ese momento, se hace en cuanto alguien la abra; se hace una sola vez y todos ven el mismo ganador). El cartel cambia a <b>¡YA HAY GANADOR!</b>: tócalo para ver el ganador, su número y su telegrama.</li><li><b>📨 COPIAR TELEGRAMA PARA EL GANADOR</b> copia el mensaje ya escrito y firmado por Vincent Harrington (telegrama SD8112) para pegarlo y avisarle.</li></ul>`],
 ['Eventos: crear y gestionar <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → EVENTOS</b>. Para crear un sorteo:</p>
 <ol><li>Elige el <b>arma</b> que se sortea (ves cuántas hay en stock).</li><li>El día en que <b>empieza</b> (si es hoy, empieza en ese momento) y el día y la <b>hora en que termina</b> (hora española).</li><li>El <b>gasto mínimo</b> para participar: sin mínimo, desde $1, $2, $5, $10 u otra cantidad. Sale en el cartel y en el anuncio.</li><li>Una nota si quieres, y <b>CREAR SORTEO</b>. Se anuncia en el canal de Discord <b>«Eventos»</b> (ponle su enlace en Dirección → Discord).</li></ol>
 <ul><li><b>✕ CANCELAR EVENTO</b>: en la ventana del evento (botón ABRIR o tocando el cartel), mientras no haya terminado. No se hace el sorteo, los números dejan de valer y se avisa en Discord.</li><li>Al terminar, el ganador se publica solo en Discord.</li><li><b>✓ ARMA ENTREGADA AL GANADOR</b>: cuando la recoja. Descuenta 1 unidad del arma del stock y apunta un <b>gasto</b> («Premio del sorteo») por el valor que pongas (viene puesto su precio de venta). No cuenta como venta.</li><li><b>Devolución de Administración</b>: cuando Administración te devuelva el dinero del premio, pulsa <b>SÍ, ADMINISTRACIÓN LO HA DEVUELTO</b>: entra en caja como una venta de «Administración» por esa cantidad. Mientras falte, sale un aviso en la revisión de Dirección.</li><li>En la lista de EVENTOS ves cada sorteo con su estado: en marcha, sorteando, falta entregar el arma, falta la devolución, entregado o cancelado.</li></ul>`],
 ['Clientes <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → CLIENTES → AÑADIR CLIENTE</b>: escribe su <b>nombre</b>, el tipo (particular o empresa) y su <b>telegrama</b> (obligatorio). El <b>número de identificación</b>, los <b>números de serie</b> y el <b>arma</b> son opcionales.</p>
-<ul><li><b>Armas vendidas · números de serie</b>: no es obligatorio rellenarlo al crearlo. Al escribir un número aparece otro hueco, hasta <b>20 por cliente</b>. Al lado puedes elegir qué arma es (opcional).</li><li><b>FICHA</b>: se abre como un <b>expediente</b> de archivo con su hoja sujeta por un clip. Además de sus datos, muestra su <b>historial de compras</b>: el total que se ha gastado, cuántas compras lleva, cuándo fue la última y cada compra con la fecha, lo que se llevó, quién le atendió y el ticket. Las anuladas salen tachadas y no cuentan. Se apunta solo al cobrar una venta con su nombre de cliente.</li><li><b>FICHA</b>: muestra todos sus datos. Al lado del número de identificación, del telegrama, de cada número de serie y de cada arma hay un botón <b>⧉ COPIAR</b> que lo copia al portapapeles para pegarlo donde quieras.</li><li>Con <b>EDITAR</b> puedes añadir más números de serie, cambiar datos o ponerle <b>precios especiales</b>.</li><li><b>Datos que faltan</b>: en la FICHA, al lado de cada dato vacío (telegrama, n.º de identificación) sale <b>✚ AÑADIR</b>: te lleva a EDITAR con el cursor puesto en ese dato. Así completas la ficha cuando el cliente te lo dé, aunque no lo tuvieras al principio. Las fichas que se crearon solas en una venta se pueden guardar aunque aún no tengan telegrama.</li><li><b>OTROS DATOS</b>: para todo lo que no tiene casilla (el dueño, su empresa, la dirección, el horario, otro telegrama…). Escribe el nombre del dato y su valor; al rellenar uno aparece otro hueco, hasta 12. Salen en la ficha con su ⧉ COPIAR y en Discord. En la FICHA, <b>✚ AÑADIR OTRO DATO</b> te lleva directo. Si pegas un mensaje con líneas como «Dueño: Pedro» o «Horario: de 9 a 5», también se apuntan solas.</li><li><b>📋 PEGAR MENSAJE</b> (opcional): dentro de la ficha, o con <b>📋 DESDE UN MENSAJE</b> en la lista, pega el mensaje o telegrama del cliente tal cual te llega (por ejemplo «Pascual Martínez, telegrama 4521, identificación 88231. Armas: Lemat n.º 55123, Schofield n.º 77810») y pulsa <b>RELLENAR LA FICHA</b>. La web pone sola el nombre, el telegrama, el número de identificación y los números de serie con su arma, y te dice qué ha rellenado. Revísalo y pulsa GUARDAR CLIENTE. Si el cliente ya existía, añade lo nuevo a su ficha. Puedes seguir rellenándola a mano como siempre.</li><li>Al crearlo se publica su ficha en el canal de Discord «Clientes» (con identificación, armas y números de serie) y, cada vez que le añades algo, <b>se actualiza ese mismo mensaje</b>.</li><li>Los clientes que se guardan solos al vender aparecen en la lista; su ficha sale en Discord la primera vez que los editas o que se les apunta un número de serie.</li><li>Los números de serie también se pueden apuntar <b>al vender</b>: al finalizar una venta con armas sale una ventana para escribirlos.</li><li>La ficha se ve como una <b>tarjeta de registro</b> de papel.</li></ul>`],
+<ul><li><b>Armas vendidas · números de serie</b>: no es obligatorio rellenarlo al crearlo. Al escribir un número aparece otro hueco, hasta <b>20 por cliente</b>. Al lado puedes elegir qué arma es (opcional).</li><li><b>FICHA</b>: se abre como un <b>expediente</b> de archivo con su hoja sujeta por un clip. Además de sus datos, muestra su <b>historial de compras</b>: el total que se ha gastado, cuántas compras lleva, cuándo fue la última y cada compra con la fecha, lo que se llevó, quién le atendió y el ticket. Las anuladas salen tachadas y no cuentan. Se apunta solo al cobrar una venta con su nombre de cliente.</li><li><b>FICHA</b>: muestra todos sus datos. Al lado del número de identificación, del telegrama, de cada número de serie y de cada arma hay un botón <b>⧉ COPIAR</b> que lo copia al portapapeles para pegarlo donde quieras.</li><li>Con <b>EDITAR</b> puedes añadir más números de serie, cambiar datos o ponerle <b>precios especiales</b>.</li><li><b>Solo armas de fuego</b>: en los números de serie solo se pueden elegir revólveres, pistolas, repetidoras, rifles y escopetas. Al lado de cada número está la casilla <b>Registrada IC (dentro del juego)</b>. En la FICHA, cada arma dice si está <b>✓ Registrada</b> o <b>⚠ SIN REGISTRAR</b> (en rojo), con el botón <b>✓ YA REGISTRADA</b> para marcarla. Las que ya estaban apuntadas antes salen como «Sin marcar».</li><li><b>Datos que faltan</b>: en la FICHA, al lado de cada dato vacío (telegrama, n.º de identificación) sale <b>✚ AÑADIR</b>: te lleva a EDITAR con el cursor puesto en ese dato. Así completas la ficha cuando el cliente te lo dé, aunque no lo tuvieras al principio. Las fichas que se crearon solas en una venta se pueden guardar aunque aún no tengan telegrama.</li><li><b>OTROS DATOS</b>: para todo lo que no tiene casilla (el dueño, su empresa, la dirección, el horario, otro telegrama…). Escribe el nombre del dato y su valor; al rellenar uno aparece otro hueco, hasta 12. Salen en la ficha con su ⧉ COPIAR y en Discord. En la FICHA, <b>✚ AÑADIR OTRO DATO</b> te lleva directo. Si pegas un mensaje con líneas como «Dueño: Pedro» o «Horario: de 9 a 5», también se apuntan solas.</li><li><b>📋 PEGAR MENSAJE</b> (opcional): dentro de la ficha, o con <b>📋 DESDE UN MENSAJE</b> en la lista, pega el mensaje o telegrama del cliente tal cual te llega (por ejemplo «Pascual Martínez, telegrama 4521, identificación 88231. Armas: Lemat n.º 55123, Schofield n.º 77810») y pulsa <b>RELLENAR LA FICHA</b>. La web pone sola el nombre, el telegrama, el número de identificación y los números de serie con su arma, y te dice qué ha rellenado. Revísalo y pulsa GUARDAR CLIENTE. Si el cliente ya existía, añade lo nuevo a su ficha. Puedes seguir rellenándola a mano como siempre.</li><li>Al crearlo se publica su ficha en el canal de Discord «Clientes» (con identificación, armas y números de serie) y, cada vez que le añades algo, <b>se actualiza ese mismo mensaje</b>.</li><li>Los clientes que se guardan solos al vender aparecen en la lista; su ficha sale en Discord la primera vez que los editas o que se les apunta un número de serie.</li><li>Los números de serie también se pueden apuntar <b>al vender</b>: al finalizar una venta con armas sale una ventana para escribirlos.</li><li>La ficha se ve como una <b>tarjeta de registro</b> de papel.</li></ul>`],
 ['Estadísticas <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → Ventas y caja → ESTADÍSTICAS</b>. Elige <b>esta semana</b>, <b>la semana pasada</b>, <b>este mes</b> o <b>el mes pasado</b>:</p>
 <ul><li><b>Resumen mensual a Discord</b>: el día 1 de cada mes se publica solo el resumen del mes anterior (ventas, gastos, beneficio, mejor vendedor, lo más vendido, mejor cliente y pedidos, comparado con el mes anterior) en el canal «Resumen mensual» o en el general. Con ESTE MES o MES PASADO también puedes enviarlo a mano.</li><li><b>Resumen</b>: lo cobrado, las operaciones, el ticket medio y las unidades, con una flecha ▲▼ que compara con el periodo anterior (si el periodo aún no ha terminado, se compara hasta el mismo día).</li><li><b>Lo más vendido</b>: los 10 productos con más unidades.</li><li><b>Ventas de cada empleado</b>, <b>horas con más ventas</b> (y cuál es la más fuerte), <b>días de la semana</b> y los <b>mejores clientes</b>.</li><li>Las semanas van de viernes a jueves, como las cuentas.</li></ul>`],
 ['Sueldos',`<p>Los sueldos van por <b>semanas de lunes a domingo</b> y se pagan <b>el domingo</b>. Están en <b>Dirección → Ventas y caja → SUELDOS</b>.</p>
-<ul><li>Cada empleado con contrato sale con las <b>horas que ha echado</b> esa semana y lo que le toca cobrar, calculado sobre el <b>sueldo de su contrato</b>.</li><li>Si ha echado todas sus horas cobra el <b>sueldo íntegro</b>.</li><li>Si le faltan horas se le <b>descuenta lo proporcional</b>: sueldo ÷ horas de contrato × horas que faltan. Ej.: sueldo de $50 por 10 h y ha echado 7 h → $50 ÷ 10 = $5 la hora × 3 h = −$15 → cobra <b>$35</b>. Se cuenta también por minutos.</li><li>Si ha echado <b>de más</b>, cobra su sueldo íntegro y se muestra aparte, por ejemplo «+2 h extra». Las horas extra no se pagan solas: tú decides.</li><li>Las horas cuentan <b>hasta que pulsas PAGAR</b>. Lo que se fiche después ese domingo pasa a la semana siguiente.</li><li><b>Ascenso a mitad de semana</b>: cada día se cobra con el sueldo que tenía ese día. El día del ascenso, el antiguo; desde el día siguiente, el nuevo. Ej.: armero ($25) que asciende el martes a armero experto ($30): lunes y martes 2 × $25 ÷ 7 + de miércoles a domingo 5 × $30 ÷ 7 = <b>$28.57</b>.</li><li>Ausencias: con 3 o 4 días esa semana solo se le exigen la mitad de sus horas; con más de 4 días queda exento y cobra el sueldo íntegro.</li><li>Pulsa <b>PAGAR</b> en cada empleado: se apunta en <b>GASTOS</b> (tipo Sueldos) con la fecha del pago, así que entra en la semana de cuentas (viernes a jueves) en curso, y se sincroniza con todos los dispositivos. Nada se paga solo: siempre tienes que pulsar tú.</li><li>No se puede pagar dos veces el mismo sueldo, ni desde dos dispositivos. Si te equivocas, borra ese gasto en GASTOS y podrás pagarlo de nuevo.</li><li>Con ◂ ▸ ves semanas anteriores y la <b>semana en curso</b> (provisional, todavía no se puede pagar).</li></ul>
+<ul><li>Cada empleado con contrato sale con las <b>horas que ha echado</b> esa semana y lo que le toca cobrar, calculado sobre el <b>sueldo de su contrato</b>.</li><li>Si ha echado todas sus horas cobra el <b>sueldo íntegro</b>.</li><li>Si le faltan horas se le <b>descuenta lo proporcional</b>: sueldo ÷ horas de contrato × horas que faltan. Ej.: sueldo de $50 por 10 h y ha echado 7 h → $50 ÷ 10 = $5 la hora × 3 h = −$15 → cobra <b>$35</b>. Se cuenta también por minutos.</li><li><b>Horas extra</b>: si ha echado <b>de más</b>, cada hora extra se le paga al precio de su hora ordinaria (sueldo ÷ horas de contrato) y se <b>suma al sueldo</b>. Ej.: jefe con $50 por 10 h ($5 la hora) que echa 12 h → $50 + 2 h × $5 = <b>$60</b>. Se cuenta también por minutos (media hora extra = $2.50). Al ir a PAGAR ya sale la suma, y en GASTOS y en Discord se ve aparte lo de las horas extra.</li><li>Las horas cuentan <b>hasta que pulsas PAGAR</b>. Lo que se fiche después ese domingo pasa a la semana siguiente.</li><li><b>Ascenso a mitad de semana</b>: cada día se cobra con el sueldo que tenía ese día. El día del ascenso, el antiguo; desde el día siguiente, el nuevo. Ej.: armero ($25) que asciende el martes a armero experto ($30): lunes y martes 2 × $25 ÷ 7 + de miércoles a domingo 5 × $30 ÷ 7 = <b>$28.57</b>.</li><li>Ausencias: con 3 o 4 días esa semana solo se le exigen la mitad de sus horas; con más de 4 días queda exento y cobra el sueldo íntegro.</li><li>Pulsa <b>PAGAR</b> en cada empleado: se apunta en <b>GASTOS</b> (tipo Sueldos) con la fecha del pago, así que entra en la semana de cuentas (viernes a jueves) en curso, y se sincroniza con todos los dispositivos. Nada se paga solo: siempre tienes que pulsar tú.</li><li>No se puede pagar dos veces el mismo sueldo, ni desde dos dispositivos. Si te equivocas, borra ese gasto en GASTOS y podrás pagarlo de nuevo.</li><li>Con ◂ ▸ ves semanas anteriores y la <b>semana en curso</b> (provisional, todavía no se puede pagar).</li></ul>
 <p><b>Placa de la pantalla principal</b> (la ven todos):</p>
 <ul><li><b>DÍA DE PAGO</b> en dorado desde el domingo, mientras quede algún sueldo por pagar, con «3 de 5 sueldos pagados». Si no se paga el domingo, sigue saliendo hasta que se pague.</li><li>Al pagar el último, cambia sola a <b>SUELDOS PAGADOS</b> en verde en todos los dispositivos, y se queda hasta el jueves.</li><li>Cada empleado ve también <b>su propio sueldo</b> y si está pagado. El de los demás solo lo ves tú.</li><li>Tócala para ir directamente a SUELDOS.</li></ul>
 <p><b>Discord</b>: al pagar el último sueldo de la semana se publica <b>un solo mensaje</b> en el canal «Sueldos» con todos los empleados: horas echadas, sueldo, si es íntegro o cuánto se le ha descontado y lo pagado.</p>`],
@@ -4966,7 +5003,7 @@ async function cloudPoll(force){
   }
   if(cloud.outbox.length)cloudFlushOutbox();
   cloud.last=Date.now();
-  autoWeekly();autoMonthly();recetasBase();try{evTick()}catch(e){}renderEmpWeek();renderPayPlate();renderGoal();
+  autoWeekly();autoMonthly();recetasBase();try{autoFijos()}catch(e){}try{evTick()}catch(e){}renderEmpWeek();renderPayPlate();renderGoal();
  }catch(e){setCloudState(false)}
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){cloudPoll();rtConnect()}});
@@ -5810,7 +5847,7 @@ evPlates.addEventListener('click',e=>{const b=e.target.closest('[data-evp]');if(
 /* Dirección → EVENTOS: crear un sorteo y ver todos */
 function evNewDraft(){const t=todayNum();return {arma:'',ini:isoToday(),fin:(()=>{const d=new Date((t+7)*86400000);return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`})(),hora:'22:00',min:'0',otro:'',nota:''}}
 function renderModEventos(){
- if(!evDraft)evDraft=evNewDraft();const d=evDraft, W=weaponNames();
+ if(!evDraft)evDraft=evNewDraft();const d=evDraft, W=allWeaponNames();
  const mins=[['0','Sin mínimo: cualquier compra'],['1','Desde $1'],['2','Desde $2'],['5','Desde $5'],['10','Desde $10'],['otro','Otra cantidad…']];
  const L=eventos.slice().sort((a,b)=>(b.created||0)-(a.created||0)), t=Date.now();
  return `<p class="bk-note">Crea un <b>sorteo de un arma</b>. Mientras dure, cada compra (desde el mínimo que elijas) da un número al cliente. Al llegar la hora de fin, la web sortea sola, sale el ganador en el cartel de la pantalla principal y se publica en Discord (canal «Eventos»).</p>
@@ -5859,17 +5896,24 @@ function evClientHTML(c){
 }
 setInterval(()=>{if(!document.hidden)evTick()},30000);
 setTimeout(()=>{try{evSync()}catch(e){}},0);
+setTimeout(()=>{try{icPaint()}catch(e){}},0);
+document.getElementById('icPlate').addEventListener('click',()=>{briefWho='';libroView='brief';renderLibro();openModal(libroModal);libroModal.scrollTop=0});
 
 /* ===== BALANCE DE FABRICACIÓN: lo que cuesta fabricar frente al precio de venta =====
    Se calcula con las recetas y los precios de materiales actuales (si se corrige una receta o un precio, se recalcula). */
 let fbPer='mes';
 function fbLine(n,q){const c=productCost(n), p=productPrice(n);if(c===null||c===undefined)return {n:n,q:q,c:null,p:p,d:null,tc:null,tp:p*q,res:null};return {n:n,q:q,c:c,p:p,d:p-c,tc:c*q,tp:p*q,res:(p-c)*q}}
+function fbMats(n){return recipeOf(n).map(x=>{
+ if(isProdIng(x.m)){const c=productCost(x.m);return {q:x.q,m:x.m+' (producto)',c:(c===null||c===undefined)?null:c,src:'coste de su receta'}}
+ const i=matCostInfo(x.m);return {q:x.q,m:x.m,c:i?i.c:null,src:!i?'sin precio':i.src==='pedido'?'último pedido'+(i.code?' '+i.code:'')+' de '+i.prov:i.src==='corregido'?'precio corregido de '+i.prov:'lista de '+i.prov};
+})}
 function fbSum(lines){let tot=0,lost=0,won=0,miss=0;lines.forEach(x=>{if(x.res===null){miss++;return}tot+=x.res;if(x.res<0)lost+=-x.res;else won+=x.res});return {tot:tot,lost:lost,won:won,miss:miss}}
 function fbText(title,lines,head){
  const L=[title].concat(head||[]);L.push('');
  lines.forEach(x=>{
   L.push(x.n+' · '+x.q+' '+(x.q===1?'unidad':'unidades'));
   if(x.res===null){L.push('  Coste de fabricación: — (falta el precio de algún material)','  Precio de venta: '+money(x.p)+' / ud.','');return}
+  L.push('  Materiales de una unidad:');fbMats(x.n).forEach(r=>L.push('    '+r.q+' × '+r.m+' a '+(r.c===null?'—':money(r.c))+' = '+(r.c===null?'—':money(r.c*r.q))+' ('+r.src+')'));
   L.push('  Coste de fabricación: '+money(x.c)+' / ud. · total '+money(x.tc));
   L.push('  Precio de venta: '+money(x.p)+' / ud. · total '+money(x.tp));
   L.push('  Resultado: '+sgn(x.res)+' ('+(x.d<0?'pierdes '+money(-x.d):x.d>0?'ganas '+money(x.d):'ni ganas ni pierdes')+' por unidad)','');
@@ -5880,12 +5924,34 @@ function fbText(title,lines,head){
  if(S.miss)L.push('Sin calcular: '+S.miss+' (falta el precio de algún material de su receta)');
  return L.join('\n');
 }
+/* Tarjeta de Discord del balance: franja roja o verde, cada producto con sus materiales y el resultado en rojo (−) o verde (+) */
+function fbEmb(title,lines,head,undo){
+ const S=fbSum(lines), mk=withMats=>{
+  const F=lines.slice(0,22).map(x=>{
+   const nm=(x.res===null?'⚪ ':x.res<0?'🔴 ':'🟢 ')+x.n+' · '+x.q+' '+(x.q===1?'unidad':'unidades');
+   if(x.res===null)return {name:nm,value:'Falta el precio de algún material de su receta: no se puede calcular.'};
+   const M=withMats?'```\n'+fbMats(x.n).map(r=>`${r.q} × ${r.m} a ${r.c===null?'—':money(r.c)} = ${r.c===null?'—':money(r.c*r.q)}`).join('\n')+'\n```\n':'';
+   const res=x.d<0?`- Pierdes ${money(-x.d)} por unidad\n- Total: −${money(-x.res)}`:x.d>0?`+ Ganas ${money(x.d)} por unidad\n+ Total: +${money(x.res)}`:'  Ni ganas ni pierdes';
+   let v=M+'```diff\n  Coste: '+money(x.c)+' / ud. (total '+money(x.tc)+')\n  Venta: '+money(x.p)+' / ud. (total '+money(x.tp)+')\n'+res+'\n```';
+   if(v.length>1024)v=v.slice(v.indexOf('```diff'));
+   return {name:nm.slice(0,250),value:v};
+  });
+  if(lines.length>22)F.push({name:'…',value:'Y '+(lines.length-22)+' productos más: míralo en la web.'});
+  const T=[];if(lines.length>1){if(S.lost)T.push('- Pérdidas: −'+money(S.lost));if(S.won)T.push('+ Ganancias: +'+money(S.won))}
+  T.push(S.tot<0?'- PÉRDIDA TOTAL: −'+money(-S.tot):'+ BENEFICIO TOTAL: +'+money(S.tot));
+  F.push({name:undo?'↶ ANULADO':S.tot<0?'📉 RESULTADO':'📈 RESULTADO',value:'```diff\n'+T.join('\n')+'\n```'});
+  if(S.miss)F.push({name:'⚠ Sin calcular',value:S.miss+' (falta el precio de algún material de su receta)'});
+  return {title:(undo?'↶ ':S.tot<0?'📉 ':'📈 ')+title,description:(head||[]).join('\n')+'\n\u200b',color:undo?0x7A6A55:S.tot<0?0xC0392B:0x2E9E5B,fields:F};
+ };
+ let e=mk(true);if(JSON.stringify(e).length>5600)e=mk(false);
+ return '\u0001EMB'+JSON.stringify(e)+'\u0001';
+}
 /* Al fabricar: se publica solo en Discord («Balance de fabricación») */
 function fbAuto(items,undo){
  const lines=items.filter(x=>recipeOf(x.producto).length&&x.delta>0).map(x=>fbLine(x.producto,x.delta));
  if(!lines.length)return;
  const now=Date.now(), w=whoAmI(), S=fbSum(lines);
- discordSend('fabricacion',fbText(undo?'FABRICACIÓN DESHECHA · BALANCE ANULADO':'BALANCE DE FABRICACIÓN',lines,['Fecha: '+fmtDate(now)+' · '+fmtTime(now),'Por: '+(w.name||'—')]));
+ discordSend('fabricacion',fbEmb(undo?'FABRICACIÓN DESHECHA · BALANCE ANULADO':'BALANCE DE FABRICACIÓN',lines,['**Fecha:** '+fmtDate(now)+' · '+fmtTime(now),'**Por:** '+(w.name||'—')],undo));
  if(!undo&&!S.miss)setTimeout(()=>say((S.tot<0?'Esta fabricación te hace perder ':'Esta fabricación te deja ')+money(Math.abs(S.tot))+' frente al precio de venta',S.tot<0?'err':undefined),1600);
 }
 function fbPeriods(){return {semana:['ESTA SEMANA',{s:weekStart(0),e:weekStart(0)+6}],mes:['ESTE MES',monthRange(0)],mespas:['EL MES PASADO',monthRange(-1)],todo:['TODO',null]}}
@@ -5900,6 +5966,10 @@ function fbHist(r){
  const lines=Object.keys(by).filter(n=>by[n]>0).map(n=>fbLine(n,by[n])).sort((a,b)=>(a.res===null?1e12:a.res)-(b.res===null?1e12:b.res));
  return {lines:lines,ev:ev.sort((a,b)=>(b.ts||0)-(a.ts||0))};
 }
+function fbHistEmb(){
+ const [lab,r]=fbPeriods()[fbPer], h=fbHist(r);
+ return fbEmb('BALANCE DE FABRICACIÓN · '+lab,h.lines,[r?'**Periodo:** '+dayStr(r.s)+' – '+dayStr(r.e):'**Periodo:** todo lo fabricado','Calculado con las recetas y los precios de materiales actuales.']);
+}
 function fbHistText(){
  const [lab,r]=fbPeriods()[fbPer], h=fbHist(r);
  return fbText('BALANCE DE FABRICACIÓN · '+lab,h.lines,[r?'Periodo: '+dayStr(r.s)+' – '+dayStr(r.e):'Periodo: todo lo fabricado','Calculado con las recetas y los precios de materiales actuales.']);
@@ -5908,7 +5978,7 @@ function renderModBalFab(){
  const PP=fbPeriods(), [lab,r]=PP[fbPer], h=fbHist(r), L=h.lines, S=fbSum(L);
  const seg=`<div class="seg" style="margin-bottom:10px;grid-template-columns:repeat(4,1fr)">${Object.keys(PP).map(k=>`<button type="button" class="${fbPer===k?'on':''}" data-dir="fbp:${k}">${PP[k][0]}</button>`).join('')}</div>`;
  const rows=L.map(x=>x.res===null?`<div class="mg-row"><span class="n">${esc(x.n)} · ${x.q} ${x.q===1?'ud.':'uds.'}</span><span class="p mg-low">—</span><small>Falta el precio de algún material de su receta: no se puede calcular.</small></div>`
-  :`<div class="mg-row"><span class="n">${esc(x.n)} · ${x.q} ${x.q===1?'ud.':'uds.'}</span><span class="p ${x.res<0?'mg-bad':'mg-ok'}">${sgn(x.res)}</span><small>Coste ${money(x.c)} / ud. (total ${money(x.tc)}) · Venta ${money(x.p)} / ud. (total ${money(x.tp)}) · ${x.d<0?'<b>pierdes '+money(-x.d)+' por unidad</b>':'ganas '+money(x.d)+' por unidad'}</small></div>`).join('');
+  :`<div class="mg-row"><span class="n">${esc(x.n)} · ${x.q} ${x.q===1?'ud.':'uds.'}</span><span class="p ${x.res<0?'mg-bad':'mg-ok'}">${sgn(x.res)}</span><small>Coste ${money(x.c)} / ud. (total ${money(x.tc)}) · Venta ${money(x.p)} / ud. (total ${money(x.tp)}) · ${x.d<0?'<b>pierdes '+money(-x.d)+' por unidad</b>':'ganas '+money(x.d)+' por unidad'}</small>${costWhyHTML(x.n)}</div>`).join('');
  return `<p class="bk-note">Todo lo que se ha fabricado: lo que cuesta fabricarlo (materiales de su receta) frente a lo que vale a la venta, aunque todavía no se haya vendido. Se calcula con las recetas y los precios de materiales <b>actuales</b>: si corriges una receta o un precio, se recalcula. Cada vez que se fabrica algo, se publica solo en el canal de Discord «Balance de fabricación».</p>${seg}
   ${L.length?rows+`<div class="brow"><span>PÉRDIDAS</span><span class="neg">${S.lost?'−'+money(S.lost):money(0)}</span></div><div class="brow"><span>GANANCIAS</span><span>${money(S.won)}</span></div><div class="brow due"><span>${S.tot<0?'PÉRDIDA TOTAL':'BALANCE TOTAL'}</span><span class="${S.tot<0?'neg':''}">${sgn(S.tot)}</span></div>`
   +`<details class="mat-mins"><summary>CADA FABRICACIÓN (${h.ev.length})</summary>${h.ev.map(x=>`<div class="reg-line"><span>${esc(x.date||fmtDate(x.ts))} ${esc(x.time||fmtTime(x.ts))} · ${esc(x.name)}${x.delta<0?' (deshecha)':''}</span><b>${x.delta>0?'+':''}${x.delta}</b></div>`).join('')}</details>
@@ -5918,5 +5988,5 @@ function renderModBalFab(){
 dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir^="fbp:"],[data-dir="fb-copy"],[data-dir="fb-send"]');if(!b)return;e.stopImmediatePropagation();const [a,arg]=b.dataset.dir.split(':');
  if(a==='fbp'){fbPer=arg;renderDir()}
  else if(a==='fb-copy')copyMsg(fbHistText(),'Balance de fabricación copiado');
- else if(a==='fb-send'){if(!(webhook.urls.fabricacion||webhook.url))return say('Pon el enlace del canal «Balance de fabricación» en Dirección → Discord');once('fbsend',async()=>{const ok=await discordSend('fabricacion',fbHistText(),null,null,true);say(ok?'Balance de fabricación enviado a Discord':'No se pudo enviar a Discord',ok?undefined:'err')},b)}
+ else if(a==='fb-send'){if(!(webhook.urls.fabricacion||webhook.url))return say('Pon el enlace del canal «Balance de fabricación» en Dirección → Discord');once('fbsend',async()=>{const ok=await discordSend('fabricacion',fbHistEmb(),null,null,true);say(ok?'Balance de fabricación enviado a Discord':'No se pudo enviar a Discord',ok?undefined:'err')},b)}
 });

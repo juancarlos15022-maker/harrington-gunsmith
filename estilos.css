@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261010f
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261010i
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1618,3 +1618,16 @@ html.lite .ev-plate.done{animation:none}
 .ev-win.bad{border-color:#8d2a16}
 .reg-line.ev-me{background:#e8b92322;border-radius:4px}
 .ev-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+/* Registro IC de armas */
+.ic-plate[hidden],.ev-plates[hidden]{display:none}
+.ser-ic{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:13px;color:#cfe6d4;padding:2px 2px 4px}
+.ser-ic input{width:20px;height:20px;accent-color:#2e9e5b}
+.ser-ic.pend{color:#f0a37a}
+.ser-l .ser-ic{margin-top:4px}
+.ic-note{margin:0 0 10px;padding:8px 10px;border:1px solid #8d2a16;border-radius:6px;background:#3a0f0a88;color:#f6d2c4;font-size:13px}
+.cf-arma.ic-no{border-color:#c0392b;box-shadow:0 0 0 1px #c0392b55 inset}
+.ic-plate{display:flex;align-items:center;gap:12px;width:100%;margin:10px 0 0;padding:10px 14px;border:2px solid #c0392b;border-radius:8px;background:linear-gradient(100deg,#3a0f0a,#1a0806);color:#f6d2c4;font:inherit;text-align:left;cursor:pointer;box-shadow:0 6px 18px #0008}
+.ic-plate small{display:block;font-size:11px;letter-spacing:.14em;color:#f0a37a}
+.ic-plate b{display:block;font-family:'Cinzel Decorative',Georgia,serif;font-size:18px;color:#ffd7c4}
+.ic-plate span{font-size:12.5px}
+.ic-plate .ic-warn{flex:0 0 34px;height:34px;border-radius:50%;background:#c0392b;color:#fff;font:700 22px/34px Georgia,serif;text-align:center}
