@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
-<!-- HARRINGTON GUNSMITH · versión 20261010l · tres archivos: index.html, estilos.css y app.js -->
+<!-- HARRINGTON GUNSMITH · versión 20261010m · tres archivos: index.html, estilos.css y app.js -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#07140f">
@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
 <title>Harrington Gunsmith · Saint Denis</title>
-<link rel="stylesheet" href="estilos.css?v=20261010l">
+<link rel="stylesheet" href="estilos.css?v=20261010m">
 <link rel="preload" as="image" href="entrada-fachada.webp" media="(max-aspect-ratio: 23/20)">
 <link rel="preload" as="image" href="entrada-fachada-ancha.webp" media="(min-aspect-ratio: 23/20)">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,6 +38,7 @@
     <button type="button" class="clock-link enc-btn only-venta" id="encBtn">ENCARGOS</button>
     <button type="button" class="clock-link enc-btn only-venta" id="pedBtn">PEDIDOS</button>
     <button type="button" class="clock-link enc-btn" id="ausBtn">AUSENCIAS</button>
+    <button type="button" class="clock-link enc-btn bell-btn" id="bellBtn" aria-label="Avisos">🔔</button>
     <button type="button" class="clock-link enc-btn" id="libroBtn">NOTAS</button>
     <button type="button" class="clock-link boss-btn" id="bossBtn">JEFE</button>
     <div class="set-wrap"><button type="button" class="clock-link boss-btn" id="setBtn" aria-label="Ajustes" aria-expanded="false" title="Ajustes">⚙</button>
@@ -58,11 +59,14 @@
   </div>
 </section>
 
-<button type="button" class="pay-plate" id="payPlate" hidden></button>
-<div class="ev-plates" id="evPlates" hidden></div>
+<div class="tablon" id="tablon">
+<div class="tb-chips" id="tbChips" hidden></div>
 <button type="button" class="ic-plate" id="icPlate" hidden></button>
+<div class="ev-plates" id="evPlates" hidden></div>
+<button type="button" class="pay-plate" id="payPlate" hidden></button>
 <div class="goal-bar" id="goalBar" hidden></div>
 <div class="emp-week" id="empWeek" hidden></div>
+</div>
 
 <nav class="cat-nav" aria-label="Categorías">
   <button type="button" class="cat-btn active" data-cat="todos" aria-pressed="true" title="Todos"><img src="boton-todos.webp" alt="Todos"></button>
@@ -696,6 +700,6 @@
   </div>
 </div>
 
-<script src="app.js?v=20261010l"></script>
+<script src="app.js?v=20261010m"></script>
 </body>
 </html>
