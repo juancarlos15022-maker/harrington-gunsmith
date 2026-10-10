@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261010n
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261010o
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1674,3 +1674,16 @@ html.lite .bell-btn.bad{animation:none}
 /* Formularios largos de Dirección: el botón de guardar se queda fijo abajo */
 #dirModal .enc-actions:has(> [data-dir="cl-save"]),#dirModal .enc-actions:has(> [data-dir="pv-save"]),#dirModal .enc-actions:has(> [data-dir="ev-create"]),#dirModal .enc-actions:has(> [data-dir="np-emit"]),#dirModal .enc-actions:has(> [data-dir="fab-save"]),#dirModal .enc-actions:has(> [data-dir="price-save"]),#dirModal .enc-actions:has(> [data-dir="stock-save"]){position:sticky;bottom:0;z-index:5;margin-left:-6px;margin-right:-6px;padding:8px 6px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(rgba(10,24,18,0),#0a1812 30%);}
 body.has-mnav #dirModal .enc-actions:has(> [data-dir="cl-save"]),body.has-mnav #dirModal .enc-actions:has(> [data-dir="pv-save"]),body.has-mnav #dirModal .enc-actions:has(> [data-dir="ev-create"]),body.has-mnav #dirModal .enc-actions:has(> [data-dir="np-emit"]),body.has-mnav #dirModal .enc-actions:has(> [data-dir="fab-save"]),body.has-mnav #dirModal .enc-actions:has(> [data-dir="price-save"]),body.has-mnav #dirModal .enc-actions:has(> [data-dir="stock-save"]){bottom:0}
+/* Pestañas de las fichas */
+.cf-line.ic-line{flex-wrap:wrap;gap:6px}
+.cf-line.ic-line>div{flex:1 1 100%}
+.cf-arma.ic-no .ic-line b{color:#a8321c}
+.ftabs{display:flex;gap:4px;margin:0 0 10px;padding:3px;border-radius:8px;background:rgba(60,38,12,.18);overflow-x:auto}
+.ftab{flex:1 1 auto;min-width:0;padding:7px 4px;border:0;border-radius:6px;background:transparent;color:#5a3c14;font:700 11.5px Georgia,serif;letter-spacing:0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ftabs{gap:2px}
+.ftab i{font-size:10px!important;min-width:15px!important;padding:0 4px!important}
+.ftab i{font-style:normal;display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:rgba(90,60,20,.18);font-size:11px}
+.ftab.on{background:#3b2410;color:#f3e2b0}
+.ftab.on i{background:#c9a24a;color:#2a1a0d}
+.ftab.bad{color:#a8321c}.ftab.bad i{background:#c0392b;color:#fff}.ftab.bad.on{background:#7a1608;color:#fff}
+.fpane[hidden]{display:none}
