@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261010c
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261010e
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -720,6 +720,7 @@ body{background:radial-gradient(ellipse at 50% -8%,#8a4f2133,transparent 44%),ra
 .np-sub{grid-column:1/-1;margin:-4px 0 4px;color:#c9b27a;font-size:13px;text-align:right}
 .serie-row,.pv-prod{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;margin-bottom:8px}
 .pv-prod{grid-template-columns:minmax(0,1fr) 112px}
+.mg-row .mg-det{grid-column:1/-1;margin-top:4px}.mg-det summary{cursor:pointer;color:#f0c27a;font-size:12px;letter-spacing:.04em}.mg-why{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 8px;padding:4px 0;border-bottom:1px dashed #7a5a2255;font-size:13px}.mg-why small{grid-column:1/-1;opacity:.75}.mg-btns{flex-wrap:wrap;gap:6px;margin-top:6px}.mg-btns button{flex:1 1 140px;font-size:12px}
 .ex-row{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}
 .cp-btn.add-btn{color:#f0c27a;border-color:#a0741e}
 .serie-row input,.serie-row select,.pv-prod input,.pv-prod .money{margin:0;min-width:0}
