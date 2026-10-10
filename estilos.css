@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261010e
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261010f
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1591,3 +1591,30 @@ html.lite .pay-plate.due::after,html.lite .hero-banner:before{animation:none!imp
 /* Productos que aún no tienen precio */
 .product.noprice .price{color:#f0c27a;font-size:12px;letter-spacing:.05em;font-family:var(--f-sc)}
 .product.noprice .qty{opacity:.45}
+/* ===== Eventos: cartel de sorteo ===== */
+.ev-plates{display:grid;gap:8px;margin:10px 0 0}
+.ev-plate{position:relative;display:block;width:100%;padding:12px 14px 12px 16px;border:3px double #5a3a14;border-radius:6px;background:radial-gradient(circle at 20% 10%,#f6e7bf,#e3c98f 60%,#cfae6c);box-shadow:0 6px 18px #0009,inset 0 0 24px #7a4f1a55;color:#2a1a0d;font:inherit;text-align:left;cursor:pointer;overflow:hidden}
+.ev-plate small{display:block;font-size:11px;letter-spacing:.14em;color:#6b4c1d;padding-right:84px}
+.ev-plate b{display:block;font-family:'Cinzel Decorative',Georgia,serif;font-size:21px;letter-spacing:.04em;color:#3b1d08;margin:2px 0}
+.ev-plate span{font-size:13px;color:#3a2410}
+.ev-plate span b{display:inline;font-family:inherit;font-size:inherit;letter-spacing:0;color:#8d2a16}
+.ev-plate .ev-rib{position:absolute;top:10px;right:-30px;transform:rotate(35deg);background:#8d2a16;color:#f6e7bf;font:700 11px/1 Georgia,serif;font-style:normal;letter-spacing:.12em;padding:5px 34px;box-shadow:0 2px 6px #0007}
+.ev-plate.done .ev-rib{background:#1b3022}
+.ev-plate.done{animation:evGlow 2.4s ease-in-out infinite}
+@keyframes evGlow{0%,100%{box-shadow:0 6px 18px #0009,inset 0 0 24px #7a4f1a55}50%{box-shadow:0 6px 26px #e8b923aa,inset 0 0 24px #7a4f1a55}}
+@media (prefers-reduced-motion:reduce){.ev-plate.done{animation:none}}
+html.lite .ev-plate.done{animation:none}
+.ev-poster{text-align:center;padding:14px 12px;margin:0 0 10px;border:3px double #5a3a14;border-radius:6px;background:radial-gradient(circle at 30% 10%,#f6e7bf,#d9bc7e);color:#2a1a0d}
+.ev-poster small{display:block;font-size:10px;letter-spacing:.18em;color:#6b4c1d}
+.ev-poster .ev-h{font-family:'Cinzel Decorative',Georgia,serif;font-size:30px;letter-spacing:.12em;color:#8d2a16;margin:4px 0}
+.ev-poster .ev-arma{font-family:'Cinzel Decorative',Georgia,serif;font-size:20px;color:#3b1d08}
+.ev-poster .ev-st{display:inline-block;margin-top:8px;padding:3px 10px;border:2px solid #3b1d08;border-radius:3px;font:700 12px Georgia,serif;letter-spacing:.14em;transform:rotate(-3deg)}
+.ev-win{margin:12px 0 8px;padding:12px;border:2px double #e8b923;border-radius:8px;background:linear-gradient(120deg,#3a2606,#1a1206);text-align:center}
+.ev-win small{display:block;color:#e2c26a;font-size:11px;letter-spacing:.16em}
+.ev-win b{display:block;font-family:'Cinzel Decorative',Georgia,serif;font-size:22px;color:#ffe08a;margin:4px 0}
+.ev-win span{display:block;color:#e9d49a;font-size:13px}
+.ev-win span b{display:inline;font-family:inherit;font-size:inherit;color:#fff}
+.ev-win .ev-num{display:inline-block;margin:4px 0 8px;padding:4px 14px;border:2px dashed #e8b923;border-radius:30px;font:700 22px Georgia,serif;color:#ffe08a}
+.ev-win.bad{border-color:#8d2a16}
+.reg-line.ev-me{background:#e8b92322;border-radius:4px}
+.ev-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}

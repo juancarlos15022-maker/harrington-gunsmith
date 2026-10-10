@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261010e
+/* HARRINGTON GUNSMITH · app.js · versión 20261010f
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -257,7 +257,7 @@ function snapshot(items,now){
   items:items.map(x=>({name:x.name,cents:x.cents,qty:x.qty,oq:x.oq||0})),
   totalCents:total,units:units,products:items.length,sig:signature(items),
   client:customerName(),employee:empName(),note:customer.note.trim(),promise:(customer.op==='encargo'&&!loadedEnc)?customer.promise:'',convenio:discTag(currentDiscount()),convenioKind:currentDiscount()?(currentDiscount().kind==='oferta'?'Oferta':'Convenio'):'',
-  ...finToSale(computeFin()),op:loadedEnc?'venta':customer.op,fromEncargo:loadedEnc?loadedEnc.id:'',telegram:loadedEnc?loadedEnc.telegram:(customer.op==='encargo'?customer.telegram.trim():''),
+  ...finToSale(computeFin()),op:loadedEnc?'venta':customer.op,fromEncargo:loadedEnc?loadedEnc.id:'',telegram:loadedEnc?loadedEnc.telegram:((customer.op==='encargo'||evTelOn())?customer.telegram.trim():''),
   date:`${madridParts(now.getTime()).day}/${madridParts(now.getTime()).month}/${madridParts(now.getTime()).year}`,
   time:`${madridParts(now.getTime()).hour}:${madridParts(now.getTime()).minute}`
  };
@@ -337,6 +337,7 @@ function receiptText(s){
  if(s.convenio)out.push((s.convenioKind||'Convenio')+': '+s.convenio);
  if(s.fromEncargo)out.push('Entrega del encargo: '+s.fromEncargo);
  if(s.note)out.push('Nota: '+s.note);
+ if(s.sorteos&&evSaleTxt(s))out.push('Sorteo: '+evSaleTxt(s));
  if(s.promise)out.push('Entrega prevista: '+fmtISO(s.promise));
  out.push('');
  groupItems(s).forEach(g=>{if(g.title)out.push(g.title,'');g.items.forEach(x=>{out.push(x.name);out.push(`${x.qty} × ${money(x.cents)} = ${money(x.qty*x.cents)}`);out.push('')})});
@@ -366,6 +367,7 @@ function renderReceipt(s){
  $('rcTelWrap').hidden=!s.telegram;
  $('rcConv').textContent=s.convenio||'';
  $('rcNote').textContent=s.note||'';$('rcNoteWrap').hidden=!s.note;
+ {const st=evSaleTxt(s);$('rcSor').textContent=st;$('rcSorWrap').hidden=!st}
  $('rcProm').textContent=s.promise?fmtISO(s.promise):'';$('rcPromWrap').hidden=!s.promise;
  $('rcConvWrap').hidden=!s.convenio;$('rcConvWrap').firstElementChild.textContent=s.convenioKind||'Convenio';
 }
@@ -398,6 +400,7 @@ document.addEventListener('keydown',e=>{
  else if(!dirModal.hidden)closeModal(dirModal);
  else if(!encModal.hidden)closeModal(encModal);
  else if(!libroModal.hidden)closeModal(libroModal);
+ else if(!evModal.hidden)closeModal(evModal);
  else if(!entryModal.hidden)closeModal(entryModal);
  else if(!shiftModal.hidden)closeModal(shiftModal);
  else if(!receiptModal.hidden)closeModal(receiptModal);
@@ -455,6 +458,7 @@ document.querySelector('.panel.order').addEventListener('input',()=>setTimeout(u
 document.querySelector('.panel.order').addEventListener('change',()=>setTimeout(updateFinish,0));
 document.getElementById('finish').onclick=e=>once('finish',async()=>{
  const s=await ensureSaleCloud(); if(!s)return;
+ try{await raffleAssign(s)}catch(e){}
  renderReceipt(s);openModal(receiptModal);receiptModal.scrollTop=0;printFx();if(s.op==='encargo')playPencil();else playRegister();notifySale(s);setTimeout(playThump,s.op==='encargo'?1250:650);say((s.op==='encargo'?'Encargo guardado · ':'Venta finalizada · ')+s.id);
  if(s.op!=='encargo'){askSerials(s);setTimeout(()=>checkRecord(s),1600);setTimeout(coinsFx,200);setTimeout(renderGoal,1200)}
  clearAfterSale(s);
@@ -770,6 +774,10 @@ function customerOk(){
   say(customer.telegram?'Telegrama no válido: solo letras, números y guiones (máx. 10)':'El telegrama de contacto es obligatorio en un encargo');
   telInput.focus();return false;
  }
+ if(evTelNeeded()&&!/^[A-Z0-9-]{1,10}$/.test(customer.telegram||'')){
+  say('Hay un sorteo en marcha: escribe el telegrama del cliente para darle su número');
+  telInput.focus();return false;
+ }
  if(computeFin().over){
   say(loadedEnc?'La fianza supera el precio final: añade productos o revisa el encargo':customer.op==='encargo'?'El pago por adelantado no puede superar el precio final':'La cantidad abonada no puede superar el precio final');
   return false;
@@ -782,7 +790,7 @@ function renderCustomer(){
  telInput.value=customer.telegram;depositInput.value=customer.deposit;noteInput.value=customer.note;promiseInput.value=customer.promise;
  nameWrap.hidden=customer.type==='sheriff';
  const ld=!!loadedEnc;
- telWrap.hidden=!enc||ld;promiseWrap.hidden=!enc||ld;depositBox.hidden=!enc||ld;opSel.disabled=ld;
+ telWrap.hidden=!(enc||evTelOn())||ld;promiseWrap.hidden=!enc||ld;depositBox.hidden=!enc||ld;opSel.disabled=ld;
  bannerEl.hidden=!ld;finishEncBtn.hidden=!ld||loadedEnc.finished;
  if(ld)bannerEl.innerHTML=`<b>${loadedEnc.finished?'ENCARGO FINALIZADO':'ENCARGO CARGADO'} · ${esc(loadedEnc.id)}</b><span>${esc(loadedEnc.client)} · Telegrama ${esc(loadedEnc.telegram)}</span><span>Fianza ya pagada: ${money(loadedEnc.depositCents)}</span>`;
 
@@ -996,6 +1004,7 @@ async function finishEncargoNow(){
  if(!loadedEnc||loadedEnc.finished)return;
  const sl=await ensureSaleCloud(); if(!sl)return;
  if(!await askConfirm('Finalizar encargo','Se marcará el encargo '+loadedEnc.id+' como entregado y cobrado. Dejará de aparecer en pendientes.','Finalizar'))return;
+ try{await raffleAssign(sl)}catch(e){}
  loadedEnc.finished=true;loadedEnc.finishedAt=Date.now();loadedEnc.deliverySale=sl.id;
  saveEncs();updateEncBtn();renderCustomer();
  renderReceipt(sl);openModal(receiptModal);receiptModal.scrollTop=0;printFx();playRegister();notifySale(sl);setTimeout(()=>{if(!stampImgFx('entregado',2.57))playThump()},700);setTimeout(coinsFx,200);say('Encargo finalizado');
@@ -1163,7 +1172,8 @@ const KEY_SHIFTLOG='harrington_shiftlog_v1', KEY_SALELOG='harrington_salelog_v1'
 function loadLog(k){try{const a=JSON.parse(store.get(k)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
 function logShift(r){const a=loadLog(KEY_SHIFTLOG), rec={uid:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:r.name,start:r.start,end:r.end};a.push(rec);store.set(KEY_SHIFTLOG,JSON.stringify(a.slice(-5000)));cloudPut('turno:'+rec.uid,rec)}
 function logSale(sl){
- const a=loadLog(KEY_SALELOG), e={items:sl.items.map(x=>({name:x.name,qty:x.qty,cents:x.cents,oq:x.oq||0})),stock:sl.stockApplied||{},note:sl.note||'',id:sl.id,date:sl.date,time:sl.time,op:sl.op,client:sl.client,employee:sl.employee||'',products:sl.products,units:sl.units,dueCents:dueCents(sl),totalCents:sl.totalCents,convenio:sl.convenio||'',fromEncargo:sl.fromEncargo||''};
+ const a=loadLog(KEY_SALELOG), e={items:sl.items.map(x=>({name:x.name,qty:x.qty,cents:x.cents,oq:x.oq||0})),stock:sl.stockApplied||{},note:sl.note||'',id:sl.id,date:sl.date,time:sl.time,op:sl.op,client:sl.client,employee:sl.employee||'',products:sl.products,units:sl.units,dueCents:dueCents(sl),totalCents:sl.totalCents,convenio:sl.convenio||'',fromEncargo:sl.fromEncargo||'',telegram:sl.telegram||''};
+ if(sl.sorteos&&Object.keys(sl.sorteos).length)e.sorteos=sl.sorteos;
  const k=a.findIndex(x=>x.id===sl.id);
  if(k>=0){e.voided=a[k].voided;e.voidedAt=a[k].voidedAt;a[k]=e}else a.push(e);
  e.ts=new Date().toISOString();
@@ -1272,9 +1282,11 @@ const DIRECCION_MODULOS=[
  {id:'convenios',titulo:'CONVENIOS Y OFERTAS',desc:'Crear y administrar convenios y ofertas.',render:()=>renderModConvenios()},
  {id:'empleados',titulo:'EMPLEADOS',desc:'Añadir, editar y eliminar empleados.',render:()=>renderModEmpleados()},
  {id:'clientes',titulo:'CLIENTES',desc:'Clientes guardados y sus precios especiales.',render:()=>renderModClientes()},
+ {id:'eventos',titulo:'EVENTOS',desc:'Sorteos: crear, ver el ganador, entregar el premio o cancelar.',render:()=>renderModEventos()},
  {id:'productos',titulo:'PRODUCTOS Y PRECIOS',desc:'Cambiar precios y añadir productos nuevos.',render:()=>renderModProductos()},
  {id:'stock',titulo:'STOCK',desc:'Añadir nuevas existencias y fijar mínimos.',render:()=>renderModStock()},
  {id:'regstock',titulo:'REGISTRO DE STOCK',desc:'Existencias actuales y movimientos.',render:()=>renderModRegistroStock()},
+ {id:'balfab',titulo:'BALANCE DE FABRICACIÓN',desc:'Lo que ganas o pierdes con lo fabricado: coste de fabricar frente al precio de venta.',render:()=>renderModBalFab()},
  {id:'fabricacion',titulo:'FABRICACIÓN',desc:'Recetas: qué materiales gasta cada producto al fabricarlo.',render:()=>renderModFabricacion()},
  {id:'horarios',titulo:'REGISTROS HORARIOS',desc:'Consultar los fichajes de los empleados.',render:()=>renderModHorarios()},
  {id:'ausencias',titulo:'AUSENCIAS',desc:'Quién está ausente, hasta cuándo y por qué.',render:()=>renderModAusencias()},
@@ -1794,6 +1806,7 @@ function finishMissing(){
   if(!/^[A-Z0-9-]{1,10}$/.test(customer.telegram||''))return 'Falta el telegrama';
   if(computeFin().raw<=0)return 'Falta el pago por adelantado';
  }
+ if(evTelNeeded()&&!/^[A-Z0-9-]{1,10}$/.test(customer.telegram||''))return 'Falta el telegrama (sorteo)';
  if(computeFin().over)return 'Revisa la cantidad abonada';
  return '';
 }
@@ -1934,7 +1947,7 @@ function clientHistHTML(c){
  const agoT=ago===null?'—':ago<=0?'Hoy':ago===1?'Ayer':'Hace '+ago+' días';
  const show=clHistAll?L:L.slice(0,8);
  return head+`<div class="ch-sum"><div><small>TOTAL GASTADO</small><b>${money(tot)}</b></div><div><small>COMPRAS</small><b>${ok.length}</b></div><div><small>ÚLTIMA</small><b>${agoT}</b></div></div>`+
-  show.map(x=>`<div class="ch-row${x.voided?' void':''}"><div class="ch-top"><span>${esc(x.date||'')} · ${esc(x.time||'')}${x.op==='encargo'?' · ENCARGO':''}${x.voided?' · ANULADA':''}</span><b>${money(collected(x))}</b></div><small>${(x.items||[]).map(i=>i.qty+' × '+esc(i.name)).join(', ')||'—'}</small><small>Atendió: ${esc(x.employee||'—')}${x.id?' · Ticket '+esc(x.id):''}</small></div>`).join('')+
+  show.map(x=>`<div class="ch-row${x.voided?' void':''}"><div class="ch-top"><span>${esc(x.date||'')} · ${esc(x.time||'')}${x.op==='encargo'?' · ENCARGO':''}${x.voided?' · ANULADA':''}</span><b>${money(collected(x))}</b></div><small>${(x.items||[]).map(i=>i.qty+' × '+esc(i.name)).join(', ')||'—'}</small><small>Atendió: ${esc(x.employee||'—')}${x.id?' · Ticket '+esc(x.id):''}${x.sorteos?' · 🎟 Sorteo '+esc(evSaleTxt(x)):''}</small></div>`).join('')+
   (L.length>8?`<div class="enc-actions" style="margin-top:8px"><button type="button" data-dir="cl-hist">${clHistAll?'VER SOLO LAS ÚLTIMAS':'VER LAS '+L.length+' COMPRAS'}</button></div>`:'');
 }
 function renderClientFicha(c){
@@ -1944,6 +1957,7 @@ function renderClientFicha(c){
   ${line('N.º DE IDENTIFICACIÓN',c.ident,1,'clIdent')}${line('TELEGRAMA',c.telegram,1,'clTel')}
   ${X.map(r=>line(esc(r.k).toUpperCase(),r.v,1)).join('')}
   <div class="enc-actions" style="margin:4px 0 2px"><button type="button" data-dir="cl-fill:${esc(c.id)}~exSeccl">✚ AÑADIR OTRO DATO</button></div>
+  ${evClientHTML(c)}
   <div class="dir-sec-title">ARMAS VENDIDAS (${S.length})</div>
   ${S.length?S.map((r,i)=>`<div class="cf-arma"><div class="cf-n">${i+1}</div><div class="cf-col">${line('N.º DE SERIE',r.s,1)}${line('ARMA',r.a,1)}</div></div>`).join(''):'<div class="enc-empty">Sin armas registradas.</div>'}
   ${clientHistHTML(c)}
@@ -2032,7 +2046,7 @@ function saveCierre(){
 }
 /* --- Discord --- */
 function renderModDiscord(){
- const E=[['ventas','Ventas: ticket al finalizar y registro semanal (solo los jueves a las 22:00, o al pulsar «Enviar a Discord»)'],['encargos','Encargos: creación, entrega y cancelación (con el ticket)'],['fichajes','Fichajes de entrada y salida'],['gastos','Gastos: al guardarlos y registro semanal (solo los jueves a las 22:00, o al pulsar «Enviar a Discord»)'],['balance','Balance de cuentas semanal (solo los jueves a las 22:00, o al pulsar «Enviar a Discord»)'],['pedidos','Pedidos a proveedores: al emitirlos, completarlos o cancelarlos'],['empleados','Empleados: imagen del contrato al incorporar a alguien'],['clientes','Clientes: ficha al crearlo, se actualiza al modificarlo'],['proveedores','Proveedores: ficha y lista de precios, se actualiza al modificarla'],['stock','Stock de productos: un mensaje que se actualiza en tiempo real (ventas, fabricación, anulaciones)'],['materiales','Almacén de materiales: un mensaje que se actualiza en tiempo real (pedidos recibidos y fabricación)'],['resumen','Resumen del día: al fichar la salida el último empleado'],['ausencias','Ausencias: cuando alguien avisa, vuelve o la anula (con el motivo)'],['sueldos','Sueldos: resumen de toda la semana al pagar el último sueldo'],['mensual','Resumen mensual: el día 1 de cada mes, el mes anterior entero (ventas, gastos, beneficio, mejor vendedor, lo más vendido y comparación con el mes anterior)'],['anulaciones','Anulaciones de ventas'],['cierres','Cierres de caja']];
+ const E=[['ventas','Ventas: ticket al finalizar y registro semanal (solo los jueves a las 22:00, o al pulsar «Enviar a Discord»)'],['encargos','Encargos: creación, entrega y cancelación (con el ticket)'],['fichajes','Fichajes de entrada y salida'],['gastos','Gastos: al guardarlos y registro semanal (solo los jueves a las 22:00, o al pulsar «Enviar a Discord»)'],['balance','Balance de cuentas semanal (solo los jueves a las 22:00, o al pulsar «Enviar a Discord»)'],['pedidos','Pedidos a proveedores: al emitirlos, completarlos o cancelarlos'],['empleados','Empleados: imagen del contrato al incorporar a alguien'],['clientes','Clientes: ficha al crearlo, se actualiza al modificarlo'],['proveedores','Proveedores: ficha y lista de precios, se actualiza al modificarla'],['stock','Stock de productos: un mensaje que se actualiza en tiempo real (ventas, fabricación, anulaciones)'],['materiales','Almacén de materiales: un mensaje que se actualiza en tiempo real (pedidos recibidos y fabricación)'],['resumen','Resumen del día: al fichar la salida el último empleado'],['ausencias','Ausencias: cuando alguien avisa, vuelve o la anula (con el motivo)'],['sueldos','Sueldos: resumen de toda la semana al pagar el último sueldo'],['mensual','Resumen mensual: el día 1 de cada mes, el mes anterior entero (ventas, gastos, beneficio, mejor vendedor, lo más vendido y comparación con el mes anterior)'],['anulaciones','Anulaciones de ventas'],['cierres','Cierres de caja'],['fabricacion','Balance de fabricación: al fabricar, lo que cuesta fabricar frente al precio de venta (lo que ganas o pierdes), y el historial al pulsar «Enviar a Discord»'],['eventos','Eventos: anuncio al crear un sorteo, ganador al terminar, entrega del premio, devolución de Administración y cancelación']];
  return dcBoxHTML()+`<p class="bk-note">Cada tipo de aviso puede ir a su <b>propio canal</b>: crea un webhook por canal y pégalo en «canal propio». Los que dejes vacíos usan el <b>canal general</b>. Se configura una vez en cada dispositivo (o importa la «configuración» desde Copia de seguridad).</p>
   <div class="dir-form enc-sec"><label>CANAL GENERAL (POR DEFECTO)<input id="whUrl" type="text" autocomplete="off" spellcheck="false" placeholder="https://discord.com/api/webhooks/..." value="${esc(webhook.url)}"></label>
   ${E.map(([k,l])=>`<div class="wh-row"><label class="chk"><input type="checkbox" data-ev="${k}"${webhook.ev[k]?' checked':''}>${l}</label><input class="wh-own" type="text" data-whu="${k}" autocomplete="off" spellcheck="false" placeholder="Canal propio (opcional): https://discord.com/api/webhooks/..." value="${esc(webhook.urls[k]||'')}"></div>`).join('')}
@@ -2049,7 +2063,7 @@ function saveWebhookForm(silent){
 }
 function testWebhooks(){
  if(!saveWebhookForm(true))return;
- const NAMES={ventas:'ventas',encargos:'encargos',fichajes:'fichajes',gastos:'gastos',balance:'balance de cuentas',pedidos:'pedidos',empleados:'contratos de empleados',clientes:'clientes',proveedores:'proveedores',stock:'stock',materiales:'materiales',resumen:'resumen del día',ausencias:'ausencias',sueldos:'sueldos',anulaciones:'anulaciones',cierres:'cierres'}, dest={};
+ const NAMES={ventas:'ventas',encargos:'encargos',fichajes:'fichajes',gastos:'gastos',balance:'balance de cuentas',pedidos:'pedidos',empleados:'contratos de empleados',clientes:'clientes',proveedores:'proveedores',stock:'stock',materiales:'materiales',resumen:'resumen del día',ausencias:'ausencias',sueldos:'sueldos',anulaciones:'anulaciones',cierres:'cierres',eventos:'eventos',fabricacion:'balance de fabricación'}, dest={};
  if(webhook.url)dest[webhook.url]=['canal general'];
  Object.keys(webhook.urls).forEach(k=>{(dest[webhook.urls[k]]=dest[webhook.urls[k]]||[]).push(NAMES[k])});
  const urls=Object.keys(dest); if(!urls.length)return say('Pega primero un enlace de webhook');
@@ -2150,6 +2164,8 @@ function rankingHTML(list){
  return `<div class="enc-card dir-item"><div class="t">RANKING DE LA SEMANA</div>${r.map((x,i)=>`<div class="reg-line"><span><i class="medal m${i+1}" aria-label="${i+1}º">${i+1}</i>${esc(x.n)}</span><b>${money(x.c)}</b></div>`).join('')}</div>`;
 }
 const MOD_ICONS={
+ balfab:'<path d="M3 20h18M6 16l4-5 3 3 5-7"/><path d="M15 7h3v3"/>',
+ eventos:'<path d="M4 8h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"/><path d="M10 8v12" stroke-dasharray="2 2"/>',
  historial:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',
  estadisticas:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
  objetivo:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2"/>',
@@ -2180,6 +2196,7 @@ const MOD_ICONS={
 function avisosHTML(){
  const A=[], hoy=todayISO();
  (()=>{const P=dcProblems();Object.keys(P).forEach(k=>A.push(['bad',`Discord: el canal <b>${esc(DC_LABELS[k]||k)}</b> falla (${esc(dcWhy(P[k].st))}). Revísalo en <b>DISCORD</b>.`]));if(DCQ.length)A.push(['pend',`Hay ${DCQ.length} ${DCQ.length===1?'mensaje':'mensajes'} de Discord sin enviar en este dispositivo: reinténtalo en <b>DISCORD</b>.`])})();
+ (eventos||[]).forEach(ev=>{if(ev.status!=='finalizado'||!ev.winner)return;if(!ev.entregado)A.push(['pend',`Sorteo del <b>${esc(ev.arma)}</b>: falta entregar el arma a <b>${esc(ev.winner.client)}</b> (n.º ${ev.winner.n}). Márcalo en <b>EVENTOS</b>.`]);else if(!ev.reembolso)A.push(['pend',`Sorteo del <b>${esc(ev.arma)}</b>: pendiente la devolución de Administración (${money(ev.premioCents||0)}). Márcala en <b>EVENTOS</b> cuando llegue.`])});
  ausNowList().forEach(a=>A.push(['pend',`<b>${esc(a.name)}</b> está ausente ${esc(ausUntil(a))} (${esc(a.cat||'')}).`]));
  ausencias.filter(a=>ausFuture(a)&&a.start-Date.now()<2*86400000).forEach(a=>A.push(['pend',`<b>${esc(a.name)}</b> estará ausente desde el ${esc(ausWhen(a.start))}.`]));
  (()=>{const s=payState();if(s&&s.st==='due'){const n=suePending(s.ws);A.push(['pend',`Día de pago (semana ${esc(sueLab(s.ws))}): quedan <b>${n.length}</b> ${n.length===1?'sueldo':'sueldos'} por pagar (${n.map(e=>esc(e.name)).join(', ')}). Ve a <b>SUELDOS</b>.`])}})();
@@ -2214,10 +2231,10 @@ function renderDashboard(){
 /* ===== Discord (webhook), registro de movimientos de stock, copia de seguridad ===== */
 const KEY_WEBHOOK='harrington_webhook_v1', KEY_STOCKLOG='harrington_stocklog_v1', KEY_CIERRES='harrington_cierres_v1', KEY_PRICES='harrington_prices_v1', KEY_CUSTPROD='harrington_custprod_v1';
 let webhook=loadObj(KEY_WEBHOOK,{});
-var EV_DEF={mensual:true,ventas:true,encargos:true,fichajes:true,gastos:true,anulaciones:true,cierres:true,balance:true,pedidos:true,empleados:true,clientes:true,proveedores:true,stock:true,materiales:true,resumen:true,ausencias:true,sueldos:true};
+var EV_DEF={fabricacion:true,eventos:true,mensual:true,ventas:true,encargos:true,fichajes:true,gastos:true,anulaciones:true,cierres:true,balance:true,pedidos:true,empleados:true,clientes:true,proveedores:true,stock:true,materiales:true,resumen:true,ausencias:true,sueldos:true};
 webhook=Object.assign({url:''},webhook,{ev:Object.assign({},EV_DEF,webhook.ev||{}),urls:Object.assign({},webhook.urls||{})});
 const WH_RE=/^https:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+/;
-const KIND_COLOR={ventas:0xC9A24A,encargos:0x9A6B1C,fichajes:0x3F7A52,gastos:0xA8321C,balance:0x1B6A3A,pedidos:0x2E7D4F,empleados:0x7A5A22,clientes:0x3A5A8C,proveedores:0x6B5A2A,stock:0x6B8E23,materiales:0x8B5A2B,anulaciones:0x7A1608,cierres:0xB88931,resumen:0xE0B25C,ausencias:0x5A6E8C,sueldos:0x3E8E4E};
+const KIND_COLOR={ventas:0xC9A24A,encargos:0x9A6B1C,fichajes:0x3F7A52,gastos:0xA8321C,balance:0x1B6A3A,pedidos:0x2E7D4F,empleados:0x7A5A22,clientes:0x3A5A8C,proveedores:0x6B5A2A,stock:0x6B8E23,materiales:0x8B5A2B,anulaciones:0x7A1608,cierres:0xB88931,resumen:0xE0B25C,ausencias:0x5A6E8C,sueldos:0x3E8E4E,eventos:0x8D2A16,fabricacion:0x8B5A2B};
 function dcEsc(s){return String(s).replace(/([*_~|`])/g,'\\$1')}
 const DC_THUMB={ventas:'icono-revolveres.webp',encargos:'vacio-encargos.webp',pedidos:'vacio-pedidos.webp',materiales:'vacio-materiales.png',stock:'icono-municion.webp',gastos:'moneda-oro.webp',sueldos:'moneda-oro.webp',balance:'moneda-oro.webp',resumen:'moneda-oro.webp',cierres:'moneda-oro.webp',fichajes:'reloj-bolsillo.webp',ausencias:'reloj-bolsillo.webp',empleados:'tarjeta-empleado.webp',clientes:'cartel-se-busca.webp',proveedores:'vacio-pedidos.webp',anulaciones:'sello-pagado.png'};
 function dcThumb(k){try{return DC_THUMB[k]&&/^https?:/.test(location.protocol)?new URL(DC_THUMB[k],location.href).href:''}catch(e){return ''}}
@@ -2252,7 +2269,7 @@ async function discordSend(kind,text,blob,fname,force,urlOverride,isRetry){
  }catch(e){if(!urlOverride&&!isRetry)dcFail(kind,e,text);if(!isRetry)say('No se pudo enviar a Discord');return false}
 }
 /* ===== Vigilar Discord: si un canal falla, se avisa en Dirección (en todos los dispositivos) y se guardan los mensajes para reintentar ===== */
-const DC_LABELS={ventas:'Ventas',encargos:'Encargos',fichajes:'Fichajes',gastos:'Gastos',balance:'Balance',pedidos:'Pedidos',empleados:'Empleados',clientes:'Clientes',proveedores:'Proveedores',stock:'Stock',materiales:'Materiales',resumen:'Resumen del día',ausencias:'Ausencias',sueldos:'Sueldos',anulaciones:'Anulaciones',cierres:'Cierres de caja',mensual:'Resumen mensual'};
+const DC_LABELS={ventas:'Ventas',encargos:'Encargos',fichajes:'Fichajes',gastos:'Gastos',balance:'Balance',pedidos:'Pedidos',empleados:'Empleados',clientes:'Clientes',proveedores:'Proveedores',stock:'Stock',materiales:'Materiales',resumen:'Resumen del día',ausencias:'Ausencias',sueldos:'Sueldos',anulaciones:'Anulaciones',cierres:'Cierres de caja',mensual:'Resumen mensual',eventos:'Eventos',fabricacion:'Balance de fabricación'};
 var DCH=loadObj('harrington_dc_health_v1',{});if(!DCH||typeof DCH!=='object')DCH={};
 var DCQ=loadObj('harrington_dc_queue_v1',[]);if(!Array.isArray(DCQ))DCQ=[];
 function saveDCH(){try{localStorage.setItem('harrington_dc_health_v1',JSON.stringify(DCH))}catch(e){}}
@@ -2313,7 +2330,7 @@ function logStock(name,delta,why){
  if(!delta)return;
  const a=loadLog(KEY_STOCKLOG), now=Date.now();
  const rec={uid:'m'+now.toString(36)+Math.random().toString(36).slice(2,5),ts:now,name:name,delta:delta,why:why,date:fmtDate(now),time:fmtTime(now)};a.push(rec);
- store.set(KEY_STOCKLOG,JSON.stringify(a.slice(-800)));cloudPut('mov:'+rec.uid,rec);
+ store.set(KEY_STOCKLOG,JSON.stringify(a.slice(-2500)));cloudPut('mov:'+rec.uid,rec);
 }
 var bossTimer=null;
 function bumpBoss(){clearTimeout(bossTimer);if(bossActive&&!(typeof meEmp==='function'&&isJefe(meEmp())))bossTimer=setTimeout(()=>{setBoss(false);closeModal(dirModal);say('Modo Jefe cerrado por inactividad')},300000)}
@@ -3707,7 +3724,7 @@ async function saveStockDraft(){
   if(Object.keys(need).length&&!await askConfirm('Fabricar','Vas a fabricar: '+items.map(x=>x.delta+' × '+x.producto).join(', ')+'. Se gastarán del almacén: '+Object.keys(need).map(k=>need[k]+' '+k).join(', ')+'.','Fabricar'))return;
   const all=items.concat(Object.keys(need).map(k=>({producto:ingKey(k),delta:-need[k]})));
   try{await moverStock(all,'Fabricación');items.forEach(x=>logStock(x.producto,x.delta,recipeOf(x.producto).length?'Fabricación':'Entrada de stock'));Object.keys(need).forEach(k=>logStock(isProdIng(k)?k:k+' (material)',-need[k],'Fabricación'));n=items.length;
-   if(Object.keys(need).length){try{localStorage.setItem('harrington_lastfab',JSON.stringify({ts:Date.now(),items:items,need:need}))}catch(x){}stampFx('FABRICADO');playAnvil()}}
+   if(Object.keys(need).length){try{localStorage.setItem('harrington_lastfab',JSON.stringify({ts:Date.now(),items:items,need:need}))}catch(x){}stampFx('FABRICADO');playAnvil();try{fbAuto(items)}catch(x){}}}
   catch(e){
    if(String(e.message).indexOf('STOCK_INSUFICIENTE')>=0){try{await refreshStock()}catch(x){}return err('<b>No hay materiales suficientes</b> (otro dispositivo los acaba de gastar). No se ha sumado nada.<br>'+missingMaterials(needMaterials(items)).map(esc).join('<br>'))}
    return say('Sin conexión: no se puede guardar el stock ahora');
@@ -3729,9 +3746,10 @@ async function undoFab(){
   return say('Sin conexión: no se puede deshacer ahora');
  }
  try{localStorage.removeItem('harrington_lastfab')}catch(e){}
+ try{fbAuto(f.items,true)}catch(e){}
  renderDir();calc(false);say('Fabricación deshecha');
 }
-const DIR_SECCIONES=[['VENTAS Y CAJA',['ventas','semanales','estadisticas','gastos','sueldos','objetivo','balance','cierre']],['CATÁLOGO, PRECIOS Y CONVENIOS',['productos','convenios']],['ALMACÉN Y FABRICACIÓN',['stock','fabricacion','regstock']],['PROVEEDORES',['proveedores','nuevopedido','regpedidos']],['PERSONAL',['empleados','horarios','ausencias']],['CLIENTES',['clientes']],['SISTEMA',['revision','historial','discord','nube','copia','reset']]];
+const DIR_SECCIONES=[['VENTAS Y CAJA',['ventas','semanales','estadisticas','gastos','sueldos','objetivo','balance','cierre']],['CATÁLOGO, PRECIOS Y CONVENIOS',['productos','convenios']],['ALMACÉN Y FABRICACIÓN',['stock','fabricacion','balfab','regstock']],['PROVEEDORES',['proveedores','nuevopedido','regpedidos']],['PERSONAL',['empleados','horarios','ausencias']],['CLIENTES',['clientes']],['EVENTOS',['eventos']],['SISTEMA',['revision','historial','discord','nube','copia','reset']]];
 let dirLast=null;
 document.getElementById('dirModal').addEventListener('toggle',e=>{const d=e.target;if(!d.matches||!d.matches('details.mod-sec'))return;let st={};try{st=JSON.parse(localStorage.getItem('harrington_dirsec')||'{}')}catch(x){}if(d.open)st[d.dataset.sec]=1;else delete st[d.dataset.sec];try{localStorage.setItem('harrington_dirsec',JSON.stringify(st))}catch(x){}},true);
 function renderDir(){
@@ -4056,7 +4074,7 @@ async function ticketBlob(s){
   const kv=(k,v)=>{g.textAlign='left';g.font='13px '+ff;g.fillStyle='#6b4c1d';g.fillText(k.toUpperCase(),P,y);y+=19;g.font='bold 20px '+ff;g.fillStyle=ink;let t=String(v);while(g.measureText(t).width>W-2*P&&t.length>4)t=t.slice(0,-2);g.fillText(t===String(v)?t:t+'…',P,y);y+=27};
   kv(s.op==='encargo'?'Encargo N.º':'Venta N.º',s.id);kv('Fecha y hora',s.date+' · '+s.time);
   if(s.employee)kv('Empleado',s.employee);if(s.client)kv('Cliente',s.client);if(s.telegram)kv('Telegrama',s.telegram);
-  if(s.convenio)kv(s.convenioKind||'Convenio',s.convenio);if(s.note)kv('Nota',s.note);if(s.promise)kv('Entrega prevista',fmtISO(s.promise));
+  if(s.convenio)kv(s.convenioKind||'Convenio',s.convenio);if(s.note)kv('Nota',s.note);if(evSaleTxt(s))kv('Sorteo',evSaleTxt(s));if(s.promise)kv('Entrega prevista',fmtISO(s.promise));
   const hr=()=>{g.strokeStyle='#7a5a22';g.lineWidth=2;g.beginPath();g.moveTo(P,y);g.lineTo(W-P,y);g.stroke();y+=24};
   y+=4;hr();
   groupItems(s).forEach(gr=>{
@@ -4170,12 +4188,17 @@ const TUTORIAL=[
 ['Fabricación y recetas <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → FABRICACIÓN</b>: sale la lista de todos los productos (armas, munición y suministros). Toca uno para crear su <b>receta</b>:</p>
 <ul><li>Elige un <b>material</b> en el desplegable y escribe cuántas <b>unidades</b> gasta una unidad del producto. Al elegirlo aparece otro desplegable para el siguiente material.</li><li>Pulsa <b>ACEPTAR</b>. «Quitar receta» la borra.</li><li>En la lista ves la receta de cada producto y cuántas unidades se pueden fabricar con el almacén actual.</li></ul>
 <p><b>Fabricar</b> = sumar unidades en <b>Dirección → STOCK</b>: se suman al stock de productos y se restan sus materiales, todo a la vez. Antes te muestra un <b>resumen para confirmar</b> («vas a fabricar 3 Cattleman y se gastarán 12 Hierro…»). Si falta algún material, <b>no se suma nada</b> y te dice qué falta y cuánto. Los productos sin receta se suman sin gastar materiales. Al fabricar suena un yunque y cae el sello FABRICADO.</p>
-<ul><li><b>↶ Deshacer última fabricación</b>: durante 10 minutos aparece arriba en STOCK; quita esas unidades y devuelve los materiales (si ya se vendieron, no se puede).</li><li><b>Hierro y carbón</b>: en el almacén y en las recetas se llaman <b>Hierro</b> y <b>Carbón</b>. A la mina se le piden como «Mena de hierro» y «Mena de carbón»: al recibir el pedido entran solos en el almacén como Hierro y Carbón, y para costes y comparar precios cuentan como lo mismo.</li><li><b>Recetas con otro producto</b>: algunas recetas llevan un producto de la tienda ya fabricado (la munición y el aceite llevan <b>pólvora</b>, el arco mejorado lleva un <b>arco</b>, el lazo reforzado un <b>lazo</b>). Al fabricarlas se gastan del stock de productos, no del almacén, y en la receta salen como «(producto)». En el editor están al final del desplegable, en «Productos de la tienda». Su coste se calcula con la receta de ese producto.</li><li><b>Coste y margen</b>: con los precios de los pedidos recibidos (o de la lista del proveedor), cada producto con receta muestra cuánto cuesta fabricarlo, su precio de venta y el margen.</li><li><b>Corregir un coste que está mal</b>: en MÁRGENES DE CADA PRODUCTO, abre <b>¿De dónde sale el coste?</b> debajo del producto. Ves cada material de la receta con su cantidad, su precio y de dónde sale (último pedido recibido, lista del proveedor o precio corregido). Si la receta está mal, pulsa <b>✎ CORREGIR RECETA</b>. Si es el precio de un proveedor, pulsa <b>✎ PRECIOS DE…</b>: se abre la ficha de ese proveedor con el cursor en el precio de ese material; lo cambias y pulsas GUARDAR CAMBIOS. Al corregir un precio en la ficha del proveedor, el coste pasa a usar el precio corregido aunque el último pedido se recibiera con el precio viejo. El aviso de margen se quita solo en cuanto el coste es correcto.</li><li><b>Márgenes de cada producto</b> (arriba en FABRICACIÓN): todos los productos con receta, del que menos deja al que más, con el margen en dólares y en %: en rojo si se vende por debajo del coste, en dorado si deja menos del 15 %. Si comprando los materiales al proveedor más barato costaría menos, te dice a quién y cuánto ganarías de más.</li><li><b>Avisos de margen</b> (en la consola de Dirección): si un producto pasa a costar más de fabricar porque ha subido algún material (sale durante 7 días), si deja menos del 10 % o si se vende por debajo de su coste.</li><li><b>¿Qué me falta?</b>: dentro de la receta, escribe cuántas quieres fabricar y te dice qué materiales faltan. Con <b>PREPARAR PEDIDO A…</b> te deja el pedido al proveedor que los vende ya rellenado, para revisarlo y emitirlo.</li><li><b>Almacén y mínimos de materiales</b>: arriba en FABRICACIÓN puedes fijar el mínimo de cada material; los que bajen de él salen como avisos.</li><li>El buscador encuentra productos y recetas.</li></ul>`],
+<ul><li><b>↶ Deshacer última fabricación</b>: durante 10 minutos aparece arriba en STOCK; quita esas unidades y devuelve los materiales (si ya se vendieron, no se puede).</li><li><b>Hierro y carbón</b>: en el almacén y en las recetas se llaman <b>Hierro</b> y <b>Carbón</b>. A la mina se le piden como «Mena de hierro» y «Mena de carbón»: al recibir el pedido entran solos en el almacén como Hierro y Carbón, y para costes y comparar precios cuentan como lo mismo.</li><li><b>Recetas con otro producto</b>: algunas recetas llevan un producto de la tienda ya fabricado (la munición y el aceite llevan <b>pólvora</b>, el arco mejorado lleva un <b>arco</b>, el lazo reforzado un <b>lazo</b>). Al fabricarlas se gastan del stock de productos, no del almacén, y en la receta salen como «(producto)». En el editor están al final del desplegable, en «Productos de la tienda». Su coste se calcula con la receta de ese producto.</li><li><b>Coste y margen</b>: con los precios de los pedidos recibidos (o de la lista del proveedor), cada producto con receta muestra cuánto cuesta fabricarlo, su precio de venta y el margen.</li><li><b>BALANCE DE FABRICACIÓN</b> (Dirección → Almacén y fabricación): cada producto fabricado con sus unidades, lo que cuesta fabricar uno, su precio de venta, lo que ganas o pierdes por unidad y el total, aunque aún no se haya vendido. Arriba eliges <b>esta semana</b>, <b>este mes</b>, <b>el mes pasado</b> o <b>todo</b>. Abajo salen las pérdidas, las ganancias y el balance total, y cada fabricación con su fecha. <b>⧉ COPIAR</b> copia el informe redactado por productos y <b>ENVIAR A DISCORD</b> lo manda al canal «Balance de fabricación» (ponle su enlace en Dirección → Discord). Además, <b>cada vez que se fabrica</b> algo (1, 20 o 50 unidades) se publica solo en ese canal el balance de esa fabricación, y sale un aviso con lo que ganas o pierdes. Se calcula con las recetas y los precios actuales: si corriges una receta o un precio, el historial se recalcula.</li><li><b>Corregir un coste que está mal</b>: en MÁRGENES DE CADA PRODUCTO, abre <b>¿De dónde sale el coste?</b> debajo del producto. Ves cada material de la receta con su cantidad, su precio y de dónde sale (último pedido recibido, lista del proveedor o precio corregido). Si la receta está mal, pulsa <b>✎ CORREGIR RECETA</b>. Si es el precio de un proveedor, pulsa <b>✎ PRECIOS DE…</b>: se abre la ficha de ese proveedor con el cursor en el precio de ese material; lo cambias y pulsas GUARDAR CAMBIOS. Al corregir un precio en la ficha del proveedor, el coste pasa a usar el precio corregido aunque el último pedido se recibiera con el precio viejo. El aviso de margen se quita solo en cuanto el coste es correcto.</li><li><b>Márgenes de cada producto</b> (arriba en FABRICACIÓN): todos los productos con receta, del que menos deja al que más, con el margen en dólares y en %: en rojo si se vende por debajo del coste, en dorado si deja menos del 15 %. Si comprando los materiales al proveedor más barato costaría menos, te dice a quién y cuánto ganarías de más.</li><li><b>Avisos de margen</b> (en la consola de Dirección): si un producto pasa a costar más de fabricar porque ha subido algún material (sale durante 7 días), si deja menos del 10 % o si se vende por debajo de su coste.</li><li><b>¿Qué me falta?</b>: dentro de la receta, escribe cuántas quieres fabricar y te dice qué materiales faltan. Con <b>PREPARAR PEDIDO A…</b> te deja el pedido al proveedor que los vende ya rellenado, para revisarlo y emitirlo.</li><li><b>Almacén y mínimos de materiales</b>: arriba en FABRICACIÓN puedes fijar el mínimo de cada material; los que bajen de él salen como avisos.</li><li>El buscador encuentra productos y recetas.</li></ul>`],
 ['Proveedores y pedidos <span class="tag boss">SOLO JEFE</span>',`<ul><li><b>Dirección → PROVEEDORES</b>: crea cada proveedor con el <b>nombre de la empresa</b>, su <b>tipo de negocio</b> (herrería, mina, tala… elige uno de la lista o escribe uno nuevo y quedará guardado para los siguientes), su <b>telegrama</b> y su <b>lista de productos con el precio por unidad</b>. Al escribir un producto aparece otro hueco. Puedes ampliar o cambiar la lista cuando quieras con EDITAR.</li><li><b>FICHA</b>: cada proveedor tiene su ficha con forma de <b>contrato de suministro</b>: el nombre en la cabecera, su telegrama (con ⧉ COPIAR), la ubicación y la lista de precios. Desde ahí puedes pulsar <b>HACER PEDIDO</b> para ir directamente a pedirle con él ya elegido.</li><li><b>Corregir precios</b>: si un proveedor te da precios nuevos, o alguno estaba mal, pulsa <b>✎ EDITAR</b> en su ficha, cambia el precio y pulsa GUARDAR CAMBIOS. Los costes de fabricación pasan a usar el precio nuevo (aunque el último pedido se recibiera con el viejo) y la ficha de Discord se actualiza sola.</li><li><b>Datos que faltan</b>: en la FICHA, al lado del tipo de negocio, el telegrama o la ubicación vacíos sale <b>✚ AÑADIR</b>, que te lleva a EDITAR con el cursor puesto en ese dato.</li><li><b>OTROS DATOS</b>: para lo que no tiene casilla (el dueño, el encargado, el horario, otro telegrama, el pedido mínimo, la forma de pago…). Escribe el nombre del dato y su valor; hasta 12. Salen en la ficha con su ⧉ COPIAR y en el mensaje de Discord. En la FICHA, <b>✚ AÑADIR OTRO DATO</b> te lleva directo. Si pegas un mensaje con líneas como «Dueño: …» o «Pedido mínimo: …», también se apuntan solas.</li><li><b>Ubicación</b> (opcional): el pueblo donde está el proveedor (Annesburg, Rhodes…). Elige uno de la lista o escribe otro.</li><li><b>Comparar precios</b>: si dos o más proveedores venden lo mismo (por ejemplo «Hierro»), al final de PROVEEDORES sale <b>COMPARAR PRECIOS</b> con todos ordenados del más barato al más caro. Al hacer un pedido, cada producto lleva una etiqueta: <b>✓ el más barato</b> en verde, o en dorado el proveedor que lo vende más barato y a qué precio. Para que los compare, el producto tiene que llamarse igual en los dos.</li><li><b>📋 PEGAR MENSAJE</b> (opcional): en lo alto de la ficha del proveedor, pega el mensaje que te manda (por ejemplo «Mina Rock Roy, de Annesburg. Telegrama MRR-21. Lista de precios: oro 5$, hierro 1,20$, carbón 0,80$, sal 0,50$, azufre 2$») y pulsa <b>RELLENAR LA FICHA</b>. La web pone sola el nombre de la empresa, el telegrama, el tipo de negocio (mina, herrería, aserradero…) y cada producto con su precio. Si un producto viene sin precio, lo deja para que lo escribas tú. Si el proveedor ya estaba en la lista, abre su ficha y actualiza los precios. Revísalo y pulsa CREAR NUEVO PROVEEDOR o GUARDAR CAMBIOS. La forma de siempre, a mano, sigue igual.</li><li>La ficha del proveedor con su lista de precios se publica en el canal de Discord «Proveedores» y <b>se actualiza en el mismo mensaje</b> cada vez que la cambias.</li><li><b>COPIAR TELEGRAMA</b> (en REALIZAR NUEVO PEDIDO, y COPIAR PEDIDO en la ventana PEDIDOS): copia el pedido listo para mandarlo al proveedor, con cada material, cantidad, precio, total y si está pagado.</li><li><b>Dirección → REALIZAR NUEVO PEDIDO</b>: elige el proveedor y te sale <b>su lista de productos y precios</b>. Igual que en la calculadora, usa <b>−</b> y <b>+</b> o escribe la cantidad: el subtotal y el total se calculan solos. Si necesitas algo que no está en su lista, añádelo en «Otros materiales». Indica si ya está <b>pagado</b> y pulsa <b>EMITIR PEDIDO</b>: se publica en el canal «Pedidos» con cada producto, el precio por unidad, el total de cada línea y el total, y aparece a todos los empleados en PEDIDOS.</li><li>Cambiar los precios de un proveedor no cambia los pedidos ya emitidos.</li><li>Al emitir un pedido, en Discord sale también como <b>imagen de albarán</b>.</li><li>Con muchos proveedores aparece un buscador (por nombre, tipo o producto).</li><li><b>Dirección → REGISTRO DE PEDIDOS</b>: pedidos completados, por día o por semana, con descarga y <b>ENVIAR A DISCORD</b>.</li><li>Para <b>cancelar</b> un pedido pendiente, ábrelo en PEDIDOS estando en Modo Jefe y pulsa CANCELAR PEDIDO. Si mientras tanto otro empleado ya lo había completado, no se cancela y se te avisa.</li><li>Al emitir, completar o cancelar un pedido se avisa solo al canal de Discord «Pedidos».</li></ul>`],
 ['Empleados y contratos <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → EMPLEADOS</b>. Para incorporar a alguien rellena todos los datos:</p>
 <ul><li><b>Nombre</b> del empleado.</li><li><b>Puesto</b>: Jefe, Gerente, Armero experto, Armero o Aprendiz de armero.</li><li><b>Sueldo semanal</b> en dólares (por ejemplo 20 o 40).</li><li><b>Horas semanales</b>: viene puesto 10; cámbialo si hace falta.</li><li><b>Fecha de inicio</b> del contrato. El <b>periodo de prueba</b> es de una semana desde ese día y se calcula solo.</li></ul>
 <p>Al pulsar <b>ACEPTAR Y CREAR CONTRATO</b> el empleado aparece en todas las listas (ventas, fichaje, pedidos…) y se publica en el canal de Discord «Empleados» la <b>imagen del contrato</b> con todos sus datos.</p>
 <ul><li><b>✎ EDITAR</b>: cambia sus datos. Marca «Publicar el contrato actualizado» si quieres que salga otra vez en Discord. Los empleados que ya tenías aparecen con «Faltan los datos del contrato» hasta que los completes.</li><li><b>📜 CONTRATO</b>: descarga la imagen del contrato.</li><li><b>🗑 PAPELERA</b>: lo quita de las listas, sin borrar sus ventas ni fichajes.</li><li>Los sueldos se pagan en <b>Dirección → SUELDOS</b> (mira la sección «Sueldos» de este tutorial).</li><li>Las fotos de los empleados se guardan más ligeras y cada móvil solo baja las que han cambiado, así la entrada carga las tarjetas antes.</li><li>Cada empleado muestra si está <b>conectado ahora</b> o cuándo se le vio por última vez, y si ya ha creado su contraseña.</li><li><b>🔑 RESET CONTRASEÑA</b>: borra la contraseña del empleado; la próxima vez que entre tendrá que crear una nueva. Nadie puede ver las contraseñas, ni siquiera la dirección.</li><li><b>📷 FOTO</b>: sube una foto del personaje (por ejemplo una captura del juego). Sale en el óvalo de su tarjeta de la entrada, en tono sepia, como un retrato antiguo. Sin foto, salen sus iniciales.</li><li><b>⏏ EXPULSAR</b>: cierra su sesión en todos sus dispositivos (por ejemplo, si se le ha quedado pillada) y, si estaba fichado, le ficha la salida en ese momento (sale en Discord como «fichada por la dirección al expulsarle»). Tendrá que volver a elegir su ficha. Los jefes también se pueden expulsar entre sí; a uno mismo, no.</li><li><b>⬆ ASCENSO</b>: sube al empleado al siguiente puesto con su sueldo: Aprendiz de armero ($20) → Armero ($25) → Armero experto ($30) → Gerente ($40, el tope). Se publica el contrato nuevo en Discord, sin periodo de prueba. El día del ascenso cobra todavía el sueldo antiguo y el nuevo cuenta desde el día siguiente.</li><li>Al crear un empleado, el sueldo se rellena solo según el puesto (Jefe $50, Gerente $40, Armero experto $30, Armero $25, Aprendiz $20). Puedes cambiarlo.</li><li>En <b>Registros semanales → Fichaje</b> ves las horas fichadas frente a las contratadas («8 h de 10 h»).</li><li>En el resumen de Dirección te avisa cuando termina el periodo de prueba de alguien.</li></ul>`],
+['Eventos y sorteos',`<p>Cuando la dirección organiza un <b>sorteo</b>, sale un <b>cartel</b> en la pantalla principal («EVENTO DE ESTA SEMANA»): el arma que se sortea, desde cuánto hay que gastar para participar, cuándo termina y cuántos números se han repartido. Tócalo para ver todos los detalles.</p>
+<ul><li><b>Cada compra da un número</b> al cliente (si compra 3 veces, tiene 3 números). Solo cuentan las compras desde el mínimo que haya puesto la dirección.</li><li>Mientras hay sorteo, en la venta sale la casilla <b>Telegrama de contacto</b> y es <b>obligatoria</b> (el botón te dirá «Falta el telegrama (sorteo)»). Si el cliente ya tiene ficha, se rellena sola. Es para poder avisarle si gana.</li><li>El número sale en el <b>ticket</b> («Sorteo: n.º 12»), en el mensaje de Discord de la venta y en la <b>ficha del cliente</b> («NÚMEROS DE SORTEO»).</li><li>Los <b>encargos</b> cuentan cuando se entregan y se cobran (al pulsar FINALIZAR ENCARGO), no al crearlos.</li><li>Si se anula una venta, su número deja de participar.</li><li>Al llegar la hora de fin, la web <b>hace el sorteo sola</b> (si nadie tiene la web abierta en ese momento, se hace en cuanto alguien la abra; se hace una sola vez y todos ven el mismo ganador). El cartel cambia a <b>¡YA HAY GANADOR!</b>: tócalo para ver el ganador, su número y su telegrama.</li><li><b>📨 COPIAR TELEGRAMA PARA EL GANADOR</b> copia el mensaje ya escrito y firmado por Vincent Harrington (telegrama SD8112) para pegarlo y avisarle.</li></ul>`],
+['Eventos: crear y gestionar <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → EVENTOS</b>. Para crear un sorteo:</p>
+<ol><li>Elige el <b>arma</b> que se sortea (ves cuántas hay en stock).</li><li>El día en que <b>empieza</b> (si es hoy, empieza en ese momento) y el día y la <b>hora en que termina</b> (hora española).</li><li>El <b>gasto mínimo</b> para participar: sin mínimo, desde $1, $2, $5, $10 u otra cantidad. Sale en el cartel y en el anuncio.</li><li>Una nota si quieres, y <b>CREAR SORTEO</b>. Se anuncia en el canal de Discord <b>«Eventos»</b> (ponle su enlace en Dirección → Discord).</li></ol>
+<ul><li><b>✕ CANCELAR EVENTO</b>: en la ventana del evento (botón ABRIR o tocando el cartel), mientras no haya terminado. No se hace el sorteo, los números dejan de valer y se avisa en Discord.</li><li>Al terminar, el ganador se publica solo en Discord.</li><li><b>✓ ARMA ENTREGADA AL GANADOR</b>: cuando la recoja. Descuenta 1 unidad del arma del stock y apunta un <b>gasto</b> («Premio del sorteo») por el valor que pongas (viene puesto su precio de venta). No cuenta como venta.</li><li><b>Devolución de Administración</b>: cuando Administración te devuelva el dinero del premio, pulsa <b>SÍ, ADMINISTRACIÓN LO HA DEVUELTO</b>: entra en caja como una venta de «Administración» por esa cantidad. Mientras falte, sale un aviso en la revisión de Dirección.</li><li>En la lista de EVENTOS ves cada sorteo con su estado: en marcha, sorteando, falta entregar el arma, falta la devolución, entregado o cancelado.</li></ul>`],
 ['Clientes <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → CLIENTES → AÑADIR CLIENTE</b>: escribe su <b>nombre</b>, el tipo (particular o empresa) y su <b>telegrama</b> (obligatorio). El <b>número de identificación</b>, los <b>números de serie</b> y el <b>arma</b> son opcionales.</p>
 <ul><li><b>Armas vendidas · números de serie</b>: no es obligatorio rellenarlo al crearlo. Al escribir un número aparece otro hueco, hasta <b>20 por cliente</b>. Al lado puedes elegir qué arma es (opcional).</li><li><b>FICHA</b>: se abre como un <b>expediente</b> de archivo con su hoja sujeta por un clip. Además de sus datos, muestra su <b>historial de compras</b>: el total que se ha gastado, cuántas compras lleva, cuándo fue la última y cada compra con la fecha, lo que se llevó, quién le atendió y el ticket. Las anuladas salen tachadas y no cuentan. Se apunta solo al cobrar una venta con su nombre de cliente.</li><li><b>FICHA</b>: muestra todos sus datos. Al lado del número de identificación, del telegrama, de cada número de serie y de cada arma hay un botón <b>⧉ COPIAR</b> que lo copia al portapapeles para pegarlo donde quieras.</li><li>Con <b>EDITAR</b> puedes añadir más números de serie, cambiar datos o ponerle <b>precios especiales</b>.</li><li><b>Datos que faltan</b>: en la FICHA, al lado de cada dato vacío (telegrama, n.º de identificación) sale <b>✚ AÑADIR</b>: te lleva a EDITAR con el cursor puesto en ese dato. Así completas la ficha cuando el cliente te lo dé, aunque no lo tuvieras al principio. Las fichas que se crearon solas en una venta se pueden guardar aunque aún no tengan telegrama.</li><li><b>OTROS DATOS</b>: para todo lo que no tiene casilla (el dueño, su empresa, la dirección, el horario, otro telegrama…). Escribe el nombre del dato y su valor; al rellenar uno aparece otro hueco, hasta 12. Salen en la ficha con su ⧉ COPIAR y en Discord. En la FICHA, <b>✚ AÑADIR OTRO DATO</b> te lleva directo. Si pegas un mensaje con líneas como «Dueño: Pedro» o «Horario: de 9 a 5», también se apuntan solas.</li><li><b>📋 PEGAR MENSAJE</b> (opcional): dentro de la ficha, o con <b>📋 DESDE UN MENSAJE</b> en la lista, pega el mensaje o telegrama del cliente tal cual te llega (por ejemplo «Pascual Martínez, telegrama 4521, identificación 88231. Armas: Lemat n.º 55123, Schofield n.º 77810») y pulsa <b>RELLENAR LA FICHA</b>. La web pone sola el nombre, el telegrama, el número de identificación y los números de serie con su arma, y te dice qué ha rellenado. Revísalo y pulsa GUARDAR CLIENTE. Si el cliente ya existía, añade lo nuevo a su ficha. Puedes seguir rellenándola a mano como siempre.</li><li>Al crearlo se publica su ficha en el canal de Discord «Clientes» (con identificación, armas y números de serie) y, cada vez que le añades algo, <b>se actualiza ese mismo mensaje</b>.</li><li>Los clientes que se guardan solos al vender aparecen en la lista; su ficha sale en Discord la primera vez que los editas o que se les apunta un número de serie.</li><li>Los números de serie también se pueden apuntar <b>al vender</b>: al finalizar una venta con armas sale una ventana para escribirlos.</li><li>La ficha se ve como una <b>tarjeta de registro</b> de papel.</li></ul>`],
 ['Estadísticas <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → Ventas y caja → ESTADÍSTICAS</b>. Elige <b>esta semana</b>, <b>la semana pasada</b>, <b>este mes</b> o <b>el mes pasado</b>:</p>
@@ -4781,6 +4804,7 @@ function upsertList(type,id,val,del){
 function applyRecord(clave,valor){
  const i=clave.indexOf(':'), type=clave.slice(0,i), id=clave.slice(i+1), del=!!(valor&&valor.deleted);
  if(type==='nota'){applyNota(id,valor,del);return}
+ if(type==='evento'){applyEvento(id,valor,del);return}
  if(type==='dcerr'){if(del)delete DCH_REMOTE[id];else DCH_REMOTE[id]=valor;return}
  if(REC_LISTS[type])upsertList(type,id,valor,del);
  else if(type==='gasto'){
@@ -4853,7 +4877,7 @@ async function cloudPullRecords(){
   const hasOld=await sbFetch('/rest/v1/datos?select=clave&clave=like.venta:*&actualizado=lte.'+encodeURIComponent(hz)+'&limit=1').then(r=>r.ok?r.json():[]).catch(()=>[]);
   if(hasOld.length){
    let got=0, top='';
-   const keep=['encargo:','pedido:','ausencia:','fichaje:','cfg:','expulsion:'];
+   const keep=['encargo:','pedido:','ausencia:','fichaje:','cfg:','expulsion:','evento:'];
    for(const pf of keep){const x=await pullRange(pf,'',hz);got+=x.got}
    /* y todo lo reciente, de cualquier tipo */
    const x=await pullRange('*:',hz,'');
@@ -4942,7 +4966,7 @@ async function cloudPoll(force){
   }
   if(cloud.outbox.length)cloudFlushOutbox();
   cloud.last=Date.now();
-  autoWeekly();autoMonthly();recetasBase();renderEmpWeek();renderPayPlate();renderGoal();
+  autoWeekly();autoMonthly();recetasBase();try{evTick()}catch(e){}renderEmpWeek();renderPayPlate();renderGoal();
  }catch(e){setCloudState(false)}
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){cloudPoll();rtConnect()}});
@@ -5556,7 +5580,7 @@ function renderModRevision(){
  const I=[], t=todayNum(), add=(lvl,txt,fix)=>I.push([lvl,txt,fix]);
  Object.keys(stockMap).forEach(k=>{if(stockMap[k]<0)add('bad',`Stock negativo: <b>${esc(k.replace(/^mat:/,''))}</b> (${stockMap[k]}).`,'Corrígelo en STOCK.')});
  shifts.forEach(s=>{if(Date.now()-s.start>12*3600000)add('bad',`<b>${esc(s.name)}</b> lleva fichado desde el ${esc(fmtDate(s.start))} a las ${esc(fmtTime(s.start))}.`,'Ciérralo en REGISTROS HORARIOS con la hora real.')});
- const noEmp=loadLog(KEY_SALELOG).filter(r=>!r.voided&&!r.employee&&saleDay(r)>t-30);if(noEmp.length)add('pend',`${noEmp.length} ${noEmp.length===1?'venta':'ventas'} de los últimos 30 días sin empleado (${noEmp.slice(0,4).map(r=>esc(r.id)).join(', ')}${noEmp.length>4?'…':''}).`,'No cuentan para el empleado de la semana ni para su ficha.');
+ const noEmp=loadLog(KEY_SALELOG).filter(r=>!r.voided&&!r.employee&&!r.admin&&saleDay(r)>t-30);if(noEmp.length)add('pend',`${noEmp.length} ${noEmp.length===1?'venta':'ventas'} de los últimos 30 días sin empleado (${noEmp.slice(0,4).map(r=>esc(r.id)).join(', ')}${noEmp.length>4?'…':''}).`,'No cuentan para el empleado de la semana ni para su ficha.');
  const seen={};gastos.forEach(g=>{const k=g.cat+'|'+norm(g.concepto)+'|'+g.cents+'|'+g.day;(seen[k]=seen[k]||[]).push(g)});Object.values(seen).filter(L=>L.length>1).forEach(L=>add('pend',`Gasto repetido ${L.length} veces el ${esc(L[0].date)}: «${esc(L[0].concepto)}» (${money(L[0].cents)}).`,'Si es un error, borra el sobrante en GASTOS.'));
  empleados.filter(e=>!empHasContract(e)).forEach(e=>add('pend',`<b>${esc(e.name)}</b> no tiene los datos del contrato completos.`,'Complétalo en EMPLEADOS (sin contrato no cobra sueldo).'));
  pendingEncs().filter(e=>e.ts&&Date.now()-e.ts>14*86400000).forEach(e=>add('pend',`El encargo ${esc(e.id)} de <b>${esc(e.client||'—')}</b> lleva más de 14 días pendiente.`,'Entrégalo o cancélalo.'));
@@ -5621,3 +5645,278 @@ restoreSale();
 try{applyMe();gateCheck();if(meEmp())presencePing(true)}catch(e){}
 calc(false);
 filter();
+/* ===== EVENTOS: sorteo de un arma entre los clientes que compran durante el evento =====
+   Cada compra (desde el mínimo que elija la dirección) da un número. Los encargos cuentan al entregarlos (cuando se pagan).
+   Al llegar la hora de fin, el primer dispositivo con la web abierta hace el sorteo (una sola vez para todos). */
+const KEY_EVENTOS='harrington_eventos_v1', MY_TEL='SD8112';
+var eventos=loadObj(KEY_EVENTOS,[]);if(!Array.isArray(eventos))eventos=[];
+const evModal=document.getElementById('evModal'), evPlates=document.getElementById('evPlates');
+let evOpen=null, evDraft=null, evBusy=false, evForm={};
+function saveEventosLocal(){eventos.sort((a,b)=>(a.created||0)-(b.created||0));try{localStorage.setItem(KEY_EVENTOS,JSON.stringify(eventos))}catch(e){}}
+function applyEvento(id,v,del){const k=eventos.findIndex(x=>x.id===id);if(del){if(k>=0)eventos.splice(k,1)}else if(k>=0)eventos[k]=v;else eventos.push(v);saveEventosLocal();evSync()}
+function putEvento(ev){applyEvento(ev.id,ev,false);cloudPut('evento:'+ev.id,ev)}
+function evActive(ev,t){t=t||Date.now();return !!ev&&ev.status==='activo'&&t>=ev.start&&t<ev.end}
+function sorteosActivos(){const t=Date.now();return (eventos||[]).filter(ev=>ev.tipo==='sorteo'&&evActive(ev,t))}
+function evMinTxt(ev){return ev.min>0?'desde '+money(ev.min):'de cualquier importe'}
+function evWhen(ms){const m=madridParts(ms), d=new Date(dayNum(+m.year,+m.month,+m.day)*86400000).getUTCDay();return `${DIAS_L[d]} ${m.day}/${m.month} a las ${m.hour}:${m.minute}`}
+function evLeft(ms){const s=Math.max(0,ms-Date.now()), d=Math.floor(s/86400000), h=Math.floor(s%86400000/3600000), mi=Math.floor(s%3600000/60000);
+ if(d)return 'quedan '+d+' d '+h+' h';if(h)return 'quedan '+h+' h '+mi+' min';return mi?'quedan '+mi+' min':'termina ya'}
+function evParticipants(id){return loadLog(KEY_SALELOG).filter(r=>!r.voided&&r.sorteos&&r.sorteos[id]).map(r=>({n:r.sorteos[id],client:r.client,telegram:r.telegram||'',id:r.id,date:r.date,time:r.time})).sort((a,b)=>a.n-b.n)}
+function evMaxNum(id){let m=0;loadLog(KEY_SALELOG).forEach(r=>{const n=r.sorteos&&r.sorteos[id];if(n>m)m=n});return m}
+function evRand(n){try{const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%n}catch(e){return Math.floor(Math.random()*n)}}
+function clientTel(name){const c=clientes.find(x=>norm(x.name)===norm(name||''));return (c&&c.telegram)||''}
+/* En la venta: mientras haya sorteo se pide el telegrama del cliente (para poder avisarle si gana) */
+function evTelOn(){return appMode==='venta'&&customer.type!=='sheriff'&&!loadedEnc&&customer.op!=='encargo'&&sorteosActivos().length>0}
+function evTelNeeded(){if(!evTelOn())return false;const f=computeFin().final;return f>0&&sorteosActivos().some(ev=>f>=(ev.min||0))}
+function evSaleTxt(s){const o=(s&&s.sorteos)||{};return Object.keys(o).map(id=>{const ev=(eventos||[]).find(x=>x.id===id);return 'n.º '+o[id]+(ev?' ('+ev.arma+')':'')}).join(' · ')}
+/* Da el número del sorteo a una venta que se acaba de finalizar (numeración única entre todos los dispositivos) */
+async function raffleAssign(s){
+ if(!s||s.op==='encargo'||!s.client||customer.type==='sheriff')return;
+ const amt=s.totalCents||0, L=sorteosActivos().filter(ev=>amt>0&&amt>=(ev.min||0)&&!(s.sorteos&&s.sorteos[ev.id]));
+ if(!L.length)return;
+ s.sorteos=Object.assign({},s.sorteos||{});let fail=false;
+ for(const ev of L){
+  let n=evMaxNum(ev.id)+1, got=0;
+  for(let i=0;i<60&&!got;i++,n++){try{if(await claimRow('sorteo-'+ev.id+'-'+n,{sale:s.id,client:s.client,ts:Date.now()}))got=n}catch(e){fail=true;break}}
+  if(got)s.sorteos[ev.id]=got;
+ }
+ try{store.set(KEY_SALE,JSON.stringify(s))}catch(e){}
+ if(Object.keys(s.sorteos).length)logSale(s);
+ if(fail)say('Sin conexión: no se ha podido dar el número del sorteo a esta venta','err');
+}
+/* Textos */
+function evStartText(ev){return ['NUEVO EVENTO · SORTEO DE UN ARMA','Premio: '+ev.arma,'Empieza: '+evWhen(ev.start),'Termina: '+evWhen(ev.end),'Participan: compras '+evMinTxt(ev),'Cómo participar: cada compra en la armería da un número para el sorteo. Hay que dar nombre y telegrama al comprar.'].concat(ev.nota?['Nota: '+ev.nota]:[]).concat(['','Harrington Gunsmith · Saint Denis']).join('\n')}
+function evEndText(ev){const w=ev.winner;return (w?['EVENTO FINALIZADO · ¡YA HAY GANADOR!','Sorteo de: '+ev.arma,'Ganador: '+w.client,'Número premiado: '+w.n,'Participaciones: '+(ev.participants||0)]:['EVENTO FINALIZADO · SIN PARTICIPANTES','Sorteo de: '+ev.arma,'No hubo ninguna compra con número para el sorteo.']).join('\n')}
+function evTelegram(ev){const w=ev.winner;if(!w)return '';return `Estimado/a ${w.client}:\n\nSoy Vincent Harrington, de la armería Harrington Gunsmith de Saint Denis. Le informo de que ha sido premiado/a en nuestro sorteo del arma ${ev.arma}, con el número ${w.n}.\n\nPuede pasar a recogerla por la armería cuando le venga bien.\n\nAtentamente, Vincent Harrington · Telegrama ${MY_TEL}`}
+/* Sorteo automático al terminar */
+async function evTick(){
+ const t=Date.now(), due=eventos.filter(ev=>ev.status==='activo'&&t>=ev.end);
+ if(due.length&&!evBusy&&cloud.ok){
+  evBusy=true;
+  try{
+   try{await cloudPullRecords()}catch(e){}
+   for(const e0 of due){
+    const ev=eventos.find(x=>x.id===e0.id);if(!ev||ev.status!=='activo')continue;
+    const slot=Math.max(0,Math.floor((Date.now()-ev.end)/300000));
+    let mine=false;try{mine=await claimRow('evento-sorteo-'+ev.id+'-'+slot,{ts:Date.now()})}catch(e){continue}
+    if(!mine)continue;
+    const P=evParticipants(ev.id), r=Object.assign({},ev,{status:'finalizado',drawnAt:Date.now(),participants:P.length,drawnBy:whoAmI().name});
+    if(P.length){const w=P[evRand(P.length)];r.winner={n:w.n,client:w.client,telegram:w.telegram||clientTel(w.client),saleId:w.id,date:w.date}}else r.winner=null;
+    putEvento(r);discordSend('eventos',evEndText(r));
+    if(r.winner)say('¡Sorteo hecho! Ganador del '+r.arma+': '+r.winner.client+' (n.º '+r.winner.n+')');
+   }
+  }finally{evBusy=false}
+ }
+ evSync();
+}
+/* Cartel en la pantalla principal */
+function evShown(){const t=Date.now();return eventos.filter(ev=>ev.tipo==='sorteo'&&((ev.status==='activo'&&(t>=ev.end||ev.start-t<14*86400000))||(ev.status==='finalizado'&&!ev.entregado&&(ev.winner||t-ev.end<86400000))))}
+function evPlateHTML(ev){
+ const t=Date.now(), n=evParticipants(ev.id).length;
+ if(ev.status==='finalizado')return ev.winner?`<small>EVENTO FINALIZADO · SORTEO DEL ${esc(ev.arma.toUpperCase())}</small><b>¡YA HAY GANADOR!</b><span>Toca para ver el ganador, su número y su telegrama</span>`:`<small>EVENTO FINALIZADO · SORTEO DEL ${esc(ev.arma.toUpperCase())}</small><b>SIN PARTICIPANTES</b><span>No hubo compras con número</span>`;
+ if(t>=ev.end)return `<small>EVENTO TERMINADO · SORTEO DEL ${esc(ev.arma.toUpperCase())}</small><b>SORTEANDO…</b><span>${n} ${n===1?'número':'números'} en el bombo</span>`;
+ if(t<ev.start)return `<small>PRÓXIMO EVENTO · SORTEO</small><b>${esc(ev.arma)}</b><span>Empieza el ${esc(evWhen(ev.start))} · compras ${esc(evMinTxt(ev))}</span>`;
+ return `<small>EVENTO DE ESTA SEMANA · SORTEO</small><b>${esc(ev.arma)}</b><span>Cada compra ${esc(evMinTxt(ev))} = un número · termina el ${esc(evWhen(ev.end))} · <b>${esc(evLeft(ev.end))}</b> · ${n} ${n===1?'número repartido':'números repartidos'}</span>`;
+}
+function evPaint(){
+ if(!evPlates)return;
+ const L=evShown(), html=L.map(ev=>`<button type="button" class="ev-plate${ev.status==='finalizado'?' done':''}" data-evp="${esc(ev.id)}"><i class="ev-rib" aria-hidden="true">${ev.status==='finalizado'?'GANADOR':'SORTEO'}</i><div>${evPlateHTML(ev)}</div></button>`).join('');
+ if(evPlates.innerHTML!==html)evPlates.innerHTML=html;evPlates.hidden=!L.length;
+}
+function evSync(){
+ evPaint();
+ try{const enc=customer.op==='encargo';telWrap.hidden=!(enc||evTelOn())||!!loadedEnc;updateFinish()}catch(e){}
+ if(evOpen&&!evModal.hidden&&!document.activeElement.matches('input,select,textarea'))renderEvModal();
+ if(!dirModal.hidden&&dirMod==='eventos'&&!document.activeElement.matches('input,select,textarea'))renderDir();
+}
+/* Ventana del evento (todos la ven; la dirección tiene además los botones) */
+function openEv(id){evOpen=id;evForm={};renderEvModal();openModal(evModal);evModal.scrollTop=0}
+function renderEvModal(){
+ const ev=eventos.find(x=>x.id===evOpen), b=document.getElementById('evBody');if(!ev){b.innerHTML='<div class="enc-empty">Este evento ya no existe.</div>';return}
+ const t=Date.now(), P=evParticipants(ev.id), w=ev.winner, boss=bossActive;
+ const st=ev.status==='cancelado'?'CANCELADO':ev.status==='finalizado'?'FINALIZADO':t>=ev.end?'SORTEANDO…':t<ev.start?'PRÓXIMAMENTE':'EN MARCHA';
+ const line=(k,v)=>`<div class="reg-line"><span>${k}</span><b>${v}</b></div>`;
+ let h=`<div class="ev-poster"><small>HARRINGTON GUNSMITH · SAINT DENIS</small><div class="ev-h">SORTEO</div><div class="ev-arma">${esc(ev.arma)}</div><div class="ev-st">${st}</div></div>
+  ${line('Empieza',esc(evWhen(ev.start)))}${line('Termina',esc(evWhen(ev.end)))}${ev.status==='activo'&&t<ev.end&&t>=ev.start?line('Tiempo',esc(evLeft(ev.end))):''}${line('Participan','Compras '+esc(evMinTxt(ev)))}${line('Números repartidos',String(ev.status==='finalizado'?(ev.participants||P.length):P.length))}${ev.nota?line('Nota',esc(ev.nota)):''}
+  <p class="bk-note">Cada compra ${esc(evMinTxt(ev))} da <b>un número</b> al cliente (si compra varias veces, tiene varios números). Hay que apuntar su <b>nombre y telegrama</b> en la venta. Los encargos cuentan al entregarlos y cobrarlos. Al llegar la hora de fin, la web hace el sorteo sola.</p>`;
+ if(ev.status==='cancelado')h+=`<div class="ev-win bad"><b>EVENTO CANCELADO</b><span>${ev.cancelledAt?esc(fmtDate(ev.cancelledAt)+' '+fmtTime(ev.cancelledAt)):''}${ev.cancelledBy?' · '+esc(ev.cancelledBy):''}</span></div>`;
+ if(ev.status==='finalizado'&&w){
+  const tel=w.telegram||clientTel(w.client);
+  h+=`<div class="ev-win"><small>GANADOR DEL SORTEO</small><b>${esc(w.client)}</b><div class="ev-num">N.º ${w.n}</div><span>Telegrama: <b>${tel?esc(tel):'— (búscalo en su ficha de cliente)'}</b>${w.saleId?' · Ticket '+esc(w.saleId):''}</span></div>
+   <div class="enc-actions${tel?' two':''}"><button type="button" class="primary" data-eva="tele">📨 COPIAR TELEGRAMA PARA EL GANADOR</button>${tel?`<button type="button" data-eva="tel">⧉ COPIAR SU TELEGRAMA (${esc(tel)})</button>`:''}</div>`;
+ }else if(ev.status==='finalizado')h+=`<div class="ev-win bad"><b>SIN PARTICIPANTES</b><span>No hubo ninguna compra con número durante el evento.</span></div>`;
+ if(boss&&ev.status==='finalizado'&&w){
+  if(!ev.entregado){const def=evForm.premio!==undefined?evForm.premio:(productPrice(ev.arma)/100).toFixed(2), have=stockMap[ev.arma]||0;
+   h+=`<div class="dir-sec-title">ENTREGA DEL PREMIO</div><p class="bk-note">Cuando el ganador recoja el arma, márcalo aquí: se descuenta <b>1 ${esc(ev.arma)}</b> del stock (hay ${have}) y se apunta como <b>gasto</b> (no cuenta como venta).</p>
+   <div class="dir-form"><label>VALOR DEL PREMIO PARA EL GASTO ($)<div class="money"><i>$</i><input id="evPremio" inputmode="decimal" autocomplete="off" value="${esc(def)}"></div></label></div>
+   <div class="enc-actions"><button type="button" class="primary" data-eva="entregar">✓ ARMA ENTREGADA AL GANADOR</button></div>`}
+  else{h+=`<div class="dir-sec-title">ENTREGA DEL PREMIO</div>${line('Entregada',esc(fmtDate(ev.entregadoAt)+' '+fmtTime(ev.entregadoAt))+(ev.entregadoBy?' · '+esc(ev.entregadoBy):''))}${line('Gasto apuntado',money(ev.premioCents||0))}`;
+   if(!ev.reembolso){const def=evForm.reem!==undefined?evForm.reem:((ev.premioCents||0)/100).toFixed(2);
+    h+=`<div class="dir-sec-title">DEVOLUCIÓN DE ADMINISTRACIÓN</div><p class="bk-note">Si Administración te devuelve el dinero del premio, márcalo: entra en caja como una venta («Administración»).</p>
+    <div class="dir-form"><label>DINERO DEVUELTO ($)<div class="money"><i>$</i><input id="evReem" inputmode="decimal" autocomplete="off" value="${esc(def)}"></div></label></div>
+    <div class="enc-actions"><button type="button" class="primary" data-eva="reembolso">SÍ, ADMINISTRACIÓN LO HA DEVUELTO</button></div>`}
+   else h+=line('Devuelto por Administración','+'+money(ev.reembolsoCents||0)+' · '+esc(fmtDate(ev.reembolsoAt)));
+  }
+ }
+ if(P.length)h+=`<details class="mat-mins"><summary>NÚMEROS DEL SORTEO (${P.length})</summary>${P.map(p=>`<div class="reg-line${w&&w.n===p.n?' ev-me':''}"><span>N.º ${p.n} · ${esc(p.client)}</span><b>${esc(p.date||'')}</b></div>`).join('')}</details>`;
+ if(boss&&ev.status==='activo'&&t<ev.end)h+=`<div class="enc-actions" style="margin-top:12px"><button type="button" class="warn" data-eva="cancelar">✕ CANCELAR EVENTO</button></div>`;
+ document.getElementById('evTitle').textContent='EVENTO · SORTEO';
+ b.innerHTML=h;
+}
+async function evDeliver(ev){
+ const c=parseMoney(document.getElementById('evPremio').value);
+ if(!(c>0))return say('Escribe el valor del premio (mayor que 0)','err');
+ if((stockMap[ev.arma]||0)<1)return say('No hay ningún '+ev.arma+' en stock: súmalo en STOCK antes de entregarlo','err');
+ if(!await askConfirm('Arma entregada',`Se descontará 1 ${ev.arma} del stock y se apuntará un gasto de ${money(c)} (premio del sorteo para ${ev.winner.client}).`,'Entregada'))return;
+ try{if(!await claimRow('evento-entrega-'+ev.id,{ts:Date.now()})){await cloudPullRecords();renderEvModal();return say('Ya lo marcó otro dispositivo')}}catch(e){return say('Sin conexión: inténtalo de nuevo','err')}
+ try{await moverStock([{producto:ev.arma,delta:-1}],'Premio del sorteo');logStock(ev.arma,-1,'Premio del sorteo')}catch(e){}
+ const now=Date.now(), m=madridParts(now), w=whoAmI();
+ const g={id:'g'+now.toString(36)+Math.random().toString(36).slice(2,5),cat:'otros',concepto:'Premio del sorteo · '+ev.arma+' · ganador '+ev.winner.client,cents:c,day:dayNum(+m.year,+m.month,+m.day),date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`,evento:ev.id};
+ gastos.push(g);saveGastos();cloudPut('gasto:'+g.id,g);discordSend('gastos','GASTO · '+CAT_NAMES.otros+'\n'+g.concepto+'\nImporte: '+money(c));
+ putEvento(Object.assign({},ev,{entregado:true,entregadoAt:now,entregadoBy:w.name,premioCents:c,gastoId:g.id}));
+ discordSend('eventos',['PREMIO ENTREGADO','Sorteo de: '+ev.arma,'Ganador: '+ev.winner.client+' (n.º '+ev.winner.n+')','Entregado por: '+(w.name||'Dirección')].join('\n'));
+ evForm={};renderEvModal();say('Premio entregado · gasto de '+money(c)+' apuntado');
+}
+async function evRefund(ev){
+ const c=parseMoney(document.getElementById('evReem').value);
+ if(!(c>0))return say('Escribe el dinero devuelto (mayor que 0)','err');
+ if(!await askConfirm('Devolución de Administración',`Entrarán ${money(c)} en caja como una venta de «Administración».`,'Apuntar'))return;
+ try{if(!await claimRow('evento-reembolso-'+ev.id,{ts:Date.now()})){await cloudPullRecords();renderEvModal();return say('Ya lo apuntó otro dispositivo')}}catch(e){return say('Sin conexión: inténtalo de nuevo','err')}
+ const now=Date.now(), m=madridParts(now), id='EV-'+m.day+m.month+m.year.slice(-2)+'-'+now.toString(36).slice(-4).toUpperCase();
+ const e={id:id,items:[],stock:{},note:'Devolución de Administración · premio del sorteo ('+ev.arma+')',date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`,op:'venta',client:'Administración',employee:'',products:0,units:0,dueCents:c,totalCents:c,convenio:'',fromEncargo:'',admin:true,evento:ev.id,ts:new Date().toISOString()};
+ const a=loadLog(KEY_SALELOG);a.push(e);store.set(KEY_SALELOG,JSON.stringify(a.slice(-5000)));cloudPut('venta:'+id,e);
+ putEvento(Object.assign({},ev,{reembolso:true,reembolsoAt:now,reembolsoCents:c,reembolsoId:id}));
+ discordSend('eventos',['DEVOLUCIÓN DE ADMINISTRACIÓN','Sorteo de: '+ev.arma,'Importe devuelto: '+money(c),'Entra en caja como venta: '+id].join('\n'));
+ renderEvModal();say('Devolución apuntada: +'+money(c)+' en caja');
+}
+async function evCancel(ev){
+ if(!await askConfirm('Cancelar evento',`El sorteo del ${ev.arma} se cancelará y no se hará. Los números repartidos dejarán de valer. Se avisará en Discord.`,'Cancelar evento'))return;
+ const w=whoAmI();putEvento(Object.assign({},ev,{status:'cancelado',cancelledAt:Date.now(),cancelledBy:w.name}));
+ discordSend('eventos',['EVENTO CANCELADO','Sorteo de: '+ev.arma,'El sorteo no se realizará.'].join('\n'));
+ renderEvModal();say('Evento cancelado');
+}
+evModal.addEventListener('click',e=>{
+ if(e.target===evModal)return closeModal(evModal);
+ const b=e.target.closest('[data-eva]');if(!b)return;const ev=eventos.find(x=>x.id===evOpen);if(!ev)return;const a=b.dataset.eva;
+ if(a==='tele')copyMsg(evTelegram(ev),'Telegrama copiado · pégalo para el ganador');
+ else if(a==='tel'){const t=ev.winner&&(ev.winner.telegram||clientTel(ev.winner.client));if(t)copyText(t).then(ok=>say(ok?'Copiado: '+t:'No se pudo copiar'))}
+ else if(a==='entregar'&&bossActive)once('event',()=>evDeliver(ev),b);
+ else if(a==='reembolso'&&bossActive)once('evreem',()=>evRefund(ev),b);
+ else if(a==='cancelar'&&bossActive)once('evcan',()=>evCancel(ev),b);
+});
+evModal.addEventListener('input',e=>{const t=e.target;if(t.id==='evPremio'||t.id==='evReem'){const v=t.value.replace(/[^0-9.,]/g,'');t.value=v;evForm[t.id==='evPremio'?'premio':'reem']=v}});
+document.getElementById('evClose').onclick=()=>closeModal(evModal);
+evPlates.addEventListener('click',e=>{const b=e.target.closest('[data-evp]');if(b)openEv(b.dataset.evp)});
+/* Dirección → EVENTOS: crear un sorteo y ver todos */
+function evNewDraft(){const t=todayNum();return {arma:'',ini:isoToday(),fin:(()=>{const d=new Date((t+7)*86400000);return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`})(),hora:'22:00',min:'0',otro:'',nota:''}}
+function renderModEventos(){
+ if(!evDraft)evDraft=evNewDraft();const d=evDraft, W=weaponNames();
+ const mins=[['0','Sin mínimo: cualquier compra'],['1','Desde $1'],['2','Desde $2'],['5','Desde $5'],['10','Desde $10'],['otro','Otra cantidad…']];
+ const L=eventos.slice().sort((a,b)=>(b.created||0)-(a.created||0)), t=Date.now();
+ return `<p class="bk-note">Crea un <b>sorteo de un arma</b>. Mientras dure, cada compra (desde el mínimo que elijas) da un número al cliente. Al llegar la hora de fin, la web sortea sola, sale el ganador en el cartel de la pantalla principal y se publica en Discord (canal «Eventos»).</p>
+ <div class="dir-form enc-sec"><div class="dir-sec-title" style="margin-top:0">NUEVO SORTEO</div>
+  <label>ARMA QUE SE SORTEA<select id="evfArma"><option value="">Elige el arma…</option>${W.map(n=>`<option value="${esc(n)}"${d.arma===n?' selected':''}>${esc(n)}${bossActive?' (en stock: '+(stockMap[n]||0)+')':''}</option>`).join('')}</select></label>
+  <label>EMPIEZA EL DÍA<input id="evfIni" type="date" value="${esc(d.ini)}"></label>
+  <div class="ev-2"><label>TERMINA EL DÍA<input id="evfFin" type="date" value="${esc(d.fin)}"></label><label>A LAS (HORA ESPAÑOLA)<input id="evfHora" type="time" value="${esc(d.hora)}"></label></div>
+  <label>GASTO MÍNIMO PARA PARTICIPAR<select id="evfMin">${mins.map(([v,l])=>`<option value="${v}"${d.min===v?' selected':''}>${l}</option>`).join('')}</select></label>
+  ${d.min==='otro'?`<label>MÍNIMO ($)<div class="money"><i>$</i><input id="evfOtro" inputmode="decimal" autocomplete="off" placeholder="Ej.: 20" value="${esc(d.otro)}"></div></label>`:''}
+  <label>NOTA (OPCIONAL)<input id="evfNota" type="text" maxlength="120" autocomplete="off" placeholder="Ej.: El premio se recoge en la tienda" value="${esc(d.nota)}"></label>
+  <div class="pay-err" id="evfErr" hidden></div>
+  <div class="enc-actions"><button type="button" class="primary" data-dir="ev-create">CREAR SORTEO</button></div></div>
+ <div class="dir-sec-title">EVENTOS (${L.length})</div>`+(L.length?L.map(ev=>{const n=ev.status==='finalizado'?(ev.participants||0):evParticipants(ev.id).length;
+  const st=ev.status==='cancelado'?'<span class="void-tag">CANCELADO</span>':ev.status==='finalizado'?(ev.winner?(ev.entregado?(ev.reembolso?' · ENTREGADO · DEVUELTO':' · ENTREGADO · <b class="neg">FALTA LA DEVOLUCIÓN</b>'):' · <b class="neg">FALTA ENTREGAR EL ARMA</b>'):' · SIN PARTICIPANTES'):t>=ev.end?' · SORTEANDO…':t<ev.start?' · PRÓXIMO':' · EN MARCHA';
+  return `<div class="enc-card dir-item"><div class="t">Sorteo · ${esc(ev.arma)}</div><div class="it">${esc(evWhen(ev.start))} → ${esc(evWhen(ev.end))}${st}<br>Compras ${esc(evMinTxt(ev))} · ${n} ${n===1?'número':'números'}${ev.winner?' · Ganador: <b>'+esc(ev.winner.client)+'</b> (n.º '+ev.winner.n+')':''}</div><div class="enc-actions"><button type="button" class="primary" data-dir="ev-open:${esc(ev.id)}">ABRIR</button></div></div>`}).join(''):'<div class="enc-empty">Todavía no hay eventos.</div>');
+}
+function evCreate(){
+ const d=evDraft, err=t=>{const e=document.getElementById('evfErr');e.textContent=t;e.hidden=false;e.scrollIntoView({block:'nearest'})};
+ if(!d.arma)return err('Elige el arma que se sortea');
+ const P=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||'');return m?dayNum(+m[1],+m[2],+m[3]):null};
+ const di=P(d.ini), df=P(d.fin), hm=/^(\d{1,2}):(\d{2})$/.exec(d.hora||'');
+ if(di===null)return err('Elige el día en que empieza');
+ if(df===null||!hm)return err('Elige el día y la hora en que termina');
+ const now=Date.now(), start=di<=todayNum()?now:madridMidnight(di), end=madridMidnight(df)+(+hm[1])*3600000+(+hm[2])*60000;
+ if(end<=now)return err('La hora de fin ya ha pasado');
+ if(end<=start)return err('Tiene que terminar después de empezar');
+ let min=0;if(d.min==='otro'){min=parseMoney(d.otro);if(!(min>0))return err('Escribe el gasto mínimo')}else min=(+d.min||0)*100;
+ const w=whoAmI(), ev={id:'e'+now.toString(36)+Math.random().toString(36).slice(2,5),tipo:'sorteo',arma:d.arma,start:start,end:end,min:min,nota:String(d.nota||'').trim().slice(0,120),status:'activo',created:now,by:w.name};
+ askConfirm('Crear sorteo',`Sorteo de ${ev.arma}. Desde el ${evWhen(start)} hasta el ${evWhen(end)}. Participan las compras ${evMinTxt(ev)}. Se anunciará en Discord.`,'Crear').then(ok=>{
+  if(!ok)return;putEvento(ev);discordSend('eventos',evStartText(ev));evDraft=null;renderDir();say('Sorteo creado: ya sale en el cartel de la pantalla principal');
+ });
+}
+dirModal.addEventListener('input',e=>{const t=e.target;if(!evDraft||String(t.id).indexOf('evf')!==0)return;
+ const k={evfArma:'arma',evfIni:'ini',evfFin:'fin',evfHora:'hora',evfMin:'min',evfOtro:'otro',evfNota:'nota'}[t.id];if(!k)return;
+ if(k==='otro'){const v=t.value.replace(/[^0-9.,]/g,'');t.value=v;evDraft.otro=v}else evDraft[k]=t.value;
+ if(k==='min')renderDir();
+});
+dirModal.addEventListener('change',e=>{const t=e.target;if(!evDraft)return;if(t.id==='evfArma')evDraft.arma=t.value;else if(t.id==='evfMin'){evDraft.min=t.value;renderDir()}else if(t.id==='evfIni')evDraft.ini=t.value;else if(t.id==='evfFin')evDraft.fin=t.value;else if(t.id==='evfHora')evDraft.hora=t.value});
+dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir^="ev-"]');if(!b)return;const [a,arg]=b.dataset.dir.split(':');
+ if(a==='ev-create'){e.stopImmediatePropagation();evCreate()}else if(a==='ev-open'){e.stopImmediatePropagation();openEv(arg)}});
+/* Ficha del cliente: sus números de los sorteos */
+function evClientHTML(c){
+ const n=norm(String(c.name||'').trim()), R=[];
+ eventos.filter(ev=>ev.status!=='cancelado').slice().reverse().forEach(ev=>{const N=evParticipants(ev.id).filter(p=>norm(String(p.client||'').trim())===n).map(p=>p.n);if(N.length)R.push(`<div class="reg-line"><span>Sorteo · ${esc(ev.arma)}${ev.status==='finalizado'?' (terminado)':''}</span><b>${N.map(x=>'n.º '+x).join(', ')}${ev.winner&&N.indexOf(ev.winner.n)>=0?' · 🏆 GANADOR':''}</b></div>`)});
+ return R.length?`<div class="dir-sec-title">NÚMEROS DE SORTEO</div>${R.join('')}`:'';
+}
+setInterval(()=>{if(!document.hidden)evTick()},30000);
+setTimeout(()=>{try{evSync()}catch(e){}},0);
+
+/* ===== BALANCE DE FABRICACIÓN: lo que cuesta fabricar frente al precio de venta =====
+   Se calcula con las recetas y los precios de materiales actuales (si se corrige una receta o un precio, se recalcula). */
+let fbPer='mes';
+function fbLine(n,q){const c=productCost(n), p=productPrice(n);if(c===null||c===undefined)return {n:n,q:q,c:null,p:p,d:null,tc:null,tp:p*q,res:null};return {n:n,q:q,c:c,p:p,d:p-c,tc:c*q,tp:p*q,res:(p-c)*q}}
+function fbSum(lines){let tot=0,lost=0,won=0,miss=0;lines.forEach(x=>{if(x.res===null){miss++;return}tot+=x.res;if(x.res<0)lost+=-x.res;else won+=x.res});return {tot:tot,lost:lost,won:won,miss:miss}}
+function fbText(title,lines,head){
+ const L=[title].concat(head||[]);L.push('');
+ lines.forEach(x=>{
+  L.push(x.n+' · '+x.q+' '+(x.q===1?'unidad':'unidades'));
+  if(x.res===null){L.push('  Coste de fabricación: — (falta el precio de algún material)','  Precio de venta: '+money(x.p)+' / ud.','');return}
+  L.push('  Coste de fabricación: '+money(x.c)+' / ud. · total '+money(x.tc));
+  L.push('  Precio de venta: '+money(x.p)+' / ud. · total '+money(x.tp));
+  L.push('  Resultado: '+sgn(x.res)+' ('+(x.d<0?'pierdes '+money(-x.d):x.d>0?'ganas '+money(x.d):'ni ganas ni pierdes')+' por unidad)','');
+ });
+ const S=fbSum(lines);
+ if(lines.length>1){if(S.lost)L.push('Pérdidas: −'+money(S.lost));if(S.won)L.push('Ganancias: '+money(S.won))}
+ L.push((S.tot<0?'PÉRDIDA TOTAL: ':'BALANCE TOTAL: ')+sgn(S.tot));
+ if(S.miss)L.push('Sin calcular: '+S.miss+' (falta el precio de algún material de su receta)');
+ return L.join('\n');
+}
+/* Al fabricar: se publica solo en Discord («Balance de fabricación») */
+function fbAuto(items,undo){
+ const lines=items.filter(x=>recipeOf(x.producto).length&&x.delta>0).map(x=>fbLine(x.producto,x.delta));
+ if(!lines.length)return;
+ const now=Date.now(), w=whoAmI(), S=fbSum(lines);
+ discordSend('fabricacion',fbText(undo?'FABRICACIÓN DESHECHA · BALANCE ANULADO':'BALANCE DE FABRICACIÓN',lines,['Fecha: '+fmtDate(now)+' · '+fmtTime(now),'Por: '+(w.name||'—')]));
+ if(!undo&&!S.miss)setTimeout(()=>say((S.tot<0?'Esta fabricación te hace perder ':'Esta fabricación te deja ')+money(Math.abs(S.tot))+' frente al precio de venta',S.tot<0?'err':undefined),1600);
+}
+function fbPeriods(){return {semana:['ESTA SEMANA',{s:weekStart(0),e:weekStart(0)+6}],mes:['ESTE MES',monthRange(0)],mespas:['EL MES PASADO',monthRange(-1)],todo:['TODO',null]}}
+function fbHist(r){
+ const by={}, ev=[];
+ loadLog(KEY_STOCKLOG).forEach(x=>{
+  if(/\(material\)$/.test(x.name)||!recipeOf(x.name).length)return;
+  const f=x.why==='Fabricación'&&x.delta>0, u=x.why==='Fabricación deshecha'&&x.delta<0;if(!f&&!u)return;
+  const m=madridParts(x.ts), d=dayNum(+m.year,+m.month,+m.day);if(r&&(d<r.s||d>r.e))return;
+  by[x.name]=(by[x.name]||0)+x.delta;ev.push(x);
+ });
+ const lines=Object.keys(by).filter(n=>by[n]>0).map(n=>fbLine(n,by[n])).sort((a,b)=>(a.res===null?1e12:a.res)-(b.res===null?1e12:b.res));
+ return {lines:lines,ev:ev.sort((a,b)=>(b.ts||0)-(a.ts||0))};
+}
+function fbHistText(){
+ const [lab,r]=fbPeriods()[fbPer], h=fbHist(r);
+ return fbText('BALANCE DE FABRICACIÓN · '+lab,h.lines,[r?'Periodo: '+dayStr(r.s)+' – '+dayStr(r.e):'Periodo: todo lo fabricado','Calculado con las recetas y los precios de materiales actuales.']);
+}
+function renderModBalFab(){
+ const PP=fbPeriods(), [lab,r]=PP[fbPer], h=fbHist(r), L=h.lines, S=fbSum(L);
+ const seg=`<div class="seg" style="margin-bottom:10px;grid-template-columns:repeat(4,1fr)">${Object.keys(PP).map(k=>`<button type="button" class="${fbPer===k?'on':''}" data-dir="fbp:${k}">${PP[k][0]}</button>`).join('')}</div>`;
+ const rows=L.map(x=>x.res===null?`<div class="mg-row"><span class="n">${esc(x.n)} · ${x.q} ${x.q===1?'ud.':'uds.'}</span><span class="p mg-low">—</span><small>Falta el precio de algún material de su receta: no se puede calcular.</small></div>`
+  :`<div class="mg-row"><span class="n">${esc(x.n)} · ${x.q} ${x.q===1?'ud.':'uds.'}</span><span class="p ${x.res<0?'mg-bad':'mg-ok'}">${sgn(x.res)}</span><small>Coste ${money(x.c)} / ud. (total ${money(x.tc)}) · Venta ${money(x.p)} / ud. (total ${money(x.tp)}) · ${x.d<0?'<b>pierdes '+money(-x.d)+' por unidad</b>':'ganas '+money(x.d)+' por unidad'}</small></div>`).join('');
+ return `<p class="bk-note">Todo lo que se ha fabricado: lo que cuesta fabricarlo (materiales de su receta) frente a lo que vale a la venta, aunque todavía no se haya vendido. Se calcula con las recetas y los precios de materiales <b>actuales</b>: si corriges una receta o un precio, se recalcula. Cada vez que se fabrica algo, se publica solo en el canal de Discord «Balance de fabricación».</p>${seg}
+  ${L.length?rows+`<div class="brow"><span>PÉRDIDAS</span><span class="neg">${S.lost?'−'+money(S.lost):money(0)}</span></div><div class="brow"><span>GANANCIAS</span><span>${money(S.won)}</span></div><div class="brow due"><span>${S.tot<0?'PÉRDIDA TOTAL':'BALANCE TOTAL'}</span><span class="${S.tot<0?'neg':''}">${sgn(S.tot)}</span></div>`
+  +`<details class="mat-mins"><summary>CADA FABRICACIÓN (${h.ev.length})</summary>${h.ev.map(x=>`<div class="reg-line"><span>${esc(x.date||fmtDate(x.ts))} ${esc(x.time||fmtTime(x.ts))} · ${esc(x.name)}${x.delta<0?' (deshecha)':''}</span><b>${x.delta>0?'+':''}${x.delta}</b></div>`).join('')}</details>
+  <div class="enc-actions two" style="margin-top:10px"><button type="button" data-dir="fb-copy">⧉ COPIAR</button><button type="button" class="gold" data-dir="fb-send">ENVIAR A DISCORD</button></div>`
+  :`<div class="enc-empty">No hay nada fabricado ${r?'en este periodo':'todavía'}.<br>Se apunta al sumar unidades en STOCK de un producto con receta.</div>`}`;
+}
+dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir^="fbp:"],[data-dir="fb-copy"],[data-dir="fb-send"]');if(!b)return;e.stopImmediatePropagation();const [a,arg]=b.dataset.dir.split(':');
+ if(a==='fbp'){fbPer=arg;renderDir()}
+ else if(a==='fb-copy')copyMsg(fbHistText(),'Balance de fabricación copiado');
+ else if(a==='fb-send'){if(!(webhook.urls.fabricacion||webhook.url))return say('Pon el enlace del canal «Balance de fabricación» en Dirección → Discord');once('fbsend',async()=>{const ok=await discordSend('fabricacion',fbHistText(),null,null,true);say(ok?'Balance de fabricación enviado a Discord':'No se pudo enviar a Discord',ok?undefined:'err')},b)}
+});
