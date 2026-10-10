@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261010m
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261010n
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -803,7 +803,7 @@ body{background:radial-gradient(ellipse at 50% -8%,#8a4f2133,transparent 44%),ra
 /* transición de páginas en Dirección */
 @keyframes pgIn{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}
 @keyframes pgBack{from{opacity:0;transform:translateX(-26px)}to{opacity:1;transform:none}}
-#dirModal .enc-panel{overflow-x:clip}
+#dirModal .enc-panel{overflow:clip}
 #dirBody.pg-in{animation:pgIn .22s ease-out}
 #dirBody.pg-back{animation:pgBack .22s ease-out}
 /* Dirección por secciones */
@@ -1671,3 +1671,6 @@ html.lite .ev-plate.done{animation:none}
 @media (prefers-reduced-motion:no-preference){.bell-btn.bad{animation:bellShake 4s ease-in-out infinite}}
 @keyframes bellShake{0%,90%,100%{transform:none}92%{transform:rotate(-8deg)}94%{transform:rotate(8deg)}96%{transform:rotate(-5deg)}98%{transform:rotate(4deg)}}
 html.lite .bell-btn.bad{animation:none}
+/* Formularios largos de Dirección: el botón de guardar se queda fijo abajo */
+#dirModal .enc-actions:has(> [data-dir="cl-save"]),#dirModal .enc-actions:has(> [data-dir="pv-save"]),#dirModal .enc-actions:has(> [data-dir="ev-create"]),#dirModal .enc-actions:has(> [data-dir="np-emit"]),#dirModal .enc-actions:has(> [data-dir="fab-save"]),#dirModal .enc-actions:has(> [data-dir="price-save"]),#dirModal .enc-actions:has(> [data-dir="stock-save"]){position:sticky;bottom:0;z-index:5;margin-left:-6px;margin-right:-6px;padding:8px 6px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(rgba(10,24,18,0),#0a1812 30%);}
+body.has-mnav #dirModal .enc-actions:has(> [data-dir="cl-save"]),body.has-mnav #dirModal .enc-actions:has(> [data-dir="pv-save"]),body.has-mnav #dirModal .enc-actions:has(> [data-dir="ev-create"]),body.has-mnav #dirModal .enc-actions:has(> [data-dir="np-emit"]),body.has-mnav #dirModal .enc-actions:has(> [data-dir="fab-save"]),body.has-mnav #dirModal .enc-actions:has(> [data-dir="price-save"]),body.has-mnav #dirModal .enc-actions:has(> [data-dir="stock-save"]){bottom:0}

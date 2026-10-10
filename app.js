@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261010m
+/* HARRINGTON GUNSMITH · app.js · versión 20261010n
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -6069,7 +6069,8 @@ const PARCHES=[
  {f:'10/10/2026',t:'Registro IC, horas extra y trabajador fijo',i:['Balance de fabricación en Discord en rojo o verde, con cada material','Registro de armas solo para las de fuego, con la casilla «Registrada IC» y recordatorios','Horas extra pagadas al precio de la hora ordinaria','Paso automático a trabajador fijo al terminar la prueba, con su contrato nuevo en Discord']},
  {f:'10/10/2026',t:'Organización de Dirección e historial de parches',i:['Dirección ordenada por tareas: HOY, DINERO, PERSONAL, TIENDA Y CLIENTES, ALMACÉN, COMPRAS y AJUSTES (Sueldos pasa a PERSONAL)','Contadores de pendientes en cada apartado y en cada grupo','ÚLTIMOS USADOS arriba del todo','Historial de parches']},
  {f:'10/10/2026',t:'Armas antiguas a registrar IC',i:['Todas las armas que ya estaban apuntadas en las fichas de cliente pasan a «⚠ SIN REGISTRAR IC» y avisan hasta que se registren dentro del juego y se marquen']},
- {f:'10/10/2026',t:'Tablón de anuncios y campanita de avisos',i:['Los carteles de la pantalla principal se ven de uno en uno, con pestañas arriba (el más urgente primero)','🔔 Campanita con todo lo pendiente en un solo sitio, en rojo si hay algo urgente']}
+ {f:'10/10/2026',t:'Tablón de anuncios y campanita de avisos',i:['Los carteles de la pantalla principal se ven de uno en uno, con pestañas arriba (el más urgente primero)','🔔 Campanita con todo lo pendiente en un solo sitio, en rojo si hay algo urgente']},
+ {f:'10/10/2026',t:'Botón de guardar siempre a mano',i:['En los formularios largos de Dirección (cliente, proveedor, evento, pedido, receta, precios y stock) el botón de guardar se queda fijo abajo de la pantalla']}
 ];
 let phQ='';
 function renderModParches(){
