@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261010q
+/* HARRINGTON GUNSMITH · app.js · versión 20261010r
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -338,6 +338,7 @@ function receiptText(s){
  if(s.fromEncargo)out.push('Entrega del encargo: '+s.fromEncargo);
  if(s.note)out.push('Nota: '+s.note);
  if(s.sorteos&&evSaleTxt(s))out.push('Sorteo: '+evSaleTxt(s));
+ if(icSaleTxt(s))out.push('Registro IC: ⚠ '+icSaleTxt(s));
  if(s.promise)out.push('Entrega prevista: '+fmtISO(s.promise));
  out.push('');
  groupItems(s).forEach(g=>{if(g.title)out.push(g.title,'');g.items.forEach(x=>{out.push(x.name);out.push(`${x.qty} × ${money(x.cents)} = ${money(x.qty*x.cents)}`);out.push('')})});
@@ -368,6 +369,7 @@ function renderReceipt(s){
  $('rcConv').textContent=s.convenio||'';
  $('rcNote').textContent=s.note||'';$('rcNoteWrap').hidden=!s.note;
  {const st=evSaleTxt(s);$('rcSor').textContent=st;$('rcSorWrap').hidden=!st}
+ {const it=icSaleTxt(s);$('rcIc').textContent=it?'⚠ '+it:'';$('rcIcWrap').hidden=!it}
  $('rcProm').textContent=s.promise?fmtISO(s.promise):'';$('rcPromWrap').hidden=!s.promise;
  $('rcConvWrap').hidden=!s.convenio;$('rcConvWrap').firstElementChild.textContent=s.convenioKind||'Convenio';
 }
@@ -484,6 +486,8 @@ function recordFx(t,sub){
 /* Al vender armas a un cliente con nombre, se pueden apuntar sus números de serie (opcional) */
 let serSale=null;
 const serModal=document.getElementById('serModal');
+/* Armas de fuego de la venta: hay que registrarlas IC a nombre del cliente */
+function icSaleTxt(s){if(!s||s.op==='encargo'||customer&&customer.type==='sheriff'&&!s.client)return '';let n=0;try{n=weaponUnits(s).length}catch(e){}return n?'pendiente de registrar '+(n===1?'1 arma de fuego':n+' armas de fuego')+' a nombre del cliente':''}
 function weaponUnits(s){const W=weaponNames(),L=[];(s.items||[]).forEach(x=>{if(W.indexOf(x.name)>=0)for(let i=0;i<Math.min(x.qty,20);i++)L.push(x.name)});return L}
 function askSerials(s){
  if(!s||!s.client||s.serialsAsked||customer.type==='sheriff')return;
@@ -4151,7 +4155,7 @@ async function ticketBlob(s){
   const kv=(k,v)=>{g.textAlign='left';g.font='13px '+ff;g.fillStyle='#6b4c1d';g.fillText(k.toUpperCase(),P,y);y+=19;g.font='bold 20px '+ff;g.fillStyle=ink;let t=String(v);while(g.measureText(t).width>W-2*P&&t.length>4)t=t.slice(0,-2);g.fillText(t===String(v)?t:t+'…',P,y);y+=27};
   kv(s.op==='encargo'?'Encargo N.º':'Venta N.º',s.id);kv('Fecha y hora',s.date+' · '+s.time);
   if(s.employee)kv('Empleado',s.employee);if(s.client)kv('Cliente',s.client);if(s.telegram)kv('Telegrama',s.telegram);
-  if(s.convenio)kv(s.convenioKind||'Convenio',s.convenio);if(s.note)kv('Nota',s.note);if(evSaleTxt(s))kv('Sorteo',evSaleTxt(s));if(s.promise)kv('Entrega prevista',fmtISO(s.promise));
+  if(s.convenio)kv(s.convenioKind||'Convenio',s.convenio);if(s.note)kv('Nota',s.note);if(evSaleTxt(s))kv('Sorteo',evSaleTxt(s));if(icSaleTxt(s))kv('Registro IC','⚠ Pendiente ('+weaponUnits(s).length+(weaponUnits(s).length===1?' arma':' armas')+')');if(s.promise)kv('Entrega prevista',fmtISO(s.promise));
   const hr=()=>{g.strokeStyle='#7a5a22';g.lineWidth=2;g.beginPath();g.moveTo(P,y);g.lineTo(W-P,y);g.stroke();y+=24};
   y+=4;hr();
   groupItems(s).forEach(gr=>{
@@ -4239,7 +4243,7 @@ const TUTORIAL=[
 <p>Si recargas la página o se cierra el navegador, <b>la venta que tenías en curso se conserva</b>. Se borra con Vaciar o Nueva venta (siempre pidiendo confirmación) y, sola, <b>al finalizar la venta</b>.</p>
 <p>Para tenerla como una app: en el menú del navegador, <b>Añadir a pantalla de inicio</b>.</p>`],
 ['Catálogo y categorías',`<ul><li><b>SIN PRECIO</b>: un producto que aún no tiene precio sale en el catálogo con ese aviso y no se puede añadir a la venta. La dirección le pone el precio en <b>Dirección → PRODUCTOS Y PRECIOS</b> y desde ese momento se vende normal.</li><li>Los <b>botones con imagen</b> filtran los productos por categoría y cambian la imagen grande de arriba. «Todos» los muestra todos.</li><li>El <b>buscador</b> encuentra productos por su nombre, sin importar las tildes.</li><li>Cada fila tiene el dibujo de su categoría, el <b>nombre</b> (tócalo para ver su ficha con descripción, precio y si está disponible), el precio, la <b>cantidad</b> y el subtotal.</li><li>Para la cantidad usa <b>−</b> y <b>+</b>, o escribe el número. En la munición hay además <b>+10, +50 y +100</b>.</li><li>Los productos con cantidad se resaltan en dorado.</li><li><b>SIN STOCK</b>: no se puede añadir. Si intentas pasarte de lo que hay, la cantidad se corrige sola y te avisa. <b>Nunca</b> se muestra cuántas unidades quedan.</li><li>Los productos recién añadidos llevan la etiqueta <b>NUEVO</b>.</li></ul>`],
-['Hacer una venta',`<ol><li>Elige productos y cantidades.</li><li>En <b>Tipo de operación</b> deja «Venta normal».</li><li><b>Tipo de cliente</b>: particular, empresa o Departamento del Sheriff (este último no pide nombre).</li><li>Escribe el <b>nombre</b>. Si el cliente ya está guardado, sale como sugerencia y se cargan sus datos y sus precios especiales.</li><li>Elige <b>Convenio</b> u <b>Oferta</b> si corresponde. Solo aparecen los vigentes y compatibles con el cliente. No se suman: al elegir uno se quita el otro.</li><li>Elige el <b>Empleado</b> que hace la venta. Es obligatorio.</li><li>Si quieres, añade una <b>Nota</b>: saldrá en el ticket y en el aviso de Discord.</li><li>Revisa el desglose: Subtotal, descuento y Total.</li><li>El botón de abajo <b>te dice qué falta</b> («Falta elegir el empleado», «Falta el telegrama»…). Cuando está todo, se pone verde con <b>FINALIZAR VENTA</b> (o GUARDAR ENCARGO): púlsalo y se abre el ticket y se descuenta el stock. Mientras se guarda, el botón queda bloqueado para que un doble toque no haga dos ventas.</li><li>Si una venta o el día superan el mejor registro de la casa, sale <b>¡RÉCORD DE LA CASA!</b> con campanas.</li><li>Si has vendido <b>armas de fuego</b> (revólveres, pistolas, repetidoras, rifles y escopetas; las armas blancas no) a un cliente con nombre, se abre una ventana para apuntar sus <b>números de serie</b>: se guardan en su ficha de cliente y en su mensaje de Discord. «Ahora no» la cierra.</li><li><b>Registro IC</b>: al lado de cada número de serie hay una casilla <b>Registrada IC</b>. Cada arma de fuego hay que registrarla <b>dentro del juego</b> a nombre del cliente con su número de serie (no hacerlo es <b>sancionable</b>). Márcala cuando la hayas registrado. Si la dejas sin marcar, la web te lo recuerda: sale un cartel rojo <b>REGISTRO DE ARMAS PENDIENTE</b> en la pantalla principal, aparece en «Para hoy» al fichar y en los avisos de Dirección, hasta que pulses <b>✓ YA LA HE REGISTRADO IC</b>.</li></ol>
+['Hacer una venta',`<ol><li>Elige productos y cantidades.</li><li>En <b>Tipo de operación</b> deja «Venta normal».</li><li><b>Tipo de cliente</b>: particular, empresa o Departamento del Sheriff (este último no pide nombre).</li><li>Escribe el <b>nombre</b>. Si el cliente ya está guardado, sale como sugerencia y se cargan sus datos y sus precios especiales.</li><li>Elige <b>Convenio</b> u <b>Oferta</b> si corresponde. Solo aparecen los vigentes y compatibles con el cliente. No se suman: al elegir uno se quita el otro.</li><li>Elige el <b>Empleado</b> que hace la venta. Es obligatorio.</li><li>Si quieres, añade una <b>Nota</b>: saldrá en el ticket y en el aviso de Discord.</li><li>Revisa el desglose: Subtotal, descuento y Total.</li><li>El botón de abajo <b>te dice qué falta</b> («Falta elegir el empleado», «Falta el telegrama»…). Cuando está todo, se pone verde con <b>FINALIZAR VENTA</b> (o GUARDAR ENCARGO): púlsalo y se abre el ticket y se descuenta el stock. Mientras se guarda, el botón queda bloqueado para que un doble toque no haga dos ventas.</li><li>Si una venta o el día superan el mejor registro de la casa, sale <b>¡RÉCORD DE LA CASA!</b> con campanas.</li><li>Si has vendido <b>armas de fuego</b> (revólveres, pistolas, repetidoras, rifles y escopetas; las armas blancas no) a un cliente con nombre, se abre una ventana para apuntar sus <b>números de serie</b>: se guardan en su ficha de cliente y en su mensaje de Discord. «Ahora no» la cierra.</li><li>El <b>ticket</b> y su mensaje de Discord llevan «Registro IC: ⚠ pendiente de registrar N armas de fuego a nombre del cliente» cuando la venta tiene armas de fuego, para que no se olvide.</li><li><b>Registro IC</b>: al lado de cada número de serie hay una casilla <b>Registrada IC</b>. Cada arma de fuego hay que registrarla <b>dentro del juego</b> a nombre del cliente con su número de serie (no hacerlo es <b>sancionable</b>). Márcala cuando la hayas registrado. Si la dejas sin marcar, la web te lo recuerda: sale un cartel rojo <b>REGISTRO DE ARMAS PENDIENTE</b> en la pantalla principal, aparece en «Para hoy» al fichar y en los avisos de Dirección, hasta que pulses <b>✓ YA LA HE REGISTRADO IC</b>.</li></ol>
 <p><b>Al finalizar la venta, el carrito se vacía solo</b>: los productos, el cliente y el convenio se borran y queda listo para el siguiente cliente, sin pulsar nada. El ticket sigue abierto con todos sus botones. Si después ves un error en una venta ya finalizada, la dirección la anula en Dirección → Registros de ventas y se hace de nuevo.</p><p><b>Vaciar</b> y <b>Nueva venta</b> son para cuando el cliente <b>se echa atrás a mitad</b>: borran lo que hayas puesto. Vaciar quita los productos; Nueva venta lo borra todo para empezar de cero. En el móvil, una <b>barra fija abajo</b> te muestra el total y tiene el botón FINALIZAR.</p>
 <p>Si no deja finalizar, el aviso te dice qué falta: nombre, empleado, telegrama, pago adelantado o stock.</p>`],
 ['Presupuesto',`<p>La pestaña <b>PRESUPUESTO</b> sirve para decirle a un cliente cuánto costaría una compra, sin vender nada.</p>
@@ -6093,7 +6097,8 @@ const PARCHES=[
  {f:'10/10/2026',t:'Botón de guardar siempre a mano',i:['En los formularios largos de Dirección (cliente, proveedor, evento, pedido, receta, precios y stock) el botón de guardar se queda fijo abajo de la pantalla']},
  {f:'10/10/2026',t:'Fichas en pestañas',i:['Ficha del cliente en pestañas: Datos · Armas · Compras · Precios (se abre en Armas si hay alguna sin registrar IC)','Ficha del proveedor en pestañas: Datos · Precios · Pedidos, con todos sus pedidos y su estado']},
  {f:'10/10/2026',t:'Mismo código de colores en toda la web',i:['Rojo para lo urgente o las pérdidas, ámbar para lo pendiente, verde para lo hecho o las ganancias y dorado para el botón principal, igual en todos los apartados']},
- {f:'10/10/2026',t:'Informe de fallos de precio para el servidor',i:['Botón 📋 COPIAR INFORME PARA EL SERVIDOR en cada producto que cuesta más fabricar que vender: producto, receta con cada material (cantidad × precio = total), coste total, precio de venta y diferencia, listo para el Discord del Estado','Botón para copiar el informe de todos los que fallan de una vez']}
+ {f:'10/10/2026',t:'Informe de fallos de precio para el servidor',i:['Botón 📋 COPIAR INFORME PARA EL SERVIDOR en cada producto que cuesta más fabricar que vender: producto, receta con cada material (cantidad × precio = total), coste total, precio de venta y diferencia, listo para el Discord del Estado','Botón para copiar el informe de todos los que fallan de una vez']},
+ {f:'10/10/2026',t:'Aviso de registro IC en el ticket',i:['El ticket, su imagen y su mensaje de Discord avisan de las armas de fuego pendientes de registrar IC a nombre del cliente']}
 ];
 let phQ='';
 function renderModParches(){
