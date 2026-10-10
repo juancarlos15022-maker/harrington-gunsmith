@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261010i
+/* HARRINGTON GUNSMITH · app.js · versión 20261010k
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -1305,6 +1305,7 @@ const DIRECCION_MODULOS=[
  {id:'proveedores',titulo:'PROVEEDORES',desc:'Crear y gestionar tus proveedores (herrerías, minas, talas…).',render:()=>renderModProveedores()},
  {id:'nuevopedido',titulo:'REALIZAR NUEVO PEDIDO',desc:'Pedir materiales a un proveedor.',render:()=>renderModNuevoPedido()},
  {id:'regpedidos',titulo:'REGISTRO DE PEDIDOS',desc:'Pedidos completados, diarios y semanales.',render:()=>renderModRegPedidos()},
+ {id:'parches',titulo:'HISTORIAL DE PARCHES',desc:'Todos los parches de la web, numerados, con lo que trajo cada uno.',render:()=>renderModParches()},
  {id:'discord',titulo:'DISCORD',desc:'Enviar las operaciones a un canal automáticamente.',render:()=>renderModDiscord()},
  {id:'historial',titulo:'HISTORIAL DE CAMBIOS',desc:'Quién cambió precios, stock, fichas o borró algo, y cuándo.',render:()=>renderModHistorial()},
  {id:'nube',titulo:'NUBE (SUPABASE)',desc:'Estado de la sincronización entre dispositivos.',render:()=>renderModNube()},
@@ -2174,6 +2175,7 @@ function rankingHTML(list){
  return `<div class="enc-card dir-item"><div class="t">RANKING DE LA SEMANA</div>${r.map((x,i)=>`<div class="reg-line"><span><i class="medal m${i+1}" aria-label="${i+1}º">${i+1}</i>${esc(x.n)}</span><b>${money(x.c)}</b></div>`).join('')}</div>`;
 }
 const MOD_ICONS={
+ parches:'<path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6M9 13h6M9 17h4"/>',
  balfab:'<path d="M3 20h18M6 16l4-5 3 3 5-7"/><path d="M15 7h3v3"/>',
  eventos:'<path d="M4 8h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"/><path d="M10 8v12" stroke-dasharray="2 2"/>',
  historial:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',
@@ -3785,7 +3787,25 @@ async function undoFab(){
  try{fbAuto(f.items,true)}catch(e){}
  renderDir();calc(false);say('Fabricación deshecha');
 }
-const DIR_SECCIONES=[['VENTAS Y CAJA',['ventas','semanales','estadisticas','gastos','sueldos','objetivo','balance','cierre']],['CATÁLOGO, PRECIOS Y CONVENIOS',['productos','convenios']],['ALMACÉN Y FABRICACIÓN',['stock','fabricacion','balfab','regstock']],['PROVEEDORES',['proveedores','nuevopedido','regpedidos']],['PERSONAL',['empleados','horarios','ausencias']],['CLIENTES',['clientes']],['EVENTOS',['eventos']],['SISTEMA',['revision','historial','discord','nube','copia','reset']]];
+const DIR_SECCIONES=[['HOY',['revision']],['DINERO',['ventas','cierre','gastos','balance','estadisticas','objetivo','semanales']],['PERSONAL',['empleados','sueldos','horarios','ausencias']],['TIENDA Y CLIENTES',['productos','convenios','clientes','eventos']],['ALMACÉN',['stock','fabricacion','balfab','regstock']],['COMPRAS',['proveedores','nuevopedido','regpedidos']],['AJUSTES',['parches','discord','nube','copia','historial','reset']]];
+/* Lo que tiene pendiente cada apartado (se ve en su tarjeta): [número, texto, 'bad' rojo | 'pend' ámbar | 'info'] */
+function modBadge(id){
+ try{
+  if(id==='clientes'){const n=icPending().length;if(n)return [n,n===1?'arma sin registrar IC':'armas sin registrar IC','bad']}
+  if(id==='eventos'){const E=(eventos||[]);const f=E.filter(e=>e.status==='finalizado'&&e.winner&&!e.entregado).length, r=E.filter(e=>e.status==='finalizado'&&e.entregado&&!e.reembolso).length, a=E.filter(e=>e.status==='activo').length;
+   if(f)return [f,'falta entregar el premio','bad'];if(r)return [r,'falta la devolución de Administración','pend'];if(a)return [a,a===1?'evento en marcha':'eventos en marcha','info']}
+  if(id==='proveedores'||id==='regpedidos'){const n=pendingPed().length;if(n)return [n,n===1?'pedido pendiente':'pedidos pendientes','pend']}
+  if(id==='sueldos'){const st=payState();if(st&&st.st==='due'){const n=st.total-st.paid;if(n)return [n,n===1?'sueldo por pagar':'sueldos por pagar','pend']}}
+  if(id==='stock'){const n=lowMats().length;if(n)return [n,n===1?'material bajo mínimo':'materiales bajo mínimo','pend']}
+  if(id==='fabricacion'||id==='balfab'){const n=marginRows().filter(x=>x.pct!==null&&x.pct<0).length;if(n)return [n,n===1?'producto con pérdidas':'productos con pérdidas','bad']}
+  if(id==='ausencias'){const n=ausNowList().length;if(n)return [n,n===1?'ausente ahora':'ausentes ahora','info']}
+  if(id==='discord'){const n=Object.keys(dcProblems()).length;if(n)return [n,n===1?'canal falla':'canales fallan','bad']}
+  if(id==='revision'){const h=avisosHTML(), m=/AVISOS \((\d+)\)/.exec(h), n=m?+m[1]:0;if(n)return [n,n===1?'aviso':'avisos',/class="aviso bad"/.test(h)?'bad':'pend']}
+ }catch(e){}
+ return null;
+}
+function dirRecent(){let L=[];try{L=JSON.parse(localStorage.getItem('harrington_dirrecent')||'[]')}catch(e){}return Array.isArray(L)?L.filter(id=>DIRECCION_MODULOS.some(m=>m.id===id&&!m.hidden)).slice(0,4):[]}
+function dirRemember(id){try{const L=dirRecent().filter(x=>x!==id);L.unshift(id);localStorage.setItem('harrington_dirrecent',JSON.stringify(L.slice(0,4)))}catch(e){}}
 let dirLast=null;
 document.getElementById('dirModal').addEventListener('toggle',e=>{const d=e.target;if(!d.matches||!d.matches('details.mod-sec'))return;let st={};try{st=JSON.parse(localStorage.getItem('harrington_dirsec')||'{}')}catch(x){}if(d.open)st[d.dataset.sec]=1;else delete st[d.dataset.sec];try{localStorage.setItem('harrington_dirsec',JSON.stringify(st))}catch(x){}},true);
 function renderDir(){
@@ -3797,11 +3817,14 @@ function renderDir0(){
  if(dirLast!==dirMod){const fw=!!dirMod;body.classList.remove('pg-in','pg-back');void body.offsetWidth;body.classList.add(fw?'pg-in':'pg-back');dirLast=dirMod}
  if(!dirMod){
   title.textContent='CONSOLA DE DIRECCIÓN';
-  const card=m=>`<button type="button" class="enc-card mod-card" data-dir="open:${m.id}"><svg class="mod-ico" viewBox="0 0 24 24" aria-hidden="true">${MOD_ICONS[m.id]||''}</svg><div><div class="t">${m.titulo}</div><div class="it">${m.desc}</div></div></button>`;
+  const card=m=>{const b=modBadge(m.id);return `<button type="button" class="enc-card mod-card${b?' has-b '+b[2]:''}" data-dir="open:${m.id}"><svg class="mod-ico" viewBox="0 0 24 24" aria-hidden="true">${MOD_ICONS[m.id]||''}</svg><div><div class="t">${m.titulo}</div><div class="it">${m.desc}</div>${b?`<span class="mod-b ${b[2]}">${b[0]} ${esc(b[1])}</span>`:''}</div></button>`};
   let st={};try{st=JSON.parse(localStorage.getItem('harrington_dirsec')||'{}')}catch(e){}
   const used={}, secs=DIR_SECCIONES.map(([t,ids])=>{const L=ids.map(id=>DIRECCION_MODULOS.find(m=>m.id===id)).filter(Boolean);L.forEach(m=>used[m.id]=1);return [t,L]});
   const rest=DIRECCION_MODULOS.filter(m=>!used[m.id]&&!m.hidden);if(rest.length)secs.push(['OTROS',rest]);
-  body.innerHTML=dirSearchHTML()+renderDashboard()+secs.filter(s=>s[1].length).map(([t,L])=>`<details class="mod-sec" data-sec="${esc(t)}"${st[t]?' open':''}><summary><span>${t}</span><small>${L.length}</small></summary><div class="mod-grid">${L.map(card).join('')}</div></details>`).join('')+
+  const rec=dirRecent().map(id=>DIRECCION_MODULOS.find(m=>m.id===id)).filter(Boolean);
+  const recHTML=rec.length?`<div class="dir-rec"><div class="dir-sec-title" style="margin-top:0">ÚLTIMOS USADOS</div><div class="dir-rec-row">${rec.map(m=>{const b=modBadge(m.id);return `<button type="button" class="rec-btn${b?' '+b[2]:''}" data-dir="open:${m.id}"><svg class="mod-ico" viewBox="0 0 24 24" aria-hidden="true">${MOD_ICONS[m.id]||''}</svg><span>${esc(m.titulo)}</span>${b?`<i>${b[0]}</i>`:''}</button>`}).join('')}</div></div>`:'';
+  body.innerHTML=dirSearchHTML()+recHTML+renderDashboard()+secs.filter(s=>s[1].length).map(([t,L])=>{const B=L.map(m=>modBadge(m.id)).filter(Boolean), nb=B.reduce((a,b)=>a+b[0],0), lv=B.some(b=>b[2]==='bad')?'bad':B.some(b=>b[2]==='pend')?'pend':'info', op=st[t]!==undefined?st[t]:(t==='HOY');
+   return `<details class="mod-sec" data-sec="${esc(t)}"${op?' open':''}><summary><span>${t}</span>${nb?`<b class="sec-b ${lv}">${nb}</b>`:''}<small>${L.length}</small></summary><div class="mod-grid">${L.map(card).join('')}</div></details>`}).join('')+
    '<div class="enc-actions" style="margin-top:6px"><button type="button" class="warn" data-dir="exit-boss">Salir del Modo Jefe</button></div>';
   return;
  }
@@ -3857,7 +3880,7 @@ dirModal.addEventListener('click',e=>{
  if(e.target===dirModal)return closeModal(dirModal);
  const b=e.target.closest('[data-dir]'); if(!b)return;
  const [act,arg]=b.dataset.dir.split(':');
- if(act==='open'){dirMod=arg;dirForm=null;sueOff=0;wkType=null;wkEmp=null;wkOffset=0;clView=null;clEdit=null;fabEdit=null;renderDir();dirModal.scrollTop=0}
+ if(act==='open'){dirRemember(arg);dirMod=arg;dirForm=null;sueOff=0;wkType=null;wkEmp=null;wkOffset=0;clView=null;clEdit=null;fabEdit=null;renderDir();dirModal.scrollTop=0}
  else if(act==='back'){
   if(dirMod==='fabricacion'&&fabEdit){fabEdit=null;fabDraft=[]}
   else if(dirMod==='clientes'&&(clView||clEdit)){clView=null;clEdit=null}
@@ -4251,7 +4274,7 @@ const TUTORIAL=[
 ['Libro de turno y «Para hoy»',`<ul><li><b>NOTAS</b> (arriba, junto a Ausencias, y en la barra de abajo del móvil) abre el <b>libro de turno</b>: deja una nota para el siguiente turno, por ejemplo «queda poca munición de rifle» o «mañana viene Dutch a recoger». Las ve todo el mundo al momento.</li><li>Cada nota se queda pendiente hasta que alguien pulsa <b>✓ HECHO / VISTO</b>. Quien la escribió puede borrarla. Si te equivocas, el aviso de abajo tiene <b>DESHACER</b>.</li><li><b>Para hoy</b>: al fichar la entrada, si hay algo pendiente, se abre una ventana con las notas del libro, los encargos vencidos o para hoy, los fabricados que aún no se han avisado al cliente y los pedidos por recibir.</li></ul>`],
 ['Fichaje',`<ul><li><b>ABIERTO / CERRADO</b>: la tienda está abierta cuando hay alguien fichado. En la entrada cuelga el cartel en la puerta con quién atiende, y en la pantalla principal sale junto al fichaje.</li><li><b>▸ Fichar entrada</b>: te ficha a ti directamente (el usuario con el que has entrado).</li><li>Arriba se ven todos los compañeros que están fichados ahora.</li><li><b>◂ Fichar salida</b>: ficha tu salida. Se muestra el registro con el tiempo trabajado y puedes copiarlo o descargarlo.</li><li><b>Último registro</b> vuelve a abrir el último fichaje.</li><li>Al fichar la entrada, la web te saluda; al fichar la salida, te dice cuánto has vendido hoy.</li><li>Si alguien lleva <b>más de 8 horas</b> fichado, su placa se pone en rojo («¿olvidó fichar la salida?») y sale un aviso en Dirección. El jefe lo cierra en <b>Dirección → Registros horarios → TURNOS ABIERTOS</b>, poniendo la <b>hora real de salida</b>, para que las horas cuadren.</li><li>Cuando ficha la salida el <b>último empleado</b>, se publica en Discord, en su canal «Resumen del día», un resumen: ventas, gastos, beneficio, encargos nuevos, pedidos recibidos, unidades fabricadas y quién ha trabajado.</li></ul>`],
 ['Modo Jefe y Dirección <span class="tag boss">SOLO JEFE</span>',`<ul><li>Los jefes entran eligiendo su ficha (puesto «Jefe») y escribiendo la <b>contraseña de jefe</b>, que es la misma para todos. La primera vez se crea la contraseña y una <b>palabra de seguridad</b>. Si olvidas la contraseña, «Cambiar contraseña» pide la palabra y te deja poner otra.</li><li>El modo jefe se queda activado hasta que cierras la web.</li><li>Mientras no haya ningún empleado con el puesto «Jefe», sigue estando el botón <b>JEFE</b> de arriba para entrar con la contraseña (por ejemplo, la primera vez).</li></ul>
-<p><b>DIRECCIÓN</b> abre la consola: resumen de hoy (ventas, gastos, beneficio, encargos, stock bajo, pedidos, materiales y empleados en prueba), una lista de <b>AVISOS</b> (pruebas que terminan, encargos vencidos, pedidos que tardan, stock o materiales bajos), el gráfico de la semana y las herramientas, agrupadas en <b>secciones plegables</b> (Ventas y caja, Catálogo, Almacén y fabricación, Proveedores, Personal, Clientes, Sistema). La web recuerda qué secciones dejas abiertas. En el ordenador, el resumen y los apartados se ven en <b>cuadrícula</b>. Dentro de cada apartado, el botón <b>? AYUDA</b> abre directamente su explicación en este tutorial. <b>Las semanas de las cuentas van de viernes a jueves</b>.</p><p>En Modo Jefe, al tocar el nombre de un producto del catálogo, su ficha muestra además el stock exacto, las unidades vendidas esta semana, la receta, el coste y el margen. El ranking semanal lleva medallas y el registro de stock, barras de nivel.</p>
+<p><b>DIRECCIÓN</b> abre la consola: resumen de hoy (ventas, gastos, beneficio, encargos, stock bajo, pedidos, materiales y empleados en prueba), una lista de <b>AVISOS</b> (pruebas que terminan, encargos vencidos, pedidos que tardan, stock o materiales bajos), el gráfico de la semana y las herramientas, agrupadas en <b>secciones plegables</b> por tareas: <b>HOY</b> (revisión y avisos, abierta de serie), <b>DINERO</b> (ventas, caja, gastos, balance, estadísticas, objetivo y registros semanales), <b>PERSONAL</b> (empleados, sueldos, horarios y ausencias), <b>TIENDA Y CLIENTES</b> (productos, convenios, clientes y eventos), <b>ALMACÉN</b> (stock, fabricación, balance de fabricación y registro de stock), <b>COMPRAS</b> (proveedores y pedidos) y <b>AJUSTES</b> (historial de parches, Discord, nube, copia, historial de cambios y resetear). La web recuerda qué secciones dejas abiertas. Cada apartado enseña en su tarjeta lo que tiene <b>pendiente</b> (por ejemplo «2 armas sin registrar IC» en rojo, «1 pedido pendiente» en ámbar) y cada sección, la suma en un círculo. Arriba del todo salen tus <b>ÚLTIMOS USADOS</b> para llegar con un toque. En <b>AJUSTES → HISTORIAL DE PARCHES</b> están todos los parches de la web numerados, con su fecha y lo que trajo cada uno (y un botón para copiarlo para Discord). En el ordenador, el resumen y los apartados se ven en <b>cuadrícula</b>. Dentro de cada apartado, el botón <b>? AYUDA</b> abre directamente su explicación en este tutorial. <b>Las semanas de las cuentas van de viernes a jueves</b>.</p><p>En Modo Jefe, al tocar el nombre de un producto del catálogo, su ficha muestra además el stock exacto, las unidades vendidas esta semana, la receta, el coste y el margen. El ranking semanal lleva medallas y el registro de stock, barras de nivel.</p>
 <ul><li><b>Convenios y ofertas</b>: crear, ver y eliminar.</li><li><b>Sueldos</b>: el pago de los domingos (semana de lunes a domingo) según las horas echadas, con el botón PAGAR.</li><li><b>Ausencias</b>: quién está ausente, hasta cuándo y el motivo (solo tú lo ves); puedes darlas por terminadas o borrarlas.</li><li><b>Empleados</b> (puesto, sueldo, contrato) y <b>Clientes</b> (telegrama, números de serie y precios especiales).</li><li><b>Productos y precios</b>: cambiar precios y añadir productos.</li><li><b>Stock</b>: sumar existencias (fabricar) con − / + y fijar el mínimo (el semáforo marca verde, ámbar o rojo). <b>Fabricación</b>: las recetas de materiales. <b>Registro de stock</b>: existencias y movimientos.</li><li><b>Registros horarios, de ventas</b> (buscar y <b>anular</b>) y <b>semanales</b> (con descarga).</li><li><b>Gastos</b>, <b>Balance de cuentas</b> y <b>Cierre de caja</b>, cada uno con descarga y «Enviar a Discord».</li><li><b>Proveedores</b>, <b>Realizar nuevo pedido</b> y <b>Registro de pedidos</b>.</li><li><b>Discord</b>, <b>Nube</b>, <b>Copia de seguridad</b> y <b>Resetear datos</b> (borra ventas, gastos, encargos y demás, sin tocar empleados ni configuración).</li></ul>`],
 ['Historial de cambios <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → Sistema → HISTORIAL DE CAMBIOS</b>: cada cambio queda apuntado con <b>quién</b> lo hizo y <b>cuándo</b>, vengan del dispositivo que vengan:</p>
 <ul><li>Precios, productos, convenios y ofertas.</li><li>Empleados (contrataciones, puesto, sueldo, horas, expulsiones, turnos cerrados a mano y ausencias borradas).</li><li>Fichas de clientes y de proveedores (qué dato cambió y, en los precios, de cuánto a cuánto).</li><li>Stock sumado o fabricado, recetas y mínimos.</li><li>Gastos y sueldos pagados o borrados, ventas anuladas, encargos cancelados y pedidos emitidos, recibidos, pagados o cancelados.</li><li>Discord, contraseña de jefe, objetivo semanal y reseteos.</li></ul>
@@ -5990,3 +6013,42 @@ dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir^="fbp:
  else if(a==='fb-copy')copyMsg(fbHistText(),'Balance de fabricación copiado');
  else if(a==='fb-send'){if(!(webhook.urls.fabricacion||webhook.url))return say('Pon el enlace del canal «Balance de fabricación» en Dirección → Discord');once('fbsend',async()=>{const ok=await discordSend('fabricacion',fbHistEmb(),null,null,true);say(ok?'Balance de fabricación enviado a Discord':'No se pudo enviar a Discord',ok?undefined:'err')},b)}
 });
+
+/* ===== Historial de parches (Dirección → AJUSTES → HISTORIAL DE PARCHES). El más nuevo, el último de la lista ===== */
+const PARCHES=[
+ {f:'09/10/2026',t:'Versión inicial de la web',i:['Calculadora de ventas, presupuestos y encargos con ticket, convenios, ofertas y precios especiales','Fichajes, empleados, sueldos, ausencias y registros horarios','Stock de productos, almacén de materiales, proveedores y pedidos','Avisos a Discord por canales, nube compartida entre dispositivos y tutorial']},
+ {f:'09/10/2026',t:'Imágenes ligeras',i:['Cabecera ancha para el ordenador','Las 38 imágenes comprimidas (de 94 MB a 10 MB) con los mismos nombres']},
+ {f:'09/10/2026',t:'Entrada nueva y web ancha',i:['Entrada con fotos nuevas','Web ancha en el ordenador y mejoras visuales','Deshacer, aviso sin conexión y web instalable como app']},
+ {f:'09/10/2026',t:'Tarjetas de empleado y modo prueba',i:['Tarjetas de empleado con la imagen pintada','Modo prueba con la tarjeta «Arthur Ayudante» para probar sin tocar nada real, con su retrato fijo']},
+ {f:'09/10/2026',t:'Imágenes WebP, objetivo, buscador y revisión',i:['Imágenes a WebP e imágenes nuevas','Objetivo semanal, buscador de Dirección, revisión de datos y ficha del empleado','Franjas de categoría alargadas para el ordenador','Imagen de cada producto como placa integrada']},
+ {f:'09/10/2026',t:'Mi ficha',i:['Cada empleado puede subir, cambiar o quitar su propia foto']},
+ {f:'09/10/2026',t:'ABIERTO/CERRADO y mejoras visuales',i:['Cartel ABIERTO/CERRADO','Mejoras en Dirección, tutorial y ticket']},
+ {f:'09/10/2026',t:'Pegar mensaje',i:['Pegas el mensaje de un cliente o proveedor y la ficha se rellena sola (la forma de siempre sigue igual)']},
+ {f:'09/10/2026',t:'Fichas, comparar proveedores y atajos',i:['Ficha de cliente como expediente y ficha de proveedor como contrato','Historial de compras del cliente','Comparar precios entre proveedores y ubicación del proveedor','Barra de abajo en el móvil, deshacer al borrar y atajos de teclado']},
+ {f:'09/10/2026',t:'Rendimiento',i:['Imágenes más ligeras y sin descargas dobles','Modo ligero de animaciones y ahorro de batería','Historial antiguo bajo demanda y limpieza de caché']},
+ {f:'09/10/2026',t:'Libro de turno, estadísticas y avisos',i:['Libro de turno y «Para hoy» al fichar','Estadísticas','Buscador del tutorial','Vigilancia de Discord y avisos del navegador','Fotos ligeras, márgenes de cada producto y mensajes listos para copiar','Resumen mensual e historial de cambios']},
+ {f:'09/10/2026',t:'Armas blancas',i:['6 productos nuevos (sin precio hasta que la dirección se lo ponga)','Recetas de fabricación de las 8 armas blancas']},
+ {f:'09/10/2026',t:'Recetas de las armas de fuego',i:['Recetas de fabricación de las 19 armas de fuego']},
+ {f:'09/10/2026',t:'Telegramas firmados',i:['Los avisos de recogida y recordatorios van firmados por Vincent Harrington con su telegrama']},
+ {f:'09/10/2026',t:'Recetas de mantenimiento, arcos y munición',i:['Recetas de mantenimiento, arcos, lazos y munición, con productos como ingrediente (pólvora, arco, lazo)','Productos nuevos: Arco mejorado y Munición Varmint','Proveedor Roanoke Mining Company']},
+ {f:'09/10/2026',t:'Hierro, carbón y almacén inicial',i:['En el almacén y las recetas se llaman Hierro y Carbón (a la mina se piden como «Mena de…»)','Almacén inicial dejado por el staff']},
+ {f:'09/10/2026',t:'Precio de la Munición Varmint',i:['Munición Varmint a $1.30']},
+ {f:'09/10/2026',t:'Proveedor Tala Annesburg',i:['Ficha de Tala Annesburg (AN5025)','Los tablones cuentan como Tabla de madera']},
+ {f:'10/10/2026',t:'Carrito que se vacía solo',i:['Al finalizar la venta el carrito se vacía solo','Nueva venta y Vaciar quedan para cuando el cliente se echa atrás']},
+ {f:'10/10/2026',t:'Completar fichas',i:['OTROS DATOS libres en las fichas de cliente y proveedor','✚ AÑADIR en los datos que falten']},
+ {f:'10/10/2026',t:'Proveedor Herrería Foster',i:['Ficha de Herrería Foster (VL2508) con sus 39 productos y precios']},
+ {f:'10/10/2026',t:'Corregir precios y recetas',i:['El coste usa el precio corregido en la ficha del proveedor','Desglose «¿De dónde sale el coste?» con botones para corregir la receta o el precio','Telegrama de Vincent Harrington corregido a SD8112']},
+ {f:'10/10/2026',t:'Eventos y Balance de fabricación',i:['Sorteo de un arma: cartel, un número por compra, sorteo automático, ganador, telegrama para el ganador, entrega del premio, devolución de Administración y cancelar','Balance de fabricación: se publica solo al fabricar e historial con copiar y enviar a Discord','Canales de Discord nuevos: Eventos y Balance de fabricación']},
+ {f:'10/10/2026',t:'Registro IC, horas extra y trabajador fijo',i:['Balance de fabricación en Discord en rojo o verde, con cada material','Registro de armas solo para las de fuego, con la casilla «Registrada IC» y recordatorios','Horas extra pagadas al precio de la hora ordinaria','Paso automático a trabajador fijo al terminar la prueba, con su contrato nuevo en Discord']},
+ {f:'10/10/2026',t:'Organización de Dirección e historial de parches',i:['Dirección ordenada por tareas: HOY, DINERO, PERSONAL, TIENDA Y CLIENTES, ALMACÉN, COMPRAS y AJUSTES (Sueldos pasa a PERSONAL)','Contadores de pendientes en cada apartado y en cada grupo','ÚLTIMOS USADOS arriba del todo','Historial de parches']}
+];
+let phQ='';
+function renderModParches(){
+ const L=PARCHES.map((p,i)=>Object.assign({n:i+1},p)).reverse(), q=norm(phQ);
+ const F=L.filter(p=>!q||norm(p.t+' '+p.i.join(' ')+' '+p.f).includes(q));
+ return `<p class="bk-note">Todos los parches de la web, numerados, con su fecha y lo que trajo cada uno. El más nuevo, arriba.</p>
+  <input class="dir-search" type="text" data-phq="1" placeholder="⌕  Buscar en los parches…" value="${esc(phQ)}" autocomplete="off">
+  ${F.map((p,k)=>`<details class="ph-card"${k===0||q?' open':''}><summary><b class="ph-n">#${p.n}</b><span>${esc(p.t)}</span><small>${esc(p.f)}</small></summary><ul>${p.i.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><div class="enc-actions"><button type="button" data-dir="ph-copy:${p.n}">⧉ COPIAR PARA DISCORD</button></div></details>`).join('')||'<div class="enc-empty">Ningún parche con eso.</div>'}`;
+}
+dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir^="ph-copy:"]');if(!b)return;e.stopImmediatePropagation();const n=+b.dataset.dir.split(':')[1], p=PARCHES[n-1];if(p)copyMsg('**PARCHE #'+n+' · '+p.t+'** ('+p.f+')\n'+p.i.map(x=>'- '+x).join('\n'),'Parche #'+n+' copiado')});
+dirModal.addEventListener('input',e=>{if(!e.target.dataset||!e.target.dataset.phq)return;phQ=e.target.value;renderDir();const i=dirModal.querySelector('[data-phq]');if(i){i.focus();i.setSelectionRange(phQ.length,phQ.length)}});

@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261010i
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261010k
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1631,3 +1631,27 @@ html.lite .ev-plate.done{animation:none}
 .ic-plate b{display:block;font-family:'Cinzel Decorative',Georgia,serif;font-size:18px;color:#ffd7c4}
 .ic-plate span{font-size:12.5px}
 .ic-plate .ic-warn{flex:0 0 34px;height:34px;border-radius:50%;background:#c0392b;color:#fff;font:700 22px/34px Georgia,serif;text-align:center}
+/* Dirección: contadores y últimos usados */
+.mod-card.has-b.bad{border-color:#c0392b}
+.mod-card.has-b.pend{border-color:#b8862f}
+.mod-b{display:inline-block;margin-top:5px;padding:2px 8px;border-radius:20px;font-size:11.5px;letter-spacing:.03em;font-weight:700}
+.mod-b.bad{background:#c0392b;color:#fff}
+.mod-b.pend{background:#e0a33a;color:#2a1a0d}
+.mod-b.info{background:#2e6e4a;color:#e9f6ee}
+.sec-b{margin-left:auto;margin-right:8px;min-width:22px;height:22px;padding:0 7px;border-radius:11px;font:700 12px/22px Georgia,serif;text-align:center}
+.sec-b.bad{background:#c0392b;color:#fff}.sec-b.pend{background:#e0a33a;color:#2a1a0d}.sec-b.info{background:#2e6e4a;color:#fff}
+.dir-rec{margin:0 0 10px}
+.dir-rec-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.rec-btn{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border:1px solid #5d4928;border-radius:8px;background:#0a1712;color:#e9d49a;font:600 10.5px/1.2 Georgia,serif;letter-spacing:.03em;text-align:center;cursor:pointer}
+.rec-btn .mod-ico{width:24px;height:24px}
+.rec-btn i{position:absolute;top:-6px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#e0a33a;color:#2a1a0d;font:700 11px/18px Georgia,serif;font-style:normal}
+.rec-btn.bad i{background:#c0392b;color:#fff}.rec-btn.info i{background:#2e6e4a;color:#fff}
+@media(max-width:420px){.dir-rec-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ph-card{margin:0 0 8px;border:1px solid #5d4928;border-radius:8px;background:#0a1712;padding:0 10px}
+.ph-card summary{display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;list-style:none}
+.ph-card summary::-webkit-details-marker{display:none}
+.ph-card .ph-n{flex:0 0 auto;min-width:38px;padding:2px 6px;border-radius:5px;background:#c9a24a;color:#2a1a0d;font:700 13px Georgia,serif;text-align:center}
+.ph-card summary span{flex:1;color:#f3e2b0;font-weight:700}
+.ph-card summary small{color:#a89366;font-size:12px}
+.ph-card ul{margin:0 0 8px;padding-left:20px;color:#e9d49a;font-size:13.5px}
+.ph-card li{margin:3px 0}
