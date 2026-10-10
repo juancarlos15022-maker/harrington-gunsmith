@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261010v
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261010w
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1709,3 +1709,10 @@ body.has-mnav #dirModal .enc-actions:has(> [data-dir="cl-save"]),body.has-mnav #
 .mw-row{display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:13.5px;color:#e9d49a}
 .mw-row.tot{border-top:1px dashed #5d4928;margin-top:4px;padding-top:6px;font-size:15px}
 .mw-row.tot b{color:#ffe08a}
+.ev-cdbox{display:flex;align-items:baseline;gap:8px;margin-top:6px}
+.ev-cdbox small{padding:0!important;font-size:10.5px!important}
+.ev-plate .ev-cd{display:inline!important;font:700 20px Georgia,serif!important;letter-spacing:.04em!important;color:#8d2a16!important}
+.ev-plate.soon{animation:evGlow 1.6s ease-in-out infinite}
+.ev-plate.soon .ev-cdbox small{color:#8d2a16;font-weight:700}
+@media (prefers-reduced-motion:reduce){.ev-plate.soon{animation:none}}
+html.lite .ev-plate.soon{animation:none}
