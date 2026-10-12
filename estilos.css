@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261012d
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261012e
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1738,3 +1738,24 @@ html.lite .ev-plate.soon{animation:none}
 .fbc-leg{display:flex;justify-content:space-between;margin:4px 0 0 calc(34% + 8px);padding-right:72px;font-size:10.5px;color:#a89366}
 .pg-x{display:none!important}
 .pg-more{margin:8px 0}
+.pr-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed #2f4536}.pr-row small{display:block;font-size:12.5px;color:#cbb886}
+
+/* ===== Parche final V1: NPC, recuento, fabricar, auditoría y clientes ===== */
+.npc-plate{border-color:#b9770e;background:linear-gradient(100deg,#3a250a,#1a1006)}
+.npc-plate .ic-warn{background:#b9770e}
+.npc-row{display:grid;grid-template-columns:1fr 76px 92px;gap:8px;align-items:end;padding:7px 0;border-bottom:1px dashed #2f4536}
+.npc-row small{display:block;font-size:12.5px;color:#cbb886}.npc-row label{font-size:11px;letter-spacing:.08em}.npc-row .min-in{width:100%}
+@media(max-width:420px){.npc-row{grid-template-columns:1fr 64px 80px}}
+.fab-emp{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px dashed #2f4536}
+.fab-emp small{display:block;font-size:12.5px;color:#cbb886}.fab-emp button{flex:0 0 auto;white-space:nowrap}.fab-emp.off{opacity:.6}
+.mat-acts{margin-bottom:10px}
+.pr-row .min-in,.npc-row .min-in,#invModal .min-in{display:inline-block;width:76px;min-height:38px;margin:0;padding:4px 8px;border:1px solid #6d5430;border-radius:6px;background:#0d0905;color:var(--ink);font-size:16px;text-align:center}
+#invModal label select{width:100%}
+.inc-open{border-left:4px solid #d08a1e}
+.inc-nota{margin:8px 0 0}
+.aud-f select{width:100%}
+.g-cli{display:flex;flex-direction:column;align-items:center;gap:4px;width:min(520px,100%);margin:26px auto 0;padding:16px 18px 18px;border:2px solid #8b6a2e;border-radius:12px;background:linear-gradient(160deg,#2a1c0d,#0d1c14);color:#f3d47c;text-decoration:none;box-shadow:0 6px 22px #000b,inset 0 0 26px #d7ae5418;transition:transform .2s,box-shadow .2s}
+.g-cli:hover,.g-cli:focus-visible{transform:translateY(-2px);box-shadow:0 10px 28px #000c,0 0 18px #d7ae5455}
+.g-cli svg{width:min(260px,70%);height:auto;color:#d7ae54}
+.g-cli b{font-family:'Cinzel Decorative',Georgia,serif;font-size:24px;letter-spacing:.08em}
+.g-cli span{font:italic 14px/1.35 'IM Fell English',Georgia,serif;color:#cfe0cf;text-align:center}

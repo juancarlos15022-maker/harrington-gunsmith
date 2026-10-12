@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261012d
+/* HARRINGTON GUNSMITH · app.js · versión 20261012e
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -583,6 +583,8 @@ try{encargos=JSON.parse(store.get(KEY_ENC)||'[]')}catch(e){}
 if(!Array.isArray(encargos))encargos=[];
 let loadedEnc=encargos.find(e=>e.id===store.get(KEY_LOADED))||null;
 const bannerEl=document.getElementById('loadedBanner'), finishEncBtn=document.getElementById('finishEnc'), encBtn=document.getElementById('encBtn'), encModal=document.getElementById('encModal');
+/* Las unidades de un encargo que se sumaron al stock al marcarlo FABRICADO salen del stock al entregarlo (el resto del encargo, como siempre) */
+function encOq(x,encId){const o=x.oq||0;if(!o||!encId)return o;const e=(loadedEnc&&loadedEnc.id===encId?loadedEnc:null)||encargos.find(z=>z.id===encId), f=e&&e.fabStock&&(e.fabStock.items||[]).find(i=>i.producto===x.name);return f?Math.max(0,o-f.delta):o}
 function origQty(name){const f=loadedEnc&&loadedEnc.items.find(x=>x.name===name);return f?f.qty:0}
 function sanitizeTelegram(v){return String(v||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,10)}
 /* Modo de la calculadora, empleados y stock */
@@ -662,7 +664,7 @@ function applyStock(sl){
  /* El stock ya se ha movido en la nube (stockPrepare); aquí solo se anota lo aplicado y el movimiento */
  if(sl.op==='encargo')return;
  const want={};
- sl.items.forEach(x=>{const q=x.qty-(x.oq||0);if(q>0)want[x.name]=q});
+ sl.items.forEach(x=>{const q=x.qty-encOq(x,sl.fromEncargo);if(q>0)want[x.name]=q});
  const prev=sl.stockApplied||{};
  new Set(Object.keys(want).concat(Object.keys(prev))).forEach(n=>{const d=(want[n]||0)-(prev[n]||0);if(d)logStock(n,-d,'Venta '+sl.id)});
  sl.stockApplied=want;
@@ -694,9 +696,10 @@ function benefitFor(d,total){
 function stockOk(items){
  if(cloud.skipStockOk||(customer.op==='encargo'&&!loadedEnc))return true;
  for(const x of items){
-  const avail=(stockMap[x.name]||0)+((sale&&sale.stockApplied&&sale.stockApplied[x.name])||0), need=x.qty-(x.oq||0);
+  const avail=(stockMap[x.name]||0)+((sale&&sale.stockApplied&&sale.stockApplied[x.name])||0), need=x.qty-encOq(x,loadedEnc&&loadedEnc.id);
   if(need>avail){say('No hay stock suficiente de '+x.name);return false}
  }
+ try{if(!reservaCheck(items))return false}catch(e){}
  return true;
 }
 const KEY_DISC='harrington_descuentos_v1';
@@ -784,6 +787,7 @@ function customerOk(){
   say('Hay un sorteo en marcha: escribe el telegrama del cliente para darle su número');
   telInput.focus();return false;
  }
+ if(!encClienteOk())return false;
  if(computeFin().over){
   say(loadedEnc?'La fianza supera el precio final: añade productos o revisa el encargo':customer.op==='encargo'?'El pago por adelantado no puede superar el precio final':'La cantidad abonada no puede superar el precio final');
   return false;
@@ -937,9 +941,10 @@ async function saveEncDraft(){
    try{await refreshStock()}catch(x){}
    const need=needMaterials(items), miss=missingMaterials(need);
    if(miss.length)return say('No se puede marcar FABRICADO: faltan materiales · '+miss.join(' · '),'err');
+   {const me=meEmp();if(me&&!bossActive){try{await cloudPullRecords()}catch(x){}if(empBloqueo(me.id).length)return say('Tienes unidades fabricadas pendientes de vender: no puedes fabricar este encargo todavía','err')}}
    if(!await askConfirm('Fabricar el encargo','Se sumarán al stock '+items.map(x=>x.delta+' × '+x.producto).join(', ')+' y se gastarán del almacén: '+Object.keys(need).map(k=>need[k]+' '+k).join(', ')+'.','Fabricar'))return;
-   try{await moverStock(items.concat(Object.keys(need).map(k=>({producto:ingKey(k),delta:-need[k]}))),'Fabricación');items.forEach(x=>logStock(x.producto,x.delta,'Fabricación'));Object.keys(need).forEach(k=>logStock(isProdIng(k)?k:k+' (material)',-need[k],'Fabricación'))}
-   catch(err){if(String(err.message).indexOf('STOCK_INSUFICIENTE')>=0)return say('Faltan materiales (otro dispositivo los acaba de gastar)','err');return say('Sin conexión: no se puede fabricar ahora','err')}
+   try{await encFabMover(items.concat(Object.keys(need).map(k=>({producto:ingKey(k),delta:-need[k]}))),items,e.id);items.forEach(x=>logStock(x.producto,x.delta,'Fabricación'));Object.keys(need).forEach(k=>logStock(isProdIng(k)?k:k+' (material)',-need[k],'Fabricación'))}
+   catch(err){if(String(err.message).indexOf('FAB_BLOQUEADA')>=0)return say('Tienes unidades fabricadas pendientes de vender: no puedes fabricar este encargo todavía','err');if(String(err.message).indexOf('STOCK_INSUFICIENTE')>=0)return say('Faltan materiales (otro dispositivo los acaba de gastar)','err');return say('Sin conexión: no se puede fabricar ahora','err')}
    e.fabStock={ts:Date.now(),items:items,need:need};fsSet=e.fabStock;try{stampFx('FABRICADO');playAnvil()}catch(x){}try{fbAuto(items)}catch(x){}
   }
  }
@@ -950,7 +955,7 @@ async function saveEncDraft(){
   const mv=f.items.map(x=>({producto:x.producto,delta:-x.delta})).concat(Object.keys(f.need).map(k=>({producto:ingKey(k),delta:f.need[k]})));
   try{await moverStock(mv,'Fabricación deshecha');mv.forEach(x=>logStock(isMat(x.producto)?x.producto.slice(4)+' (material)':x.producto,x.delta,'Fabricación deshecha'))}
   catch(err){if(String(err.message).indexOf('STOCK_INSUFICIENTE')>=0)return say('No se puede deshacer: alguna de esas unidades ya se ha vendido','err');return say('Sin conexión: no se puede deshacer ahora','err')}
-  e.fabStock=null;fsSet=null;try{fbAuto(f.items,true)}catch(x){}
+  e.fabStock=null;fsSet=null;try{fbAuto(f.items,true)}catch(x){}try{encFabAnular(e.id)}catch(x){}
  }
  /* mientras se fabricaba pudo llegar la copia de la nube: se aplica sobre la actual */
  {const cur=encargos.find(x=>x.id===e.id);if(cur&&cur!==e){if(fsSet!==undefined)cur.fabStock=fsSet;e=cur}}
@@ -1337,6 +1342,9 @@ const DIRECCION_MODULOS=[
  {id:'proveedores',titulo:'PROVEEDORES',desc:'Crear y gestionar tus proveedores (herrerías, minas, talas…).',render:()=>renderModProveedores()},
  {id:'nuevopedido',titulo:'REALIZAR NUEVO PEDIDO',desc:'Pedir materiales a un proveedor.',render:()=>renderModNuevoPedido()},
  {id:'regpedidos',titulo:'REGISTRO DE PEDIDOS',desc:'Pedidos completados, diarios y semanales.',render:()=>renderModRegPedidos()},
+ {id:'npc',titulo:'NPC DE LA TIENDA',desc:'Lo que vende el NPC con la tienda cerrada: unidades asignadas y sus precios.',render:()=>renderModNpc()},
+ {id:'publico',titulo:'PÁGINA PARA CLIENTES',desc:'Enlace público con el catálogo y los precios, sin nada privado.',render:()=>renderModPublico()},
+ {id:'auditoria',titulo:'AUDITORÍA E INCIDENCIAS',desc:'Todo lo que hace cada empleado, con filtros, e incidencias para revisar.',render:()=>renderModAuditoria()},
  {id:'parches',titulo:'HISTORIAL DE PARCHES',desc:'Todos los parches de la web, numerados, con lo que trajo cada uno.',render:()=>renderModParches()},
  {id:'discord',titulo:'DISCORD',desc:'Enviar las operaciones a un canal automáticamente.',render:()=>renderModDiscord()},
  {id:'historial',titulo:'HISTORIAL DE CAMBIOS',desc:'Quién cambió precios, stock, fichas o borró algo, y cuándo.',render:()=>renderModHistorial()},
@@ -1812,7 +1820,8 @@ const KEY_STOCKMIN='harrington_stockmin_v1';
 let stockMin=loadObj(KEY_STOCKMIN,{});
 if(Array.isArray(stockMin))stockMin={};
 let minDraft={};
-function saveStockMin(){store.set(KEY_STOCKMIN,JSON.stringify(stockMin))}
+function saveStockMin(){store.set(KEY_STOCKMIN,JSON.stringify(stockMin));try{matPaint()}catch(e){}}
+setInterval(()=>{if(!document.hidden)try{matPaint()}catch(e){}},15000);
 function dotCls(n){const v=stockMap[n]||0,m=stockMin[n]||0;return v<=0?'r':(m>0&&v<=m?'a':'g')}
 function lowStock(){return inputs.map(i=>i.dataset.name).filter(n=>{const m=stockMin[n]||0;return m>0&&(stockMap[n]||0)<=m})}
 function rollTo(el,cents,instant){
@@ -1961,7 +1970,10 @@ async function icLegacy(){
  if(mine){let n=0;clientes.forEach(c=>(c.series||[]).forEach(r=>{if(r&&r.s&&r.ic===undefined){r.ic=false;n++}}));if(n){saveClientes();icPaint();say(n+(n===1?' arma pasa':' armas pasan')+' a «sin registrar IC»: regístralas dentro del juego y márcalas','err')}}
  try{localStorage.setItem('harrington_iclegacy_1','1')}catch(e){}
 }
-function icPaint(){try{bellPaint()}catch(e){}const el=document.getElementById('icPlate');if(!el)return;const n=icPending().length;el.hidden=!n;if(n){const h=`<span class="ic-warn" aria-hidden="true">!</span><div><small>REGISTRO DE ARMAS PENDIENTE</small><b>${n} ${n===1?'arma sin registrar IC':'armas sin registrar IC'}</b><span>Hay que registrarlas dentro del juego a nombre del cliente: no hacerlo es sancionable. Toca para verlas.</span></div>`;if(el.innerHTML!==h)el.innerHTML=h}}
+/* Alerta persistente de materias primas bajas: solo materias primas (no productos ni NPC); se quita sola al reponer */
+function matPaint(){const el=document.getElementById('matPlate');if(!el)return;let L=[];try{L=lowMats()}catch(e){}el.hidden=!L.length;if(!L.length){if(el.innerHTML)el.innerHTML='';return}
+ const h=`<span class="ic-warn" aria-hidden="true">!</span><div><small>MATERIAS PRIMAS BAJAS</small><b>${L.length} ${L.length===1?'material en su mínimo':'materiales en su mínimo'}</b><span>${L.map(n=>`${esc(n)}: ${stockMap[matKey(n)]||0} (mínimo ${stockMin[matKey(n)]})`).join(' · ')}</span></div>`;if(el.innerHTML!==h)el.innerHTML=h}
+function icPaint(){try{matPaint()}catch(e){}try{bellPaint()}catch(e){}const el=document.getElementById('icPlate');if(!el)return;const n=icPending().length;el.hidden=!n;if(n){const h=`<span class="ic-warn" aria-hidden="true">!</span><div><small>REGISTRO DE ARMAS PENDIENTE</small><b>${n} ${n===1?'arma sin registrar IC':'armas sin registrar IC'}</b><span>Hay que registrarlas dentro del juego a nombre del cliente: no hacerlo es sancionable. Toca para verlas.</span></div>`;if(el.innerHTML!==h)el.innerHTML=h}}
 function serieRows(c){const L=(c.series||[]).filter(r=>r&&(r.s||r.a)).map(r=>Object.assign({s:r.s||'',a:r.a||''},r.ic!==undefined?{ic:!!r.ic}:{}));if(L.length<MAX_SERIES)L.push({s:'',a:'',ic:false});c.series=L;return L}
 function serieRowHTML(r,i){return `<div class="serie-row"><input data-ser="s" data-i="${i}" type="text" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="N.º de serie ${i+1}" value="${esc(r.s)}"><select data-ser="a" data-i="${i}" aria-label="Arma"><option value="">Arma (opcional)</option>${weaponNames().map(n=>`<option value="${esc(n)}"${r.a===n?' selected':''}>${esc(n)}</option>`).join('')}${r.a&&weaponNames().indexOf(r.a)<0?`<option value="${esc(r.a)}" selected>${esc(r.a)}</option>`:''}</select><label class="ser-ic${r.s&&!r.ic?' pend':''}"><input type="checkbox" data-ser="ic" data-i="${i}"${r.ic?' checked':''}> Registrada IC (dentro del juego)</label></div>`}
 function clientText(c,title){
@@ -2166,7 +2178,7 @@ async function doReset(){
  }catch(e){return say('No se pudo completar el reseteo: sin conexión con la nube. Vuelve a intentarlo.')}
  wipeLocal(what);
  if(what.indexOf('stock')>=0||what.indexOf('materiales')>=0){try{await refreshStock()}catch(e){}if(what.indexOf('stock')>=0){invLast.stock='Reseteo';invSchedule('stock')}if(what.indexOf('materiales')>=0){invLast.materiales='Reseteo';invSchedule('materiales')}}
- cloud.since='';try{localStorage.removeItem('harrington_cloud_since')}catch(e){}
+ cloud.since='';cloud.seenA={};try{localStorage.removeItem('harrington_cloud_since')}catch(e){}
  say('Datos reseteados');renderDir();
 }
 /* --- Nube (Supabase) --- */
@@ -2231,6 +2243,9 @@ function rankingHTML(list){
  return `<div class="enc-card dir-item"><div class="t">RANKING DE LA SEMANA</div>${r.map((x,i)=>`<div class="reg-line"><span><i class="medal m${i+1}" aria-label="${i+1}º">${i+1}</i>${esc(x.n)}</span><b>${money(x.c)}</b></div>`).join('')}</div>`;
 }
 const MOD_ICONS={
+ npc:'<circle cx="12" cy="7" r="3"/><path d="M6 21v-4a6 6 0 0 1 12 0v4"/><path d="M8 4h8"/>',
+ publico:'<circle cx="8" cy="8" r="2.5"/><circle cx="16" cy="8" r="2.5"/><path d="M3 19v-2a5 5 0 0 1 10 0v2M11 19v-2a5 5 0 0 1 10 0v2"/>',
+ auditoria:'<path d="M5 3h10l4 4v14H5z"/><circle cx="11" cy="13" r="3"/><path d="M13.5 15.5L17 19"/>',
  parches:'<path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6M9 13h6M9 17h4"/>',
  balfab:'<path d="M3 20h18M6 16l4-5 3 3 5-7"/><path d="M15 7h3v3"/>',
  eventos:'<path d="M4 8h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"/><path d="M10 8v12" stroke-dasharray="2 2"/>',
@@ -2406,7 +2421,9 @@ async function discordCard(kind,text,ref,editOnly){
 function logStock(name,delta,why){
  if(!delta)return;
  const a=loadLog(KEY_STOCKLOG), now=Date.now();
- const rec={uid:'m'+now.toString(36)+Math.random().toString(36).slice(2,5),ts:now,name:name,delta:delta,why:why,date:fmtDate(now),time:fmtTime(now)};a.push(rec);
+ const rec={uid:'m'+now.toString(36)+Math.random().toString(36).slice(2,5),ts:now,name:name,delta:delta,why:why,date:fmtDate(now),time:fmtTime(now)};
+ try{rec.who=whoAmI().name||'';const k=/ \(material\)$/.test(name)?matKey(canonMat(name.replace(/ \(material\)$/,''))):name, d=stockMap[k];if(typeof d==='number'){rec.despues=d;rec.antes=d-delta}}catch(e){}
+ a.push(rec);
  store.set(KEY_STOCKLOG,JSON.stringify(a.slice(-2500)));cloudPut('mov:'+rec.uid,rec);
 }
 var bossTimer=null;
@@ -2457,7 +2474,8 @@ function pedidoText(r,title){
  L.push('','TOTAL: '+money(r.totalCents),'Pagado: '+(r.paid?'SÍ':'NO')+(r.paidBy?' ('+r.paidBy+')':'')+' · Recibido: '+(r.received?'SÍ':'NO')+(r.receivedBy?' ('+r.receivedBy+')':''));
  return L.join('\n');
 }
-function pedBadges(x){return `<span class="badge ${x.received?'fab':'pend'}">${x.received?'RECIBIDO':'POR RECIBIR'}</span><span class="badge ${x.paid?'si':'no'}">${x.paid?'PAGADO':'NO PAGADO'}</span>`}
+function pedRecv(x){const q=(x.items||[]).reduce((a,i)=>a+i.qty,0), r=(x.items||[]).reduce((a,i)=>a+Math.min(i.qty,i.rq||0),0);return {q:q,r:x.received?q:r}}
+function pedBadges(x){const pr=pedRecv(x);return `<span class="badge ${x.received?'fab':'pend'}">${x.received?'RECIBIDO':pr.r>0?'RECIBIDO EN PARTE · '+pr.r+'/'+pr.q:'POR RECIBIR'}</span><span class="badge ${x.paid?'si':'no'}">${x.paid?'PAGADO':'NO PAGADO'}</span>`}
 function renderPed(){
  const body=document.getElementById('pedBody'), title=document.getElementById('pedTitle');
  const x=pedView?pendingPed().find(p=>p.id===pedView):null;
@@ -2481,7 +2499,11 @@ function renderPed(){
   <div class="enc-sec">
    <label>EMPLEADO QUE LO REGISTRA<select id="pdEmp"${meEmp()?' disabled':''}><option value="">Seleccionar empleado</option>${empleados.map(e=>`<option value="${esc(e.id)}"${pedDraft.emp===e.id?' selected':''}>${esc(e.name)}</option>`).join('')}</select></label>
    <label>¿RECIBIDO?<select id="pdRec"${x.received?' disabled':''}><option value="0"${!pedDraft.received?' selected':''}>NO</option><option value="1"${pedDraft.received?' selected':''}>SÍ</option></select></label>
-   ${x.received?'<div class="enc-note">Ya recibido: sus materiales ya están en el almacén.</div>':'<div class="enc-note">Al marcarlo como recibido, sus materiales se suman al almacén de MATERIALES.</div>'}
+   ${x.received?'<div class="enc-note">Ya recibido: sus materiales ya están en el almacén.</div>':'<div class="enc-note">Al marcarlo como recibido, se suma al almacén de MATERIALES todo lo que falte por llegar.</div>'}
+   ${x.received?'':`<div class="dir-sec-title">RECEPCIÓN PARCIAL</div><p class="bk-note" style="margin:0 0 6px">Si el proveedor trae solo una parte, escribe lo que ha llegado ahora. Solo se suma al almacén lo que escribas; el pedido sigue pendiente hasta que llegue todo.</p>
+   ${x.items.map((i,k)=>{const rq=Math.min(i.qty,i.rq||0), pe=i.qty-rq;return `<div class="pr-row"><div><b>${esc(i.material)}</b><small>Pedidas ${i.qty} · Recibidas ${rq} · Pendientes <b class="${pe?'neg':'mg-ok'}">${pe}</b></small></div>${pe?`<input class="min-in" type="text" inputmode="numeric" data-prq="${k}" placeholder="0" aria-label="Recibidas ahora de ${esc(i.material)}" value="${esc((pedDraft.part||{})[k]||'')}">`:'<span class="mg-ok">✓</span>'}</div>`}).join('')}
+   <div class="enc-actions"><button type="button" class="primary" data-pact="partial">REGISTRAR ENTREGA PARCIAL</button></div>`}
+   ${(x.recs||[]).length?`<details class="mat-mins"><summary>ENTREGAS RECIBIDAS (${x.recs.length})</summary>${x.recs.map(r=>`<div class="reg-line"><span>${esc(fmtDate(r.ts))} ${esc(fmtTime(r.ts))} · ${esc(r.by||'—')}<br><small>${r.items.map(it=>it.qty+' × '+esc(it.material)).join(', ')}</small></span><b>${r.full?'RESTO':'PARCIAL'}</b></div>`).join('')}</details>`:''}
    <label>¿PAGADO?<select id="pdPaid"${x.paidInitial?' disabled':''}><option value="0"${!pedDraft.paid?' selected':''}>NO</option><option value="1"${pedDraft.paid?' selected':''}>SÍ</option></select></label>
    ${x.paidInitial?'<div class="enc-note">Este pedido ya se dejó pagado: no se puede cambiar.</div>':''}
    <div class="enc-note">Cuando esté recibido y pagado, el pedido sale de la lista y pasa a la contabilidad.</div>
@@ -2510,8 +2532,11 @@ async function savePedido(){
    if(!r.ok)throw new Error(r.status);const rows=await r.json();mine=Array.isArray(rows)&&rows.length>0;
   }catch(e){return say('Sin conexión: no se puede registrar la recepción ahora')}
   if(mine){
-   const mi={};rec.items.forEach(x=>{const k=matKey(canonMat(x.material));mi[k]=(mi[k]||0)+x.qty});
+   const mi={};rec.items.forEach(x=>{const f=Math.max(0,x.qty-Math.min(x.qty,x.rq||0));if(!f)return;const k=matKey(canonMat(x.material));mi[k]=(mi[k]||0)+f});
    const mv=Object.keys(mi).map(k=>({producto:k,delta:mi[k]}));
+   const got=rec.items.filter(x=>x.qty>Math.min(x.qty,x.rq||0)).map(x=>({material:x.material,qty:x.qty-Math.min(x.qty,x.rq||0)}));
+   rec.items=rec.items.map(x=>Object.assign({},x,{rq:x.qty}));if(got.length){rec.recs=(rec.recs||[]).concat([{ts:now,by:emp,items:got,full:true}])}
+   if(!mv.length){}else
    try{await moverStock(mv,'Pedido '+rec.code);mv.forEach(x=>logStock(x.producto.slice(4)+' (material)',x.delta,'Pedido '+rec.code))}
    catch(e){sbFetch('/rest/v1/datos?clave=eq.'+encodeURIComponent('recibido-'+rec.id),{method:'DELETE'}).catch(()=>{});return say('Sin conexión: no se puede registrar la recepción ahora')}
    if(!stampImgFx('recibido',2.43))stampFx('RECIBIDO');playChest();
@@ -2527,6 +2552,36 @@ async function savePedido(){
   pedView=null;say('Pedido completado: pasa a la contabilidad');
  }else say('Pedido actualizado');
  renderPed();
+}
+/* Entrega parcial: solo se suma lo que llega ahora; el pedido sigue pendiente hasta recibirlo todo */
+async function savePartial(){
+ const x=pendingPed().find(p=>p.id===pedView); if(!x||!pedDraft)return;
+ if(!pedDraft.emp)return say('Selecciona el empleado que lo registra');
+ const want={};Object.keys(pedDraft.part||{}).forEach(k=>{const v=parseInt(pedDraft.part[k])||0;if(v>0)want[k]=v});
+ if(!Object.keys(want).length)return say('Escribe cuántas unidades han llegado de algún material');
+ let base=x;
+ try{const r=await sbFetch('/rest/v1/datos?select=valor&clave=eq.'+encodeURIComponent('pedido:'+x.id));if(!r.ok)throw new Error(r.status);const rows=await r.json();if(rows[0]&&rows[0].valor&&!rows[0].valor.deleted)base=rows[0].valor}
+ catch(e){return say('Sin conexión: no se puede registrar la entrega ahora','err')}
+ if(base.completedAt||base.cancelled||base.received){savePed(base);renderPed();return say('Este pedido ya está recibido o cerrado')}
+ const items=base.items.map(i=>Object.assign({},i)), got=[];
+ for(const k of Object.keys(want)){const i=items[+k];if(!i)continue;const pe=i.qty-Math.min(i.qty,i.rq||0);if(want[k]>pe)return say('De '+i.material+' solo faltan '+pe+' por recibir','err');i.rq=Math.min(i.qty,i.rq||0)+want[k];got.push({material:i.material,qty:want[k]})}
+ if(!got.length)return;
+ const emp=(empleados.find(e=>e.id===pedDraft.emp)||{}).name||'', now=Date.now(), n=(base.recs||[]).length+1;
+ try{if(!await claimRow('recibido-'+base.id+'-'+n,{ts:now,by:emp})){await cloudPullRecords();renderPed();return say('Otro dispositivo acaba de registrar una entrega de este pedido: revisa y vuelve a intentarlo','err')}}
+ catch(e){return say('Sin conexión: no se puede registrar la entrega ahora','err')}
+ const mi={};got.forEach(g=>{const k=matKey(canonMat(g.material));mi[k]=(mi[k]||0)+g.qty});const mv=Object.keys(mi).map(k=>({producto:k,delta:mi[k]}));
+ try{await moverStock(mv,'Pedido '+base.code);mv.forEach(m=>logStock(m.producto.slice(4)+' (material)',m.delta,'Pedido '+base.code))}
+ catch(e){sbFetch('/rest/v1/datos?clave=eq.'+encodeURIComponent('recibido-'+base.id+'-'+n),{method:'DELETE'}).catch(()=>{});return say('Sin conexión: no se puede registrar la entrega ahora','err')}
+ const rec=Object.assign({},base,{items:items,recs:(base.recs||[]).concat([{ts:now,by:emp,items:got}])});
+ const all=items.every(i=>(i.rq||0)>=i.qty);
+ if(all){rec.received=true;rec.receivedBy=emp;rec.receivedAt=now;rec.matIn=true;try{await claimRow('recibido-'+rec.id,{ts:now,by:emp,parcial:true})}catch(e){}}
+ let done=false;if(rec.received&&rec.paid){rec.completedAt=now;done=true}
+ savePed(rec);pedDraft.part={};
+ actLog('recepcion',{pedido:rec.code,proveedor:rec.proveedor,items:got,parcial:!all},emp);
+ discordSend('pedidos',['ENTREGA '+(all?'FINAL':'PARCIAL')+' · '+rec.code,'Proveedor: '+rec.proveedor,'Recibido ahora: '+got.map(g=>g.qty+' × '+g.material).join(', '),'Registrado por: '+(emp||'—')].concat(all?[]:['Pendiente: '+items.filter(i=>(i.rq||0)<i.qty).map(i=>(i.qty-(i.rq||0))+' × '+i.material).join(', ')]).join('\n'));
+ if(done){const m=madridParts(now), g={id:'gp'+rec.id,cat:'proveedor',concepto:`Pedido ${rec.code} · ${rec.proveedor}`,cents:rec.totalCents,day:dayNum(+m.year,+m.month,+m.day),date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`,pedido:rec.id};if(!gastos.some(y=>y.id===g.id)){gastos.push(g);saveGastos();cloudPut('gasto:'+g.id,g)}discordSend('pedidos',pedidoText(rec,'PEDIDO COMPLETADO'));pedView=null}
+ try{stampFx(all?'RECIBIDO':'PARCIAL');playChest()}catch(e){}
+ renderPed();say(all?'Entrega final: pedido recibido entero':'Entrega parcial registrada: '+got.map(g=>g.qty+' × '+g.material).join(', '));
 }
 async function cancelPedido(id){
  const x=pendingPed().find(p=>p.id===id); if(!x)return;
@@ -2551,9 +2606,11 @@ pedModal.addEventListener('click',e=>{
  const a=e.target.closest('[data-pact]'); if(!a)return;
  if(a.dataset.pact==='back'){pedView=null;pedDraft=null;renderPed()}
  else if(a.dataset.pact==='save')once('ped',savePedido,a);
+ else if(a.dataset.pact==='partial')once('pedp',savePartial,a);
  else if(a.dataset.pact==='cancel')once('pedc',()=>cancelPedido(pedView),a);
  else if(a.dataset.pact==='tele'){const x=pendingPed().find(p=>p.id===pedView);if(x)copyMsg(pedidoTelegram(x.proveedor,x.items,x.paid,x.code),'Pedido copiado · pégalo en el telegrama al proveedor')}
 });
+pedModal.addEventListener('input',e=>{const t=e.target;if(!pedDraft||t.dataset.prq===undefined)return;const v=t.value.replace(/[^0-9]/g,'').slice(0,6);if(v!==t.value)t.value=v;pedDraft.part=pedDraft.part||{};pedDraft.part[t.dataset.prq]=v});
 pedModal.addEventListener('change',e=>{
  if(!pedDraft)return;
  if(e.target.id==='pdEmp'){pedDraft.emp=e.target.value;if(e.target.value)store.set(KEY_EMPLOYEE,e.target.value)}
@@ -3879,7 +3936,7 @@ async function undoFab(){
  try{fbAuto(f.items,true)}catch(e){}
  renderDir();calc(false);say('Fabricación deshecha');
 }
-const DIR_SECCIONES=[['HOY',['revision']],['DINERO',['ventas','cierre','gastos','balance','estadisticas','objetivo','semanales']],['PERSONAL',['empleados','sueldos','horarios','ausencias']],['TIENDA Y CLIENTES',['productos','convenios','clientes','eventos']],['ALMACÉN',['stock','fabricacion','balfab','regstock']],['COMPRAS',['proveedores','nuevopedido','regpedidos']],['AJUSTES',['parches','discord','nube','copia','historial','reset']]];
+const DIR_SECCIONES=[['HOY',['revision']],['DINERO',['ventas','cierre','gastos','balance','estadisticas','objetivo','semanales']],['PERSONAL',['empleados','sueldos','horarios','ausencias','auditoria']],['TIENDA Y CLIENTES',['productos','convenios','clientes','eventos','npc','publico']],['ALMACÉN',['stock','fabricacion','balfab','regstock']],['COMPRAS',['proveedores','nuevopedido','regpedidos']],['AJUSTES',['parches','discord','nube','copia','historial','reset']]];
 /* Lo que tiene pendiente cada apartado (se ve en su tarjeta): [número, texto, 'bad' rojo | 'pend' ámbar | 'info'] */
 function modBadge(id){
  try{
@@ -3890,6 +3947,8 @@ function modBadge(id){
   if(id==='sueldos'){const st=payState();if(st&&st.st==='due'){const n=st.total-st.paid;if(n)return [n,n===1?'sueldo por pagar':'sueldos por pagar','pend']}}
   if(id==='stock'){const n=lowMats().length;if(n)return [n,n===1?'material bajo mínimo':'materiales bajo mínimo','pend']}
   if(id==='fabricacion'||id==='balfab'){const n=marginRows().filter(x=>x.pct!==null&&x.pct<0).length;if(n)return [n,n===1?'producto con pérdidas':'productos con pérdidas','bad']}
+  if(id==='npc'&&npc.rev&&npc.rev.pending&&npcTotal()>0)return [1,'revisión pendiente','bad'];
+  if(id==='auditoria'){const n=incidencias().filter(x=>!x.rev).length;if(n)return [n,n===1?'incidencia por revisar':'incidencias por revisar','pend']}
   if(id==='ausencias'){const n=ausNowList().length;if(n)return [n,n===1?'ausente ahora':'ausentes ahora','info']}
   if(id==='discord'){const n=Object.keys(dcProblems()).length;if(n)return [n,n===1?'canal falla':'canales fallan','bad']}
   if(id==='revision'){const h=avisosHTML(), m=/AVISOS \((\d+)\)/.exec(h), n=m?+m[1]:0;if(n)return [n,n===1?'aviso':'avisos',/class="aviso bad"/.test(h)?'bad':'pend']}
@@ -4342,10 +4401,23 @@ const TUTORIAL=[
 <p><b>Cada jueves a las 22:00 (hora española)</b> se envían solos el <b>registro semanal de ventas</b>, el de <b>gastos</b> y el <b>balance de cuentas</b> de la semana (de viernes a jueves), cada uno a su canal. La web no tiene un servidor propio: los manda el <b>primer móvil que tenga la web abierta o la abra</b> a partir de esa hora, y la nube apunta que ya se enviaron para que nunca salgan repetidos. Si ese jueves nadie entra, salen en cuanto alguien abra la web.</p>
 <p>Además, el jefe puede mandarlos cuando quiera con <b>«ENVIAR A DISCORD»</b> en Dirección (y también el registro de pedidos). Se publica un resumen y el documento completo adjunto. Balance de cuentas tiene su propio canal.</p>`],
 ['Pedidos a proveedores',`<p>El botón <b>PEDIDOS</b> (arriba, junto a Encargos) muestra los <b>pedidos pendientes</b> que el jefe ha hecho a sus proveedores: herrerías, minas, talas…</p>
-<ul><li>Cada pedido indica el proveedor, a qué se dedica, su telegrama, los materiales y cantidades que tienen que llegar, el total y si está <b>pagado</b>.</li><li>Elige tu nombre en <b>Empleado que lo registra</b>.</li><li><b>¿Recibido?</b>: márcalo en SÍ cuando llegue la mercancía. En ese momento sus materiales se suman al almacén de <b>MATERIALES</b> (suena un baúl y cae el sello RECIBIDO), y ya no se puede desmarcar. Aunque dos personas lo marquen a la vez, los materiales se suman una sola vez.</li><li>La ficha del pedido se ve como un <b>albarán</b> de papel con sus sellos (RECIBIDO, PAGADO o POR PAGAR), y en la lista ves hace cuánto se pidió.</li><li><b>¿Pagado?</b>: solo se puede cambiar si el pedido <b>no estaba ya pagado</b>. Si el jefe lo dejó pagado al emitirlo, aparece bloqueado. Si estaba «no pagado», quien lo recibe lo paga y lo marca.</li><li>Pulsa <b>GUARDAR CAMBIOS</b>. Cuando el pedido está <b>recibido y pagado</b>, sale de la lista y se guarda en la contabilidad: en el registro de pedidos y en los gastos de la semana (categoría Proveedor), y por tanto en el balance.</li></ul>
+<ul><li>Cada pedido indica el proveedor, a qué se dedica, su telegrama, los materiales y cantidades que tienen que llegar, el total y si está <b>pagado</b>.</li><li>Elige tu nombre en <b>Empleado que lo registra</b>.</li><li><b>¿Recibido?</b>: márcalo en SÍ cuando llegue la mercancía. En ese momento sus materiales se suman al almacén de <b>MATERIALES</b> (suena un baúl y cae el sello RECIBIDO), y ya no se puede desmarcar. Aunque dos personas lo marquen a la vez, los materiales se suman una sola vez.</li><li>La ficha del pedido se ve como un <b>albarán</b> de papel con sus sellos (RECIBIDO, PAGADO o POR PAGAR), y en la lista ves hace cuánto se pidió.</li><li><b>¿Pagado?</b>: solo se puede cambiar si el pedido <b>no estaba ya pagado</b>. Si el jefe lo dejó pagado al emitirlo, aparece bloqueado. Si estaba «no pagado», quien lo recibe lo paga y lo marca.</li><li><b>RECEPCIÓN PARCIAL</b>: si el proveedor solo trae una parte, en cada material ves <b>Pedidas</b>, <b>Recibidas</b> (lo que ha llegado hasta ahora) y <b>Pendientes</b>. Escribe lo que ha llegado ahora y pulsa <b>REGISTRAR ENTREGA PARCIAL</b>: solo se suma eso al almacén. No deja apuntar más de lo que falta y, aunque dos lo hagan a la vez, no se suma dos veces. El pedido sale como <b>RECIBIDO EN PARTE</b> hasta que llega todo; entonces queda <b>recibido</b>. En <b>ENTREGAS RECIBIDAS</b> ves cada entrega con quién la apuntó, cuándo y qué llegó, y se avisa en Discord. Si lo marcas como recibido entero, solo se suma lo que faltaba.</li><li>Pulsa <b>GUARDAR CAMBIOS</b>. Cuando el pedido está <b>recibido y pagado</b>, sale de la lista y se guarda en la contabilidad: en el registro de pedidos y en los gastos de la semana (categoría Proveedor), y por tanto en el balance.</li></ul>
 <p>Si dos empleados lo tocan a la vez, el sistema parte siempre de lo último guardado, para que no se pisen. Para actualizar un pedido hace falta conexión.</p>`],
 ['Materiales',`<p>La tercera pestaña, <b>MATERIALES</b> (junto a VENTA y PRESUPUESTO), muestra el <b>almacén de materiales</b>: todo lo que traen los proveedores (palos, fibras, hierro, carbón, sal, piezas…) con las unidades que hay. Es solo de consulta.</p>
-<ul><li>Hay <b>dos almacenes separados</b>: el <b>stock de productos</b> (lo que se vende) y el <b>almacén de materiales</b> (con lo que se fabrica). Las ventas solo restan stock de productos; nunca tocan los materiales.</li><li>Los materiales <b>entran solos</b> cuando un pedido a proveedor se marca como <b>RECIBIDO</b> (aunque aún no esté pagado). Si un material es nuevo, se crea en el almacén y ya se puede usar en las recetas.</li><li>Los materiales <b>salen solos al fabricar</b>, según la receta de cada producto.</li><li>No se pueden cambiar a mano.</li><li>Cada material tiene una <b>barra de nivel</b> (verde, ámbar o roja) y la etiqueta <b>BAJO</b> si está por debajo del mínimo que fije el jefe.</li><li>En Discord, el canal «Materiales» tiene un mensaje con el almacén que se actualiza en tiempo real; el canal «Stock» hace lo mismo con el stock de productos.</li></ul>`],
+<ul><li>Hay <b>dos almacenes separados</b>: el <b>stock de productos</b> (lo que se vende) y el <b>almacén de materiales</b> (con lo que se fabrica). Las ventas solo restan stock de productos; nunca tocan los materiales.</li><li>Los materiales <b>entran solos</b> cuando un pedido a proveedor se marca como <b>RECIBIDO</b> (aunque aún no esté pagado). Si un material es nuevo, se crea en el almacén y ya se puede usar en las recetas.</li><li>Los materiales <b>salen solos al fabricar</b>, según la receta de cada producto.</li><li>No se pueden cambiar a mano (solo la dirección, con un ajuste que queda apuntado).</li><li><b>MATERIAS PRIMAS BAJAS</b>: si un material llega a su mínimo o baja de él, sale un cartel rojo en la pantalla principal (pestaña «⚠ Materias primas») con cada material, lo que queda y su mínimo. Se quita solo en cuanto se repone por encima del mínimo. Solo avisa de materias primas, no de productos ni del NPC. Los mínimos los pone el jefe en Dirección → FABRICACIÓN.</li><li>Arriba tienes <b>⚒ FABRICAR</b> (para fabricar tú, ver «Fabricar») y <b>☰ RECUENTO</b> (ver «Recuento de inventario»).</li><li>Cada material tiene una <b>barra de nivel</b> (verde, ámbar o roja) y la etiqueta <b>BAJO</b> si está por debajo del mínimo que fije el jefe.</li><li>En Discord, el canal «Materiales» tiene un mensaje con el almacén que se actualiza en tiempo real; el canal «Stock» hace lo mismo con el stock de productos.</li></ul>`],
+['Fabricar',`<p>En <b>MATERIALES → ⚒ FABRICAR</b> cada empleado puede fabricar productos con receta y con precio.</p>
+<ul><li>Cada vez fabricas <b>1 unidad</b>; la munición, el <b>Trapo</b> y el <b>Aceite de Arma</b> van en <b>lotes de 15</b>.</li><li>Se gastan los materiales de la receta, se suman las unidades al stock, se apunta en el registro y en el Balance de fabricación, y se avisa en Discord.</li><li>Después de fabricar quedas <b>bloqueado</b>: no puedes volver a fabricar nada hasta que se vendan y se apunten en la web <b>todas</b> las unidades de esa fabricación (las vendas tú u otro). La ventana te dice cuántas faltan.</li><li>El bloqueo es de cada empleado: los demás siguen pudiendo fabricar. No se puede saltar desde otro móvil: se comprueba con lo guardado en la nube.</li><li>La dirección fabrica sin límites desde Dirección → STOCK.</li></ul>`],
+['Recuento de inventario',`<p>Es <b>opcional</b>. Al fichar la entrada (en «Para hoy») o en <b>MATERIALES → ☰ RECUENTO</b> puedes contar lo que hay de verdad en el juego.</p>
+<ul><li>Elige si es <b>al empezar el turno</b>, <b>al terminar</b> u <b>otro momento</b>.</li><li>Escribe lo que cuentas de los productos o materiales que quieras (lo que dejes vacío no se cuenta).</li><li>La web lo compara con lo que tiene apuntado y te enseña las <b>diferencias</b>. Se guarda quién, cuándo, el tipo y cada cantidad.</li><li><b>No cambia el inventario</b>. Las diferencias quedan como <b>incidencias</b> para que la dirección las revise; no significan que nadie haya hecho nada malo.</li><li>Solo el jefe puede <b>AJUSTAR EL STOCK A LO CONTADO</b>, y queda apuntado como «Ajuste por recuento».</li></ul>`],
+['NPC de la tienda',`<p>Cuando la tienda está cerrada, el <b>NPC</b> vende una parte del inventario que la dirección le asigna.</p>
+<ul><li>Al <b>abrir la tienda</b> (el primer fichaje después de estar cerrada) sale el aviso <b>REVISIÓN DEL NPC PENDIENTE</b> en «Para hoy» y en un cartel de la pantalla principal.</li><li>Pulsa <b>HACER LA REVISIÓN DEL NPC</b> y escribe lo que <b>le queda de verdad</b> al NPC dentro del juego. Lo que falta es lo que ha vendido: se apunta como <b>venta del NPC</b> a sus precios y se descuenta del inventario.</li><li>El aviso sigue saliendo a todos hasta que alguien haga la revisión. Si alguien ficha la salida sin hacerla, queda apuntado como incidencia y se le recuerda al siguiente.</li><li>Aunque dos personas la hagan a la vez, se apunta una sola vez.</li><li>En la tienda se puede vender lo asignado al NPC: cuenta como venta normal y se quita de lo del NPC, sin contarse dos veces.</li></ul>`],
+['NPC: asignar y precios <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → TIENDA Y CLIENTES → NPC DE LA TIENDA</b>.</p>
+<ul><li>En cada producto con precio escribe cuántas unidades tiene el NPC y, si quieres, su <b>precio NPC</b> (si lo dejas vacío, usa el precio de la tienda).</li><li>Lo del NPC es <b>parte del inventario general</b>: no se puede asignar más de lo que hay en stock. Ves el stock, lo que es del NPC y lo que queda para la venta normal.</li><li>Las ventas del NPC salen en los registros de ventas como «NPC (tienda cerrada)» con el número NPC-….</li></ul>`],
+['Armas reservadas con anticipo',`<ul><li>Cuando un encargo con <b>anticipo</b> está <b>FABRICADO</b>, sus unidades quedan <b>reservadas</b> para ese cliente.</li><li>No se pueden vender a otro cliente: la web te avisa de cuántas hay reservadas y para quién, y solo deja vender las que no lo están.</li><li>Para entregárselas a su cliente, <b>carga el encargo</b> desde ENCARGOS: el anticipo se descuenta una sola vez.</li><li>Un encargo cargado solo se puede entregar si el <b>nombre del cliente coincide</b> con el del encargo.</li></ul>`],
+['Página para clientes',`<p>En la entrada, debajo de las tarjetas, está <b>CLIENTES</b>: lleva a una página aparte solo con el <b>catálogo</b>, las <b>categorías</b> y los <b>precios</b>. El cliente elige cantidades y ve el total (como un presupuesto) y puede copiarlo.</p>
+<ul><li>Esa página <b>no lleva nada privado</b> (ni la nube, ni stock, ni clientes, ni empleados, ni ventas, ni Dirección): no es que los botones estén escondidos, es que no está ahí.</li><li>Los productos sin precio no salen.</li><li>En <b>Dirección → PÁGINA PARA CLIENTES</b> puedes copiar el enlace para pasárselo a los clientes. Si cambias precios, vuelve a copiarlo.</li></ul>`],
+['Auditoría e incidencias <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → PERSONAL → AUDITORÍA E INCIDENCIAS</b>.</p>
+<ul><li><b>ACTIVIDAD</b>: todo lo que pasa en la tienda (turnos, ventas, encargos, fabricaciones, gasto de materiales, movimientos y ajustes de stock, NPC, recepciones de pedidos, cambios de datos y recuentos) con quién, cuándo, qué y, en el stock, cuánto había antes y después. Filtra por empleado, tipo y fechas.</li><li><b>INCIDENCIAS</b>: diferencias de los recuentos, del NPC y revisiones del NPC sin hacer. Son para <b>revisar</b>, no acusan a nadie. Escribe una nota si quieres y pulsa <b>MARCAR COMO REVISADA</b>.</li><li><b>FABRICACIÓN</b>: lo que ha fabricado cada empleado, lo vendido y lo que falta por vender (y si está bloqueado).</li><li>Estos registros <b>no se pueden borrar ni cambiar</b>.</li></ul>`],
 ['Fabricación y recetas <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → FABRICACIÓN</b>: sale la lista de todos los productos (armas, munición y suministros). Toca uno para crear su <b>receta</b>:</p>
 <ul><li>Elige un <b>material</b> en el desplegable y escribe cuántas <b>unidades</b> gasta una unidad del producto. Al elegirlo aparece otro desplegable para el siguiente material.</li><li>Pulsa <b>ACEPTAR</b>. «Quitar receta» la borra.</li><li>En la lista ves la receta de cada producto y cuántas unidades se pueden fabricar con el almacén actual.</li></ul>
 <p><b>Fabricar</b> = sumar unidades en <b>Dirección → STOCK</b>: se suman al stock de productos y se restan sus materiales, todo a la vez. Antes te muestra un <b>resumen para confirmar</b> («vas a fabricar 3 Cattleman y se gastarán 12 Hierro…»). Si falta algún material, <b>no se suma nada</b> y te dice qué falta y cuánto. Los productos sin receta se suman sin gastar materiales. Al fabricar suena un yunque y cae el sello FABRICADO.</p>
@@ -4408,7 +4480,7 @@ function tutFilter(q){
  if(info)info.textContent=words.length?(n?n+(n===1?' apartado habla':' apartados hablan')+' de «'+q.trim()+'»':'No hay nada sobre «'+q.trim()+'». Prueba con otra palabra.'):'';
 }
 document.getElementById('tutModal').addEventListener('input',e=>{if(e.target.id==='tutQ'){clearTimeout(tutFilter.t);const v=e.target.value;tutFilter.t=setTimeout(()=>tutFilter(v),120)}});
-const HELP_MAP={historial:'Historial de cambios',estadisticas:'Estadísticas',objetivo:'Objetivo, buscador y revisión',revision:'Objetivo, buscador y revisión',empficha:'Empleados y contratos',sueldos:'Sueldos',ausencias:'Ausencias',convenios:'Convenios',empleados:'Empleados y contratos',clientes:'Clientes',productos:'Modo Jefe',stock:'Fabricación y recetas',fabricacion:'Fabricación y recetas',regstock:'Modo Jefe',horarios:'Fichaje',ventas:'Modo Jefe',semanales:'Ticket, copias y Discord',gastos:'Empleados y contratos',balance:'Ticket, copias y Discord',cierre:'Modo Jefe',proveedores:'Proveedores y pedidos',nuevopedido:'Proveedores y pedidos',regpedidos:'Proveedores y pedidos',discord:'Ticket, copias y Discord',nube:'Datos y dispositivos',reset:'Datos y dispositivos',copia:'Datos y dispositivos'};
+const HELP_MAP={npc:'NPC: asignar y precios',publico:'Página para clientes',auditoria:'Auditoría e incidencias',historial:'Historial de cambios',estadisticas:'Estadísticas',objetivo:'Objetivo, buscador y revisión',revision:'Objetivo, buscador y revisión',empficha:'Empleados y contratos',sueldos:'Sueldos',ausencias:'Ausencias',convenios:'Convenios',empleados:'Empleados y contratos',clientes:'Clientes',productos:'Modo Jefe',stock:'Fabricación y recetas',fabricacion:'Fabricación y recetas',regstock:'Modo Jefe',horarios:'Fichaje',ventas:'Modo Jefe',semanales:'Ticket, copias y Discord',gastos:'Empleados y contratos',balance:'Ticket, copias y Discord',cierre:'Modo Jefe',proveedores:'Proveedores y pedidos',nuevopedido:'Proveedores y pedidos',regpedidos:'Proveedores y pedidos',discord:'Ticket, copias y Discord',nube:'Datos y dispositivos',reset:'Datos y dispositivos',copia:'Datos y dispositivos'};
 /* El tutorial muestra a cada uno lo suyo: los empleados no ven nada de Dirección ni de jefes */
 const TUT_BOSS=['Fabricación y recetas','Proveedores y pedidos','Empleados y contratos','Clientes','Sueldos','Modo Jefe y Dirección','Datos y dispositivos','Modo prueba','Objetivo, buscador y revisión','Convenios, ofertas y precios especiales'];
 const TUT_BOSS_RE=/Dirección|DIRECCIÓN|Modo Jefe|MODO JEFE|modo jefe|contraseña de jefe|SOLO JEFE|data-dir=/;
@@ -4517,7 +4589,7 @@ function renderMat(){
  document.getElementById('matTitle').textContent=`ALMACÉN DE MATERIALES (${ns.length})`;
  const mx=Math.max(0,...ns.map(n=>stockMap[matKey(n)]||0)), lm=lowMats();
  document.getElementById('matBody').innerHTML=(ns.length?ns.map(n=>{const v=stockMap[matKey(n)]||0,u=uses(n);return `<div class="mat-line"><div><b>${esc(n)}${lm.indexOf(n)>=0?' <span class="lowtag">BAJO</span>':''}</b>${lvlBar(v,stockMin[matKey(n)]||0,mx)}${u.length?`<small>Se usa en: ${esc(u.slice(0,4).join(', '))}${u.length>4?' y '+(u.length-4)+' más':''}</small>`:''}</div><span class="${v?'':'zero'}">${v} ${v===1?'ud.':'uds.'}</span></div>`}).join(''):'<div class="enc-empty">'+emptyArt('anvil')+'Todavía no hay materiales.<br>Se suman solos cuando se recibe un pedido a un proveedor.</div>')+
-  '<p class="bk-note" style="margin-top:10px">Los materiales <b>entran</b> al marcar un pedido como recibido y <b>se gastan</b> al fabricar (cuando el jefe suma stock de un producto con receta). Las ventas no los tocan.</p>';
+  '<p class="bk-note" style="margin-top:10px">Los materiales <b>entran</b> al recibir un pedido (entero o en parte) y <b>se gastan</b> al fabricar (con ⚒ FABRICAR o cuando el jefe suma stock de un producto con receta). Las ventas no los tocan.</p>';
 }
 document.getElementById('matTab').onclick=async()=>{playClick();renderMat();openModal(matModal);matModal.scrollTop=0;try{await refreshStock();if(!matModal.hidden)renderMat()}catch(e){}};
 document.getElementById('matClose').onclick=()=>closeModal(matModal);
@@ -4586,10 +4658,11 @@ function acceptEntry(){
  }
  const emp=empleados.find(e=>e.id===employeeInput.value);
  if(!emp)return say('Selecciona un empleado');
- const sh={name:emp.name,empId:emp.id,start:Date.now()};
+ const sh={name:emp.name,empId:emp.id,start:Date.now()}, wasClosed=!shifts.length;
  shifts.push(sh);store.set(KEY_SHIFT,JSON.stringify(shifts));store.set(KEY_EMPLOYEE,emp.id);cloudPut('fichaje:'+emp.id,sh);
  ausencias.filter(a=>a.empId===emp.id&&ausActive(a)).forEach(a=>ausEndNow(a.id,true));
  closeModal(entryModal);renderClock();say(`${saludo()}, ${emp.name}. Entrada a las ${fmtTime(sh.start)}: que sea una jornada próspera.`,'long');
+ try{if(wasClosed)npcOnOpen()}catch(e){}
  setTimeout(()=>{try{showBrief(emp.name)}catch(e){}},900);
  discordSend('fichajes','ENTRADA · '+emp.name+'\n'+fmtDate(sh.start)+' '+fmtTime(sh.start));
 }
@@ -4620,6 +4693,7 @@ function saludo(){const h=+madridParts(Date.now()).hour;return h<14?'Buenos día
 function todaySalesOf(name){const t=todayNum();let n=0,c=0;loadLog(KEY_SALELOG).forEach(r=>{if(r.voided||r.employee!==name||saleDay(r)!==t)return;n++;c+=collected(r)});return {n:n,c:c}}
 /* Cierra un turno abierto (fichaje normal o corrección del jefe) */
 function endShift(sh,end,fixedBy){
+ try{npcOnShiftEnd(sh.name)}catch(e){}
  lastShift={name:sh.name,start:sh.start,end:end};
  store.set(KEY_LASTSHIFT,JSON.stringify(lastShift));logShift(lastShift);
  shifts=shifts.filter(x=>x!==sh);if(shifts.length)store.set(KEY_SHIFT,JSON.stringify(shifts));else store.remove(KEY_SHIFT);cloudDel('fichaje:'+sh.empId);
@@ -4794,7 +4868,7 @@ async function sbRpc(name,body){
  try{return JSON.parse(t)}catch(e){return t}
 }
 function cloudRev(){return sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify([{clave:'rev',valor:{n:Date.now()+'-'+Math.random().toString(36).slice(2,6)},actualizado:new Date().toISOString()}])}).catch(()=>{})}
-function applyStockMap(m){stockMap=m&&typeof m==='object'&&!Array.isArray(m)?m:{};saveStock();const mm=document.getElementById('matModal');if(mm&&!mm.hidden&&typeof renderMat==='function')renderMat()}
+function applyStockMap(m){stockMap=m&&typeof m==='object'&&!Array.isArray(m)?m:{};saveStock();try{matPaint()}catch(e){}const mm=document.getElementById('matModal');if(mm&&!mm.hidden&&typeof renderMat==='function')renderMat()}
 async function moverStock(items,why){const m=await sbRpc('mover_stock',{p_items:items});applyStockMap(m);cloudRev();invChanged(items,why);return m}
 /* --- Almacén de materiales: viven en la misma tabla de stock con el prefijo «mat:» --- */
 function matKey(n){return 'mat:'+n}
@@ -4941,13 +5015,14 @@ async function refreshStock(){
 async function stockPrepare(){
  const items=selected();
  if(customer.op==='encargo'&&!loadedEnc)return {ok:true,moved:[]};
- const want={};items.forEach(x=>{const q=x.qty-(x.oq||0);if(q>0)want[x.name]=q});
+ const want={};items.forEach(x=>{const q=x.qty-encOq(x,loadedEnc&&loadedEnc.id);if(q>0)want[x.name]=q});
  const prev=(sale&&sale.stockApplied)||{}, moved=[];
  new Set(Object.keys(want).concat(Object.keys(prev))).forEach(n=>{const d=(want[n]||0)-(prev[n]||0);if(d)moved.push({producto:n,delta:-d})});
  if(!moved.length)return {ok:true,moved:[]};
- try{await moverStock(moved,'Venta');return {ok:true,moved:moved}}
+ try{await ventaStock(moved);return {ok:true,moved:moved}}
  catch(e){
-  if(String(e.message).indexOf('STOCK_INSUFICIENTE')>=0){try{await refreshStock()}catch(x){}calc(false);say('Otro empleado se ha llevado antes ese stock. Revisa las cantidades.')}
+  if(String(e.message).indexOf('RESERVADA')>=0){try{await Promise.all([cloudPullRecords(),refreshStock()])}catch(x){}calc(false);say('Esas unidades están reservadas para el encargo de otro cliente (con anticipo). Revisa las cantidades.','err')}
+  else if(String(e.message).indexOf('STOCK_INSUFICIENTE')>=0){try{await refreshStock()}catch(x){}calc(false);say('Otro empleado se ha llevado antes ese stock. Revisa las cantidades.')}
   else say('Sin conexión: no se puede finalizar la venta ahora');
   return {ok:false,moved:[]};
  }
@@ -4966,8 +5041,11 @@ async function ensureSaleCloud(){
  cloud.skipStockOk=true;
  try{return ensureSale()}finally{cloud.skipStockOk=false}
 }
-const KEY_AUDIT='harrington_audit_v1';
+const KEY_AUDIT='harrington_audit_v1', KEY_ACT='harrington_act_v1', KEY_RECU='harrington_recuentos_v1', KEY_FABLOTE='harrington_fablotes_v1';
 const REC_LISTS={
+ act:[()=>KEY_ACT,x=>x.id,(a,b)=>(a.ts||0)-(b.ts||0)],
+ recu:[()=>KEY_RECU,x=>x.id,(a,b)=>(a.ts||0)-(b.ts||0)],
+ fablote:[()=>KEY_FABLOTE,x=>x.id,(a,b)=>(a.ts||0)-(b.ts||0)],
  log:[()=>KEY_AUDIT,x=>x.id,(a,b)=>(a.ts||0)-(b.ts||0)],
  venta:[()=>KEY_SALELOG,x=>x.id,(a,b)=>String(a.ts||'').localeCompare(String(b.ts||''))],
  turno:[()=>KEY_SHIFTLOG,x=>x.uid,(a,b)=>(a.start||0)-(b.start||0)],
@@ -4986,6 +5064,7 @@ function applyRecord(clave,valor){
  if(type==='nota'){applyNota(id,valor,del);return}
  if(type==='evento'){applyEvento(id,valor,del);return}
  if(type==='dcerr'){if(del)delete DCH_REMOTE[id];else DCH_REMOTE[id]=valor;return}
+ if(type==='npc'){if(id==='estado')try{applyNpc(valor)}catch(e){}return}
  if(REC_LISTS[type])upsertList(type,id,valor,del);
  else if(type==='gasto'){
   const k=gastos.findIndex(x=>x.id===id);
@@ -5057,7 +5136,7 @@ async function cloudPullRecords(){
   const hasOld=await sbFetch('/rest/v1/datos?select=clave&clave=like.venta:*&actualizado=lte.'+encodeURIComponent(hz)+'&limit=1').then(r=>r.ok?r.json():[]).catch(()=>[]);
   if(hasOld.length){
    let got=0, top='';
-   const keep=['encargo:','pedido:','ausencia:','fichaje:','cfg:','expulsion:','evento:'];
+   const keep=['encargo:','pedido:','ausencia:','fichaje:','cfg:','expulsion:','evento:','npc:','fablote:'];
    for(const pf of keep){const x=await pullRange(pf,'',hz);got+=x.got}
    /* y todo lo reciente, de cualquier tipo */
    const x=await pullRange('*:',hz,'');
@@ -5074,7 +5153,9 @@ async function cloudPullRecords(){
   const r=await sbFetch('/rest/v1/datos?select=clave,valor,actualizado&clave=like.*:*'+flt+'&order=actualizado.asc&limit=500');
   if(!r.ok)throw new Error(r.status);
   const rows=await r.json();
-  rows.forEach(x=>applyRecord(x.clave,x.valor));got+=rows.length;
+  /* los registros que ya teníamos tal cual (misma fecha de guardado) no se vuelven a aplicar ni a pintar */
+  const seen=cloud.seenA||(cloud.seenA={});
+  rows.forEach(x=>{if(seen[x.clave]===x.actualizado)return;seen[x.clave]=x.actualizado;applyRecord(x.clave,x.valor);got++});
   if(rows.length){const last=rows[rows.length-1].actualizado;if(!cloud.since||Date.parse(last)>Date.parse(cloud.since))cloud.since=last;since=last}
   if(rows.length<500)break;
  }
@@ -5088,7 +5169,7 @@ function wipeOps(){
  try{const o={};[KEY_SALELOG,KEY_ENC,KEY_GASTOS,KEY_CIERRES,KEY_SHIFTLOG,KEY_STOCKLOG,KEY_SHIFT].forEach(k=>{const v=localStorage.getItem(k);if(v!=null)o[k]=v});localStorage.setItem('harrington_prejoin_backup',JSON.stringify(o))}catch(e){} /* copia de seguridad interna antes de olvidar */
  [KEY_SALELOG,KEY_ENC,KEY_GASTOS,KEY_CIERRES,KEY_SHIFTLOG,KEY_STOCKLOG,KEY_SHIFT].forEach(k=>store.remove(k));
  encargos=[];gastos=[];shifts=[];loadedEnc=null;store.remove(KEY_LOADED);
- cloud.sig={};cloud.since='';cloud.revSeen=0;cloud.outbox=[];saveOutbox();
+ cloud.sig={};cloud.since='';cloud.seenA={};cloud.revSeen=0;cloud.outbox=[];saveOutbox();
  try{localStorage.removeItem('harrington_cloud_since')}catch(e){}
  pedidos=[];store.remove(KEY_PEDIDOS);updatePedBtn();
  ausencias=[];store.remove(KEY_AUS);updateAusBtn();
@@ -5117,7 +5198,7 @@ async function applyResetRow(){
  wipeLocal(what);
  if(what.indexOf('stock')>=0||what.indexOf('materiales')>=0){try{await refreshStock()}catch(e){}}
  cloud.resetSeen=t;try{localStorage.setItem('harrington_reset_seen',String(t))}catch(e){}
- cloud.since='';try{localStorage.removeItem('harrington_cloud_since')}catch(e){}
+ cloud.since='';cloud.seenA={};try{localStorage.removeItem('harrington_cloud_since')}catch(e){}
  say('El jefe ha reseteado datos: '+what.join(', '));
 }
 async function cloudPoll(force){
@@ -5365,7 +5446,7 @@ function gateCards(){
  const ROT=[-2.2,1.6,-1.2,2.4,-1.8,1.1,2,-2.6];
  L.push(G_PRUEBA);
  gUi.innerHTML=`<div class="g-panel">${G.msg?`<div class="g-msg${G.msgOk?' ok':''}">${esc(G.msg)}</div>`:''}<h2 class="g-title">¿Quién entra hoy?</h2><p class="g-sub">Toca tu tarjeta. Quedará a tu nombre hasta que cierres la web.</p>
-  <div class="g-cards" id="gCards">${L.map((e,i)=>`<button type="button" class="g-card${isJefe(e)?' jefe':''}" data-gcard="${esc(e.id)}" style="--r:${ROT[i%ROT.length]}deg;--dx:${(i%2?1:-1)*24}px;animation-delay:${(0.25+i*0.13).toFixed(2)}s" aria-label="${esc(e.name)}${e.puesto?', '+esc(e.puesto):''}">${cardInner(e,abs.has(e.id))}</button>`).join('')}</div></div>`;
+  <div class="g-cards" id="gCards">${L.map((e,i)=>`<button type="button" class="g-card${isJefe(e)?' jefe':''}" data-gcard="${esc(e.id)}" style="--r:${ROT[i%ROT.length]}deg;--dx:${(i%2?1:-1)*24}px;animation-delay:${(0.25+i*0.13).toFixed(2)}s" aria-label="${esc(e.name)}${e.puesto?', '+esc(e.puesto):''}">${cardInner(e,abs.has(e.id))}</button>`).join('')}</div>${cliCardHTML()}</div>`;
  gUi.scrollTop=0;
 }
 /* inclinación 3D y brillo dorado al mover el dedo o el ratón por la tarjeta */
@@ -6062,7 +6143,7 @@ setInterval(()=>{if(!document.hidden)evTick()},30000);
 setTimeout(()=>{try{evSync()}catch(e){}},0);
 setTimeout(()=>{try{icPaint()}catch(e){}},0);
 /* ===== Tablón de anuncios: los carteles de la pantalla principal, uno abierto y los demás como pestañas ===== */
-const TB=[['icPlate','⚠ Registro IC','bad'],['evPlates','🎟 Evento','ev'],['payPlate','$ Sueldos','pay'],['goalBar','🎯 Objetivo',''],['empWeek','★ Empleado de la semana','']];
+const TB=[['icPlate','⚠ Registro IC','bad'],['npcPlate','⚠ Revisión del NPC','bad'],['matPlate','⚠ Materias primas','bad'],['evPlates','🎟 Evento','ev'],['payPlate','$ Sueldos','pay'],['goalBar','🎯 Objetivo',''],['empWeek','★ Empleado de la semana','']];
 let tbSel=null;try{tbSel=sessionStorage.getItem('harrington_tb')}catch(e){}
 function tbPaint(){
  const vis=TB.filter(([id])=>{const el=document.getElementById(id);return el&&!el.hidden&&el.innerHTML.trim()}), chips=document.getElementById('tbChips');
@@ -6074,6 +6155,7 @@ function tbPaint(){
 }
 document.getElementById('tbChips').addEventListener('click',e=>{const b=e.target.closest('[data-tb]');if(!b)return;tbSel=b.dataset.tb;try{sessionStorage.setItem('harrington_tb',tbSel)}catch(x){}tbPaint()});
 {const mo=new MutationObserver(()=>tbPaint());TB.forEach(([id])=>{const el=document.getElementById(id);if(el)mo.observe(el,{attributes:true,attributeFilter:['hidden'],childList:true})});setTimeout(tbPaint,0)}
+document.getElementById('matPlate').addEventListener('click',()=>{if(bossActive){if(dirModal.hidden){openModal(dirModal)}dirMod='fabricacion';fabEdit=null;renderDir();dirModal.scrollTop=0}else{const b=document.getElementById('matTab');if(b)b.click()}});
 document.getElementById('icPlate').addEventListener('click',()=>{briefWho='';libroView='brief';renderLibro();openModal(libroModal);libroModal.scrollTop=0});
 
 /* ===== BALANCE DE FABRICACIÓN: lo que cuesta fabricar frente al precio de venta =====
@@ -6235,6 +6317,8 @@ dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir^="fbp:
 });
 
 /* ===== Historial de parches (Dirección → AJUSTES → HISTORIAL DE PARCHES). El más nuevo, el último de la lista ===== */
+/* Versión abierta ahora (la 1.0 está cerrada con «Final versión 1.0») */
+const PH_ABIERTA={v:'2.0',f:'12/10/2026'};
 const PARCHES=[
  {f:'09/10/2026',t:'Versión inicial de la web',i:['Calculadora de ventas, presupuestos y encargos con ticket, convenios, ofertas y precios especiales','Fichajes, empleados, sueldos, ausencias y registros horarios','Stock de productos, almacén de materiales, proveedores y pedidos','Avisos a Discord por canales, nube compartida entre dispositivos y tutorial']},
  {f:'09/10/2026',t:'Imágenes ligeras',i:['Cabecera ancha para el ordenador','Las 38 imágenes comprimidas (de 94 MB a 10 MB) con los mismos nombres']},
@@ -6275,7 +6359,8 @@ const PARCHES=[
  {f:'10/10/2026',t:'Sorteo: cuenta atrás y buscador de números',i:['Cuenta atrás en directo en el cartel del evento, que brilla en las últimas 24 horas','Buscador en la ventana del evento: escribes el nombre del cliente y ves cuántos números tiene y cuáles']},
  {f:'10/10/2026',t:'Clientes frecuentes',i:['En CLIENTES, ranking de los que más compran (con medallas)','Aviso de los buenos clientes (3 compras o más) que llevan 2 semanas o más sin venir']},
  {f:'12/10/2026',t:'Cartel de la entrada centrado',i:['El nombre de la armería en el cartel de encima de la puerta siempre cabe en la placa y va centrado, en el móvil y en el ordenador']},
- {f:'12/10/2026',t:'Panel de inicio, gráfico, listas e indemnizaciones',i:['Panel de inicio de Dirección: cada tarjeta lleva a su apartado, con armas sin registrar, sueldos y eventos','Gráfico de barras en el Balance de fabricación (ganancias en verde, pérdidas en rojo)','Balance de fabricación con el precio real pagado en los pedidos; lo que ya estaba en el almacén cuenta a $0','Indemnización por pérdidas de Administración: entra en caja y compensa el balance','Listas largas de 50 en 50','Historial de parches ordenado por versiones','Lo que no tiene precio no se puede fabricar ni cuenta en márgenes, avisos de pérdidas ni balance']}
+ {f:'12/10/2026',t:'Panel de inicio, gráfico, listas e indemnizaciones',i:['Panel de inicio de Dirección: cada tarjeta lleva a su apartado, con armas sin registrar, sueldos y eventos','Gráfico de barras en el Balance de fabricación (ganancias en verde, pérdidas en rojo)','Balance de fabricación con el precio real pagado en los pedidos; lo que ya estaba en el almacén cuenta a $0','Indemnización por pérdidas de Administración: entra en caja y compensa el balance','Listas largas de 50 en 50','Historial de parches ordenado por versiones','Lo que no tiene precio no se puede fabricar ni cuenta en márgenes, avisos de pérdidas ni balance']},
+ {f:'12/10/2026',t:'Final versión 1.0',v:'1.0',fin:true,i:['NPC de la tienda: unidades asignadas dentro del inventario general, precios NPC en Dirección, revisión al abrir la tienda con aviso hasta que se haga, ventas del NPC apuntadas a sus precios y descontadas del stock, sin contar nada dos veces','Página para CLIENTES en la entrada: catálogo, categorías, precios, cantidades y total, en una página aparte sin nada privado','Alerta de materias primas bajas con mínimos de cada material, que se quita sola al reponer','Auditoría e incidencias: todo lo que hace cada empleado con filtros por empleado, fechas y tipo; incidencias para revisar sin acusar a nadie; registros que no se pueden borrar','Recepción parcial de pedidos: pedidas, recibidas y pendientes, sumando solo lo que llega y con historial de entregas','Recuento de inventario opcional al empezar o terminar el turno, con diferencias, sin cambiar el stock','Armas reservadas con anticipo: no se venden a otro cliente y el encargo solo se entrega a su cliente','Fabricación para empleados: 1 unidad (o 15 de munición, trapo y aceite) y bloqueo hasta vender lo fabricado','Optimización y depuración general de la web','Se cierra la versión 1.0']}
 ];
 let phQ='';
 /* Versiones: cada parche lleva su versión (v); los que no la llevan son de la 1.0 */
@@ -6284,9 +6369,12 @@ let phOpenV=null;
 function renderModParches(){
  const L=PARCHES.map((p,i)=>Object.assign({n:i+1},p)), q=norm(phQ);
  const vers=[];L.forEach(p=>{const v=phVer(p);if(vers.indexOf(v)<0)vers.push(v)});vers.reverse();
+ if(vers.indexOf(PH_ABIERTA.v)<0)vers.unshift(PH_ABIERTA.v);
  const cur=vers[0];
  const card=(p,open)=>`<details class="ph-card"${open?' open':''}><summary><b class="ph-n">#${p.n}</b><span>${esc(p.t)}</span><small>${esc(p.f)}</small></summary><ul>${p.i.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><div class="enc-actions"><button type="button" data-dir="ph-copy:${p.n}">⧉ COPIAR PARA DISCORD</button></div></details>`;
- const body=vers.map(v=>{const P=L.filter(p=>phVer(p)===v&&(!q||norm(p.t+' '+p.i.join(' ')+' '+p.f).includes(q))).reverse();if(!P.length)return '';
+ const body=vers.map(v=>{const P=L.filter(p=>phVer(p)===v&&(!q||norm(p.t+' '+p.i.join(' ')+' '+p.f).includes(q))).reverse();
+  if(!P.length&&v===PH_ABIERTA.v&&!q&&!L.some(p=>phVer(p)===v))return `<details class="ph-ver" data-phv="${esc(v)}" open><summary><b>VERSIÓN ${esc(v)}</b><small>abierta el ${esc(PH_ABIERTA.f)} · en curso</small></summary><div class="enc-empty">Todavía no hay parches en esta versión.</div></details>`;
+  if(!P.length)return '';
   const all=L.filter(p=>phVer(p)===v), fin=all.some(p=>p.fin), open=q?true:(phOpenV?phOpenV===v:v===cur);
   return `<details class="ph-ver" data-phv="${esc(v)}"${open?' open':''}><summary><b>VERSIÓN ${esc(v)}</b><small>${all.length} ${all.length===1?'parche':'parches'} · ${esc(all[0].f)}${fin?' – '+esc(all[all.length-1].f):v===cur?' · en curso':''}</small></summary>${P.map((p,k)=>card(p,q||(k===0&&v===cur))).join('')}</details>`}).join('');
  return `<p class="bk-note">Todos los parches de la web, ordenados por <b>versiones</b>. Dentro de cada versión, numerados, con su fecha y lo que trajo cada uno. Lo más nuevo, arriba.</p>
@@ -6296,6 +6384,357 @@ function renderModParches(){
 dirModal.addEventListener('toggle',e=>{const d=e.target;if(d&&d.classList&&d.classList.contains('ph-ver')&&d.open)phOpenV=d.dataset.phv},true);
 dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir^="ph-copy:"]');if(!b)return;e.stopImmediatePropagation();const n=+b.dataset.dir.split(':')[1], p=PARCHES[n-1];if(p)copyMsg('**VERSIÓN '+phVer(p)+' · PARCHE #'+n+' · '+p.t+'** ('+p.f+')\n'+p.i.map(x=>'- '+x).join('\n'),'Parche #'+n+' copiado')});
 dirModal.addEventListener('input',e=>{if(!e.target.dataset||!e.target.dataset.phq)return;phQ=e.target.value;renderDir();const i=dirModal.querySelector('[data-phq]');if(i){i.focus();i.setSelectionRange(phQ.length,phQ.length)}});
+
+/* ======================================================================
+   PARCHE FINAL V1 · NPC, auditoría, recuentos, reservas y fabricación de empleados
+   ====================================================================== */
+
+/* ---------- Auditoría (función 4): registro de solo adición ---------- */
+function actLog(tipo,data,who){
+ try{const now=Date.now(), me=meEmp(), w=who||(me?me.name:(bossActive?'Dirección':'')), id='a'+now.toString(36)+Math.random().toString(36).slice(2,6);
+  const r={id:id,ts:now,tipo:tipo,who:w,empId:me?me.id:'',data:data||{}};upsertList('act',id,r,false);cloudPut('act:'+id,r);return r}catch(e){return null}
+}
+const ACT_TIPOS={turno:'Turnos',venta:'Ventas',encargo:'Encargos',fabricacion:'Fabricación',stock:'Stock y ajustes',pedido:'Pedidos a proveedores',npc:'NPC',recuento:'Recuentos',cambio:'Cambios de datos',incidencia:'Incidencias',revision:'Incidencias revisadas'};
+function actAll(){
+ const L=[], P=(ts,who,tipo,txt,extra)=>L.push(Object.assign({ts:ts||0,who:who||'—',tipo:tipo,txt:txt},extra||{}));
+ loadLog(KEY_SHIFTLOG).forEach(r=>{P(r.start,r.name,'turno','Entrada de turno');if(r.end)P(r.end,r.name,'turno','Salida de turno · '+hm(Math.max(0,r.end-r.start)))});
+ shifts.forEach(r=>P(r.start,r.name,'turno','Entrada de turno (sigue fichado)'));
+ loadLog(KEY_SALELOG).forEach(r=>{const ts=Date.parse(r.ts||'')||0;const tx=(r.items||[]).map(i=>i.qty+' × '+i.name).join(', ');
+  if(r.npc)P(ts,r.by||r.employee,'npc','Ventas del NPC '+r.id+' · '+tx+' · '+money(r.dueCents||0));
+  else P(ts,r.employee||(r.admin?'Administración':''),r.op==='encargo'?'encargo':'venta',(r.op==='encargo'?'Encargo ':'Venta ')+r.id+(r.client?' · '+r.client:'')+(tx?' · '+tx:'')+' · '+money(collected(r))+(r.voided?' · ANULADA':''))});
+ loadLog(KEY_STOCKLOG).forEach(x=>{const w=String(x.why||''), t=/^Fabricaci/.test(w)?'fabricacion':/^Pedido /.test(w)?'pedido':/NPC/.test(w)?'npc':/^(Venta|Anulación)/.test(w)?null:'stock';if(!t)return;
+  P(x.ts,x.who,t,(x.delta>0?'+':'')+x.delta+' '+x.name+' · '+w+(x.antes!=null?' · '+x.antes+' → '+x.despues:''))});
+ loadLog(KEY_AUDIT).forEach(a=>P(a.ts,a.who,'cambio',(a.cat?a.cat+': ':'')+(a.lines||[]).join(' · ')));
+ loadLog(KEY_ACT).forEach(a=>{if(a.tipo!=='recepcion')P(a.ts,a.who,a.tipo,actTxt(a))}); /* las recepciones salen de los propios pedidos */
+ pedidos.forEach(p=>(p.recs||[]).forEach(r=>P(r.ts,r.by,'pedido','Recepción '+(r.full?'del resto':'parcial')+' '+p.code+' · '+p.proveedor+' · '+r.items.map(i=>i.qty+' × '+i.material).join(', '))));
+ return L.sort((a,b)=>b.ts-a.ts);
+}
+function actTxt(a){const d=a.data||{};
+ if(a.tipo==='recuento')return 'Recuento '+(d.tipoR||'')+' · '+(d.n||0)+' contados · '+(d.diffs||0)+' diferencias';
+ if(a.tipo==='npc')return d.txt||'NPC';
+ if(a.tipo==='incidencia')return '⚠ '+(d.txt||'Incidencia');
+ if(a.tipo==='pedido')return 'Recepción '+(d.parcial?'parcial':'final')+' '+(d.pedido||'');
+ if(a.tipo==='fabricacion')return d.txt||'Fabricación';
+ return d.txt||a.tipo;
+}
+/* Incidencias: diferencias de los recuentos y del NPC, y revisiones del NPC que se quedaron sin hacer */
+function incidencias(){
+ const L=[], RV={};loadLog(KEY_ACT).forEach(a=>{if(a.tipo==='revision'&&a.data&&a.data.ref&&!RV[a.data.ref])RV[a.data.ref]={ts:a.ts,by:a.who,nota:a.data.nota||''}});
+ loadLog(KEY_RECU).forEach(r=>(r.items||[]).forEach(x=>{if(x.diff)L.push({id:r.id+'|'+x.k,rid:r.id,ts:r.ts,who:r.by,txt:`Recuento ${r.tipo||''}: ${x.name} · en la web ${x.teo} · contado ${x.fis} · diferencia ${x.diff>0?'+':''}${x.diff}`,rev:RV[r.id+'|'+x.k]})}));
+ loadLog(KEY_ACT).filter(a=>a.tipo==='incidencia').forEach(a=>L.push({id:'act|'+a.id,aid:a.id,ts:a.ts,who:a.who,txt:(a.data||{}).txt||'Incidencia',rev:RV['act|'+a.id]}));
+ return L.sort((a,b)=>b.ts-a.ts);
+}
+let audF={emp:'',tipo:'',d1:'',d2:'',inc:0,lim:60};
+function renderModAuditoria(){
+ const P=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||'');return m?dayNum(+m[1],+m[2],+m[3]):null};
+ const d1=P(audF.d1), d2=P(audF.d2);
+ let L=actAll().filter(x=>(!audF.emp||norm(x.who)===norm(audF.emp))&&(!audF.tipo||x.tipo===audF.tipo)&&(()=>{if(d1===null&&d2===null)return true;const m=madridParts(x.ts),d=dayNum(+m.year,+m.month,+m.day);return (d1===null||d>=d1)&&(d2===null||d<=d2)})());
+ const I=incidencias(), ip=I.filter(x=>!x.rev);
+ const emps=Array.from(new Set(empleados.map(e=>e.name).concat(['Dirección','Administración']))).sort((a,b)=>a.localeCompare(b,'es'));
+ return `<p class="bk-note">Todo lo que se hace en la web, con quién, cuándo y qué. Nadie puede borrar ni cambiar estos registros. Las <b>incidencias</b> son diferencias entre la web y lo que hay en el juego: hay que revisarlas, <b>no significan que nadie haya hecho nada malo</b> (puede ser un despiste, una venta sin apuntar o un error al contar).</p>
+  <div class="seg" style="margin-bottom:10px;grid-template-columns:repeat(3,1fr)"><button type="button" class="${audF.inc===0?'on':''}" data-dir="aud-inc:0">ACTIVIDAD</button><button type="button" class="${audF.inc===1?'on':''}" data-dir="aud-inc:1">INCIDENCIAS${ip.length?` (${ip.length})`:''}</button><button type="button" class="${audF.inc===2?'on':''}" data-dir="aud-inc:2">FABRICACIÓN</button></div>
+  ${audF.inc===2?audFabHTML():audF.inc===1?(I.length?I.map(x=>`<div class="enc-card dir-item${x.rev?'':' inc-open'}"><div class="it">${esc(fmtDate(x.ts))} ${esc(fmtTime(x.ts))} · ${esc(x.who||'—')}<br><b>${esc(x.txt)}</b>${x.rev?`<br><small class="mg-ok">✓ Revisada por ${esc(x.rev.by||'—')} el ${esc(fmtDate(x.rev.ts))}${x.rev.nota?' · '+esc(x.rev.nota):''}</small>`:''}</div>${x.rev?'':`<input class="dir-search inc-nota" type="text" maxlength="140" data-incn="${esc(x.id)}" placeholder="Nota de la revisión (opcional)" autocomplete="off"><div class="enc-actions"><button type="button" data-dir="inc-rev:${encodeURIComponent(x.id)}">✓ MARCAR COMO REVISADA</button></div>`}</div>`).join(''):'<div class="enc-empty">No hay incidencias.</div>')
+  :`<div class="dir-form enc-sec aud-f"><label>EMPLEADO<select id="audEmp"><option value="">Todos</option>${emps.map(n=>`<option${audF.emp===n?' selected':''}>${esc(n)}</option>`).join('')}</select></label>
+  <label>TIPO<select id="audTipo"><option value="">Todo</option>${Object.keys(ACT_TIPOS).map(k=>`<option value="${k}"${audF.tipo===k?' selected':''}>${ACT_TIPOS[k]}</option>`).join('')}</select></label>
+  <div class="ev-2"><label>DESDE<input id="audD1" type="date" value="${esc(audF.d1)}"></label><label>HASTA<input id="audD2" type="date" value="${esc(audF.d2)}"></label></div></div>
+  <div class="dir-sec-title">REGISTROS (${L.length})</div>${L.slice(0,audF.lim).map(x=>`<div class="reg-line"><span>${esc(fmtDate(x.ts))} ${esc(fmtTime(x.ts))} · <b>${esc(x.who||'—')}</b><br><small>${esc(ACT_TIPOS[x.tipo]||x.tipo)} · ${esc(x.txt)}</small></span></div>`).join('')||'<div class="enc-empty">No hay registros con esos filtros.</div>'}
+  ${L.length>audF.lim?`<div class="enc-actions" style="margin-top:8px"><button type="button" data-dir="aud-more">VER MÁS · quedan ${L.length-audF.lim}</button></div>`:''}`}`;
+}
+/* Fabricación de los empleados: lo fabricado, lo vendido y lo que falta por vender de cada lote */
+function audFabHTML(){
+ const L=fabPend().slice().reverse(), by={};L.forEach(l=>{const o=by[l.emp]=by[l.emp]||{f:0,v:0,p:0};o.f+=l.q;o.v+=l.vend;o.p+=l.pend});
+ const ks=Object.keys(by).sort((a,b)=>a.localeCompare(b,'es'));
+ return `<p class="bk-note">Cada empleado fabrica 1 unidad (o 15 de munición, trapos y aceite) y no puede volver a fabricar hasta que se vendan y se apunten todas. Las ventas de un producto se cuentan primero para la fabricación más antigua de ese producto. La Dirección fabrica sin límites y no sale aquí.</p>
+  ${ks.length?`<div class="dir-sec-title">POR EMPLEADO</div>${ks.map(k=>`<div class="reg-line"><span><b>${esc(k)}</b><br><small>Fabricadas ${by[k].f} · vendidas ${by[k].v}</small></span><b class="${by[k].p?'neg':'mg-ok'}">${by[k].p?'Faltan '+by[k].p+' · BLOQUEADO':'✓ Puede fabricar'}</b></div>`).join('')}
+  <div class="dir-sec-title">CADA FABRICACIÓN (${L.length})</div>${L.slice(0,100).map(l=>`<div class="reg-line"><span>${esc(fmtDate(l.ts))} ${esc(fmtTime(l.ts))} · <b>${esc(l.emp)}</b><br><small>${l.q} × ${esc(l.prod)} · vendidas ${l.vend}</small></span><b class="${l.pend?'neg':'mg-ok'}">${l.pend?'Pendientes '+l.pend:'✓ Todo vendido'}</b></div>`).join('')}`:'<div class="enc-empty">Ningún empleado ha fabricado todavía.</div>'}`;
+}
+async function incRevisar(id){
+ const it=incidencias().find(x=>x.id===id);if(!it||it.rev)return renderDir();
+ const ni=[...dirModal.querySelectorAll('[data-incn]')].find(i=>i.dataset.incn===id), nota=ni?ni.value.trim():'';
+ /* el registro es de solo adición: la revisión es un registro nuevo que apunta a la incidencia */
+ actLog('revision',{ref:id,nota:String(nota).slice(0,140),txt:'Revisa la incidencia: '+it.txt+(nota?' · Nota: '+String(nota).slice(0,140):'')});
+ renderDir();say('Incidencia marcada como revisada');
+}
+dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir^="aud-"],[data-dir^="inc-rev:"]');if(!b)return;e.stopImmediatePropagation();const d=b.dataset.dir, i=d.indexOf(':'), a=i<0?d:d.slice(0,i), arg=i<0?'':d.slice(i+1);
+ if(a==='aud-inc'){audF.inc=+arg||0;renderDir()}else if(a==='aud-more'){audF.lim+=60;renderDir()}else if(a==='inc-rev')incRevisar(decodeURIComponent(arg))});
+dirModal.addEventListener('change',e=>{const t=e.target;if(t.id==='audEmp')audF.emp=t.value;else if(t.id==='audTipo')audF.tipo=t.value;else if(t.id==='audD1')audF.d1=t.value;else if(t.id==='audD2')audF.d2=t.value;else return;audF.lim=60;renderDir()});
+
+/* ---------- Recuento físico (función 6): no toca el stock; las diferencias quedan para revisar ---------- */
+const invModal=document.getElementById('invModal');
+let invView='recuento', invDraft={tipo:'inicio',q:{}}, invQ='', recuLast=null;
+function recItems(){
+ const P=inputs.map(i=>({k:i.dataset.name,name:i.dataset.name,grp:'PRODUCTOS'})), M=matNames().map(n=>({k:matKey(n),name:n,grp:'MATERIAS PRIMAS'}));
+ return P.concat(M);
+}
+function openRecuento(tipo){invView='recuento';invDraft={tipo:tipo||(meEmp()&&shifts.some(x=>x.empId===meEmp().id)?'final':'inicio'),q:{}};invQ='';recuLast=null;renderInv();openModal(invModal);invModal.scrollTop=0;refreshStock().then(()=>{if(!invModal.hidden&&!document.activeElement.matches('input'))renderInv()}).catch(()=>{})}
+function renderInv(){
+ const b=document.getElementById('invBody'), t=document.getElementById('invTitle');
+ if(invView==='npc'){t.textContent='REVISIÓN DEL NPC';b.innerHTML=npcRevHTML();return}
+ if(invView==='fab'){t.textContent='FABRICAR';b.innerHTML=empFabHTML();return}
+ t.textContent='RECUENTO DE INVENTARIO';
+ if(recuLast){const r=recuLast, D=r.items.filter(x=>x.diff);
+  b.innerHTML=`<div class="enc-note">✓ Recuento guardado: ${r.items.length} ${r.items.length===1?'artículo contado':'artículos contados'}. El inventario de la web <b>no se ha cambiado</b>.</div>
+   ${D.length?`<div class="dir-sec-title">DIFERENCIAS (${D.length})</div>${D.map(x=>`<div class="reg-line"><span>${esc(x.name)}<br><small>En la web ${x.teo} · contado ${x.fis}</small></span><b class="${x.diff<0?'neg':'mg-ok'}">${x.diff>0?'+':''}${x.diff}</b></div>`).join('')}<p class="bk-note">Quedan registradas como incidencias para que Dirección las revise.</p>${bossActive?`<div class="enc-actions"><button type="button" class="warn" data-inv="ajustar">AJUSTAR EL STOCK A LO CONTADO</button></div>`:''}`:'<div class="enc-empty">Todo cuadra: no hay diferencias.</div>'}
+   <div class="enc-actions" style="margin-top:8px"><button type="button" data-inv="cerrar">CERRAR</button></div>`;return}
+ const q=norm(invQ), L=recItems().filter(x=>!q||norm(x.name).includes(q));let g='';
+ b.innerHTML=`<p class="bk-note">Opcional. Escribe lo que hay <b>de verdad</b> en el juego de lo que quieras comprobar (lo que dejes vacío no se cuenta). La web lo compara con lo que tiene apuntado y guarda las diferencias para revisarlas. <b>No cambia el inventario.</b></p>
+  <label>TIPO DE RECUENTO<select id="invTipo"><option value="inicio"${invDraft.tipo==='inicio'?' selected':''}>Al empezar el turno</option><option value="final"${invDraft.tipo==='final'?' selected':''}>Al terminar el turno</option><option value="otro"${invDraft.tipo==='otro'?' selected':''}>Otro momento</option></select></label>
+  <input class="dir-search" type="text" id="invQ" placeholder="⌕  Buscar…" value="${esc(invQ)}" autocomplete="off">
+  ${L.map(x=>{const h=x.grp!==g?`<div class="dir-sec-title">${x.grp}</div>`:'';g=x.grp;const teo=stockMap[x.k]||0;return h+`<div class="pr-row"><div><b>${esc(x.name)}</b><small>En la web: ${teo}</small></div><input class="min-in" type="text" inputmode="numeric" data-invq="${esc(x.k)}" placeholder="—" value="${esc(invDraft.q[x.k]!==undefined?invDraft.q[x.k]:'')}" aria-label="Contado de ${esc(x.name)}"></div>`}).join('')}
+  <div class="enc-actions" style="margin-top:10px"><button type="button" class="primary" data-inv="guardar">GUARDAR RECUENTO</button></div>`;
+}
+async function saveRecuento(){
+ const ks=Object.keys(invDraft.q).filter(k=>invDraft.q[k]!==''&&invDraft.q[k]!==undefined);
+ if(!ks.length)return say('Escribe lo que has contado de algún artículo');
+ try{await refreshStock()}catch(e){}
+ const w=whoAmI(), now=Date.now(), id='r'+now.toString(36)+Math.random().toString(36).slice(2,5), all=recItems();
+ const items=ks.map(k=>{const it=all.find(x=>x.k===k)||{name:k}, teo=stockMap[k]||0, fis=parseInt(invDraft.q[k])||0;return {k:k,name:it.name,teo:teo,fis:fis,diff:fis-teo}});
+ const r={id:id,ts:now,by:w.name||'—',tipo:{inicio:'al empezar el turno',final:'al terminar el turno',otro:'en otro momento'}[invDraft.tipo]||'',items:items};
+ upsertList('recu',id,r,false);cloudPut('recu:'+id,r);
+ const D=items.filter(x=>x.diff);actLog('recuento',{tipoR:r.tipo,n:items.length,diffs:D.length,id:id});
+ if(D.length)discordSend('stock',['RECUENTO DE INVENTARIO · '+r.tipo,'Por: '+r.by,'Diferencias ('+D.length+'):'].concat(D.map(x=>'  '+x.name+': web '+x.teo+' · contado '+x.fis+' ('+(x.diff>0?'+':'')+x.diff+')')).concat(['','Quedan registradas para revisar. El inventario de la web no se ha cambiado.']).join('\n'));
+ recuLast=r;renderInv();invModal.scrollTop=0;say(D.length?'Recuento guardado con '+D.length+(D.length===1?' diferencia':' diferencias'):'Recuento guardado: todo cuadra');
+}
+async function ajustarRecuento(){
+ const r=recuLast;if(!r||!bossActive)return;const D=r.items.filter(x=>x.diff);if(!D.length)return;
+ try{await refreshStock()}catch(e){}
+ const mv=D.map(x=>({producto:x.k,delta:x.fis-(stockMap[x.k]||0)})).filter(m=>m.delta);
+ if(!mv.length)return say('El stock ya coincide con lo contado');
+ if(!await askConfirm('Ajustar el stock',mv.map(m=>(m.delta>0?'+':'')+m.delta+' '+(isMat(m.producto)?m.producto.slice(4):m.producto)).join(', ')+'. Queda registrado como ajuste por recuento.','Ajustar'))return;
+ try{await moverStock(mv,'Ajuste por recuento');mv.forEach(m=>logStock(isMat(m.producto)?m.producto.slice(4)+' (material)':m.producto,m.delta,'Ajuste por recuento'))}catch(e){return say('Sin conexión: no se puede ajustar ahora','err')}
+ actLog('stock',{ref:r.id,txt:'Ajuste del stock por el recuento '+r.id+': '+mv.map(m=>(m.delta>0?'+':'')+m.delta+' '+(isMat(m.producto)?m.producto.slice(4):m.producto)).join(', ')});say('Stock ajustado a lo contado');recuLast=null;closeModal(invModal);
+}
+
+/* ---------- NPC (función 1): parte del inventario general asignada al NPC, con sus precios ---------- */
+var npc={asig:{},precios:{},rev:{pending:false,since:0,seq:0}};
+try{const v=JSON.parse(localStorage.getItem('harrington_npc_v1')||'null');if(v&&typeof v==='object')npc=Object.assign(npc,v)}catch(e){}
+function npcSave(){npc.ts=Date.now();try{localStorage.setItem('harrington_npc_v1',JSON.stringify(npc))}catch(e){}cloudPut('npc:estado',npc);npcPaint()}
+function applyNpc(v){if(!v||typeof v!=='object'||v.deleted)return;npc=Object.assign({asig:{},precios:{},rev:{pending:false,since:0,seq:0}},v);try{localStorage.setItem('harrington_npc_v1',JSON.stringify(npc))}catch(e){}npcPaint();if(!dirModal.hidden&&dirMod==='npc'&&!document.activeElement.matches('input'))renderDir()}
+function npcPrice(n){const p=npc.precios[n];return p>0?p:productPrice(n)}
+function npcTotal(){return Object.keys(npc.asig).reduce((a,k)=>a+(npc.asig[k]||0),0)}
+/* si una venta normal usa unidades del NPC, se quitan de lo asignado (no cuentan luego como venta del NPC) */
+async function npcClampSafe(){
+ try{if(!npcTotal())return;if(!(cloud.outbox||[]).some(o=>o.clave==='npc:estado')){const r=await sbFetch('/rest/v1/datos?select=valor&clave=eq.npc:estado');if(r.ok){const j=await r.json();if(j[0]&&j[0].valor)applyNpc(j[0].valor)}}npcClamp()}catch(e){}
+}
+(function(){const _mv=moverStock;moverStock=async function(items,why){const m=await _mv.apply(this,arguments);if(!/^Venta NPC/.test(why||'')&&(items||[]).some(x=>x.delta<0&&!isMat(x.producto)&&npc.asig[x.producto]))npcClampSafe();return m}})();
+function npcClamp(){let ch=false;Object.keys(npc.asig).forEach(n=>{const s=stockMap[n]||0;if(npc.asig[n]>s){npc.asig[n]=s;ch=true}if(!npc.asig[n])delete npc.asig[n]});if(ch)npcSave()}
+function npcPaint(){const el=document.getElementById('npcPlate');if(!el)return;const on=!!(npc.rev&&npc.rev.pending);el.hidden=!on;if(on){const h=`<span class="ic-warn" aria-hidden="true">!</span><div><small>NPC · TIENDA CERRADA</small><b>REVISIÓN DEL NPC PENDIENTE</b><span>Comprueba en el juego lo que le queda al NPC y apúntalo: así se registran sus ventas. Toca aquí para hacerla.</span></div>`;if(el.innerHTML!==h)el.innerHTML=h}try{bellPaint()}catch(e){}}
+/* Al abrir la tienda (primer fichaje tras estar cerrada) toca revisar al NPC */
+function npcOnOpen(){if(npcTotal()>0&&!(npc.rev&&npc.rev.pending)){npc.rev=Object.assign({},npc.rev,{pending:true,since:Date.now()});npcSave();actLog('npc',{txt:'Revisión del NPC pendiente (la tienda ha abierto)'})}}
+function npcOnShiftEnd(name){if(npc.rev&&npc.rev.pending)actLog('incidencia',{txt:'Turno terminado sin hacer la revisión del NPC ('+name+'). Sigue pendiente.'},name)}
+function openNpcRev(){invView='npc';invDraft={q:{}};renderInv();openModal(invModal);invModal.scrollTop=0;refreshStock().then(()=>{if(!invModal.hidden&&!document.activeElement.matches('input'))renderInv()}).catch(()=>{})}
+function npcRevHTML(){
+ const L=Object.keys(npc.asig).filter(n=>npc.asig[n]>0);
+ if(!L.length)return '<div class="enc-empty">El NPC no tiene nada asignado.</div><div class="enc-actions"><button type="button" data-inv="npcok">MARCAR COMO REVISADO</button></div>';
+ return `<p class="bk-note">Escribe lo que queda <b>de verdad</b> en el NPC dentro del juego. La diferencia con lo que tenía es lo que ha vendido: se apunta como <b>venta del NPC</b> con sus precios y se descuenta del inventario.</p>
+  ${L.map(n=>`<div class="pr-row"><div><b>${esc(n)}</b><small>Tenía ${npc.asig[n]} · precio NPC ${money(npcPrice(n))}</small></div><input class="min-in" type="text" inputmode="numeric" data-npcf="${esc(n)}" placeholder="?" value="${esc(invDraft.q[n]!==undefined?invDraft.q[n]:'')}" aria-label="Quedan en el NPC de ${esc(n)}"></div>`).join('')}
+  <div class="enc-actions" style="margin-top:10px"><button type="button" class="primary" data-inv="npcsave">GUARDAR REVISIÓN</button></div>`;
+}
+async function npcRevSave(){
+ let L=Object.keys(npc.asig).filter(n=>npc.asig[n]>0);
+ for(const n of L)if(invDraft.q[n]===undefined||invDraft.q[n]==='')return say('Falta lo que queda de '+n,'err');
+ try{await cloudPullRecords();await refreshStock()}catch(e){return say('Sin conexión: no se puede guardar la revisión ahora','err')}
+ if(!(npc.rev&&npc.rev.pending)){closeModal(invModal);return say('Otro dispositivo acaba de hacer esta revisión del NPC')}
+ L=Object.keys(npc.asig).filter(n=>npc.asig[n]>0);for(const n of L)if(invDraft.q[n]===undefined||invDraft.q[n]===''){renderInv();return say('Ha cambiado lo asignado al NPC: falta lo que queda de '+n,'err')}
+ const seq=((npc.rev&&npc.rev.seq)||0)+1;
+ try{if(!await claimRow('npc-rev-'+seq,{ts:Date.now()})){await cloudPullRecords();renderInv();return say('Otro dispositivo acaba de hacer esta revisión','err')}}catch(e){return say('Sin conexión: no se puede guardar la revisión ahora','err')}
+ const w=whoAmI(), now=Date.now(), m=madridParts(now), rows=[], items=[], mv=[], inc=[];
+ L.forEach(n=>{const exp=npc.asig[n]||0, fis=parseInt(invDraft.q[n])||0, sold=Math.max(0,exp-fis);rows.push({n:n,esperado:exp,encontrado:fis,vendido:sold});
+  if(fis>exp)inc.push(n+': el NPC tenía '+exp+' y se han encontrado '+fis);
+  if(sold){items.push({name:n,qty:sold,cents:npcPrice(n),oq:0});mv.push({producto:n,delta:-sold})}npc.asig[n]=Math.min(fis,exp);if(!npc.asig[n])delete npc.asig[n]});
+ let id='';
+ if(mv.length){
+  try{await moverStock(mv,'Venta NPC')}catch(e){return say(String(e.message).indexOf('STOCK_INSUFICIENTE')>=0?'El inventario general no tiene esas unidades: revisa el stock':'Sin conexión: no se puede guardar la revisión ahora','err')}
+  id='NPC-'+m.day+m.month+m.year.slice(-2)+'-'+pad(seq,3);mv.forEach(x=>logStock(x.producto,x.delta,'Venta NPC '+id));
+  const tot=items.reduce((a,x)=>a+x.qty*x.cents,0), e={id:id,items:items,stock:{},note:'Ventas del NPC con la tienda cerrada',date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`,op:'venta',client:'NPC (tienda cerrada)',employee:'',by:w.name||'',products:items.length,units:items.reduce((a,x)=>a+x.qty,0),dueCents:tot,totalCents:tot,convenio:'',fromEncargo:'',npc:true,ts:new Date().toISOString()};
+  const a=loadLog(KEY_SALELOG);a.push(e);store.set(KEY_SALELOG,JSON.stringify(a.slice(-5000)));cloudPut('venta:'+id,e);
+  discordSend('ventas',['VENTAS DEL NPC · '+id,'Revisado por: '+(w.name||'—'),''].concat(items.map(x=>x.qty+' × '+x.name+' a '+money(x.cents)+' = '+money(x.qty*x.cents))).concat(['','TOTAL: '+money(tot)]).join('\n'));
+ }
+ const rv={id:'n'+now.toString(36),ts:now,by:w.name||'—',filas:rows,venta:id};
+ cloudPut('npcrev:'+rv.id,rv);
+ actLog('npc',{txt:'Revisión del NPC · '+rows.map(r=>r.n+' '+r.esperado+'→'+r.encontrado).join(', ')+(id?' · venta '+id:' · sin ventas')});
+ inc.forEach(t=>actLog('incidencia',{txt:'NPC: '+t}));
+ npc.rev={pending:false,since:0,seq:seq,last:{ts:now,by:w.name||'—'}};npcSave();
+ closeModal(invModal);say(id?'Revisión guardada: '+items.reduce((a,x)=>a+x.qty,0)+' unidades vendidas por el NPC ('+money(items.reduce((a,x)=>a+x.qty*x.cents,0))+')':'Revisión guardada: el NPC no ha vendido nada');
+}
+/* Dirección → NPC: asignar unidades y precios */
+let npcDraft=null;
+function renderModNpc(){
+ if(!npcDraft)npcDraft={asig:Object.assign({},npc.asig),precios:Object.keys(npc.precios).reduce((o,k)=>(o[k]=(npc.precios[k]/100).toFixed(2),o),{})};
+ const L=inputs.map(i=>i.dataset.name).filter(n=>productPrice(n)>0||npc.asig[n]);
+ return `<p class="bk-note">El NPC vende cuando la tienda está cerrada. Lo que le asignas es <b>parte del inventario general</b> (no se duplica): aquí ves cuánto tiene el NPC y cuánto queda para la venta normal. Si en la tienda se vende algo asignado al NPC, se quita de lo asignado. Al abrir la tienda, el primer empleado tiene que revisar lo que le queda al NPC.</p>
+  ${npc.rev&&npc.rev.pending?`<div class="enc-actions" style="margin-bottom:8px"><button type="button" class="warn" data-dir="npc-rev">⚠ HACER LA REVISIÓN DEL NPC PENDIENTE</button></div>`:''}
+  <div class="dir-form enc-sec">${L.map(n=>{const s=stockMap[n]||0, a=parseInt(npcDraft.asig[n])||0;return `<div class="npc-row"><div><b>${esc(n)}</b><small>Stock ${s} · venta normal ${Math.max(0,s-a)} · precio tienda ${money(productPrice(n))}</small></div><label>NPC<input class="min-in" type="text" inputmode="numeric" data-npca="${esc(n)}" placeholder="0" value="${esc(npcDraft.asig[n]||'')}"></label><label>$ NPC<input class="min-in" type="text" inputmode="decimal" data-npcp="${esc(n)}" placeholder="${(productPrice(n)/100).toFixed(2)}" value="${esc(npcDraft.precios[n]||'')}"></label></div>`}).join('')}
+  <div class="pay-err" id="npcErr" hidden></div><div class="enc-actions"><button type="button" class="primary" data-dir="npc-save">GUARDAR NPC</button></div></div>
+  ${npc.rev&&npc.rev.last?`<p class="bk-note">Última revisión: ${esc(fmtDate(npc.rev.last.ts))} ${esc(fmtTime(npc.rev.last.ts))} · ${esc(npc.rev.last.by)}.</p>`:''}`;
+}
+async function npcModSave(){
+ try{await refreshStock()}catch(e){}
+ const err=t=>{const e=document.getElementById('npcErr');e.textContent=t;e.hidden=false;e.scrollIntoView({block:'nearest'})};
+ const asig={}, pr={};
+ for(const n of Object.keys(npcDraft.asig)){const v=parseInt(npcDraft.asig[n])||0;if(v<0)return err('Cantidad no válida en '+n);if(v>(stockMap[n]||0))return err(n+': no puedes asignar '+v+' al NPC, solo hay '+(stockMap[n]||0)+' en el inventario');if(v)asig[n]=v}
+ for(const n of Object.keys(npcDraft.precios)){const s=String(npcDraft.precios[n]||'').trim();if(!s)continue;const c=parseMoney(s);if(!(c>0))return err('Precio NPC no válido en '+n);pr[n]=c}
+ const before=JSON.stringify(npc.asig);npc.asig=asig;npc.precios=pr;npcSave();npcDraft=null;
+ if(before!==JSON.stringify(asig))actLog('npc',{txt:'Asignación al NPC: '+(Object.keys(asig).map(n=>asig[n]+' × '+n).join(', ')||'nada')});
+ renderDir();say('NPC guardado');
+}
+dirModal.addEventListener('input',e=>{const t=e.target;if(!npcDraft)return;if(t.dataset.npca!==undefined){const v=t.value.replace(/[^0-9]/g,'');t.value=v;npcDraft.asig[t.dataset.npca]=v}else if(t.dataset.npcp!==undefined){const v=t.value.replace(/[^0-9.,]/g,'');t.value=v;npcDraft.precios[t.dataset.npcp]=v}});
+dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir="npc-save"],[data-dir="npc-rev"]');if(!b)return;e.stopImmediatePropagation();if(b.dataset.dir==='npc-save')once('npcs',npcModSave,b);else openNpcRev()});
+
+/* ---------- Reservas de armas con anticipo (función 7) ---------- */
+/* Un encargo FABRICADO con anticipo reserva sus unidades: no se pueden vender a otro cliente */
+function reservas(excl){const R={};encargos.forEach(e=>{if(e.finished||e.cancelled||e.id===excl||e.fab!=='FABRICADO'||!(e.depositCents>0))return;(e.items||[]).forEach(i=>{(R[i.name]=R[i.name]||[]).push({enc:e.id,client:e.client,qty:i.qty,dep:e.depositCents,pend:e.pendingCents!=null?e.pendingCents:Math.max(0,(e.totalCents||0)-(e.depositCents||0))})})});return R}
+function reservadas(n,excl){return (reservas(excl)[n]||[]).reduce((a,r)=>a+r.qty,0)}
+function reservaCheck(items){
+ const R=reservas(loadedEnc?loadedEnc.id:null);
+ for(const x of items){const rs=R[x.name];if(!rs||!rs.length)continue;
+  const res=rs.reduce((a,r)=>a+r.qty,0), avail=(stockMap[x.name]||0)+((sale&&sale.stockApplied&&sale.stockApplied[x.name])||0)-res, need=x.qty-encOq(x,loadedEnc&&loadedEnc.id);
+  if(need>avail){const mine=rs.find(r=>norm(r.client)===norm(customerName()||''));
+   if(mine){say(`${x.name} está reservado para ${mine.client} en el encargo ${mine.enc} (anticipo ${money(mine.dep)}). Cárgalo desde ENCARGOS para entregarlo y descontar el anticipo.`,'err');return false}
+   say(`${x.name}: ${res} ${res===1?'unidad reservada':'unidades reservadas'} para ${rs.map(r=>r.client+' ('+r.enc+')').join(', ')}. Solo puedes vender ${Math.max(0,avail)} a otro cliente.`,'err');return false}}
+ return true;
+}
+/* venta: se comprueba también en la base de datos si ya está instalada la regla (vender_stock); si no, como siempre */
+async function ventaStock(moved){
+ if(!cloud.noVender){
+  try{const m=await sbRpc('vender_stock',{p_items:moved,p_ctx:{encargo:loadedEnc?loadedEnc.id:'',cliente:customerName()||''}});applyStockMap(m);cloudRev();invChanged(moved,'Venta');npcClampSafe();return m}
+  catch(e){const t=String(e.message||'');if(/RESERVADA/.test(t))throw new Error('RESERVADA');if(/STOCK_INSUFICIENTE/.test(t))throw e;if(e.status===404||/PGRST202|Could not find the function|does not exist/i.test(t))cloud.noVender=true;else throw e}
+ }
+ return moverStock(moved,'Venta');
+}
+
+/* ---------- Fabricación controlada para empleados (función 8) ---------- */
+function fabLote(n){const i=inputs.find(x=>x.dataset.name===n), c=i?i.closest('.product').dataset.cat:'';return c==='municion'||/^Trapo$/i.test(n)||/^Aceite de Arma$/i.test(n)?15:1}
+/* las fabricaciones deshechas (encargo que vuelve a PENDIENTE) se anulan con un registro nuevo: nunca se borra nada */
+function fabLotes(){const L=loadLog(KEY_FABLOTE), an={};L.forEach(l=>{if(l.anula)an[l.anula]=1});return L.filter(l=>!l.anula&&l.prod&&!an[l.id]).sort((a,b)=>(a.ts||0)-(b.ts||0))}
+/* Pendientes de venta de cada lote: las ventas de un producto se asignan a los lotes de empleados más antiguos de ese producto */
+function fabPend(){
+ const lots=fabLotes().map(l=>Object.assign({},l,{vend:0})), byP={};lots.forEach(l=>(byP[l.prod]=byP[l.prod]||[]).push(l));
+ const sales=[];loadLog(KEY_SALELOG).forEach(r=>{if(r.voided||r.op==='encargo')return;const ts=Date.parse(r.ts||'')||0;(r.items||[]).forEach(i=>{if(byP[i.name]&&i.qty>0)sales.push({ts:ts,n:i.name,q:i.qty})})});
+ sales.sort((a,b)=>a.ts-b.ts).forEach(s=>{let q=s.q;for(const l of byP[s.n]){if(q<=0)break;if(l.ts>s.ts)break;const f=Math.min(q,l.q-l.vend);if(f>0){l.vend+=f;q-=f}}});
+ return lots.map(l=>Object.assign(l,{pend:Math.max(0,l.q-l.vend)}));
+}
+function empBloqueo(empId){return fabPend().filter(l=>l.empId===empId&&l.pend>0)}
+function openEmpFab(){invView='fab';renderInv();openModal(invModal);invModal.scrollTop=0;Promise.all([cloudPullRecords(),refreshStock()]).then(()=>{if(!invModal.hidden&&invView==='fab')renderInv()}).catch(()=>{})}
+function empFabHTML(){
+ const me=meEmp();if(!me)return '<div class="enc-empty">Entra con tu ficha para fabricar.</div>';
+ const B=empBloqueo(me.id);
+ if(B.length&&!bossActive)return `<div class="enc-note warnote"><b>⛔ Fabricación bloqueada.</b> Para volver a fabricar tienen que venderse y apuntarse en la web todas las unidades de tu última fabricación.</div>${B.map(l=>`<div class="reg-line"><span>${esc(l.prod)}<br><small>Fabricadas ${l.q} el ${esc(fmtDate(l.ts))} · vendidas ${l.vend}</small></span><b class="neg">Faltan ${l.pend}</b></div>`).join('')}`;
+ const L=inputs.map(i=>i.dataset.name).filter(n=>recipeOf(n).length&&productPrice(n)>0);
+ return `<p class="bk-note">${bossActive?'Como jefe puedes fabricar sin límites desde Dirección → STOCK. Aquí fabricas como un empleado.':'Puedes fabricar <b>1 unidad</b> de cada producto, o <b>lotes de 15</b> de munición, trapos y aceite. Después no podrás volver a fabricar hasta que se vendan y se apunten en la web todas esas unidades.'}</p>
+  ${L.map(n=>{const q=fabLote(n), need=recipeOf(n).map(r=>({m:r.m,q:r.q*q,have:stockMap[ingKey(r.m)]||0})), ok=need.every(x=>x.have>=x.q);return `<div class="fab-emp${ok?'':' off'}"><div><b>${esc(n)}</b><small>${need.map(x=>`${x.q} ${esc(x.m)}${x.have<x.q?` <span class="neg">(hay ${x.have})</span>`:''}`).join(' · ')}</small></div><button type="button" class="primary" data-inv="fab:${esc(n)}"${ok?'':' disabled'}>FABRICAR ${q}</button></div>`}).join('')}`;
+}
+let fabBusy=false;
+async function empFabricar(n){
+ const me=meEmp();if(!me||fabBusy)return;fabBusy=true;
+ try{
+  try{await cloudPullRecords();await refreshStock()}catch(e){return say('Sin conexión: no se puede fabricar ahora','err')}
+  if(!bossActive&&empBloqueo(me.id).length){renderInv();return say('Tienes unidades fabricadas pendientes de vender: no puedes fabricar todavía','err')}
+  if(!(productPrice(n)>0))return say('Sin precio: no se puede fabricar '+n,'err');
+  const q=fabLote(n), items=[{producto:n,delta:q}], need=needMaterials(items), miss=missingMaterials(need);
+  if(miss.length)return say('Faltan materiales · '+miss.join(' · '),'err');
+  if(!await askConfirm('Fabricar',`Vas a fabricar ${q} × ${n}. Se gastarán: ${Object.keys(need).map(k=>need[k]+' '+k).join(', ')}.${bossActive?'':' No podrás volver a fabricar hasta que se vendan todas.'}`,'Fabricar'))return;
+  const seq=loadLog(KEY_FABLOTE).filter(l=>l.empId===me.id).length+1, all=items.concat(Object.keys(need).map(k=>({producto:ingKey(k),delta:-need[k]})));
+  const now=Date.now(), lot={id:'f'+now.toString(36)+Math.random().toString(36).slice(2,4),ts:now,empId:me.id,emp:me.name,prod:n,q:q,seq:seq};
+  let done=false;
+  /* Con la regla de la base de datos instalada, el bloqueo se comprueba allí y el lote se apunta en la misma operación */
+  if(!bossActive&&!cloud.noFabEmp){
+   try{const m=await sbRpc('fabricar_empleado',{p_emp:me.id,p_items:all,p_lote:lot});applyStockMap(m);cloudRev();invChanged(all,'Fabricación');upsertList('fablote',lot.id,lot,false);done=true}
+   catch(e){const t=String(e.message||'');
+    if(/FAB_BLOQUEADA/.test(t)){try{await cloudPullRecords()}catch(x){}renderInv();return say('Tienes unidades fabricadas pendientes de vender: no puedes fabricar todavía','err')}
+    if(/STOCK_INSUFICIENTE/.test(t))return say('Faltan materiales (otro dispositivo los acaba de gastar)','err');
+    if(e.status===404||/PGRST202|Could not find the function|does not exist/i.test(t))cloud.noFabEmp=true;else return say('Sin conexión: no se puede fabricar ahora','err')}
+  }
+  if(!done){
+   if(!bossActive){try{if(!await claimRow('fab-'+me.id+'-'+seq,{ts:Date.now(),prod:n,q:q})){await cloudPullRecords();renderInv();return say('Ya hay otra fabricación tuya en marcha en otro dispositivo','err')}}catch(e){return say('Sin conexión: no se puede fabricar ahora','err')}}
+   try{await moverStock(all,'Fabricación')}
+   catch(e){if(!bossActive)sbFetch('/rest/v1/datos?clave=eq.'+encodeURIComponent('fab-'+me.id+'-'+seq),{method:'DELETE'}).catch(()=>{});return say(String(e.message).indexOf('STOCK_INSUFICIENTE')>=0?'Faltan materiales (otro dispositivo los acaba de gastar)':'Sin conexión: no se puede fabricar ahora','err')}
+   if(!bossActive){upsertList('fablote',lot.id,lot,false);cloudPut('fablote:'+lot.id,lot)}
+  }
+  logStock(n,q,'Fabricación');Object.keys(need).forEach(k=>logStock(isProdIng(k)?k:k+' (material)',-need[k],'Fabricación'));
+  actLog('fabricacion',{txt:'Fabrica '+q+' × '+n+' · gasta '+Object.keys(need).map(k=>need[k]+' '+k).join(', ')+(bossActive?'':' · queda bloqueado hasta venderlas')});
+  try{stampFx('FABRICADO');playAnvil()}catch(e){}try{fbAuto(items)}catch(e){}
+  renderInv();say('Fabricado: '+q+' × '+n);
+ }finally{fabBusy=false}
+}
+
+/* Encargo marcado FABRICADO por un empleado: también cuenta como su fabricación (mismo bloqueo) */
+async function encFabMover(all,items,encId){
+ const me=meEmp();
+ if(!me||bossActive)return moverStock(all,'Fabricación');
+ const now=Date.now(), lots=items.map((x,i)=>({id:'f'+now.toString(36)+i+Math.random().toString(36).slice(2,4),ts:now,empId:me.id,emp:me.name,prod:x.producto,q:x.delta,enc:encId}));
+ let done=false;
+ if(!cloud.noFabEmp){
+  try{const m=await sbRpc('fabricar_empleado',{p_emp:me.id,p_items:all,p_lote:lots[0]});applyStockMap(m);cloudRev();invChanged(all,'Fabricación');done=true}
+  catch(e){const t=String(e.message||'');if(/FAB_BLOQUEADA/.test(t))throw new Error('FAB_BLOQUEADA');if(e.status===404||/PGRST202|Could not find the function|does not exist/i.test(t))cloud.noFabEmp=true;else throw e}
+ }
+ if(!done)await moverStock(all,'Fabricación');
+ lots.forEach((l,i)=>{upsertList('fablote',l.id,l,false);if(i||!done)cloudPut('fablote:'+l.id,l)});
+ actLog('fabricacion',{txt:'Fabrica el encargo '+encId+': '+items.map(x=>x.delta+' × '+x.producto).join(', ')});
+}
+function encFabAnular(encId){const now=Date.now();fabLotes().filter(l=>l.enc===encId).forEach((l,i)=>{const r={id:'x'+now.toString(36)+i+Math.random().toString(36).slice(2,4),ts:now,anula:l.id,empId:'',by:whoAmI().name||''};upsertList('fablote',r.id,r,false);cloudPut('fablote:'+r.id,r)})}
+
+/* ---------- Ventana común (recuento, NPC, fabricar) ---------- */
+invModal.addEventListener('click',e=>{
+ if(e.target===invModal)return closeModal(invModal);
+ const b=e.target.closest('[data-inv]');if(!b)return;const a=b.dataset.inv;
+ if(a==='guardar')once('recu',saveRecuento,b);else if(a==='cerrar'){recuLast=null;closeModal(invModal)}else if(a==='ajustar')once('recaj',ajustarRecuento,b);
+ else if(a==='npcsave')once('npcr',npcRevSave,b);else if(a==='npcok'){npc.rev=Object.assign({},npc.rev,{pending:false,last:{ts:Date.now(),by:whoAmI().name||'—'}});npcSave();closeModal(invModal);say('Revisión del NPC hecha')}
+ else if(a.indexOf('fab:')===0)once('efab',()=>empFabricar(a.slice(4)),b);
+});
+invModal.addEventListener('input',e=>{const t=e.target;
+ if(t.dataset.invq!==undefined){const v=t.value.replace(/[^0-9]/g,'').slice(0,6);if(v!==t.value)t.value=v;invDraft.q[t.dataset.invq]=v}
+ else if(t.dataset.npcf!==undefined){const v=t.value.replace(/[^0-9]/g,'').slice(0,6);if(v!==t.value)t.value=v;invDraft.q[t.dataset.npcf]=v}
+ else if(t.id==='invQ'){invQ=t.value;renderInv();const i=document.getElementById('invQ');if(i){i.focus();i.setSelectionRange(invQ.length,invQ.length)}}});
+invModal.addEventListener('change',e=>{if(e.target.id==='invTipo')invDraft.tipo=e.target.value});
+document.getElementById('invClose').onclick=()=>closeModal(invModal);
+document.getElementById('npcPlate').addEventListener('click',openNpcRev);
+setTimeout(()=>{try{npcPaint()}catch(e){}},0);
+
+/* ---------- Acceso público CLIENTES (función 2): página aparte sin clave ni datos privados ---------- */
+function cliCatalog(){
+ const P=inputs.map(i=>({n:i.dataset.name,c:i.closest('.product').dataset.cat,p:productPrice(i.dataset.name)})).filter(x=>x.p>0);
+ return {c:CATS.filter(c=>P.some(p=>p.c===c[0])),p:P,ts:Date.now()};
+}
+function cliLink(){
+ const s=btoa(unescape(encodeURIComponent(JSON.stringify(cliCatalog())))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+ return new URL('clientes.html',location.href).href.split('#')[0]+'#'+s;
+}
+function cliSvg(){return '<svg viewBox="0 0 340 120" aria-hidden="true"><g fill="currentColor"><path d="M50 30h28l-4-6H54z"/><rect x="44" y="30" width="40" height="3" rx="1.5"/><circle cx="64" cy="44" r="10"/><path d="M46 112V70q0-14 18-14t18 14v42z"/><path d="M130 22h24v10h-24z"/><rect x="124" y="31" width="36" height="3" rx="1.5"/><circle cx="142" cy="45" r="10"/><path d="M122 112V72q0-15 20-15t20 15v40z"/><path d="M200 38q14-12 28 0l-4 4q-10-6-20 0z"/><circle cx="214" cy="50" r="9"/><path d="M196 112l6-38q2-12 12-12t12 12l10 38z"/><path d="M266 26h26l-3-6h-20z"/><rect x="260" y="26" width="38" height="3" rx="1.5"/><circle cx="279" cy="40" r="10"/><path d="M262 112V66q0-13 17-13t17 13v46z"/></g></svg>'}
+function cliCardHTML(){return `<a class="g-cli" href="clientes.html" data-gcli="1" rel="noopener">${cliSvg()}<b>CLIENTES</b><span>Catálogo y precios de la tienda · sin acceso a nada privado</span></a>`}
+document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('[data-gcli]');if(!a)return;try{a.href=cliLink()}catch(x){}},true);
+function renderModPublico(){
+ const C=cliCatalog();
+ return `<p class="bk-note">Página <b>solo para clientes</b>: ven el catálogo, las categorías y los precios de venta, eligen cantidades y ven el total (como un presupuesto). Es una página aparte que <b>no lleva la clave de la nube ni ningún dato privado</b> (stock, clientes, empleados, ventas, Dirección…): aunque alguien la toque por dentro, no puede llegar a nada.</p>
+  <p class="bk-note">El enlace lleva los precios de ahora mismo (${C.p.length} productos con precio; los que no tienen precio no salen). Si cambias precios, vuelve aquí y copia el enlace otra vez. A los clientes, pásales <b>solo este enlace</b>, nunca el de la web de empleados.</p>
+  <div class="enc-actions two"><button type="button" data-dir="cli-copy">⧉ COPIAR ENLACE PARA CLIENTES</button><button type="button" class="gold" data-dir="cli-open">ABRIR LA PÁGINA DE CLIENTES</button></div>`;
+}
+dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir="cli-copy"],[data-dir="cli-open"]');if(!b)return;e.stopImmediatePropagation();const u=cliLink();
+ if(b.dataset.dir==='cli-copy')copyText(u).then(ok=>{if(ok)say('Enlace para clientes copiado');else prompt('Copia este enlace:',u)});else window.open(u,'_blank','noopener')});
+
+/* ---------- Enganches con lo que ya existía ---------- */
+/* Almacén: botones para fabricar (empleados) y para el recuento */
+(function(){const _rm=renderMat;renderMat=function(){_rm.apply(this,arguments);const b=document.getElementById('matBody');if(!b)return;
+ const me=meEmp(), B=me?empBloqueo(me.id):[];
+ b.insertAdjacentHTML('afterbegin',`<div class="enc-actions two mat-acts"><button type="button" class="primary" data-mx="fab">⚒ FABRICAR${B.length&&!bossActive?' · BLOQUEADO':''}</button><button type="button" data-mx="recu">☰ RECUENTO</button></div>`)}})();
+matModal.addEventListener('click',e=>{const b=e.target.closest('[data-mx]');if(!b)return;closeModal(matModal);if(b.dataset.mx==='fab')openEmpFab();else openRecuento()});
+/* Libro de turno: revisión del NPC pendiente y recuento opcional */
+(function(){const _bi=briefItems;briefItems=function(){const b=_bi.apply(this,arguments);b.NPC=!!(npc.rev&&npc.rev.pending&&npcTotal()>0);if(b.NPC)b.n++;return b};
+ const _bh=briefHTML;briefHTML=function(name){let o=_bh.apply(this,arguments);const b=briefItems();
+  const npcH=b.NPC?`<div class="br-sec"><div class="dir-sec-title">⚠ REVISIÓN DEL NPC PENDIENTE</div><p class="bk-note" style="margin:0 0 6px">La tienda ha estado cerrada y el NPC ha podido vender. Mira lo que le queda en el juego y apúntalo. El aviso seguirá hasta que se haga.</p><div class="enc-actions"><button type="button" class="warn" data-lb="npc">HACER LA REVISIÓN DEL NPC</button></div></div>`:'';
+  const rc=`<div class="enc-actions" style="margin-top:8px"><button type="button" data-lb="recu">☰ HACER UN RECUENTO (OPCIONAL)</button></div>`;
+  const i=o.lastIndexOf('<div class="enc-actions');return o.slice(0,i).replace(/(<p class="bk-note" style="margin:0 0 4px">[^<]*<\/p>)/,'$1'+npcH)+rc+o.slice(i)}})();
+libroModal.addEventListener('click',e=>{const b=e.target.closest('[data-lb="npc"],[data-lb="recu"]');if(!b)return;e.stopImmediatePropagation();closeModal(libroModal);libroView='libro';if(b.dataset.lb==='npc')openNpcRev();else openRecuento()},true);
+/* ENCARGOS: lista de armas reservadas (encargo, cliente, arma, cantidad, anticipo y lo que falta por pagar) */
+(function(){const _re=renderEnc;renderEnc=function(){_re.apply(this,arguments);if(encView)return;const R=reservas(null), L=[];Object.keys(R).forEach(n=>R[n].forEach(r=>L.push(Object.assign({n:n},r))));if(!L.length)return;
+ const b=document.getElementById('encBody');if(!b)return;
+ b.insertAdjacentHTML('afterbegin',`<details class="mat-mins res-list"><summary>🔒 ARMAS RESERVADAS CON ANTICIPO (${L.reduce((a,r)=>a+r.qty,0)})</summary><p class="bk-note" style="margin:4px 0">No se pueden vender a otro cliente. Para entregarlas, carga su encargo.</p>${L.map(r=>`<div class="reg-line"><span><b>${esc(r.n)} × ${r.qty}</b><br><small>${esc(r.enc)} · ${esc(r.client)} · anticipo ${money(r.dep)} · pendiente ${money(r.pend)}</small></span></div>`).join('')}</details>`)}})();
+/* Un encargo cargado solo se entrega al cliente que lo encargó */
+function encClienteOk(){
+ if(!loadedEnc||loadedEnc.clientType==='sheriff')return true;
+ if(norm(customerName())===norm(loadedEnc.client))return true;
+ say('Este encargo es de '+loadedEnc.client+': el nombre del cliente tiene que coincidir para entregarlo','err');try{nameInput.focus()}catch(e){}return false;
+}
 
 /* El nombre del cartel de la fachada: si no cabe en la placa (según la letra que cargue cada móvil), se hace un poco más pequeño */
 function fitSign(){try{const sg=document.querySelector('.g-sign'), t=document.getElementById('gSignTxt');if(!sg||!t||!sg.clientWidth)return;t.style.fontSize='';const max=sg.clientWidth*.9, w=t.scrollWidth;if(w>max)t.style.fontSize=(parseFloat(getComputedStyle(t).fontSize)*max/w).toFixed(2)+'px'}catch(e){}}

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07140f">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<title>Harrington Gunsmith · Catálogo</title>
+<!-- PÁGINA PÚBLICA PARA CLIENTES: solo catálogo y precios. No lleva la clave de la base de datos ni ningún dato privado. -->
+<style>
+*{box-sizing:border-box}
+:root{--gold:#d7ae54;--gold2:#f3d47c;--ink:#e9dec2;--muted:#a99a7d;--line:#5b4524}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;color:var(--ink);font-family:"IM Fell English",Georgia,serif;min-height:100vh;background:
+radial-gradient(circle at 50% -10%,#6a3d1d55,transparent 35%),linear-gradient(#120d09cc,#050a07f5),repeating-linear-gradient(90deg,#24160f 0 2px,#170f0a 2px 7px)}
+button{font-family:inherit;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
+.wrap{max-width:1100px;margin:auto;padding:16px 16px 140px}
+header{text-align:center;padding:18px 8px 6px}
+header svg{width:min(340px,80%);height:auto;display:block;margin:0 auto 6px}
+h1{font-family:"Cinzel Decorative",Georgia,serif;color:var(--gold2);margin:4px 0 2px;font-size:clamp(24px,6vw,40px);letter-spacing:.04em;text-shadow:0 2px 0 #000}
+.sub{color:var(--muted);font-style:italic;margin:0 0 6px}
+.note{color:var(--muted);font-size:14px;text-align:center;margin:0 auto 14px;max-width:640px}
+.cats{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:10px 0 14px}
+.cats button{border:1px solid var(--line);background:#1a120b;color:var(--ink);padding:7px 12px;border-radius:999px;cursor:pointer;font-size:14px;letter-spacing:.04em}
+.cats button.on{border-color:var(--gold2);background:linear-gradient(#80601f,#3a2a0c);color:#fff0b6}
+.search{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:#0d0905;color:var(--ink);font:inherit;font-size:16px;margin-bottom:10px}
+.sec{font-family:"IM Fell English SC",Georgia,serif;color:var(--gold);letter-spacing:.12em;margin:18px 2px 6px;border-bottom:1px solid var(--line);padding-bottom:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.item{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;padding:10px 12px;border:1px solid #3b2c17;border-left:4px solid #3b2c17;border-radius:8px;background:linear-gradient(90deg,#141b12,#0b130e)}
+.item.on{border-left-color:var(--gold);background:linear-gradient(90deg,#1b2a14,#0d1f16 70%)}
+.item b{font-size:17px}.item .p{color:var(--gold2);font-weight:bold;font-size:17px}
+.qty{grid-column:1/-1;display:flex;gap:6px;align-items:center}
+.qty button{width:38px;height:38px;border-radius:8px;border:1px solid var(--line);background:#1a120b;color:var(--gold2);font-size:20px;cursor:pointer}
+.qty input{width:64px;height:38px;text-align:center;border-radius:8px;border:1px solid var(--line);background:#0d0905;color:var(--ink);font:inherit;font-size:17px}
+.qty small{margin-left:auto;color:var(--muted)}
+.bar{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(#1d140b,#0a0704);border-top:2px solid var(--gold);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 18px #000a}
+.bar .in{max-width:1100px;margin:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.bar .tot{font-size:20px;color:var(--gold2);font-weight:bold;margin-right:auto}
+.bar .tot small{display:block;font-size:13px;color:var(--muted);font-weight:normal}
+.bar button{padding:10px 14px;border-radius:8px;border:1px solid var(--gold);background:linear-gradient(#2a1c0d,#0d1c14);color:var(--gold2);cursor:pointer;font-size:15px;letter-spacing:.05em}
+.list{max-width:1100px;margin:8px auto 0;font-size:14px;color:var(--ink);max-height:30vh;overflow:auto}
+.list div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dotted #3b2c17;padding:2px 0}
+.empty{color:var(--muted);text-align:center;padding:30px 0}
+.toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:#1d140b;border:1px solid var(--gold);padding:8px 14px;border-radius:8px;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.on{opacity:1}
+@media (max-width:420px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<svg viewBox="0 0 340 120" aria-hidden="true"><g fill="#d7ae54" opacity=".9">
+<path d="M50 30h28l-4-6H54z"/><rect x="44" y="30" width="40" height="3" rx="1.5"/><circle cx="64" cy="44" r="10"/><path d="M46 112V70q0-14 18-14t18 14v42z"/>
+<path d="M130 22h24v10h-24z"/><rect x="124" y="31" width="36" height="3" rx="1.5"/><circle cx="142" cy="45" r="10"/><path d="M122 112V72q0-15 20-15t20 15v40z"/>
+<path d="M200 38q14-12 28 0l-4 4q-10-6-20 0z"/><circle cx="214" cy="50" r="9"/><path d="M196 112l6-38q2-12 12-12t12 12l10 38z"/>
+<path d="M266 26h26l-3-6h-20z"/><rect x="260" y="26" width="38" height="3" rx="1.5"/><circle cx="279" cy="40" r="10"/><path d="M262 112V66q0-13 17-13t17 13v46z"/></g></svg>
+<h1>Harrington Gunsmith</h1>
+<p class="sub">Saint Denis · Catálogo y precios</p>
+</header>
+<p class="note">Elige lo que quieres y verás el total al momento. Es solo un presupuesto: para comprar, habla con un empleado en la tienda.</p>
+<div class="cats" id="cats"></div>
+<input class="search" id="q" type="search" placeholder="⌕  Buscar un producto…" autocomplete="off">
+<div id="list"></div>
+<p class="note" id="upd"></p>
+</div>
+<div class="bar"><div class="in"><div class="tot" id="tot">$0.00<small>Nada elegido</small></div><button type="button" id="ver">VER LISTA</button><button type="button" id="copy">COPIAR</button><button type="button" id="clear">VACIAR</button></div><div class="list" id="sum" hidden></div></div>
+<div class="toast" id="toast"></div>
+<script>
+/* Catálogo por defecto (se genera al publicar la web) y, si el enlace trae uno más nuevo de la tienda, ese. */
+var CATALOGO={"c": [["revolveres", "Revólveres"], ["pistolas", "Pistolas"], ["repetidoras", "Repetidoras"], ["rifles", "Rifles"], ["escopetas", "Escopetas"], ["blancas", "Armas blancas"], ["municion", "Munición"], ["suministros", "Suministros"]], "p": [{"n": "Cattleman Revolver", "c": "revolveres", "p": 1380}, {"n": "Doble Action Revolver", "c": "revolveres", "p": 1490}, {"n": "Schofield Revolver", "c": "revolveres", "p": 6210}, {"n": "Lemat Revolver", "c": "revolveres", "p": 8900}, {"n": "Navy Revolver", "c": "revolveres", "p": 10830}, {"n": "Navy Crossover Revolver", "c": "revolveres", "p": 13400}, {"n": "Semiautomática Pistola", "c": "pistolas", "p": 11140}, {"n": "Mauser Pistola", "c": "pistolas", "p": 9810}, {"n": "Volcanic Pistola", "c": "pistolas", "p": 16510}, {"n": "M1899 Pistola", "c": "pistolas", "p": 13580}, {"n": "Carabina Repetición", "c": "repetidoras", "p": 7340}, {"n": "Evans Repetición", "c": "repetidoras", "p": 17390}, {"n": "Henry Repetición", "c": "repetidoras", "p": 21630}, {"n": "Winchester Repetición", "c": "repetidoras", "p": 26090}, {"n": "Varmint", "c": "rifles", "p": 3290}, {"n": "Springfield Rifle", "c": "rifles", "p": 35100}, {"n": "Cerrojo Rifle", "c": "rifles", "p": 37590}, {"n": "Recortada Escopeta", "c": "escopetas", "p": 29200}, {"n": "Doble Cañón Escopeta", "c": "escopetas", "p": 32300}, {"n": "Escopeta Exótica", "c": "escopetas", "p": 36870}, {"n": "Cuchillo", "c": "blancas", "p": 450}, {"n": "Hacha", "c": "blancas", "p": 360}, {"n": "Machete", "c": "blancas", "p": 1940}, {"n": "Arco", "c": "blancas", "p": 300}, {"n": "Munición Escopeta", "c": "municion", "p": 230}, {"n": "Munición Pistola", "c": "municion", "p": 130}, {"n": "Munición Repetidora", "c": "municion", "p": 130}, {"n": "Munición Revolver", "c": "municion", "p": 130}, {"n": "Munición Rifle", "c": "municion", "p": 230}, {"n": "Munición Varmint", "c": "municion", "p": 130}, {"n": "Flechas", "c": "municion", "p": 100}, {"n": "Trapo", "c": "suministros", "p": 90}, {"n": "Pólvora", "c": "suministros", "p": 50}, {"n": "Lazo", "c": "suministros", "p": 200}, {"n": "Lazo Reforzado", "c": "suministros", "p": 470}, {"n": "Aceite de Arma", "c": "suministros", "p": 20}], "ts": 0};
+(function(){
+ function dec(s){try{s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return JSON.parse(decodeURIComponent(escape(atob(s))))}catch(e){return null}}
+ var h=location.hash.slice(1), c=h?dec(h):null;
+ if(c&&Array.isArray(c.p)&&Array.isArray(c.c))CATALOGO=c;
+ if(!CATALOGO||!Array.isArray(CATALOGO.p))CATALOGO={c:[],p:[],ts:0};
+ /* solo nombre, categoría y precio público: cualquier otra cosa se ignora */
+ var P=CATALOGO.p.filter(function(x){return x&&typeof x.n==='string'&&typeof x.c==='string'&&typeof x.p==='number'&&x.p>0&&x.p<1e7}).map(function(x){return {n:x.n.slice(0,60),c:x.c,p:Math.round(x.p)}});
+ var C=CATALOGO.c.filter(function(x){return Array.isArray(x)&&typeof x[0]==='string'&&typeof x[1]==='string'&&P.some(function(p){return p.c===x[0]})});
+ var Q={}, cat='todos', q='';
+ try{Q=JSON.parse(sessionStorage.getItem('hg_cli_q')||'{}')||{}}catch(e){Q={}}
+ var $=function(id){return document.getElementById(id)};
+ function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+ function money(c){return '$'+(c/100).toFixed(2)}
+ function norm(s){return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')}
+ function save(){try{sessionStorage.setItem('hg_cli_q',JSON.stringify(Q))}catch(e){}}
+ function sel(){return P.filter(function(p){return Q[p.n]>0}).map(function(p){return {n:p.n,q:Q[p.n],p:p.p}})}
+ function cats(){$('cats').innerHTML='<button type="button" data-c="todos" class="'+(cat==='todos'?'on':'')+'">TODO</button>'+C.map(function(c){return '<button type="button" data-c="'+esc(c[0])+'" class="'+(cat===c[0]?'on':'')+'">'+esc(c[1].toUpperCase())+'</button>'}).join('')}
+ function render(){
+  var nq=norm(q), html='';
+  C.forEach(function(c){if(cat!=='todos'&&cat!==c[0])return;var L=P.filter(function(p){return p.c===c[0]&&(!nq||norm(p.n).indexOf(nq)>=0)});if(!L.length)return;
+   html+='<div class="sec">'+esc(c[1].toUpperCase())+'</div><div class="grid">'+L.map(function(p){var v=Q[p.n]||0;return '<div class="item'+(v?' on':'')+'"><b>'+esc(p.n)+'</b><span class="p">'+money(p.p)+'</span><div class="qty"><button type="button" data-m="'+esc(p.n)+'" aria-label="Restar">−</button><input type="text" inputmode="numeric" value="'+(v||'')+'" placeholder="0" data-i="'+esc(p.n)+'" aria-label="Cantidad de '+esc(p.n)+'"><button type="button" data-p="'+esc(p.n)+'" aria-label="Sumar">+</button><small>'+(v?money(v*p.p):'')+'</small></div></div>'}).join('')+'</div>'});
+  $('list').innerHTML=html||'<div class="empty">No hay productos con eso.</div>';tot();
+ }
+ function tot(){var S=sel(), t=S.reduce(function(a,x){return a+x.q*x.p},0), u=S.reduce(function(a,x){return a+x.q},0);
+  $('tot').innerHTML=money(t)+'<small>'+(u?u+(u===1?' unidad':' unidades')+' · '+S.length+(S.length===1?' producto':' productos'):'Nada elegido')+'</small>';
+  $('sum').innerHTML=S.length?S.map(function(x){return '<div><span>'+x.q+' × '+esc(x.n)+'</span><b>'+money(x.q*x.p)+'</b></div>'}).join('')+'<div><span><b>TOTAL</b></span><b>'+money(t)+'</b></div>':'<div><span>No has elegido nada.</span></div>'}
+ function setQ(n,v){v=Math.max(0,Math.min(999,parseInt(v)||0));if(v)Q[n]=v;else delete Q[n];save()}
+ function toast(t){var e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(function(){e.classList.remove('on')},1800)}
+ $('cats').onclick=function(e){var b=e.target.closest('[data-c]');if(!b)return;cat=b.getAttribute('data-c');cats();render()};
+ $('q').oninput=function(e){q=e.target.value;render()};
+ $('list').onclick=function(e){var b=e.target.closest('[data-m],[data-p]');if(!b)return;var n=b.getAttribute('data-m')||b.getAttribute('data-p');setQ(n,(Q[n]||0)+(b.hasAttribute('data-p')?1:-1));render()};
+ $('list').onchange=function(e){var i=e.target;if(!i.hasAttribute('data-i'))return;setQ(i.getAttribute('data-i'),i.value);render()};
+ $('ver').onclick=function(){var s=$('sum');s.hidden=!s.hidden;$('ver').textContent=s.hidden?'VER LISTA':'OCULTAR'};
+ $('clear').onclick=function(){Q={};save();render()};
+ $('copy').onclick=function(){var S=sel();if(!S.length)return toast('No has elegido nada');var t=['PRESUPUESTO · HARRINGTON GUNSMITH'].concat(S.map(function(x){return x.q+' × '+x.n+' = '+money(x.q*x.p)})).concat(['TOTAL: '+money(S.reduce(function(a,x){return a+x.q*x.p},0))]).join('\n');
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast('Presupuesto copiado')},function(){prompt('Copia este texto:',t)})};
+ if(CATALOGO.ts)$('upd').textContent='Precios actualizados el '+new Date(CATALOGO.ts).toLocaleDateString('es-ES')+'.';
+ window.__cli={P:P,C:C};
+ cats();render();
+})();
+</script>
+</body>
+</html>
