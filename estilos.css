@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261010x
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261012d
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1647,6 +1647,11 @@ html.lite .ev-plate.done{animation:none}
 .rec-btn i{position:absolute;top:-6px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#e0a33a;color:#2a1a0d;font:700 11px/18px Georgia,serif;font-style:normal}
 .rec-btn.bad i{background:#c0392b;color:#fff}.rec-btn.info i{background:#2e6e4a;color:#fff}
 @media(max-width:420px){.dir-rec-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ph-ver{margin:0 0 10px;border:2px solid #8b6a2e;border-radius:10px;background:#0d1c15;padding:0 8px 4px}
+.ph-ver>summary{display:flex;align-items:baseline;gap:10px;padding:12px 4px;cursor:pointer;list-style:none}
+.ph-ver>summary::-webkit-details-marker{display:none}
+.ph-ver>summary b{font-family:'Cinzel Decorative',Georgia,serif;font-size:17px;color:#ffe08a;letter-spacing:.06em}
+.ph-ver>summary small{color:#a89366;font-size:12px}
 .ph-card{margin:0 0 8px;border:1px solid #5d4928;border-radius:8px;background:#0a1712;padding:0 10px}
 .ph-card summary{display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;list-style:none}
 .ph-card summary::-webkit-details-marker{display:none}
@@ -1716,3 +1721,20 @@ body.has-mnav #dirModal .enc-actions:has(> [data-dir="cl-save"]),body.has-mnav #
 .ev-plate.soon .ev-cdbox small{color:#8d2a16;font-weight:700}
 @media (prefers-reduced-motion:reduce){.ev-plate.soon{animation:none}}
 html.lite .ev-plate.soon{animation:none}
+/* Cartel de la fachada: el nombre siempre cabe en la placa y va centrado */
+.g-sign{justify-items:center;align-items:center}
+.g-sign span{display:block;text-align:center;line-height:1;letter-spacing:.02em;justify-self:center;align-self:center;transform:translateY(4%)}
+.dash-go{font:inherit;text-align:left;cursor:pointer;color:inherit}
+.dash-go:hover,.dash-go:focus-visible{border-color:var(--st-gold);box-shadow:0 0 0 1px var(--st-gold) inset}
+.dash-card.dash-bad{border-color:var(--st-bad-s)}
+.fb-chart{margin:0 0 12px;padding:10px;border:1px solid #5d4928;border-radius:8px;background:#0a1712}
+.fbc-row{display:grid;grid-template-columns:minmax(0,34%) minmax(0,1fr) auto;align-items:center;gap:8px;padding:3px 0;font-size:12.5px;color:#e9d49a}
+.fbc-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fbc-bar{position:relative;height:14px;border-radius:3px;background:#13241b}
+.fbc-bar em{position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:#8b6a2e}
+.fbc-bar i{position:absolute;top:0;bottom:0;border-radius:3px}
+.fbc-bar i.pos{background:var(--st-ok-s)}.fbc-bar i.neg{background:var(--st-bad-s)}
+.fbc-row b{font-size:12px;min-width:64px;text-align:right}
+.fbc-leg{display:flex;justify-content:space-between;margin:4px 0 0 calc(34% + 8px);padding-right:72px;font-size:10.5px;color:#a89366}
+.pg-x{display:none!important}
+.pg-more{margin:8px 0}
