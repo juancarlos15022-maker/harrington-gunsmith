@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261012g
+/* HARRINGTON GUNSMITH · app.js · versión 20261012h
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -6744,7 +6744,7 @@ let appPrompt=null;
 function appInstalled(){try{return matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: window-controls-overlay)').matches||matchMedia('(display-mode: minimal-ui)').matches||navigator.standalone===true}catch(e){return false}}
 function appPlat(){const u=navigator.userAgent||'';if(/iPhone|iPad|iPod/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1))return 'ios';if(/Android/.test(u))return /Firefox\//.test(u)?'android-firefox':'android';if(/Firefox\//.test(u))return 'firefox';return 'pc'}
 function appPaint(){const b=document.getElementById('appDl');if(b)b.hidden=appInstalled()}
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();appPrompt=e;appPaint()});
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();appPrompt=e;appPaint();appModalPaint()});
 window.addEventListener('appinstalled',()=>{appPrompt=null;appPaint();closeModal(document.getElementById('appModal'));say('Aplicación instalada: ya la tienes con su icono')});
 function appHelpHTML(){
  const P=appPlat(), ico='<img class="app-ico" src="icono-app-192.png" alt="">';
@@ -6756,18 +6756,50 @@ function appHelpHTML(){
   firefox:['Firefox en el ordenador no instala aplicaciones web.','Abre esta misma web en <b>Google Chrome</b> o <b>Microsoft Edge</b>.','Pulsa abajo del todo <b>«Descargar aplicación»</b> y confirma con <b>«Instalar»</b>.'],
   pc:['En <b>Chrome</b>: pulsa el icono de instalar de la barra de direcciones (una pantalla con una flecha) o menú <b>⋮ → Enviar, guardar y compartir → Instalar página como aplicación</b>.','En <b>Edge</b>: menú <b>… → Aplicaciones → Instalar este sitio como una aplicación</b>.','Confirma con <b>«Instalar»</b>: se abre en su propia ventana y queda en el escritorio y en el menú Inicio.']
  }[P];
- return ico+head+`<div class="dir-sec-title">CÓMO INSTALARLA${P==='ios'?' EN IPHONE / IPAD':P.indexOf('android')===0?' EN ANDROID':P==='firefox'?'':' EN EL ORDENADOR'}</div><ol class="app-steps">${S.map(x=>`<li>${x}</li>`).join('')}</ol>`;
+ const now=(P==='pc'||P==='android')?`<div class="enc-actions" style="margin:4px 0 10px"><button type="button" class="primary" id="appNow" hidden>⬇ INSTALAR AHORA</button></div><p class="bk-note" id="appWait">Tu navegador todavía no ofrece la instalación directa (a veces lo hace tras usar la web un momento). Mientras tanto, puedes instalarla así:</p>`:'';
+ return ico+head+now+`<div class="dir-sec-title">CÓMO INSTALARLA${P==='ios'?' EN IPHONE / IPAD':P.indexOf('android')===0?' EN ANDROID':P==='firefox'?'':' EN EL ORDENADOR'}</div><ol class="app-steps">${S.map(x=>`<li>${x}</li>`).join('')}</ol>`;
 }
+/* Si la ventana de instalar del navegador está abierta, el botón INSTALAR AHORA aparece en cuanto el navegador lo permite */
+function appModalPaint(){const m=document.getElementById('appModal'), b=document.getElementById('appNow');if(!m||m.hidden||!b)return;b.hidden=!appPrompt;const w=document.getElementById('appWait');if(w)w.hidden=!!appPrompt}
+async function appPromptNow(ev){appPrompt=null;try{await ev.prompt();const r=await ev.userChoice;if(r&&r.outcome==='accepted'){closeModal(document.getElementById('appModal'));return true}if(r&&r.outcome==='dismissed'){say('Instalación cancelada');return true}}catch(e){appPrompt=ev;appModalPaint();return false}return true}
 async function appInstall(){
  if(appInstalled())return say('Ya estás usando la aplicación');
- if(appPrompt){const p=appPrompt;appPrompt=null;try{await p.prompt();const r=await p.userChoice;if(r&&r.outcome==='accepted')return}catch(e){}}
- document.getElementById('appBody').innerHTML=appHelpHTML();openModal(document.getElementById('appModal'));
+ if(appPrompt){if(await appPromptNow(appPrompt))return}
+ /* el navegador todavía no la ofrece: se espera un momento (sigue siendo el mismo toque) y se lanza su ventana de instalar */
+ const P=appPlat();
+ if(P==='pc'||P==='android'){
+  const btn=document.getElementById('appDl'), b=btn.querySelector('b'), old=b.textContent;b.textContent='PREPARANDO LA DESCARGA…';btn.disabled=true;
+  const ev=await new Promise(r=>{if(appPrompt)return r(appPrompt);const t=setTimeout(()=>r(null),3500);window.addEventListener('beforeinstallprompt',()=>{clearTimeout(t);setTimeout(()=>r(appPrompt),0)},{once:true})});
+  b.textContent=old;btn.disabled=false;
+  if(ev&&await appPromptNow(ev))return;
+ }
+ document.getElementById('appBody').innerHTML=appHelpHTML();openModal(document.getElementById('appModal'));appModalPaint();
 }
 document.getElementById('appDl').addEventListener('click',()=>{try{playClick()}catch(e){}appInstall()});
 document.getElementById('appClose').onclick=()=>closeModal(document.getElementById('appModal'));
+document.getElementById('appModal').addEventListener('click',e=>{if(e.target.id==='appNow'&&appPrompt)appPromptNow(appPrompt)});
 document.getElementById('appModal').addEventListener('click',e=>{if(e.target.id==='appModal')closeModal(e.target)});
 try{matchMedia('(display-mode: standalone)').addEventListener('change',appPaint)}catch(e){}
 appPaint();
+
+/* ===== V2 · Versión nueva publicada: aviso para recargar (nadie se queda con archivos antiguos) ===== */
+const APP_VER=(()=>{const sc=document.querySelector('script[src*="app.js?v="]');const m=sc&&/[?&]v=([0-9A-Za-z._-]+)/.exec(sc.getAttribute('src'));return m?m[1]:''})();
+let updShown=false;
+async function verCheck(){
+ if(!APP_VER||updShown||location.protocol==='file:'||document.hidden||navigator.onLine===false)return;
+ try{const r=await fetch('index.html?_='+Date.now(),{cache:'no-store'});if(!r.ok)return;const m=/app\.js\?v=([0-9A-Za-z._-]+)/.exec(await r.text());if(m&&m[1]!==APP_VER)updShow()}catch(e){}
+}
+function updShow(){
+ if(updShown)return;updShown=true;
+ const d=document.createElement('div');d.className='upd-bar';d.id='updBar';d.setAttribute('role','status');
+ d.innerHTML='<span>✦ Hay una <b>versión nueva</b> de Harrington Gunsmith.</span><button type="button" id="updGo">ACTUALIZAR</button>';
+ document.body.appendChild(d);
+ document.getElementById('updGo').onclick=()=>{try{const b=document.getElementById('updGo');b.disabled=true;b.textContent='ACTUALIZANDO…'}catch(e){}
+  Promise.resolve(navigator.serviceWorker&&navigator.serviceWorker.getRegistration&&navigator.serviceWorker.getRegistration()).then(r=>r&&r.update()).catch(()=>{}).finally(()=>location.reload())};
+}
+setInterval(verCheck,10*60*1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)verCheck()});
+setTimeout(verCheck,20000);
 
 /* El nombre del cartel de la fachada: si no cabe en la placa (según la letra que cargue cada móvil), se hace un poco más pequeño */
 function fitSign(){try{const sg=document.querySelector('.g-sign'), t=document.getElementById('gSignTxt');if(!sg||!t||!sg.clientWidth)return;t.style.fontSize='';const max=sg.clientWidth*.9, w=t.scrollWidth;if(w>max)t.style.fontSize=(parseFloat(getComputedStyle(t).fontSize)*max/w).toFixed(2)+'px'}catch(e){}}

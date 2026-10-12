@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261012g
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261012h
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1303,7 +1303,8 @@ body.has-agotado .nostock{width:74px;height:36px;margin:2px 0 0;font-size:0;colo
 .product.no-stock .weapon-icon.has-icon img{filter:grayscale(.8) brightness(.7)}
 .prod-sheet .weapon-icon.has-icon{width:96px;height:64px}
 @media(min-width:1400px){#products .product{grid-template-columns:70px minmax(120px,1fr) 92px 136px 84px;column-gap:6px}#products .weapon-icon.has-icon{width:62px;height:42px}}
-@media(max-width:900px){.product{grid-template-columns:62px 1fr 80px}.weapon-icon.has-icon{width:56px;height:38px}}
+/* V2 · tableta en vertical (651–900 px): la tabla completa del catálogo, que cabe de sobra */
+@media(min-width:651px) and (max-width:900px){.table-head,#products .product{grid-template-columns:64px minmax(150px,1fr) 100px 156px 92px;column-gap:6px}.weapon-icon.has-icon{width:56px;height:38px}}
 @media(max-width:650px){.product{grid-template-columns:58px 1fr 80px}.weapon-icon.has-icon{width:52px;height:36px}}
 .me-chip{cursor:pointer}
 .me-chip:hover,.me-chip:focus-visible{border-color:#f3d27a;outline:none;box-shadow:0 0 10px #e8b92355}
@@ -1761,6 +1762,24 @@ html.lite .ev-plate.soon{animation:none}
 .g-cli b{font-family:'Cinzel Decorative',Georgia,serif;font-size:24px;letter-spacing:.08em}
 .g-cli span{font:italic 14px/1.35 'IM Fell English',Georgia,serif;color:#cfe0cf;text-align:center}
 
+.upd-bar{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:9000;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;width:min(560px,calc(100% - 20px));padding:10px 14px;border:2px solid var(--gold);border-radius:10px;background:linear-gradient(#2a1c0d,#0d1c14);color:#f3e2b0;box-shadow:0 8px 26px #000c;font-size:15px}
+.upd-bar b{color:var(--gold2)}
+.upd-bar button{min-height:40px;padding:8px 16px;border-radius:6px;border:1px solid #b88931;background:linear-gradient(#80601f,#3a2a0c);color:#fff0b6;font-weight:bold;cursor:pointer;font-family:inherit;letter-spacing:.06em}
+
+/* ===== V2 · Pantallas táctiles (móvil y tableta): botones cómodos para el dedo ===== */
+@media(pointer:coarse){
+ .enc-head button{min-height:40px;min-width:64px}
+ #clear{min-height:40px}
+ .qty .quick button{min-height:38px}
+ .au-filt button{min-height:40px}
+ details.mg-det>summary{min-height:40px;display:flex;align-items:center}
+ .wh-row label.chk input,#dirBody input[type=checkbox]{width:24px;height:24px}
+ .stock-cats .cat-btn{min-height:40px}
+ .seg button{min-height:42px}
+}
+/* ===== V2 · Letra legible: nada por debajo de 11 px ===== */
+.pname small,.dash-card small,.lowtag{font-size:11px}
+@media(max-width:650px){.carthead{font-size:11px}}
 /* ===== V2 · Aplicación instalable ===== */
 .app-dl{display:flex;align-items:center;gap:12px;margin:16px auto 4px;padding:10px 18px 10px 12px;border:2px solid var(--gold);border-radius:10px;background:linear-gradient(#2a1c0d,#0d1c14);color:var(--gold2);cursor:pointer;font-family:inherit;text-transform:none;letter-spacing:normal;box-shadow:0 4px 16px #000a,inset 0 0 18px #d7ae5418;transition:transform .2s,box-shadow .2s;min-height:52px}
 .app-dl[hidden]{display:none}
