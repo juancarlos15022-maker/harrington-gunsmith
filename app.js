@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261012l
+/* HARRINGTON GUNSMITH · app.js · versión 20261012m
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== V2 · La sesión no se cierra al salir de la aplicación =====
    Se guarda en el dispositivo y se recupera al volver, aunque el móvil haya cerrado la aplicación por detrás para ahorrar memoria.
@@ -1361,7 +1361,7 @@ const DIRECCION_MODULOS=[
  {id:'historial',titulo:'HISTORIAL DE CAMBIOS',desc:'Quién cambió precios, stock, fichas o borró algo, y cuándo.',render:()=>renderModHistorial()},
  {id:'nube',titulo:'NUBE (SUPABASE)',desc:'Estado de la sincronización entre dispositivos.',render:()=>renderModNube()},
  {id:'reset',titulo:'RESETEAR DATOS',desc:'Borrar ventas, gastos, encargos y demás datos de operación.',render:()=>renderModReset()},
- {id:'copia',titulo:'COPIA DE SEGURIDAD',desc:'Guardar y restaurar todos los datos.',render:()=>renderModCopia()}
+ {id:'copia',titulo:'COPIAS DE SEGURIDAD',desc:'Copias diarias en la nube (7 días): ver, descargar y restaurar.',render:()=>renderModCopia()}
 ];
 let dirMod=null, dirForm=null;
 function fmtLong(ms){return new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',day:'numeric',month:'long'}).format(ms)}
@@ -2236,7 +2236,7 @@ async function nubeDown(){
 /* --- Copia de seguridad --- */
 function renderModCopia(){
  const lb=Number(store.get('harrington_lastbackup_v1')||0);
- return `<p class="bk-note">Los datos viven en este dispositivo. Haz una copia de vez en cuando: si se borran los datos del navegador, se pierden.${lb?`<br>Última copia descargada: ${fmtDate(lb)} ${fmtTime(lb)}.`:'<br>Todavía no has descargado ninguna copia.'}</p>
+ return nubeCopiasHTML()+`<div class="dir-sec-title">COPIA EN ESTE DISPOSITIVO</div><p class="bk-note">Los datos viven en este dispositivo. Haz una copia de vez en cuando: si se borran los datos del navegador, se pierden.${lb?`<br>Última copia descargada: ${fmtDate(lb)} ${fmtTime(lb)}.`:'<br>Todavía no has descargado ninguna copia.'}</p>
   <div class="enc-actions"><button type="button" class="primary" data-dir="bk-full">DESCARGAR COPIA COMPLETA</button><button type="button" data-dir="bk-config">DESCARGAR CONFIGURACIÓN (PARA OTROS DISPOSITIVOS)</button><button type="button" class="warn" data-dir="bk-restore">RESTAURAR DESDE UN ARCHIVO</button></div>
   <input type="file" id="bkFile" accept=".json,application/json" hidden>
   <p class="bk-note" style="margin-top:10px">La <b>configuración</b> incluye empleados, convenios, clientes, precios, productos nuevos, mínimos de stock y Discord, pero no ventas, stock ni contraseña. Sirve para dejar otro móvil listo en un momento.</p>`;
@@ -4461,6 +4461,7 @@ const TUTORIAL=[
 ['Historial de cambios <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → Sistema → HISTORIAL DE CAMBIOS</b>: cada cambio queda apuntado con <b>quién</b> lo hizo y <b>cuándo</b>, vengan del dispositivo que vengan:</p>
 <ul><li>Precios, productos, convenios y ofertas.</li><li>Empleados (contrataciones, puesto, sueldo, horas, expulsiones, turnos cerrados a mano y ausencias borradas).</li><li>Fichas de clientes y de proveedores (qué dato cambió y, en los precios, de cuánto a cuánto).</li><li>Stock sumado o fabricado, recetas y mínimos.</li><li>Gastos y sueldos pagados o borrados, ventas anuladas, encargos cancelados y pedidos emitidos, recibidos, pagados o cancelados.</li><li>Discord, contraseña de jefe, objetivo semanal y reseteos.</li></ul>
 <p>Arriba puedes filtrar por tipo (Catálogo, Personal, Clientes…) o buscar una persona, un producto o un cliente. Las ventas normales y los fichajes no salen aquí: están en sus registros.</p>`],
+['Copias de seguridad en la nube <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → AJUSTES → COPIAS DE SEGURIDAD</b>.</p><ul><li>Cada día a las <b>5:00</b> se guarda en la base de datos una copia de todo: ventas, encargos, gastos, pedidos, fichajes, stock, materiales y configuración. Si ese día no se pudo hacer, la hace la web la primera vez que alguien la abra.</li><li>Se guardan siempre <b>las 7 últimas</b>: al hacer la del día 8 se borra la más antigua. Nada se guarda en los teléfonos.</li><li><b>⬇ DESCARGAR</b>: baja esa copia como archivo.</li><li><b>↺ RESTAURAR</b>: todo vuelve a como estaba ese día, en todos los dispositivos (pide escribir RESTAURAR). Antes se guarda una copia «antes de restaurar» por si acaso. Las contraseñas, la auditoría y el número de las ventas no retroceden.</li><li>Debajo sigue la copia en este dispositivo de siempre.</li></ul>`],
 ['Datos y dispositivos',`<p>Todos los datos están en la <b>nube</b> y se comparten entre los móviles en pocos segundos:</p>
 <ul><li><b>Configuración</b>: empleados, clientes, proveedores, convenios y ofertas, precios, productos nuevos, Discord, mínimos de stock y la contraseña del jefe.</li><li><b>Operación</b>: stock, ventas, encargos, pedidos a proveedores, fichajes, gastos y cierres. Los números de venta y el stock los controla la nube, así que nunca se repiten ni se vende lo que ya no hay.</li></ul>
 <p>Los cambios llegan a los demás móviles <b>al instante</b>: la nube avisa en cuanto algo cambia. Si ese aviso no funcionara, cada móvil sigue comprobando la nube cada pocos segundos. Arriba, junto a FICHAJE, ves «☁ conectado», «☁ guardando…», «☁ guardado ✓» o «☁ sin conexión». <b>Sin conexión</b> puedes mirar el catálogo y hacer presupuestos, pero no finalizar ventas ni cambiar el stock. Los cambios de configuración se suben solos al volver la conexión.</p>
@@ -6382,7 +6383,8 @@ const PARCHES=[
  {f:'12/10/2026',t:'Aplicación instalable',v:'2.0',i:['Botón DESCARGAR APLICACIÓN abajo del todo de la página principal','Se instala en el ordenador (Chrome o Edge), en Android y en iPhone/iPad (con sus pasos), con el icono de Harrington y su propia ventana','La misma web y los mismos datos de Supabase, sincronizados en todos los dispositivos, y se actualiza sola con cada parche','Base de datos: reglas del parche final instaladas e índices para que la sincronización siga siendo rápida']},
  {f:'12/10/2026',t:'Ordenador, tableta y móvil',v:'2.0',i:['Revisadas todas las pantallas en móvil, tableta vertical, tableta horizontal, portátil y ordenador grande: sin desbordes','Tableta en vertical: el catálogo se ve como tabla completa (producto, precio, cantidad y subtotal) en vez de descolocado','Pantallas táctiles: botones de cerrar, vaciar, +10/+50/+100, filtros, pestañas y casillas más grandes para el dedo','Letra pequeña más legible','DESCARGAR APLICACIÓN lanza la instalación directa en cuanto el navegador lo permite, con INSTALAR AHORA; en Samsung Internet, ABRIR EN CHROME E INSTALAR','Se actualiza sola con cada parche, sin pulsar nada, en cuanto es seguro (nunca mientras escribes)']},
  {f:'12/10/2026',t:'Más rápida y siempre al día',v:'2.0',i:['Se actualiza sola con cada parche, sin pulsar nada: al abrirla y, si está abierta, en cuanto es seguro (nunca mientras escribes o tienes una ventana abierta); la venta a medias se conserva','Arranque más rápido: el programa y los estilos se descargan primero y las imágenes que no se ven al abrir, después','La fachada de la entrada solo se descarga cuando va a salir la entrada','Si internet va lento, la aplicación abre con la versión guardada en 1,5 segundos y se pone al día sola después','Quitado un manifiesto antiguo duplicado que podía confundir a algunos navegadores al instalarla']},
- {f:'12/10/2026',t:'Sesión abierta y atajos del icono',v:'2.0',i:['La sesión no se cierra al salir de la aplicación, aunque el móvil la cierre por detrás: se cierra con ⏻ CERRAR SESIÓN (en tu ficha), al fichar la salida si lo eliges o tras 3 horas sin usarla','El Modo Jefe solo se recupera si eres jefe o si fue hace menos de 5 minutos','Atajos al mantener pulsado el icono: Nueva venta, Fichar y Encargos']}
+ {f:'12/10/2026',t:'Sesión abierta y atajos del icono',v:'2.0',i:['La sesión no se cierra al salir de la aplicación, aunque el móvil la cierre por detrás: se cierra con ⏻ CERRAR SESIÓN (en tu ficha), al fichar la salida si lo eliges o tras 3 horas sin usarla','El Modo Jefe solo se recupera si eres jefe o si fue hace menos de 5 minutos','Atajos al mantener pulsado el icono: Nueva venta, Fichar y Encargos']},
+ {f:'12/10/2026',t:'Copias de seguridad diarias en la nube',v:'2.0',i:['Cada día a las 5:00 se guarda en la base de datos una copia de todo; siempre las 7 últimas (la del día 8 sustituye a la más antigua)','Dirección → COPIAS DE SEGURIDAD: ver, descargar y restaurar cada copia, con una copia «antes de restaurar» por si acaso','Al restaurar, todos los dispositivos se ponen al día solos; las contraseñas, la auditoría y el número de las ventas no retroceden']}
 ];
 let phQ='';
 /* Versiones: cada parche lleva su versión (v); los que no la llevan son de la 1.0 */
@@ -6850,6 +6852,47 @@ setTimeout(verCheck,20000);
  };
  setTimeout(run,900);
 })();
+
+/* ===== V2 · Copias de seguridad diarias en la nube: las 7 últimas, en la base de datos (nada en los teléfonos) ===== */
+let NC={list:null,err:'',busy:false};
+async function nubeCopiasLoad(){
+ try{const L=await sbRpc('listar_copias');NC.list=Array.isArray(L)?L:[];NC.err=''}
+ catch(e){NC.list=[];NC.err=(e.status===404||/PGRST202|Could not find the function/i.test(String(e.message)))?'falta':'red'}
+ if(!dirModal.hidden&&dirMod==='copia'&&!document.activeElement.matches('input'))renderDir();
+}
+function nubeCopiasHTML(){
+ if(NC.list===null){nubeCopiasLoad();return '<div class="dir-sec-title" style="margin-top:0">COPIAS AUTOMÁTICAS EN LA NUBE</div><div class="enc-empty">Cargando las copias…</div>'}
+ const head='<div class="dir-sec-title" style="margin-top:0">COPIAS AUTOMÁTICAS EN LA NUBE</div><p class="bk-note">Cada día a las 5:00 se guarda en la base de datos una copia de todo (ventas, encargos, stock, configuración…). Se guardan siempre <b>las 7 últimas</b>: al hacer la del día 8 se borra la más antigua. Nada se guarda en los teléfonos.</p>';
+ if(NC.err==='falta')return head+'<div class="enc-note warnote">Falta instalar en Supabase el archivo <b>parche-v2-copias.sql</b> (SQL Editor → New query → pegar → Run). Hasta entonces no se hacen copias en la nube.</div>';
+ if(NC.err==='red')return head+'<div class="enc-note warnote">Sin conexión con la nube: no se pueden ver las copias ahora.</div><div class="enc-actions"><button type="button" data-dir="nc-reload">REINTENTAR</button></div>';
+ const D=NC.list.filter(c=>c.tipo==='diaria'), A=NC.list.find(c=>c.tipo==='antes-restaurar');
+ const row=c=>{const t=Date.parse(c.creada);return `<div class="enc-card dir-item nc-row"><div class="it"><b>${c.tipo==='diaria'?'Copia del '+esc(fmtDate(t)):'Antes de restaurar · '+esc(fmtDate(t))}</b> · ${esc(fmtTime(t))}<br><small>${c.filas||0} registros · ${Math.max(1,Math.round((c.bytes||0)/1024))} KB</small></div><div class="enc-actions two"><button type="button" data-dir="nc-dl:${esc(c.id)}">⬇ DESCARGAR</button><button type="button" class="warn" data-dir="nc-res:${esc(c.id)}">↺ RESTAURAR</button></div></div>`};
+ return head+(D.length?D.map(row).join(''):'<div class="enc-empty">Todavía no hay copias. La primera se hace hoy.</div>')+(A?'<div class="dir-sec-title">COPIA DE ANTES DE LA ÚLTIMA RESTAURACIÓN</div>'+row(A):'')+
+  `<div class="enc-actions" style="margin-top:8px"><button type="button" data-dir="nc-hoy">HACER LA COPIA DE HOY AHORA</button></div>`;
+}
+async function nubeCopiaHoy(){try{const r=await sbRpc('hacer_copia',{p_tipo:'diaria'});say(r&&r.hecha?'Copia de hoy guardada en la nube':'La copia de hoy ya estaba hecha')}catch(e){say('No se pudo hacer la copia: sin conexión','err')}NC.list=null;renderDir()}
+async function nubeCopiaDl(id){
+ try{const c=await sbRpc('ver_copia',{p_id:id});if(!c)return say('Esa copia ya no existe','err');
+  const blob=new Blob([JSON.stringify({app:'harrington',tipo:'copia-nube',copia:c})],{type:'application/json'}), a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='Harrington_copia_nube_'+id+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);say('Copia descargada')}
+ catch(e){say('No se pudo descargar: sin conexión','err')}
+}
+async function nubeCopiaRes(id){
+ const c=(NC.list||[]).find(x=>x.id===id);if(!c||!bossActive)return;
+ const t=Date.parse(c.creada);
+ if(!await askConfirm('Restaurar la copia','Todo volverá a como estaba el '+fmtDate(t)+' a las '+fmtTime(t)+': ventas, encargos, gastos, pedidos, fichajes, stock y configuración, en TODOS los dispositivos. Lo de después se perderá (antes se guarda una copia por si acaso). Las contraseñas y la auditoría no se tocan.','Restaurar'))return;
+ const w=prompt('Para confirmar, escribe RESTAURAR');if((w||'').trim().toUpperCase()!=='RESTAURAR')return say('Restauración cancelada');
+ try{await sbRpc('restaurar_copia',{p_id:id})}catch(e){return say('No se pudo restaurar: '+(/COPIA_NO_EXISTE/.test(String(e.message))?'esa copia ya no existe':'sin conexión'),'err')}
+ try{audit('Sistema','Restauró la copia de la nube del '+fmtDate(t)+' '+fmtTime(t))}catch(e){}
+ try{await applyResetRow()}catch(e){}
+ try{await refreshStock()}catch(e){}try{await cloudPullRecords()}catch(e){}
+ NC.list=null;renderDir();say('Copia restaurada en todos los dispositivos');
+}
+dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir^="nc-"]');if(!b)return;e.stopImmediatePropagation();const d=b.dataset.dir, i=d.indexOf(':'), a=i<0?d:d.slice(0,i), arg=i<0?'':d.slice(i+1);
+ if(a==='nc-reload'){NC.list=null;renderDir()}else if(a==='nc-hoy')once('nch',nubeCopiaHoy,b);else if(a==='nc-dl')once('ncd',()=>nubeCopiaDl(arg),b);else if(a==='nc-res')once('ncr',()=>nubeCopiaRes(arg),b)});
+/* Si la tarea de las 5:00 no la hizo, la primera vez del día que se abre la web se pide la copia (la base de datos solo guarda una por día) */
+setTimeout(()=>{try{if(SANDBOX||location.protocol==='file:'&&!window.__hgTest)return;const d=todayISO();if(localStorage.getItem('harrington_copia_dia')===d)return;
+ sbRpc('hacer_copia',{p_tipo:'diaria'}).then(()=>{try{localStorage.setItem('harrington_copia_dia',d)}catch(e){}}).catch(()=>{})}catch(e){}},15000);
 
 /* El nombre del cartel de la fachada: si no cabe en la placa (según la letra que cargue cada móvil), se hace un poco más pequeño */
 function fitSign(){try{const sg=document.querySelector('.g-sign'), t=document.getElementById('gSignTxt');if(!sg||!t||!sg.clientWidth)return;t.style.fontSize='';const max=sg.clientWidth*.9, w=t.scrollWidth;if(w>max)t.style.fontSize=(parseFloat(getComputedStyle(t).fontSize)*max/w).toFixed(2)+'px'}catch(e){}}
