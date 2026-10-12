@@ -10,8 +10,11 @@
 //   4. /despedir o clic derecho → Apps → «Despedir de Harrington»: quita la ficha de la web y deja a la persona como visita.
 //   5. La web (Jefe o Gerente con sesión) avisa de altas, ascensos y despidos para ajustar los roles.
 //   6. Canal de plantilla (dirección): cada ficha tiene Ascender y Despedir, con confirmación; cambian la web, el rol y avisan por carta.
+//   7. /precio y /stock (con autocompletado); fichar y ausencias con botones (mismos registros que la web);
+//      /evento con «Me apunto»; sanciones con formulario y carta. Las piezas comunes están en comun.ts.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { catalogo, diaNum, duracion, fecha, hora, hoyNum, madrid, medianoche, ORO } from "./comun.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 const json = (o: unknown, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { "Content-Type": "application/json" } });
@@ -93,6 +96,38 @@ async function carta(c: Record<string, string>, uid: string, texto: string) {
 }
 // las fichas del canal de plantilla se ponen al día al momento (si no, la revisión de cada medio minuto lo hace)
 const refrescarPlantilla = (c: Record<string, string>) => fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/discord-puerta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ secreto: c.secreto, solo: "plantilla" }) }).catch(() => null);
+const norm = (s: string) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+const AUS_CATS = ["Viaje", "Trabajo", "Estudios", "Salud", "Asuntos personales", "Otro"];
+type Aus = { id: string; empId: string; name: string; start: number; end: number; returned?: boolean; cancelled?: boolean };
+// empleado de la web enlazado con este usuario de Discord
+async function empleadoDe(uid: string) {
+  const { data } = await sb.from("datos").select("valor").eq("clave", "empleados").maybeSingle();
+  return (Array.isArray(data?.valor) ? data!.valor as Array<Record<string, string>> : []).find((e) => e && e.discord === uid) || null;
+}
+// escribe registros en la base de datos igual que la web (y avisa a todas las webs abiertas con «rev»)
+async function guardar(filas: Array<[string, unknown]>) {
+  const t = new Date().toISOString();
+  const { error } = await sb.from("datos").upsert([...filas.map(([clave, valor]) => ({ clave, valor, actualizado: t })), { clave: "rev", valor: { n: Date.now() + "-" + Math.random().toString(36).slice(2, 6) }, actualizado: t }], { onConflict: "clave" });
+  if (error) throw new Error(error.message);
+}
+async function registros<T>(prefijo: string) {
+  const { data } = await sb.from("datos").select("valor").like("clave", prefijo + "%");
+  return ((data ?? []) as Array<{ valor: T & { deleted?: boolean } }>).map((r) => r.valor).filter((v) => v && !v.deleted) as T[];
+}
+const activas = async (empId: string) => { const ahora = Date.now(); return (await registros<Aus>("ausencia:")).filter((a) => a.empId === empId && !a.cancelled && !a.returned && a.start <= ahora && (!a.end || a.end > ahora)); };
+const publicar = (c: Record<string, string>, canal: string | undefined, embed: Record<string, unknown>) => canal ? api(c, "POST", `/channels/${canal}/messages`, { allowed_mentions: { parse: [] }, embeds: [{ footer: PIE, ...embed }] }) : Promise.resolve(null);
+const refrescarPaneles = (c: Record<string, string>) => fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/discord-puerta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ secreto: c.secreto, solo: "paneles" }) }).catch(() => null);
+// anuncio de un evento con su lista de apuntados y los botones
+function anuncio(ev: { id: string; titulo: string; cuando: string; lugar?: string; detalles?: string; creador?: string; inscritos: Array<{ id: string; n: string }> }) {
+  const L = ev.inscritos || [];
+  return {
+    embeds: [{ title: "📅 " + ev.titulo, color: ORO, description: ev.detalles || "",
+      fields: [{ name: "Cuándo", value: ev.cuando || "—", inline: true }, ...(ev.lugar ? [{ name: "Dónde", value: ev.lugar, inline: true }] : []),
+        { name: `Apuntados (${L.length})`, value: L.length ? L.map((x) => `<@${x.id}>`).join(", ").slice(0, 1024) : "Nadie todavía. ¡Sea usted el primero!" }],
+      footer: { text: `Anunciado por ${ev.creador || "la Dirección"} · Señor Harrington` } }],
+    components: [{ type: 1, components: [{ type: 2, style: 3, label: "Me apunto", emoji: { name: "✋" }, custom_id: "ev:si:" + ev.id }, { type: 2, style: 2, label: "Me borro", custom_id: "ev:no:" + ev.id }] }],
+  };
+}
 const limpio = (s: unknown, n: number) => String(s ?? "").replace(/@(everyone|here)/gi, "@​$1").replace(/<@[!&]?\d+>/g, "").trim().slice(0, n);
 
 // La web avisa de un cambio de plantilla (alta, ascenso, despido): se ajustan los roles según lo que diga la base de datos
@@ -254,6 +289,186 @@ Deno.serve(async (req: Request) => {
       return json({ type: 6 });
     }
     return efimero("Este botón ha caído en desuso.");
+  }
+
+  // ── consultas rápidas: /precio y /stock (con autocompletado del nombre) ──
+  if (i.type === 4 && (i.data?.name === "precio" || i.data?.name === "stock")) {
+    const q = norm(String((i.data?.options || [])[0]?.value || ""));
+    let nombres = (await catalogo(sb)).map((p) => p.nombre);
+    if (i.data.name === "stock") { const { data } = await sb.from("stock").select("producto"); nombres = [...new Set([...nombres, ...((data ?? []) as Array<{ producto: string }>).map((r) => r.producto)])]; }
+    const elegidos = nombres.filter((n) => !q || norm(n).includes(q)).slice(0, 25);
+    return json({ type: 8, data: { choices: elegidos.map((n) => ({ name: n.startsWith("mat:") ? n.slice(4) + " (material)" : n, value: n })) } });
+  }
+  if (i.type === 2 && i.data?.name === "precio") {
+    const q = String((i.data?.options || [])[0]?.value || ""), L = await catalogo(sb);
+    const p = L.find((x) => x.nombre === q) || L.find((x) => norm(x.nombre).includes(norm(q)));
+    if (!p) return efimero(`No conozco «${limpio(q, 40)}» en el catálogo de la casa. Empiece a escribir y elija de la lista.`);
+    return efimero(`🏷️ **${p.nombre}** · ${p.precio > 0 ? `**${dolar(p.precio)}** la unidad` : "*por encargo*: el precio se pacta con el cliente"}.`);
+  }
+  if (i.type === 2 && i.data?.name === "stock") {
+    if (!PLANTILLA.some((k) => c[k] && roles.includes(c[k]))) return efimero("Las existencias de la casa solo puede consultarlas el personal.");
+    const q = String((i.data?.options || [])[0]?.value || "");
+    const { data } = await sb.from("stock").select("producto,cantidad");
+    const S = (data ?? []) as Array<{ producto: string; cantidad: number }>;
+    const s = S.find((x) => x.producto === q) || S.find((x) => x.producto === "mat:" + q) || S.find((x) => norm(x.producto).includes(norm(q)));
+    if (!s) return efimero(`No hay existencias apuntadas de «${limpio(q, 40)}». Si es un producto de la casa, ahora mismo quedan **0**.`);
+    return efimero(`📦 **${s.producto.replace(/^mat:/, "")}**${s.producto.startsWith("mat:") ? " (material)" : ""}: quedan **${s.cantidad}** en el almacén.`);
+  }
+
+  // ── fichar desde Discord (lo mismo que en la web) ──
+  if (i.type === 3 && (id === "fch:in" || id === "fch:out")) {
+    const e = await empleadoDe(user.id);
+    if (!e) return efimero("Solo el personal con ficha en la web puede fichar. Si es usted empleado y ve este aviso, pida a la Dirección que enlace su ficha con su Discord.");
+    const { data: f } = await sb.from("datos").select("valor").eq("clave", "fichaje:" + e.id).maybeSingle();
+    const abierto = f?.valor && !(f.valor as Record<string, unknown>).deleted ? f.valor as { start: number } : null;
+    const ahora = Date.now();
+    if (id === "fch:in") {
+      if (abierto) return efimero(`Ya está usted dentro desde las ${hora(abierto.start)}. Cuando termine, pulse **Salgo de turno**.`);
+      await guardar([["fichaje:" + e.id, { name: e.name, empId: e.id, start: ahora }]]);
+      enSegundoPlano((async () => {
+        await publicar(c, c.canal_turnos, { title: "🟢 Entrada · " + limpio(e.name, 60), color: 0x3d8b52, description: `${fecha(ahora)} ${hora(ahora)}\nFichada desde Discord.` });
+        const aus = await activas(e.id);
+        for (const a of aus) { await guardar([["ausencia:" + a.id, { ...a, returned: true, returnedAt: ahora }]]); await publicar(c, c.canal_ausencias, { title: "🏠 Regreso · " + limpio(e.name, 60), color: 0x3d8b52, description: `Ha vuelto el ${fecha(ahora)} ${hora(ahora)}${a.end && a.end > ahora ? " (antes de lo previsto)" : ""}.` }); }
+        await refrescarPaneles(c);
+      })());
+      const h = +madrid(ahora).hour;
+      return efimero(`${h < 14 ? "Buenos días" : h < 21 ? "Buenas tardes" : "Buenas noches"}, ${limpio(e.name, 40)}. Entrada a las **${hora(ahora)}**: que sea una jornada próspera. 🟢`);
+    }
+    if (!abierto) return efimero("No consta que haya fichado la entrada. Pulse **Entro de turno** al empezar.");
+    const uid = "t" + ahora.toString(36) + Math.random().toString(36).slice(2, 5);
+    await guardar([["turno:" + uid, { uid, name: e.name, start: abierto.start, end: ahora }], ["fichaje:" + e.id, { ts: ahora, deleted: true }]]);
+    enSegundoPlano((async () => {
+      const mismo = fecha(abierto.start) === fecha(ahora);
+      await publicar(c, c.canal_turnos, { title: "🔴 Salida · " + limpio(e.name, 60), color: 0x8b2e25,
+        description: (mismo ? `Fecha: ${fecha(ahora)}\nEntrada: ${hora(abierto.start)}\nSalida: ${hora(ahora)}` : `Entrada: ${fecha(abierto.start)} ${hora(abierto.start)}\nSalida: ${fecha(ahora)} ${hora(ahora)}`) + `\nTiempo: ${duracion(abierto.start, ahora)}\nFichada desde Discord.` });
+      await refrescarPaneles(c);
+    })());
+    return efimero(`Buen trabajo, ${limpio(e.name, 40)}. Salida a las **${hora(ahora)}** tras ${duracion(abierto.start, ahora)}. ¡Hasta la próxima jornada! 🔴`);
+  }
+
+  // ── ausencias desde Discord: motivo (lista) → ficha (formulario) → apuntada en la web ──
+  if (i.type === 3 && id === "aus:new") {
+    const e = await empleadoDe(user.id);
+    if (!e) return efimero("Solo el personal con ficha en la web puede avisar de una ausencia aquí.");
+    return json({ type: 4, data: { flags: 64, content: "¿Cuál es el motivo de su ausencia?", components: [{ type: 1, components: [{ type: 3, custom_id: "aus:cat", placeholder: "Elija el motivo…", options: AUS_CATS.map((x, k) => ({ label: x, value: String(k) })) }] }] } });
+  }
+  if (i.type === 3 && id === "aus:cat") {
+    const k = String((i.data?.values || [])[0] || "0");
+    return json({ type: 9, data: { custom_id: "aus:form:" + k, title: "Aviso de ausencia · " + (AUS_CATS[+k] || "Otro"), components: [
+      { type: 1, components: [{ type: 4, custom_id: "desde", label: "¿Desde cuándo?", style: 1, required: true, max_length: 20, placeholder: "hoy, mañana o una fecha: 20/10", value: "hoy" }] },
+      { type: 1, components: [{ type: 4, custom_id: "dias", label: "¿Cuántos días? (vacío si no lo sabe)", style: 1, required: false, max_length: 3, placeholder: "Ej.: 3" }] },
+      { type: 1, components: [{ type: 4, custom_id: "motivo", label: "Explique el motivo", style: 2, required: true, min_length: 3, max_length: 300, placeholder: "Ej.: Me voy de viaje con la familia y no podré conectarme." }] },
+    ] } });
+  }
+  if (i.type === 5 && id.startsWith("aus:form:")) {
+    const e = await empleadoDe(user.id);
+    if (!e) return efimero("Solo el personal con ficha en la web puede avisar de una ausencia aquí.");
+    const v: Record<string, string> = {};
+    for (const row of i.data?.components || []) for (const x of row.components || []) v[x.custom_id] = x.value;
+    const cat = AUS_CATS[+id.split(":")[2]] || "Otro", ahora = Date.now(), hoy = hoyNum();
+    const d = norm(v.desde || "hoy");
+    let st = 0;
+    if (!d || d === "hoy" || d === "ahora") st = ahora;
+    else if (d === "manana") st = medianoche(hoy + 1);
+    else if (d === "pasado manana" || d === "pasado") st = medianoche(hoy + 2);
+    else { const mm = /^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?$/.exec(d); if (mm) { const y = mm[3] ? (+mm[3] < 100 ? 2000 + +mm[3] : +mm[3]) : +madrid(ahora).year; const dn = diaNum(y, +mm[2], +mm[1]); if (dn >= hoy) st = dn === hoy ? ahora : medianoche(dn); } }
+    if (!st) return efimero("No he entendido desde cuándo. Escriba **hoy**, **mañana** o una fecha como **20/10**, y vuelva a pulsar **Avisar una ausencia**.");
+    const nd = String(v.dias || "").trim();
+    if (nd && !/^\d{1,3}$/.test(nd)) return efimero("Los días han de ser un número (por ejemplo 3), o déjelo vacío si no sabe cuándo volverá.");
+    const n = nd ? Math.max(1, Math.min(90, +nd)) : 0;
+    const unit = !n ? "indef" : n % 7 === 0 && n / 7 <= 4 ? "semanas" : "dias", cuantos = unit === "semanas" ? n / 7 : n;
+    const en = n ? st + n * 86400000 : 0;
+    const todas = await registros<Aus>("ausencia:");
+    if (todas.some((a) => a.empId === e.id && !a.cancelled && !a.returned && a.start < (en || Infinity) && (a.end || Infinity) > st)) return efimero("Ya tiene usted una ausencia avisada en esas fechas.");
+    const rec = { id: "a" + ahora.toString(36) + Math.random().toString(36).slice(2, 5), empId: e.id, name: e.name, start: st, end: en, unit, n: cuantos, cat, motivo: limpio(v.motivo, 300).replace(/\s+/g, " "), ts: ahora, returned: false, cancelled: false };
+    await guardar([["ausencia:" + rec.id, rec]]);
+    const largo = unit === "indef" ? "sin fecha de vuelta" : `${cuantos} ${unit === "semanas" ? (cuantos === 1 ? "semana" : "semanas") : (cuantos === 1 ? "día" : "días")}`;
+    enSegundoPlano((async () => {
+      await publicar(c, c.canal_ausencias, { title: "✉️ Ausencia · " + limpio(e.name, 60), color: ORO, description: [`Desde: ${fecha(st)} ${hora(st)}`, `Duración: ${largo}`, `Vuelve: ${en ? fecha(en) + " " + hora(en) : "sin fecha de vuelta"}`, `Motivo: ${cat}`, `Explicación: ${rec.motivo}`, "Avisada desde Discord."].join("\n") });
+      await refrescarPaneles(c);
+    })());
+    return efimero(`✅ Ausencia apuntada en la web: desde el ${fecha(st)}${en ? `, vuelve el ${fecha(en)}` : ", sin fecha de vuelta"}. Cuando regrese, pulse **He vuelto** (o fiche la entrada).`);
+  }
+  if (i.type === 3 && id === "aus:back") {
+    const e = await empleadoDe(user.id);
+    if (!e) return efimero("Solo el personal con ficha en la web usa este botón.");
+    const ahora = Date.now(), todas = (await registros<Aus>("ausencia:")).filter((a) => a.empId === e.id && !a.cancelled && !a.returned && (!a.end || a.end > ahora));
+    if (!todas.length) return efimero("No tiene ninguna ausencia en curso ni avisada.");
+    for (const a of todas) {
+      const fut = a.start > ahora;
+      await guardar([["ausencia:" + a.id, { ...a, ...(fut ? { cancelled: true, cancelledAt: ahora } : { returned: true, returnedAt: ahora }) }]]);
+      enSegundoPlano(publicar(c, c.canal_ausencias, fut ? { title: "Ausencia anulada · " + limpio(e.name, 60), color: ORO, description: `Ya no se ausentará desde el ${fecha(a.start)} ${hora(a.start)}.` } : { title: "🏠 Regreso · " + limpio(e.name, 60), color: 0x3d8b52, description: `Ha vuelto el ${fecha(ahora)} ${hora(ahora)}${a.end && a.end > ahora ? " (antes de lo previsto)" : ""}.` }));
+    }
+    enSegundoPlano(refrescarPaneles(c));
+    return efimero(`¡Bienvenido de vuelta, ${limpio(e.name, 40)}! 🏠`);
+  }
+
+  // ── eventos con inscripción: /evento (Dirección) → anuncio con «Me apunto» ──
+  if (i.type === 2 && i.data?.name === "evento") {
+    if (!esDireccion()) return efimero("Solo la Dirección puede anunciar eventos.");
+    return json({ type: 9, data: { custom_id: "ev:form", title: "Nuevo evento de la casa", components: [
+      { type: 1, components: [{ type: 4, custom_id: "titulo", label: "Título", style: 1, required: true, max_length: 80, placeholder: "Ej.: Tirada al blanco en el campo de Saint Denis" }] },
+      { type: 1, components: [{ type: 4, custom_id: "cuando", label: "¿Cuándo?", style: 1, required: true, max_length: 80, placeholder: "Ej.: Sábado 17 a las 21:00" }] },
+      { type: 1, components: [{ type: 4, custom_id: "lugar", label: "¿Dónde? (opcional)", style: 1, required: false, max_length: 80 }] },
+      { type: 1, components: [{ type: 4, custom_id: "detalles", label: "Detalles (opcional)", style: 2, required: false, max_length: 800 }] },
+    ] } });
+  }
+  if (i.type === 5 && id === "ev:form") {
+    if (!esDireccion()) return efimero("Solo la Dirección puede anunciar eventos.");
+    const v: Record<string, string> = {};
+    for (const row of i.data?.components || []) for (const x of row.components || []) v[x.custom_id] = x.value;
+    const ev = { id: "v" + Date.now().toString(36), titulo: limpio(v.titulo, 80), cuando: limpio(v.cuando, 80), lugar: limpio(v.lugar, 80), detalles: limpio(v.detalles, 800), creador: limpio(i.member?.nick || user.global_name || user.username, 60), inscritos: [] as Array<{ id: string; n: string }> };
+    if (!c.canal_eventos) return efimero("No está dispuesto el canal de eventos.");
+    const m = await api(c, "POST", `/channels/${c.canal_eventos}/messages`, { allowed_mentions: { parse: [] }, ...anuncio(ev) });
+    if (m.st >= 300) return efimero("No he podido publicar el evento ahora. Inténtelo de nuevo.");
+    await sb.from("bot_eventos").insert({ id: ev.id, mensaje_id: m.d?.id, titulo: ev.titulo, cuando: ev.cuando, lugar: ev.lugar, detalles: ev.detalles, creador: ev.creador });
+    return efimero(`✅ Evento anunciado en ${ch("canal_eventos")}. El personal ya puede apuntarse.`);
+  }
+  if (i.type === 3 && (id.startsWith("ev:si:") || id.startsWith("ev:no:"))) {
+    const evId = id.split(":")[2];
+    const { data: f } = await sb.from("bot_eventos").select("*").eq("id", evId).maybeSingle();
+    if (!f) return efimero("Este evento ya no existe.");
+    const yo = { id: user.id, n: limpio(i.member?.nick || user.global_name || user.username, 40) };
+    let L = (Array.isArray(f.inscritos) ? f.inscritos : []) as Array<{ id: string; n: string }>;
+    const esta = L.some((x) => x.id === yo.id);
+    if (id.startsWith("ev:si:")) { if (esta) return efimero("Ya estaba usted apuntado. ✋"); L = [...L, yo]; }
+    else { if (!esta) return efimero("No estaba usted apuntado."); L = L.filter((x) => x.id !== yo.id); }
+    await sb.from("bot_eventos").update({ inscritos: L }).eq("id", evId);
+    return json({ type: 7, data: anuncio({ ...f, inscritos: L }) });
+  }
+
+  // ── sanciones con formulario (Dirección): empleado → falta y sanción → libro y carta ──
+  if (i.type === 3 && id === "san:new") {
+    if (!esDireccion()) return efimero("Solo la Dirección puede anotar sanciones.");
+    const { data } = await sb.from("datos").select("valor").eq("clave", "empleados").maybeSingle();
+    const L = (Array.isArray(data?.valor) ? data!.valor as Array<Record<string, string>> : []).filter((e) => e && e.puesto !== "Jefe").slice(0, 25);
+    if (!L.length) return efimero("No hay empleados a los que sancionar (a los Jefes no se les sanciona desde aquí).");
+    return json({ type: 4, data: { flags: 64, content: "¿A quién se le anota la sanción?", components: [{ type: 1, components: [{ type: 3, custom_id: "san:emp", placeholder: "Elija al empleado…", options: L.map((e) => ({ label: limpio(e.name, 80), description: limpio(e.puesto, 50) || undefined, value: e.id })) }] }] } });
+  }
+  if (i.type === 3 && id === "san:emp") {
+    if (!esDireccion()) return efimero("Solo la Dirección puede anotar sanciones.");
+    const empId = String((i.data?.values || [])[0] || "");
+    return json({ type: 9, data: { custom_id: "san:form:" + empId, title: "Anotar una sanción", components: [
+      { type: 1, components: [{ type: 4, custom_id: "falta", label: "Falta cometida", style: 2, required: true, min_length: 3, max_length: 500, placeholder: "Ej.: Vendió por debajo del precio sin autorización." }] },
+      { type: 1, components: [{ type: 4, custom_id: "sancion", label: "Sanción", style: 1, required: true, min_length: 3, max_length: 120, placeholder: "Ej.: Advertencia, descenso de rango, suspensión de 3 días…" }] },
+    ] } });
+  }
+  if (i.type === 5 && id.startsWith("san:form:")) {
+    if (!esDireccion()) return efimero("Solo la Dirección puede anotar sanciones.");
+    const empId = id.split(":")[2];
+    const { data } = await sb.from("datos").select("valor").eq("clave", "empleados").maybeSingle();
+    const e = (Array.isArray(data?.valor) ? data!.valor as Array<Record<string, string>> : []).find((x) => x && x.id === empId);
+    if (!e) return efimero("Esa persona ya no está en la plantilla.");
+    const v: Record<string, string> = {};
+    for (const row of i.data?.components || []) for (const x of row.components || []) v[x.custom_id] = x.value;
+    const falta = limpio(v.falta, 500), sancion = limpio(v.sancion, 120), quien = limpio(i.member?.nick || user.global_name || user.username, 60), ahora = Date.now();
+    const m = c.canal_sanciones ? await api(c, "POST", `/channels/${c.canal_sanciones}/messages`, { allowed_mentions: { parse: [] }, embeds: [{ title: "⚖ Sanción · " + limpio(e.name, 60), color: 0x8b2e25, fields: [
+      { name: "Fecha", value: `${fecha(ahora)} ${hora(ahora)}`, inline: true }, { name: "Rango", value: limpio(e.puesto, 40) || "—", inline: true }, { name: "Anotada por", value: quien || "Dirección", inline: true },
+      { name: "Falta", value: falta || "—" }, { name: "Sanción", value: sancion || "—" }], footer: PIE }] }) : { st: 0, d: null };
+    await sb.from("bot_sanciones").insert({ emp_id: e.id, nombre: e.name, discord: e.discord || null, falta, sancion, por: quien, mensaje_id: m.d?.id || null });
+    await sb.from("datos").insert({ clave: "log:s" + ahora.toString(16) + e.id, valor: { id: "s" + ahora.toString(16) + e.id, ts: ahora, who: quien || "Dirección", cat: "Personal", lines: [`Sanción desde Discord a ${e.name}: ${sancion} (falta: ${falta.slice(0, 200)})`] }, actualizado: new Date().toISOString() });
+    if (e.discord) enSegundoPlano(carta(c, e.discord, `Por la presente se le comunica que la Dirección le ha impuesto una **sanción**.\n\n**Falta:** ${falta}\n**Sanción:** ${sancion}\n\nConfiamos en que no vuelva a repetirse.`));
+    return efimero(`✅ Sanción anotada en ${ch("canal_sanciones")}${e.discord ? " y comunicada por carta a " + limpio(e.name, 40) : ". No tiene Discord enlazado: no se le ha enviado carta"}.`);
   }
 
   // 1 · el aspirante pide entrar: formulario

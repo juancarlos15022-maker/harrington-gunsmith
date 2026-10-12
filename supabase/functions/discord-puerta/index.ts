@@ -6,8 +6,11 @@
 //   · una despedida, con la foto de perfil, en el canal de despedidas.
 // Seguridades: la primera vez solo apunta a todos (no saluda a nadie); solo saluda a quien entró hace menos de 30 minutos;
 // si la lista llega incompleta, no despide a nadie; como mucho 5 mensajes de cada tipo por revisión.
+// En cada revisión, además: fichas de la plantilla, aviso de tienda abierta/cerrada, panel de fichar y ausencias,
+// lista de precios al día con la web y recordatorios para la dirección (10:00 cada día; domingo 17:00, día de paga).
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { catalogo, fecha as fechaMs, hora, hoyNum, listaPrecios, madrid, ORO, PIE } from "./comun.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 const json = (o: unknown, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { "Content-Type": "application/json" } });
@@ -104,6 +107,103 @@ async function plantilla(c: Record<string, string>, H: Record<string, string>) {
   return { cambios: n };
 }
 
+// ── mensaje fijo que el Señor Harrington mantiene al día (se crea una vez y se edita solo si cambia) ──
+async function fijo(c: Record<string, string>, H: Record<string, string>, canal: string | undefined, clave: string, cuerpo: Record<string, unknown>) {
+  if (!canal) return false;
+  const firma = JSON.stringify(cuerpo);
+  if (c["firma_" + clave] === firma && c[clave]) return false;
+  const api = (m: string, ruta: string, b?: unknown) => fetch("https://discord.com/api/v10" + ruta, { method: m, headers: H, body: b === undefined ? undefined : JSON.stringify(b) });
+  let id = c[clave];
+  if (id) {
+    const r = await api("PATCH", `/channels/${canal}/messages/${id}`, cuerpo);
+    if (r.status === 404) id = "";
+    else if (!r.ok) return false;
+  }
+  if (!id) {
+    const r = await api("POST", `/channels/${canal}/messages`, cuerpo);
+    if (!r.ok) return false;
+    id = (await r.json()).id;
+    await api("PUT", `/channels/${canal}/pins/${id}`);
+    await sb.from("bot_cfg").upsert({ clave, valor: id });
+  }
+  await sb.from("bot_cfg").upsert({ clave: "firma_" + clave, valor: firma });
+  return true;
+}
+type Turno = { name: string; empId: string; start: number };
+type Aus = { id: string; empId: string; name: string; start: number; end: number; returned?: boolean; cancelled?: boolean };
+async function registros<T>(prefijo: string) {
+  const { data } = await sb.from("datos").select("clave,valor").like("clave", prefijo + "%");
+  return ((data ?? []) as Array<{ valor: T & { deleted?: boolean } }>).map((r) => r.valor).filter((v) => v && !v.deleted) as T[];
+}
+// tienda abierta o cerrada (visitas) y panel de fichar y ausencias (personal)
+async function paneles(c: Record<string, string>, H: Record<string, string>) {
+  const turnos = (await registros<Turno>("fichaje:")).filter((t) => t.empId && t.start).sort((a, b) => a.start - b.start);
+  const ahora = Date.now();
+  const ausentes = (await registros<Aus>("ausencia:")).filter((a) => !a.cancelled && !a.returned && a.start <= ahora && (!a.end || a.end > ahora));
+  const abierto = turnos.length > 0;
+  await fijo(c, H, c.canal_estado, "msg_estado", { allowed_mentions: { parse: [] }, components: [], embeds: [{
+    title: abierto ? "🟢 " + gotica("Abierto") : "🔴 " + gotica("Cerrado"), color: abierto ? 0x3d8b52 : 0x8b2e25,
+    description: abierto
+      ? `Las puertas de la Casa Harrington están abiertas. Pase usted.\n\n**Le atienden:** ${turnos.map((t) => limpio(t.name, 40)).join(", ")}\n**Abierto desde las** ${hora(turnos[0].start)}`
+      : "Ahora mismo no hay nadie tras el mostrador.\n\nVuelva más tarde o deje un telegrama: le atenderemos en cuanto abramos.",
+    footer: { text: "Se pone al día solo con los fichajes · Señor Harrington" } }] });
+  await fijo(c, H, c.canal_fichar, "msg_fichar", { allowed_mentions: { parse: [] }, embeds: [{
+    title: "🕰 " + gotica("Fichar y Ausencias"), color: ORO,
+    description: "**Al empezar a trabajar**, pulse **Entro de turno**. **Al terminar**, pulse **Salgo de turno**. Es lo mismo que fichar en la web.\n\n" +
+      "**¿No podrá venir unos días?** Pulse **Avisar una ausencia** y rellene la ficha. Cuando regrese, pulse **He vuelto**.",
+    fields: [
+      { name: "🛠 En el taller ahora", value: turnos.length ? turnos.map((t) => `${limpio(t.name, 40)} · desde las ${hora(t.start)}`).join("\n") : "Nadie", inline: true },
+      { name: "✉️ Ausentes", value: ausentes.length ? ausentes.map((a) => `${limpio(a.name, 40)} · ${a.end ? "hasta el " + fechaMs(a.end) : "sin fecha de vuelta"}`).join("\n") : "Nadie", inline: true },
+    ], footer: PIE }],
+    components: [{ type: 1, components: [
+      { type: 2, style: 3, label: "Entro de turno", emoji: { name: "🟢" }, custom_id: "fch:in" },
+      { type: 2, style: 2, label: "Salgo de turno", emoji: { name: "🔴" }, custom_id: "fch:out" },
+      { type: 2, style: 1, label: "Avisar una ausencia", emoji: { name: "✉️" }, custom_id: "aus:new" },
+      { type: 2, style: 2, label: "He vuelto", emoji: { name: "🏠" }, custom_id: "aus:back" },
+    ] }] });
+  return { abierto, turnos: turnos.length, ausentes: ausentes.length };
+}
+// lista de precios: se reescribe sola en cuanto cambia un precio o un producto en la web
+async function precios(c: Record<string, string>, H: Record<string, string>) {
+  return await fijo(c, H, c.canal_precios, "msg_precios", listaPrecios(await catalogo(sb)) as unknown as Record<string, unknown>);
+}
+// recordatorios para la dirección (en el despacho): cada día a las 10:00 y el domingo a las 17:00 (hora de Madrid)
+async function recordatorios(c: Record<string, string>, H: Record<string, string>) {
+  const m = madrid(Date.now()), hoy = hoyNum(), clave = `${m.year}-${m.month}-${m.day}`;
+  const marcar = async (k: string) => { const { data } = await sb.from("bot_hechos").insert({ clave: k }).select("clave"); return !!data?.length; };
+  const post = (embed: Record<string, unknown>) => fetch(`https://discord.com/api/v10/channels/${c.canal_despacho}/messages`, { method: "POST", headers: H, body: JSON.stringify({ allowed_mentions: { parse: [] }, embeds: [{ color: ORO, footer: PIE, ...embed }] }) });
+  if (!c.canal_despacho) return null;
+  const { data: fe } = await sb.from("datos").select("valor").eq("clave", "empleados").maybeSingle();
+  const emps = (Array.isArray(fe?.valor) ? fe!.valor : []) as Array<Record<string, string | number | boolean>>;
+  const isoDe = (d: number) => new Date(d * 86400000).toISOString().slice(0, 10);
+  if (+m.hour === 10 && await marcar("diario-" + clave)) {
+    const L: string[] = [];
+    for (const e of emps) {
+      if (e.puesto === "Jefe" || e.fijo || e.sinPrueba || !e.prueba) continue;
+      if (e.prueba === isoDe(hoy)) L.push(`📜 El periodo de prueba de **${limpio(e.name, 40)}** termina **hoy**.`);
+      else if (e.prueba === isoDe(hoy + 1)) L.push(`📜 El periodo de prueba de **${limpio(e.name, 40)}** termina **mañana**.`);
+    }
+    const { data: mn } = await sb.from("datos").select("valor").eq("clave", "stockmin").maybeSingle();
+    const minimos = (mn?.valor && typeof mn.valor === "object") ? mn.valor as Record<string, number> : {};
+    if (Object.keys(minimos).length) {
+      const { data: st } = await sb.from("stock").select("producto,cantidad");
+      const S = Object.fromEntries(((st ?? []) as Array<{ producto: string; cantidad: number }>).map((r) => [r.producto, r.cantidad]));
+      for (const [k, min] of Object.entries(minimos)) if (Number(min) > 0 && Number(S[k] ?? 0) < Number(min)) L.push(`📦 Quedan **${S[k] ?? 0}** de **${k.replace(/^mat:/, "")}** (el mínimo es ${min}).`);
+    }
+    const aus = await registros<Aus>("ausencia:");
+    for (const a of aus) if (!a.cancelled && !a.returned && a.end && hoyNum(a.end) === hoy) L.push(`🏠 **${limpio(a.name, 40)}** debería volver hoy de su ausencia.`);
+    if (L.length) await post({ title: "🔔 " + gotica("Recordatorios de Hoy"), description: "Buenos días. Esto es lo que conviene tener presente hoy:\n\n" + L.join("\n") });
+  }
+  if (m.weekday?.startsWith("dom") && +m.hour === 17 && await marcar("paga-" + clave)) {
+    const lunes = hoy - 6;
+    const { data: pagos } = await sb.from("datos").select("clave").like("clave", `sueldo-${lunes}-%`);
+    const pagados = new Set(((pagos ?? []) as Array<{ clave: string }>).map((r) => r.clave.split("-").slice(2).join("-")));
+    const L = emps.filter((e) => Number(e.sueldo) > 0).map((e) => `${pagados.has(String(e.id)) ? "✅" : "⏳"} ${limpio(e.name, 40)} · ${dolar(e.sueldo)}`);
+    await post({ title: "💵 " + gotica("Domingo de Paga"), description: "Es domingo: toca pagar los sueldos de la semana en la web (**Dirección → SUELDOS**).\n\n" + (L.join("\n") || "No hay sueldos que pagar.") + "\n\n✅ ya pagado · ⏳ pendiente" });
+  }
+  return true;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "solo POST" }, 405);
   let b: Record<string, unknown> = {};
@@ -117,6 +217,11 @@ Deno.serve(async (req: Request) => {
   let pl: unknown = null;
   try { pl = await plantilla(c, H); } catch (e) { pl = { error: String(e).slice(0, 120) }; }
   if (b.solo === "plantilla") return json({ ok: true, plantilla: pl });
+  let pa: unknown = null;
+  try { pa = await paneles(c, H); } catch (e) { pa = { error: String(e).slice(0, 120) }; }
+  if (b.solo === "paneles") return json({ ok: true, paneles: pa });
+  try { await precios(c, H); } catch { /* */ }
+  try { await recordatorios(c, H); } catch { /* */ }
 
   // 1 · lista completa de miembros (de 1000 en 1000)
   const todos: Miembro[] = [];
