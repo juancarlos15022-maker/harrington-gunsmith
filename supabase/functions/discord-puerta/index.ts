@@ -37,7 +37,8 @@ const ASC: Record<string, string> = { "Aprendiz de armero": "Armero", "Armero": 
 const COLOR: Record<string, number> = { "Jefe": 0x8b2e25, "Gerente": 0x3498db, "Armero experto": 0xa85d00, "Armero": 0xa86400, "Aprendiz de armero": 0xf1c40f };
 const dolar = (c: unknown) => "$" + (Number(c || 0) / 100).toFixed(2);
 const fecha = (iso: unknown) => /^\d{4}-\d{2}-\d{2}$/.test(String(iso || "")) ? String(iso).split("-").reverse().join("/") : "—";
-function ficha(e: Emp) {
+const EMO: Record<string, string> = { venta1: "🪙", venta50: "💰", venta100: "🏆", horas10: "⏱", horas50: "🕰", horas100: "⚙️", mes1: "📜", mes3: "🎖", anio1: "👑", ascenso: "⬆️", examen: "📚" };
+function ficha(e: Emp, med: string[] = [], form?: { nota: number; aprobado: boolean }) {
   const jefe = e.puesto === "Jefe", sig = ASC[e.puesto || ""];
   const contrato = jefe ? "Dueño de la casa" : e.fijo ? "Fijo" : e.sinPrueba ? "Sin periodo de prueba (ascendido)" : e.prueba ? `En prueba hasta el ${fecha(e.prueba)}` : "—";
   const botones = [];
@@ -55,6 +56,8 @@ function ficha(e: Emp) {
         { name: "Sueldo", value: Number(e.sueldo) > 0 ? dolar(e.sueldo) + " a la semana" : "—", inline: true },
         { name: "En la casa desde", value: fecha(e.inicio), inline: true },
         { name: "Contrato", value: contrato, inline: true },
+        { name: "Medallas", value: med.length ? med.map((k) => EMO[k] || (k.startsWith("mes-") ? "🏅" : "🎖")).join(" ") : "—", inline: true },
+        { name: "Examen de la casa", value: form ? (form.aprobado ? `✅ aprobado (${form.nota}/10)` : `❌ ${form.nota}/10, sin aprobar`) : "Sin hacer", inline: true },
       ],
       footer: { text: jefe ? "Al Jefe no se le asciende ni se le despide desde aquí" : !sig ? "Gerente: el rango más alto del personal" : "Señor Harrington · Plantilla de la casa" },
     }],
@@ -79,10 +82,15 @@ async function plantilla(c: Record<string, string>, H: Record<string, string>) {
   const { data: fila } = await sb.from("datos").select("valor").eq("clave", "empleados").maybeSingle();
   const emps = (Array.isArray(fila?.valor) ? fila!.valor : []) as Emp[];
   const { data: hechas } = await sb.from("bot_fichas").select("emp_id,mensaje_id,firma,creada");
+  const { data: Md } = await sb.from("bot_medallas").select("emp_id,medalla").order("fecha");
+  const { data: Fo } = await sb.from("bot_formacion").select("emp_id,nota,aprobado");
+  const MED: Record<string, string[]> = {};
+  for (const x of (Md ?? []) as Array<{ emp_id: string; medalla: string }>) (MED[x.emp_id] ||= []).push(x.medalla);
+  const FOR = Object.fromEntries(((Fo ?? []) as Array<{ emp_id: string; nota: number; aprobado: boolean }>).filter((x) => x.emp_id).map((x) => [x.emp_id, x]));
   const F = new Map(((hechas ?? []) as Array<{ emp_id: string; mensaje_id: string | null; firma: string; creada: string }>).map((r) => [r.emp_id, r]));
   let n = 0;
   for (const e of emps.filter((x) => x && x.id && x.name)) {
-    const cuerpo = ficha(e), firma = JSON.stringify(cuerpo);
+    const cuerpo = ficha(e, MED[e.id] || [], FOR[e.id]), firma = JSON.stringify(cuerpo);
     const f = F.get(e.id);
     if (f && f.firma === firma && f.mensaje_id) continue;
     if (f && !f.mensaje_id && Date.now() - Date.parse(f.creada) < 120000) continue; // otra revisión la está creando

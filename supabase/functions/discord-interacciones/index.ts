@@ -12,6 +12,8 @@
 //   6. Canal de plantilla (dirección): cada ficha tiene Ascender y Despedir, con confirmación; cambian la web, el rol y avisan por carta.
 //   7. /precio y /stock (con autocompletado); fichar y ausencias con botones (mismos registros que la web);
 //      /evento con «Me apunto»; sanciones con formulario y carta. Las piezas comunes están en comun.ts.
+//   8. La segunda tanda (/encargos, /cliente, /caja, /telegrama, /mis-horas, /reunion, /votacion, /duelo, /tiradores,
+//      /cumpleanos, /examen, buzón, libro de visitas) se reenvía a discord-extra tras comprobar la firma.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { catalogo, diaNum, duracion, fecha, hora, hoyNum, madrid, medianoche, ORO } from "./comun.ts";
@@ -97,6 +99,7 @@ async function carta(c: Record<string, string>, uid: string, texto: string) {
 // las fichas del canal de plantilla se ponen al día al momento (si no, la revisión de cada medio minuto lo hace)
 const refrescarPlantilla = (c: Record<string, string>) => fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/discord-puerta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ secreto: c.secreto, solo: "plantilla" }) }).catch(() => null);
 const norm = (s: string) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+const EXTRA_ORDENES = ["encargos", "cliente", "caja", "telegrama", "mis-horas", "reunion", "votacion", "duelo", "tiradores", "cumpleanos", "examen"];
 const AUS_CATS = ["Viaje", "Trabajo", "Estudios", "Salud", "Asuntos personales", "Otro"];
 type Aus = { id: string; empId: string; name: string; start: number; end: number; returned?: boolean; cancelled?: boolean };
 // empleado de la web enlazado con este usuario de Discord
@@ -163,6 +166,14 @@ Deno.serve(async (req: Request) => {
   const id = String(i.data?.custom_id || "");
   const ch = (k: string) => c[k] ? `<#${c[k]}>` : "el canal siguiente";
   const esDireccion = () => [c.rol_jefe, c.rol_gerente].filter(Boolean).some((r) => roles.includes(r));
+  // segunda tanda de órdenes y botones: las atiende discord-extra (la firma de Discord ya está comprobada aquí)
+  if (((i.type === 2 || i.type === 4) && EXTRA_ORDENES.includes(String(i.data?.name || ""))) || ((i.type === 3 || i.type === 5) && /^(reu|vot|duel|exa|buz|vis):/.test(id))) {
+    try {
+      const r = await fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/discord-extra", { method: "POST", headers: { "Content-Type": "application/json", "x-hg-secreto": c.secreto }, body: cuerpo });
+      if (r.ok) return new Response(await r.text(), { status: 200, headers: { "Content-Type": "application/json" } });
+    } catch { /* */ }
+    return efimero("Disculpe usted: no he podido atenderle en este momento. Inténtelo de nuevo dentro de un instante.");
+  }
 
   // 0 · recorrido de entrada: aceptar normas y elegir acceso (cada botón exige el paso anterior)
   if (i.type === 3 && id.startsWith("onb:")) {
