@@ -31,11 +31,11 @@ self.addEventListener('fetch', e => {
   /* la nube (Supabase) y Discord siempre van por internet, nunca se guardan */
   if (url.origin !== self.location.origin && !fonts) return;
 
-  /* la página: primero internet (para tener siempre la última versión); sin conexión, la guardada */
+  /* la página: primero internet (para tener siempre la última versión); si internet tarda más de 1,5 s o no hay, la guardada (y se pone al día sola después) */
   if (req.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('.html')) {
     e.respondWith(new Promise(resolve => {
       let done = false;
-      const t = setTimeout(() => { caches.match(req, { ignoreSearch: true }).then(r => { if (r && !done) { done = true; resolve(r); } }); }, 3500);
+      const t = setTimeout(() => { caches.match(req, { ignoreSearch: true }).then(r => { if (r && !done) { done = true; resolve(r); } }); }, 1500);
       fromNet(req).then(r => { if (!done) { done = true; clearTimeout(t); resolve(r); } })
         .catch(() => caches.match(req, { ignoreSearch: true }).then(r => { if (!done) { done = true; clearTimeout(t); resolve(r || Response.error()); } }));
     }));

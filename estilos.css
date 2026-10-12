@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261012i
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261012k
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1762,9 +1762,6 @@ html.lite .ev-plate.soon{animation:none}
 .g-cli b{font-family:'Cinzel Decorative',Georgia,serif;font-size:24px;letter-spacing:.08em}
 .g-cli span{font:italic 14px/1.35 'IM Fell English',Georgia,serif;color:#cfe0cf;text-align:center}
 
-.upd-bar{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:9000;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;width:min(560px,calc(100% - 20px));padding:10px 14px;border:2px solid var(--gold);border-radius:10px;background:linear-gradient(#2a1c0d,#0d1c14);color:#f3e2b0;box-shadow:0 8px 26px #000c;font-size:15px}
-.upd-bar b{color:var(--gold2)}
-.upd-bar button{min-height:40px;padding:8px 16px;border-radius:6px;border:1px solid #b88931;background:linear-gradient(#80601f,#3a2a0c);color:#fff0b6;font-weight:bold;cursor:pointer;font-family:inherit;letter-spacing:.06em}
 
 /* ===== V2 · Pantallas táctiles (móvil y tableta): botones cómodos para el dedo ===== */
 @media(pointer:coarse){
