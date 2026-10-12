@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261012r
+/* HARRINGTON GUNSMITH · app.js · versión 20261012s
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== V2 · La sesión no se cierra al salir de la aplicación =====
    Se guarda en el dispositivo y se recupera al volver, aunque el móvil haya cerrado la aplicación por detrás para ahorrar memoria.
@@ -6475,7 +6475,7 @@ dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir^="fbp:
 
 /* ===== Historial de parches (Dirección → AJUSTES → HISTORIAL DE PARCHES). El más nuevo, el último de la lista ===== */
 /* Versión abierta ahora (la 1.0 está cerrada con «Final versión 1.0») */
-const PH_ABIERTA={v:'2.0',f:'12/10/2026'};
+const PH_ABIERTA={v:'3.0',f:'12/10/2026'};
 const PARCHES=[
  {f:'09/10/2026',t:'Versión inicial de la web',i:['Calculadora de ventas, presupuestos y encargos con ticket, convenios, ofertas y precios especiales','Fichajes, empleados, sueldos, ausencias y registros horarios','Stock de productos, almacén de materiales, proveedores y pedidos','Avisos a Discord por canales, nube compartida entre dispositivos y tutorial']},
  {f:'09/10/2026',t:'Imágenes ligeras',i:['Cabecera ancha para el ordenador','Las 38 imágenes comprimidas (de 94 MB a 10 MB) con los mismos nombres']},
@@ -6526,7 +6526,8 @@ const PARCHES=[
  {f:'12/10/2026',t:'Consulta sin conexión',v:'2.0',i:['Sin internet, la web y la aplicación se abren igual en modo consulta: catálogo, stock, materiales, encargos y pedidos','Vender, guardar encargos, fichar, fabricar, recibir pedidos y recuentos esperan a que vuelva la conexión, para no duplicar nada','Franja «Sin conexión · solo consulta» y el botón de finalizar lo indica']},
  {f:'12/10/2026',t:'Modo mostrador',v:'2.0',i:['Botón ▦ MOSTRADOR (tableta y ordenador): venta rápida a pantalla completa con fichas grandes por categorías y buscador','Pedido, cliente y total a la derecha (abajo en vertical), con − y +, y FINALIZAR VENTA de siempre','La pantalla no se apaga mientras el mostrador está abierto']},
  {f:'12/10/2026',t:'Avisos en el móvil',v:'2.0',i:['Avisos aunque la aplicación esté cerrada: encargo nuevo y encargo listo para entregar (a todos); material bajo mínimo y revisión del NPC sin hacer (a los jefes)','Se activan en tu ficha con 🔔 ACTIVAR AVISOS, con aviso de prueba','Función «avisos» en Supabase con sus claves en una tabla protegida']},
- {f:'12/10/2026',t:'Cuenta segura de cada empleado',v:'2.0',i:['Al entrar con la tarjeta, cada empleado recibe su propia cuenta en la base de datos (función «cuentas» de Supabase, que vuelve a comprobar la contraseña)','La sesión viaja en cada petición y en el aviso instantáneo, y se renueva sola cada hora','Se borra al cerrar sesión o si entra otra persona en el dispositivo','Dirección → COPIAS DE SEGURIDAD: quién tiene ya su cuenta segura','Base de datos cerrada: sin cuenta segura solo se ve la puerta; la tarjeta y la contraseña se comprueban en el servidor, también al crearla o al recuperar la de jefe','Las ventas, el stock, el contador y las copias comprueban la cuenta en la propia base de datos; restaurar una copia, solo un jefe','Un empleado que ya no está en la plantilla pierde el acceso al momento']}
+ {f:'12/10/2026',t:'Cuenta segura de cada empleado',v:'2.0',i:['Al entrar con la tarjeta, cada empleado recibe su propia cuenta en la base de datos (función «cuentas» de Supabase, que vuelve a comprobar la contraseña)','La sesión viaja en cada petición y en el aviso instantáneo, y se renueva sola cada hora','Se borra al cerrar sesión o si entra otra persona en el dispositivo','Dirección → COPIAS DE SEGURIDAD: quién tiene ya su cuenta segura','Base de datos cerrada: sin cuenta segura solo se ve la puerta; la tarjeta y la contraseña se comprueban en el servidor, también al crearla o al recuperar la de jefe','Las ventas, el stock, el contador y las copias comprueban la cuenta en la propia base de datos; restaurar una copia, solo un jefe','Un empleado que ya no está en la plantilla pierde el acceso al momento']},
+ {f:'12/10/2026',t:'Final versión 2.0',v:'2.0',fin:true,i:['Aplicación instalable en ordenador, tableta y móvil (botón DESCARGAR APLICACIÓN), con atajos en el icono y sesión que no se cierra al salir','Se actualiza sola con cada parche, sin pulsar nada','Copias de seguridad diarias en la base de datos (las 7 últimas), consulta sin conexión, modo mostrador para la tableta y avisos en el móvil','Cuenta segura de cada empleado y base de datos cerrada: sin cuenta solo se ve la puerta','Revisión final en 5 tamaños (móvil, tableta vertical y horizontal, portátil y ordenador): sin desbordes ni errores','Arreglos visuales: las tarjetas de la entrada ya no se desplazan en móviles estrechos (360 px) y la barra de abajo del móvil muestra los nombres completos','Base de datos: funciones con ruta de búsqueda fija (aviso de seguridad de Supabase resuelto)','Más rápida: la segunda apertura carga en torno a 1 segundo incluso en un móvil lento']}
 ];
 let phQ='';
 /* Versiones: cada parche lleva su versión (v); los que no la llevan son de la 1.0 */
@@ -7043,7 +7044,7 @@ async function cuentasLoad(){
  if(!dirModal.hidden&&dirMod==='copia'&&!document.activeElement.matches('input'))renderDir();
 }
 function cuentasHTML(){
- const head='<div class="dir-sec-title">CUENTAS SEGURAS EN LA BASE DE DATOS</div><p class="bk-note">Al entrar con su tarjeta, cada empleado recibe su propia cuenta en la base de datos. Cuando hayáis entrado todos al menos una vez, la base de datos se podrá cerrar para que nadie sin cuenta pueda leer ni tocar nada.</p>';
+ const head='<div class="dir-sec-title">CUENTAS SEGURAS EN LA BASE DE DATOS</div><p class="bk-note">Al entrar con su tarjeta, cada empleado recibe su propia cuenta en la base de datos.'+(ACC.cerrado?' <b>🔒 La base de datos está cerrada</b>: sin cuenta segura solo se ve la puerta (las tarjetas); nadie sin cuenta puede leer ni tocar los datos.':' La base de datos todavía está abierta.')+'</p>';
  const here=authFresh()||(AUTH&&ME&&AUTH.emp===ME.id)?'<div class="enc-note">✓ Este dispositivo ya habla con la base de datos con tu cuenta segura.</div>':'<div class="enc-note warnote">Este dispositivo todavía no tiene tu cuenta segura: cierra sesión y vuelve a entrar con tu tarjeta.</div>';
  if(SANDBOX)return head+'<div class="enc-empty">En el modo prueba no se usan cuentas.</div>';
  if(CU.list===null){cuentasLoad();return head+here+'<div class="enc-empty">Cargando…</div>'}

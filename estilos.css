@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261012r
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261012s
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1450,9 +1450,9 @@ body.theme-day .hero-banner img{filter:brightness(1.06) saturate(1.04)}
 /* Barra fija abajo (móvil) */
 .mnav{display:none}
 @media(max-width:900px){
- .mnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:41;padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));gap:2px;background:linear-gradient(rgba(8,16,11,.55),rgba(4,10,7,.82)),url(textura-madera.webp) 0 0/360px,#07120e;border-top:2px solid #b88931;box-shadow:0 -6px 16px #000a}
+ .mnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:41;padding:4px 3px calc(4px + env(safe-area-inset-bottom,0px));gap:0;background:linear-gradient(rgba(8,16,11,.55),rgba(4,10,7,.82)),url(textura-madera.webp) 0 0/360px,#07120e;border-top:2px solid #b88931;box-shadow:0 -6px 16px #000a}
  .mnav[hidden]{display:none}
- .mnav button{flex:1 1 0;min-width:0;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 2px;border:0;border-radius:6px;background:none;color:#e9d9ad;font-family:var(--f-sc);font-size:10.5px;letter-spacing:.04em;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent}
+ .mnav button{flex:1 1 auto;min-width:0;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 1px;border:0;border-radius:6px;background:none;color:#e9d9ad;font-family:var(--f-sc);font-size:10.5px;letter-spacing:.04em;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent}
  .mnav button[hidden]{display:none}
  .mnav button:active{background:#ffffff14}
  .mnav .bi{width:22px;height:22px;stroke:#f0d278;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;margin:0}
@@ -1468,6 +1468,7 @@ body.theme-day .hero-banner img{filter:brightness(1.06) saturate(1.04)}
  body.has-mnav .toast{bottom:78px}
  body.has-mnav.has-bar .toast{bottom:156px}
 }
+@media(max-width:379px){.mnav button{padding:4px 0}.mnav .mn-l{letter-spacing:.02em}}
 .kb-help{display:none}
 @media(hover:hover) and (pointer:fine){.kb-help{display:block}}
 .kb-help kbd,.tut kbd{display:inline-block;min-width:1.5em;padding:0 5px;border:1px solid #8b6a2e;border-bottom-width:2px;border-radius:4px;background:#0a1712;color:#f0d278;font:12px/1.5 Georgia,serif;text-align:center}
