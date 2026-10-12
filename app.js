@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261012o
+/* HARRINGTON GUNSMITH · app.js · versión 20261012p
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== V2 · La sesión no se cierra al salir de la aplicación =====
    Se guarda en el dispositivo y se recupera al volver, aunque el móvil haya cerrado la aplicación por detrás para ahorrar memoria.
@@ -897,7 +897,7 @@ function saveEncargoFromSale(sl){
   employee:sl.employee||'',note:sl.note||'',promise:sl.promise||'',totalCents:sl.totalCents,depositCents:sl.paidCents,pendingCents:sl.pendingCents,discounts:sl.discounts||[],disc:sl.discInfo||null};
  const cur=encargos.find(e=>e.id===sl.id);
  if(cur)Object.assign(cur,data);
- else encargos.push(Object.assign(data,{fab:'PENDIENTE',avisado:false,finished:false,ts:Date.now()}));
+ else{encargos.push(Object.assign(data,{fab:'PENDIENTE',avisado:false,finished:false,ts:Date.now()}));try{pushSend('encargo-nuevo','Nuevo encargo · '+sl.client,data.items.map(x=>x.qty+' × '+x.name).join(', ')+' · anticipo '+money(sl.paidCents||0),'todos',sl.id)}catch(x){}}
  saveEncs();updateEncBtn();
 }
 const TYPE_NAMES={particular:'Cliente particular',empresa:'Empresa',sheriff:'Departamento del Sheriff'};
@@ -970,6 +970,7 @@ async function saveEncDraft(){
  }
  /* mientras se fabricaba pudo llegar la copia de la nube: se aplica sobre la actual */
  {const cur=encargos.find(x=>x.id===e.id);if(cur&&cur!==e){if(fsSet!==undefined)cur.fabStock=fsSet;e=cur}}
+ if(encDraft.fab==='FABRICADO'&&e.fab!=='FABRICADO')try{pushSend('encargo-listo','Encargo listo para entregar · '+e.client,(e.items||[]).map(x=>x.qty+' × '+x.name).join(', ')+' · avisa al cliente (telegrama '+(e.telegram||'—')+')','todos',e.id)}catch(x){}
  e.fab=encDraft.fab;e.avisado=encDraft.fab==='FABRICADO'&&encDraft.avisado; /* coherencia: pendiente nunca puede estar avisado */
  saveEncs();encDraft=null;encView=null;renderEnc();say(e.fab==='FABRICADO'&&e.fabStock?'Encargo fabricado: unidades sumadas al stock':'Cambios guardados');
  }finally{encSaving=false}
@@ -4463,6 +4464,7 @@ const TUTORIAL=[
 <ul><li>Precios, productos, convenios y ofertas.</li><li>Empleados (contrataciones, puesto, sueldo, horas, expulsiones, turnos cerrados a mano y ausencias borradas).</li><li>Fichas de clientes y de proveedores (qué dato cambió y, en los precios, de cuánto a cuánto).</li><li>Stock sumado o fabricado, recetas y mínimos.</li><li>Gastos y sueldos pagados o borrados, ventas anuladas, encargos cancelados y pedidos emitidos, recibidos, pagados o cancelados.</li><li>Discord, contraseña de jefe, objetivo semanal y reseteos.</li></ul>
 <p>Arriba puedes filtrar por tipo (Catálogo, Personal, Clientes…) o buscar una persona, un producto o un cliente. Las ventas normales y los fichajes no salen aquí: están en sus registros.</p>`],
 ['Copias de seguridad en la nube <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → AJUSTES → COPIAS DE SEGURIDAD</b>.</p><ul><li>Cada día a las <b>5:00</b> se guarda en la base de datos una copia de todo: ventas, encargos, gastos, pedidos, fichajes, stock, materiales y configuración. Si ese día no se pudo hacer, la hace la web la primera vez que alguien la abra.</li><li>Se guardan siempre <b>las 7 últimas</b>: al hacer la del día 8 se borra la más antigua. Nada se guarda en los teléfonos.</li><li><b>⬇ DESCARGAR</b>: baja esa copia como archivo.</li><li><b>↺ RESTAURAR</b>: todo vuelve a como estaba ese día, en todos los dispositivos (pide escribir RESTAURAR). Antes se guarda una copia «antes de restaurar» por si acaso. Las contraseñas, la auditoría y el número de las ventas no retroceden.</li><li>Debajo sigue la copia en este dispositivo de siempre.</li></ul>`],
+['Avisos en el móvil',`<p>Te llegan avisos al móvil o al ordenador <b>aunque la aplicación esté cerrada</b>.</p><ul><li>Actívalos en tu ficha (toca tu nombre arriba) → <b>🔔 ACTIVAR AVISOS</b> y acepta el permiso. Con <b>ENVIAR AVISO DE PRUEBA</b> compruebas que llegan.</li><li>A todos: <b>encargo nuevo</b> y <b>encargo listo para entregar</b>. A los jefes, además: <b>material bajo mínimo</b> y <b>revisión del NPC sin hacer</b> al salir del turno.</li><li>No te llegan tus propios avisos (lo que haces tú en ese dispositivo).</li><li>Tocando el aviso se abre la aplicación.</li><li><b>iPhone y iPad</b>: solo funcionan con la aplicación <b>instalada</b> (Safari → Compartir → Añadir a pantalla de inicio) y activándolos desde ella.</li><li>Se desactivan con <b>🔕 DESACTIVAR AVISOS</b>.</li></ul>`],
 ['Modo mostrador (tableta)',`<p>Para dejar la tableta fija en la tienda: botón <b>▦ MOSTRADOR</b> arriba (en tableta y ordenador). Se abre a pantalla completa y la pantalla no se apaga mientras está abierto.</p><ul><li>A la izquierda, los productos en <b>fichas grandes</b>, por categorías y con buscador (busca en todo el catálogo). Toca una ficha para añadir una unidad; el número dorado es lo que llevas. Lo agotado sale apagado.</li><li>A la derecha (abajo en la tableta en vertical): <b>cliente</b>, el pedido con <b>−</b> y <b>+</b>, y el <b>total</b>.</li><li><b>FINALIZAR VENTA</b> hace la venta de siempre: mismos precios, convenios, stock, reservas, ticket y Discord. El botón te dice qué falta.</li><li><b>SALIR DEL MOSTRADOR</b> vuelve a la web normal; el pedido sigue ahí.</li></ul>`],
 ['Sin conexión',`<p>Si se va internet, arriba sale la franja roja <b>«Sin conexión · solo consulta»</b>.</p><ul><li>Puedes <b>consultar</b> todo lo que ya tenías: catálogo y precios, stock, materiales, encargos y pedidos.</li><li><b>No</b> se puede vender, guardar encargos, fichar, fabricar, recibir pedidos ni hacer recuentos: así nunca se duplica nada ni se descuadra el stock. El botón de abajo lo dice: «Sin conexión · solo consulta».</li><li>En cuanto vuelve la conexión, la franja desaparece sola y todo funciona como siempre.</li></ul>`],
 ['Datos y dispositivos',`<p>Todos los datos están en la <b>nube</b> y se comparten entre los móviles en pocos segundos:</p>
@@ -4994,6 +4996,7 @@ function lowMats(){return matNames().filter(n=>{const m=stockMin[matKey(n)]||0;r
 /* --- Discord: un mensaje de stock y otro de materiales que se editan en tiempo real --- */
 let invTimers={}, invLast={};
 function invChanged(items,why){
+ try{items.forEach(x=>{if(!isMat(x.producto)||!(x.delta<0))return;const mn=stockMin[x.producto]||0, now=stockMap[x.producto]||0;if(mn>0&&now<=mn&&now-x.delta>mn)pushSend('material-bajo','Material bajo mínimo · '+x.producto.slice(4),'Quedan '+now+' (mínimo '+mn+'). Toca para ver el almacén.','jefes',x.producto)})}catch(e){}
  const fmt=x=>(x.delta>0?'+':'−')+Math.abs(x.delta)+' '+(isMat(x.producto)?x.producto.slice(4):x.producto);
  const P=items.filter(x=>!isMat(x.producto)&&x.delta), M=items.filter(x=>isMat(x.producto)&&x.delta);
  if(P.length){invLast.stock=P.slice(0,4).map(fmt).join(', ')+(P.length>4?'…':'')+(why?' · '+why:'');invSchedule('stock')}
@@ -5295,7 +5298,7 @@ const ICO_USER='<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle c
 function meEmp(){return ME&&ME.id?empleados.find(e=>e.id===ME.id)||null:null}
 function isJefe(e){return !!e&&e.puesto==='Jefe'}
 function hasJefes(){return empleados.some(isJefe)}
-function setMe(e){ME=e?{id:e.id,at:Date.now()}:null;try{if(ME)sessionStorage.setItem('harrington_me_v1',JSON.stringify(ME));else sessionStorage.removeItem('harrington_me_v1')}catch(x){}sesSave();applyMe();presencePing(true)}
+function setMe(e){ME=e?{id:e.id,at:Date.now()}:null;try{if(ME)sessionStorage.setItem('harrington_me_v1',JSON.stringify(ME));else sessionStorage.removeItem('harrington_me_v1')}catch(x){}sesSave();applyMe();presencePing(true);try{pushRefresh()}catch(x){}}
 function sesSave(){try{if(SANDBOX||!ME||!ME.id||ME.id==='prueba'){localStorage.removeItem(SES_KEY);return}const e=empleados.find(x=>x.id===ME.id);localStorage.setItem(SES_KEY,JSON.stringify({me:ME,boss:!!bossActive,jefe:!!(e&&e.puesto==='Jefe'),tab:typeof DEV_ID==='string'?DEV_ID:'',seen:Date.now()}))}catch(x){}}
 document.addEventListener('visibilitychange',()=>{try{if(ME)sesSave()}catch(x){}});
 window.addEventListener('pagehide',()=>{try{if(ME)sesSave()}catch(x){}});
@@ -5901,6 +5904,7 @@ function renderMi(){
   ${miWeekHTML(e)}
   <div class="enc-actions"><button type="button" class="primary" id="miFoto">📷 ${ph?'CAMBIAR MI FOTO':'SUBIR MI FOTO'}</button>${ph?'<button type="button" class="warn" id="miNoFoto">QUITAR MI FOTO</button>':''}</div>
   <p class="bk-note" style="margin:4px 0 0">Sale en tu tarjeta de la entrada en tono sepia, como un retrato antiguo. Por ejemplo, una captura de tu personaje.</p>
+  ${pushMiHTML()}
   <div class="enc-actions" style="margin-top:12px"><button type="button" class="warn" id="miLogout">⏻ CERRAR SESIÓN</button></div>
   <p class="bk-note" style="margin:4px 0 0">Tu sesión se queda abierta aunque salgas de la aplicación. Ciérrala aquí cuando acabes, para que nadie use la web a tu nombre (se cierra sola tras 3 horas sin usarla).</p>`;
  document.getElementById('miFoto').onclick=()=>empPickFoto(e.id);
@@ -6392,7 +6396,8 @@ const PARCHES=[
  {f:'12/10/2026',t:'Sesión abierta y atajos del icono',v:'2.0',i:['La sesión no se cierra al salir de la aplicación, aunque el móvil la cierre por detrás: se cierra con ⏻ CERRAR SESIÓN (en tu ficha), al fichar la salida si lo eliges o tras 3 horas sin usarla','El Modo Jefe solo se recupera si eres jefe o si fue hace menos de 5 minutos','Atajos al mantener pulsado el icono: Nueva venta, Fichar y Encargos']},
  {f:'12/10/2026',t:'Copias de seguridad diarias en la nube',v:'2.0',i:['Cada día a las 5:00 se guarda en la base de datos una copia de todo; siempre las 7 últimas (la del día 8 sustituye a la más antigua)','Dirección → COPIAS DE SEGURIDAD: ver, descargar y restaurar cada copia, con una copia «antes de restaurar» por si acaso','Al restaurar, todos los dispositivos se ponen al día solos; las contraseñas, la auditoría y el número de las ventas no retroceden']},
  {f:'12/10/2026',t:'Consulta sin conexión',v:'2.0',i:['Sin internet, la web y la aplicación se abren igual en modo consulta: catálogo, stock, materiales, encargos y pedidos','Vender, guardar encargos, fichar, fabricar, recibir pedidos y recuentos esperan a que vuelva la conexión, para no duplicar nada','Franja «Sin conexión · solo consulta» y el botón de finalizar lo indica']},
- {f:'12/10/2026',t:'Modo mostrador',v:'2.0',i:['Botón ▦ MOSTRADOR (tableta y ordenador): venta rápida a pantalla completa con fichas grandes por categorías y buscador','Pedido, cliente y total a la derecha (abajo en vertical), con − y +, y FINALIZAR VENTA de siempre','La pantalla no se apaga mientras el mostrador está abierto']}
+ {f:'12/10/2026',t:'Modo mostrador',v:'2.0',i:['Botón ▦ MOSTRADOR (tableta y ordenador): venta rápida a pantalla completa con fichas grandes por categorías y buscador','Pedido, cliente y total a la derecha (abajo en vertical), con − y +, y FINALIZAR VENTA de siempre','La pantalla no se apaga mientras el mostrador está abierto']},
+ {f:'12/10/2026',t:'Avisos en el móvil',v:'2.0',i:['Avisos aunque la aplicación esté cerrada: encargo nuevo y encargo listo para entregar (a todos); material bajo mínimo y revisión del NPC sin hacer (a los jefes)','Se activan en tu ficha con 🔔 ACTIVAR AVISOS, con aviso de prueba','Función «avisos» en Supabase con sus claves en una tabla protegida']}
 ];
 let phQ='';
 /* Versiones: cada parche lleva su versión (v); los que no la llevan son de la 1.0 */
@@ -6554,7 +6559,7 @@ function npcClamp(){let ch=false;Object.keys(npc.asig).forEach(n=>{const s=stock
 function npcPaint(){const el=document.getElementById('npcPlate');if(!el)return;const on=!!(npc.rev&&npc.rev.pending);el.hidden=!on;if(on){const h=`<span class="ic-warn" aria-hidden="true">!</span><div><small>NPC · TIENDA CERRADA</small><b>REVISIÓN DEL NPC PENDIENTE</b><span>Comprueba en el juego lo que le queda al NPC y apúntalo: así se registran sus ventas. Toca aquí para hacerla.</span></div>`;if(el.innerHTML!==h)el.innerHTML=h}try{bellPaint()}catch(e){}}
 /* Al abrir la tienda (primer fichaje tras estar cerrada) toca revisar al NPC */
 function npcOnOpen(){if(npcTotal()>0&&!(npc.rev&&npc.rev.pending)){npc.rev=Object.assign({},npc.rev,{pending:true,since:Date.now()});npcSave();actLog('npc',{txt:'Revisión del NPC pendiente (la tienda ha abierto)'})}}
-function npcOnShiftEnd(name){if(npc.rev&&npc.rev.pending)actLog('incidencia',{txt:'Turno terminado sin hacer la revisión del NPC ('+name+'). Sigue pendiente.'},name)}
+function npcOnShiftEnd(name){if(npc.rev&&npc.rev.pending){actLog('incidencia',{txt:'Turno terminado sin hacer la revisión del NPC ('+name+'). Sigue pendiente.'},name);try{pushSend('npc-pendiente','Revisión del NPC sin hacer',name+' ha terminado su turno sin revisar el NPC. Sigue pendiente para el siguiente.','jefes','npc')}catch(e){}}}
 function openNpcRev(){invView='npc';invDraft={q:{}};renderInv();openModal(invModal);invModal.scrollTop=0;refreshStock().then(()=>{if(!invModal.hidden&&!document.activeElement.matches('input'))renderInv()}).catch(()=>{})}
 function npcRevHTML(){
  const L=Object.keys(npc.asig).filter(n=>npc.asig[n]>0);
@@ -6957,6 +6962,45 @@ document.getElementById('mostClear').onclick=()=>{document.getElementById('clear
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)mostWake()});
 (function(){const _c=calc;calc=function(){const r=_c.apply(this,arguments);mostSoon();return r}})();
 (function(){const _u=updateFinish;updateFinish=function(){const r=_u.apply(this,arguments);mostSoon();return r}})();
+
+/* ===== V2 · Avisos en el móvil aunque la aplicación esté cerrada (Web Push con la función «avisos» de Supabase) ===== */
+const PUSH_URL=SB_URL+'/functions/v1/avisos', PUSH_PUB='BLAuxcZaK5ZoYWUoW5S8kVDHQ_-C-LADTaKeYDiH41GA2vNM-ARN3ojrp5bwrC-IXcRoD53dD5FOI7XoOq0Ekwo';
+function pushApi(body){return fetch(PUSH_URL,{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify(body)}).then(r=>r.ok?r.json():r.json().catch(()=>({})).then(j=>Promise.reject(new Error(j.error||r.status))))}
+function pushSupported(){return 'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window}
+function pushEp(){try{return localStorage.getItem('harrington_push')||''}catch(e){return ''}}
+function pushKey(b){const p='='.repeat((4-b.length%4)%4), r=atob((b+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(r,c=>c.charCodeAt(0))}
+async function pushOn(){
+ const me=meEmp();if(!me)return;
+ if(!pushSupported()){return say(appPlat()==='ios'?'En iPhone los avisos solo funcionan con la aplicación instalada (Safari → Compartir → Añadir a pantalla de inicio) y abierta desde su icono':'Este navegador no permite avisos','err')}
+ if(appPlat()==='ios'&&!appInstalled())return say('En iPhone, primero instala la aplicación (Safari → Compartir → Añadir a pantalla de inicio) y actívalos desde ella','err');
+ let perm=Notification.permission;if(perm!=='granted')perm=await Notification.requestPermission();
+ if(perm!=='granted')return say('Sin permiso para avisos: actívalo en los ajustes del navegador para esta web','err');
+ try{
+  const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushKey(PUSH_PUB)});
+  await pushApi({accion:'suscribir',sub:sub.toJSON(),empId:me.id,jefe:isJefe(me)});
+  try{localStorage.setItem('harrington_push',sub.endpoint)}catch(e){}
+  say('Avisos activados en este dispositivo');
+ }catch(e){say('No se pudieron activar los avisos: '+(e&&e.message||'sin conexión'),'err')}
+ if(!miModal.hidden)renderMi();
+}
+async function pushOff(){
+ const ep=pushEp();
+ try{const reg=await navigator.serviceWorker.ready, sub=await reg.pushManager.getSubscription();if(sub)await sub.unsubscribe()}catch(e){}
+ if(ep)pushApi({accion:'baja',endpoint:ep}).catch(()=>{});
+ try{localStorage.removeItem('harrington_push')}catch(e){}
+ say('Avisos desactivados en este dispositivo');if(!miModal.hidden)renderMi();
+}
+function pushSend(tipo,titulo,texto,para,ref){if(SANDBOX||location.protocol==='file:'&&!window.__hgPush)return;pushApi({accion:'enviar',tipo:tipo,titulo:titulo,texto:texto,para:para||'todos',ref:ref||'',excepto:pushEp()}).catch(()=>{})}
+/* si cambia quién usa este dispositivo, el aviso le llega a la persona correcta */
+function pushRefresh(){const ep=pushEp(), me=meEmp();if(!ep||!me||!pushSupported())return;navigator.serviceWorker.ready.then(r=>r.pushManager.getSubscription()).then(sub=>{if(!sub){try{localStorage.removeItem('harrington_push')}catch(e){}return}return pushApi({accion:'suscribir',sub:sub.toJSON(),empId:me.id,jefe:isJefe(me)})}).catch(()=>{})}
+setTimeout(pushRefresh,8000);
+function pushMiHTML(){
+ const on=!!pushEp()&&pushSupported()&&Notification.permission==='granted';
+ return `<div class="dir-sec-title">AVISOS EN ESTE DISPOSITIVO</div><p class="bk-note" style="margin:0 0 6px">Te llegan aunque la aplicación esté cerrada: encargos nuevos y listos para entregar${(meEmp()&&isJefe(meEmp()))?', materiales bajo mínimo y revisiones del NPC sin hacer':''}.</p>
+  <div class="enc-actions${on?' two':''}">${on?'<button type="button" id="miPushOff">🔕 DESACTIVAR AVISOS</button><button type="button" id="miPushTest">ENVIAR AVISO DE PRUEBA</button>':'<button type="button" class="primary" id="miPushOn">🔔 ACTIVAR AVISOS</button>'}</div>`;
+}
+document.getElementById('miModal').addEventListener('click',e=>{const t=e.target;if(t.id==='miPushOn')once('pon',pushOn,t);else if(t.id==='miPushOff')once('poff',pushOff,t);else if(t.id==='miPushTest'){pushApi({accion:'enviar',tipo:'prueba',titulo:'Harrington Gunsmith',texto:'Aviso de prueba: ¡funciona!',solo:pushEp()}).then(r=>say(r&&r.enviados?'Aviso de prueba enviado: te llegará en unos segundos':'No se pudo enviar: vuelve a activar los avisos','err')).catch(()=>say('No se pudo enviar: sin conexión','err'))}});
 
 /* El nombre del cartel de la fachada: si no cabe en la placa (según la letra que cargue cada móvil), se hace un poco más pequeño */
 function fitSign(){try{const sg=document.querySelector('.g-sign'), t=document.getElementById('gSignTxt');if(!sg||!t||!sg.clientWidth)return;t.style.fontSize='';const max=sg.clientWidth*.9, w=t.scrollWidth;if(w>max)t.style.fontSize=(parseFloat(getComputedStyle(t).fontSize)*max/w).toFixed(2)+'px'}catch(e){}}

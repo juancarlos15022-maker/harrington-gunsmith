@@ -1,7 +1,7 @@
 -- =====================================================================
 --  HARRINGTON GUNSMITH · V2 · Copias de seguridad diarias en la base de datos
---  Se guardan siempre las 7 últimas (al hacer la del día 8 se borra la más antigua),
---  más una copia «antes de restaurar» por si acaso. Nada se guarda en los teléfonos.
+--  Se guardan siempre las 7 últimas: 7 huecos, uno por día de la semana; la copia de hoy
+--  sustituye a la de hace 7 días. Más una copia «antes de restaurar» por si acaso. Nada se guarda en los teléfonos.
 --  Se puede ejecutar más de una vez.
 -- =====================================================================
 
@@ -42,25 +42,23 @@ declare
   v_stk jsonb;
   v_cnt integer;
   v_n   integer;
+  v_dia date;
 begin
   if p_tipo not in ('diaria', 'antes-restaurar') then raise exception 'COPIA_TIPO'; end if;
-  v_id := case when p_tipo = 'diaria'
-               then 'diaria-' || to_char(now() at time zone 'Europe/Madrid', 'YYYY-MM-DD')
-               else p_tipo || '-' || to_char(clock_timestamp(), 'YYYYMMDDHH24MISSMS') end;
-  if p_tipo = 'diaria' and exists (select 1 from copias where id = v_id) then
+  -- 7 huecos fijos (uno por día de la semana): la copia de hoy sustituye a la de hace 7 días
+  v_dia := (now() at time zone 'Europe/Madrid')::date;
+  v_id := case when p_tipo = 'diaria' then 'diaria-' || extract(isodow from v_dia)::int else 'antes-restaurar' end;
+  if p_tipo = 'diaria' and exists (select 1 from copias where id = v_id and (creada at time zone 'Europe/Madrid')::date = v_dia) then
     return jsonb_build_object('id', v_id, 'hecha', false);
   end if;
   select coalesce(jsonb_object_agg(clave, jsonb_build_object('v', valor, 'a', actualizado)), '{}'::jsonb), count(*)
     into v_dat, v_n from datos where not hg_fuera_de_copia(clave);
   select coalesce(jsonb_object_agg(producto, to_jsonb(s) - 'producto'), '{}'::jsonb) into v_stk from stock s;
   select valor into v_cnt from contador where id = 1;
-  insert into copias (id, tipo, datos, stock, contador, filas, bytes)
-    values (v_id, p_tipo, v_dat, v_stk, v_cnt, v_n, pg_column_size(v_dat) + pg_column_size(v_stk));
-  -- solo las 7 diarias más nuevas y la última «antes de restaurar»
-  delete from copias c where c.tipo = 'diaria'
-    and c.id not in (select id from copias where tipo = 'diaria' order by creada desc limit 7);
-  delete from copias c where c.tipo = 'antes-restaurar'
-    and c.id not in (select id from copias where tipo = 'antes-restaurar' order by creada desc limit 1);
+  insert into copias (id, tipo, creada, datos, stock, contador, filas, bytes)
+    values (v_id, p_tipo, now(), v_dat, v_stk, v_cnt, v_n, pg_column_size(v_dat) + pg_column_size(v_stk))
+    on conflict (id) do update set creada = excluded.creada, datos = excluded.datos, stock = excluded.stock,
+      contador = excluded.contador, filas = excluded.filas, bytes = excluded.bytes;
   return jsonb_build_object('id', v_id, 'hecha', true, 'filas', v_n);
 end $$;
 
@@ -105,16 +103,17 @@ begin
   select * into c from copias where id = p_id;
   if not found then raise exception 'COPIA_NO_EXISTE'; end if;
   perform hacer_copia('antes-restaurar');
-  -- lo que no estaba en la copia, fuera (salvo lo protegido)
-  delete from datos d
+  -- lo que no estaba en la copia se marca como eliminado (igual que cuando se borra algo en la web; se puede recuperar)
+  update datos d set valor = jsonb_build_object('deleted', true, 'ts', (extract(epoch from stamp) * 1000)::bigint), actualizado = stamp
    where not hg_fuera_de_copia(d.clave)
-     and not (c.datos ? d.clave);
+     and not (c.datos ? d.clave)
+     and not coalesce((d.valor->>'deleted')::boolean, false);
   -- lo de la copia, tal cual estaba (con fecha nueva para que todos lo descarguen)
   insert into datos (clave, valor, actualizado)
     select k, e.value->'v', stamp from jsonb_each(c.datos) e(k, value)
     on conflict (clave) do update set valor = excluded.valor, actualizado = excluded.actualizado;
   -- stock y materiales
-  delete from stock s where not (c.stock ? s.producto);
+  update stock s set cantidad = 0 where not (c.stock ? s.producto);
   insert into stock
     select * from jsonb_populate_recordset(null::stock,
       (select coalesce(jsonb_agg(e.value || jsonb_build_object('producto', e.key)), '[]'::jsonb) from jsonb_each(c.stock) e))
