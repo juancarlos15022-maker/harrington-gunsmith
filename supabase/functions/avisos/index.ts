@@ -26,6 +26,20 @@ async function vapid() {
   return PUB;
 }
 
+async function cerrado() {
+  const { data } = await sb.from("datos").select("valor").eq("clave", "acceso").maybeSingle();
+  return !!(data?.valor as { cerrado?: boolean } | null)?.cerrado;
+}
+async function empleadoOk(req: Request) {
+  const tk = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  if (!tk) return false;
+  const { data: u } = await sb.auth.getUser(tk);
+  const id = u?.user?.app_metadata?.emp_id;
+  if (!id) return false;
+  const { data } = await sb.from("datos").select("valor").eq("clave", "empleados").maybeSingle();
+  return Array.isArray(data?.valor) && (data!.valor as Array<{ id?: string }>).some((e) => e && e.id === id);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "solo POST" }, 405);
@@ -35,18 +49,19 @@ Deno.serve(async (req: Request) => {
     const pub = await vapid();
     const acc = String(b.accion || "");
     if (acc === "clave") return json({ publicKey: pub });
+    if (acc === "baja") {
+      const ep = corta(b.endpoint, 2000);
+      if (ep) await sb.from("push_subs").delete().eq("endpoint", ep);
+      return json({ ok: true });
+    }
+    // con la base de datos cerrada, darse de alta y enviar avisos solo con la cuenta segura de un empleado
+    if (await cerrado() && !(await empleadoOk(req))) return json({ error: "SIN_CUENTA" }, 401);
 
     if (acc === "suscribir") {
       const sub = b.sub as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
       if (!sub || typeof sub.endpoint !== "string" || !/^https:\/\//.test(sub.endpoint) || !sub.keys?.p256dh || !sub.keys?.auth) return json({ error: "suscripción no válida" }, 400);
       const { error } = await sb.from("push_subs").upsert({ endpoint: sub.endpoint, sub, emp_id: corta(b.empId, 40) || null, jefe: !!b.jefe, vista: new Date().toISOString() });
       if (error) throw error;
-      return json({ ok: true });
-    }
-
-    if (acc === "baja") {
-      const ep = corta(b.endpoint, 2000);
-      if (ep) await sb.from("push_subs").delete().eq("endpoint", ep);
       return json({ ok: true });
     }
 

@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261012p
+/* HARRINGTON GUNSMITH · app.js · versión 20261012r
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== V2 · La sesión no se cierra al salir de la aplicación =====
    Se guarda en el dispositivo y se recupera al volver, aunque el móvil haya cerrado la aplicación por detrás para ahorrar memoria.
@@ -6,7 +6,7 @@
    El Modo Jefe solo se recupera si fue hace menos de 5 minutos (o si eres jefe), como siempre. */
 var SES_KEY='harrington_ses_v1', SES_MAX=3*3600000;
 (function(){try{if(sessionStorage.getItem('harrington_me_v1'))return;const s=JSON.parse(localStorage.getItem(SES_KEY)||'null');
- if(!s||!s.me||!s.me.id||Date.now()-(s.seen||0)>SES_MAX){localStorage.removeItem(SES_KEY);return}
+ if(!s||!s.me||!s.me.id||Date.now()-(s.seen||0)>SES_MAX){localStorage.removeItem(SES_KEY);localStorage.removeItem('harrington_auth_v1');return}
  sessionStorage.setItem('harrington_me_v1',JSON.stringify(s.me));if(s.tab)sessionStorage.setItem('harrington_tab',s.tab);
  if(s.boss&&(s.jefe||Date.now()-(s.seen||0)<300000))sessionStorage.setItem('harrington_boss_active_v1','1');
  window.__sesRestored=true}catch(e){}})();
@@ -1276,7 +1276,7 @@ function checkNewWord(word,pw){
  return '';
 }
 const KEY_BOSS_CRED='harrington_boss_cred_v1';
-let bossTyped='';
+let bossTyped='', bossResetWord='';
 function bossCreds(){
  const c=loadObj(KEY_BOSS_CRED,null);
  if(c&&c.pw)return {pw:c.pw,word:c.word||'',hashed:true};
@@ -1311,13 +1311,22 @@ async function submitBoss(){
  }
  if(bossMode==='resetword'){
   if(!await checkWord(word))return bossError('Palabra de seguridad incorrecta');
-  return openBoss('resetpw');
+  bossResetWord=word;return openBoss('resetpw');
  }
  if(bossMode==='resetpw'){
   if(!bossPw1.value)return bossError('Escribe una contraseña');
   if(bossPw1.value!==bossPw2.value)return bossError('Las contraseñas no coinciden');
   const c=bossCreds(), same=c.hashed?(await hashStr(wnorm(bossPw1.value)))===c.word:wnorm(bossPw1.value)===wnorm(c.word);
   if(same)return bossError('La contraseña debe ser distinta de la palabra de seguridad');
+  /* desde la puerta: el servidor comprueba la palabra, cambia la contraseña y abre la cuenta segura */
+  if(G&&G.pending&&G.pendMode==='forgot'&&!SANDBOX&&bossResetWord&&!(location.protocol==='file:'&&!window.__hgTest)){
+   const r=await authApi({accion:'nueva_jefe',empId:G.pending.id,word:bossResetWord,pw:bossPw1.value});
+   if(r.ok&&r.j.access_token){bossResetWord='';authSave(authFromResp(r.j,G.pending.id));await saveCreds(bossPw1.value,c.hashed?c.word:await hashStr(wnorm(c.word)),true);return finishBoss('Contraseña cambiada · MODO JEFE ACTIVADO')}
+   if(r.st===401)return bossError('Palabra de seguridad incorrecta');
+   if(r.st===429)return bossError('Demasiados intentos: espera un minuto');
+   if(accClosed())return bossError(r.st===0?'Sin conexión: inténtalo en un momento':'No se ha podido cambiar ahora ('+(r.j.error||r.st)+')');
+  }
+  bossResetWord='';
   await saveCreds(bossPw1.value,c.hashed?c.word:await hashStr(wnorm(c.word)),true);return finishBoss('Contraseña cambiada · MODO JEFE ACTIVADO');
  }
 }
@@ -2238,7 +2247,7 @@ async function nubeDown(){
 /* --- Copia de seguridad --- */
 function renderModCopia(){
  const lb=Number(store.get('harrington_lastbackup_v1')||0);
- return nubeCopiasHTML()+`<div class="dir-sec-title">COPIA EN ESTE DISPOSITIVO</div><p class="bk-note">Los datos viven en este dispositivo. Haz una copia de vez en cuando: si se borran los datos del navegador, se pierden.${lb?`<br>Última copia descargada: ${fmtDate(lb)} ${fmtTime(lb)}.`:'<br>Todavía no has descargado ninguna copia.'}</p>
+ return nubeCopiasHTML()+cuentasHTML()+`<div class="dir-sec-title">COPIA EN ESTE DISPOSITIVO</div><p class="bk-note">Los datos viven en este dispositivo. Haz una copia de vez en cuando: si se borran los datos del navegador, se pierden.${lb?`<br>Última copia descargada: ${fmtDate(lb)} ${fmtTime(lb)}.`:'<br>Todavía no has descargado ninguna copia.'}</p>
   <div class="enc-actions"><button type="button" class="primary" data-dir="bk-full">DESCARGAR COPIA COMPLETA</button><button type="button" data-dir="bk-config">DESCARGAR CONFIGURACIÓN (PARA OTROS DISPOSITIVOS)</button><button type="button" class="warn" data-dir="bk-restore">RESTAURAR DESDE UN ARCHIVO</button></div>
   <input type="file" id="bkFile" accept=".json,application/json" hidden>
   <p class="bk-note" style="margin-top:10px">La <b>configuración</b> incluye empleados, convenios, clientes, precios, productos nuevos, mínimos de stock y Discord, pero no ventas, stock ni contraseña. Sirve para dejar otro móvil listo en un momento.</p>`;
@@ -4464,6 +4473,7 @@ const TUTORIAL=[
 <ul><li>Precios, productos, convenios y ofertas.</li><li>Empleados (contrataciones, puesto, sueldo, horas, expulsiones, turnos cerrados a mano y ausencias borradas).</li><li>Fichas de clientes y de proveedores (qué dato cambió y, en los precios, de cuánto a cuánto).</li><li>Stock sumado o fabricado, recetas y mínimos.</li><li>Gastos y sueldos pagados o borrados, ventas anuladas, encargos cancelados y pedidos emitidos, recibidos, pagados o cancelados.</li><li>Discord, contraseña de jefe, objetivo semanal y reseteos.</li></ul>
 <p>Arriba puedes filtrar por tipo (Catálogo, Personal, Clientes…) o buscar una persona, un producto o un cliente. Las ventas normales y los fichajes no salen aquí: están en sus registros.</p>`],
 ['Copias de seguridad en la nube <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → AJUSTES → COPIAS DE SEGURIDAD</b>.</p><ul><li>Cada día a las <b>5:00</b> se guarda en la base de datos una copia de todo: ventas, encargos, gastos, pedidos, fichajes, stock, materiales y configuración. Si ese día no se pudo hacer, la hace la web la primera vez que alguien la abra.</li><li>Se guardan siempre <b>las 7 últimas</b>: al hacer la del día 8 se borra la más antigua. Nada se guarda en los teléfonos.</li><li><b>⬇ DESCARGAR</b>: baja esa copia como archivo.</li><li><b>↺ RESTAURAR</b>: todo vuelve a como estaba ese día, en todos los dispositivos (pide escribir RESTAURAR). Antes se guarda una copia «antes de restaurar» por si acaso. Las contraseñas, la auditoría y el número de las ventas no retroceden.</li><li>Debajo sigue la copia en este dispositivo de siempre.</li></ul>`],
+['Cuenta segura de cada empleado',`<p>Cada vez que entras con <b>tu tarjeta y tu contraseña</b>, la base de datos te da tu <b>propia cuenta segura</b>. No tienes que hacer nada más: es automático.</p><ul><li>La web la guarda en tu dispositivo y la usa en todo lo que guarda o consulta, así la base de datos sabe quién es quién.</li><li>Se renueva sola cada hora mientras usas la aplicación.</li><li>Se borra al pulsar <b>⏻ CERRAR SESIÓN</b> o si entra otra persona en el mismo dispositivo.</li><li>Los jefes ven quién la tiene ya en <b>Dirección → COPIAS DE SEGURIDAD → CUENTAS SEGURAS</b>.</li><li><b>Base de datos cerrada</b>: sin cuenta segura solo se ve la puerta (las tarjetas). Al tocar tu tarjeta, la contraseña se comprueba en el servidor; si eres nuevo, la creas allí mismo y tu cuenta se abre sola.</li><li>Si un dispositivo tenía la sesión abierta de antes, sin cuenta segura, vuelve a la puerta una vez para que entres con tu tarjeta.</li><li>Sin internet puedes entrar en modo consulta si ese dispositivo ya conoce tu tarjeta.</li><li>¿Contraseña de jefe olvidada? En la puerta, <b>¿Has olvidado la contraseña?</b> → palabra de seguridad → nueva contraseña (lo comprueba el servidor).</li></ul>`],
 ['Avisos en el móvil',`<p>Te llegan avisos al móvil o al ordenador <b>aunque la aplicación esté cerrada</b>.</p><ul><li>Actívalos en tu ficha (toca tu nombre arriba) → <b>🔔 ACTIVAR AVISOS</b> y acepta el permiso. Con <b>ENVIAR AVISO DE PRUEBA</b> compruebas que llegan.</li><li>A todos: <b>encargo nuevo</b> y <b>encargo listo para entregar</b>. A los jefes, además: <b>material bajo mínimo</b> y <b>revisión del NPC sin hacer</b> al salir del turno.</li><li>No te llegan tus propios avisos (lo que haces tú en ese dispositivo).</li><li>Tocando el aviso se abre la aplicación.</li><li><b>iPhone y iPad</b>: solo funcionan con la aplicación <b>instalada</b> (Safari → Compartir → Añadir a pantalla de inicio) y activándolos desde ella.</li><li>Se desactivan con <b>🔕 DESACTIVAR AVISOS</b>.</li></ul>`],
 ['Modo mostrador (tableta)',`<p>Para dejar la tableta fija en la tienda: botón <b>▦ MOSTRADOR</b> arriba (en tableta y ordenador). Se abre a pantalla completa y la pantalla no se apaga mientras está abierto.</p><ul><li>A la izquierda, los productos en <b>fichas grandes</b>, por categorías y con buscador (busca en todo el catálogo). Toca una ficha para añadir una unidad; el número dorado es lo que llevas. Lo agotado sale apagado.</li><li>A la derecha (abajo en la tableta en vertical): <b>cliente</b>, el pedido con <b>−</b> y <b>+</b>, y el <b>total</b>.</li><li><b>FINALIZAR VENTA</b> hace la venta de siempre: mismos precios, convenios, stock, reservas, ticket y Discord. El botón te dice qué falta.</li><li><b>SALIR DEL MOSTRADOR</b> vuelve a la web normal; el pedido sigue ahí.</li></ul>`],
 ['Sin conexión',`<p>Si se va internet, arriba sale la franja roja <b>«Sin conexión · solo consulta»</b>.</p><ul><li>Puedes <b>consultar</b> todo lo que ya tenías: catálogo y precios, stock, materiales, encargos y pedidos.</li><li><b>No</b> se puede vender, guardar encargos, fichar, fabricar, recibir pedidos ni hacer recuentos: así nunca se duplica nada ni se descuadra el stock. El botón de abajo lo dice: «Sin conexión · solo consulta».</li><li>En cuanto vuelve la conexión, la franja desaparece sola y todo funciona como siempre.</li></ul>`],
@@ -4795,10 +4805,83 @@ probeImg('esquina-ornamento.png',img=>{
 
 /* ===== Nube: sincronización de la configuración compartida con Supabase ===== */
 const SB_URL='https://mrlpvjxuifvspeaqtscm.supabase.co', SB_KEY='sb_publishable_OvDXH0UuWJMMBd6fYgOxtg_IsVBZKTz';
-function sbFetch(path,opts){
+/* ===== V2 · Cuentas seguras: cada empleado habla con la base de datos con su propia sesión =====
+   Al entrar con la tarjeta (y solo si la contraseña es buena), la función «cuentas» de Supabase vuelve a comprobarla
+   y abre una sesión de Supabase a nombre de ese empleado. La web la guarda en este dispositivo y la manda en cada petición.
+   Caduca cada hora y se renueva sola. Se borra al cerrar sesión. Si algo falla, la web sigue funcionando igual que antes. */
+const AUTH_KEY='harrington_auth_v1', AUTH_URL=SB_URL+'/functions/v1/cuentas';
+var AUTH=null;try{AUTH=JSON.parse(localStorage.getItem(AUTH_KEY)||'null')}catch(e){}
+if(SANDBOX)AUTH=null;
+function authSave(a){AUTH=a;try{if(a)localStorage.setItem(AUTH_KEY,JSON.stringify(a));else localStorage.removeItem(AUTH_KEY)}catch(e){}}
+function authClear(){if(AUTH)authSave(null);else try{localStorage.removeItem(AUTH_KEY)}catch(e){}try{if(typeof accEnforce==='function')setTimeout(accEnforce,0)}catch(e){}}
+function authFresh(){return !!(AUTH&&AUTH.at&&ME&&ME.id===AUTH.emp&&AUTH.exp-Date.now()>60000)}
+async function authOpen(empId,pw){
+ if(SANDBOX||!empId||empId==='prueba'||!pw||(location.protocol==='file:'&&!window.__hgTest))return false;
+ try{
+  const r=await fetch(AUTH_URL,{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({accion:'entrar',empId:empId,pw:pw})});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.access_token||!ME||ME.id!==empId)return false;
+  authSave({at:j.access_token,rt:j.refresh_token,exp:(Number(j.expires_at)||0)*1000||Date.now()+3600000,emp:empId});
+  try{rtToken()}catch(e){}
+  return true;
+ }catch(e){return false}
+}
+let authRefP=null;
+function authRefresh(){
+ if(authRefP)return authRefP;
+ const a=AUTH;if(!a||!a.rt)return Promise.resolve(null);
+ /* otra pestaña de este dispositivo puede haberla renovado ya */
+ try{const o=JSON.parse(localStorage.getItem(AUTH_KEY)||'null');if(o&&o.emp===a.emp&&o.at!==a.at&&o.exp-Date.now()>60000){AUTH=o;try{rtToken()}catch(e){}return Promise.resolve(o)}}catch(e){}
+ authRefP=fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({refresh_token:a.rt})})
+  .then(r=>r.ok?r.json():Promise.reject(r.status))
+  .then(j=>{if(!j||!j.access_token)return Promise.reject(400);if(AUTH!==a)return AUTH;authSave({at:j.access_token,rt:j.refresh_token||a.rt,exp:j.expires_at?j.expires_at*1000:Date.now()+(j.expires_in||3600)*1000,emp:a.emp});try{rtToken()}catch(e){}return AUTH})
+  .catch(st=>{if((st===400||st===401||st===403)&&AUTH===a)authClear();return null})
+  .finally(()=>{authRefP=null});
+ return authRefP;
+}
+async function authToken(){
+ if(!AUTH||SANDBOX||!ME)return null;
+ if(ME.id!==AUTH.emp){authClear();return null}
+ if(authFresh())return AUTH.at;
+ const a=await authRefresh();return a&&a.at||null;
+}
+async function sbFetch(path,opts){
  opts=opts||{};
- const ctl=typeof AbortController!=='undefined'?new AbortController():null, t=ctl?setTimeout(()=>ctl.abort(),9000):null;
- return fetch(SB_URL+path,Object.assign({},opts,{signal:ctl?ctl.signal:undefined,headers:Object.assign({apikey:SB_KEY,'Content-Type':'application/json'},opts.headers||{})})).finally(()=>{if(t)clearTimeout(t)});
+ let tk=null;if(opts._tk!==undefined)tk=opts._tk;else try{tk=await authToken()}catch(e){}
+ /* base de datos cerrada y sin cuenta segura: no se intenta escribir (se queda pendiente hasta entrar con la tarjeta) */
+ if(!tk&&(opts.method||'GET')!=='GET'&&path.indexOf('/rest/v1/')===0&&accClosed())return new Response(JSON.stringify({message:'SIN_CUENTA'}),{status:401,headers:{'Content-Type':'application/json'}});
+ const go=k=>{
+  const ctl=typeof AbortController!=='undefined'?new AbortController():null, t=ctl?setTimeout(()=>ctl.abort(),9000):null;
+  return fetch(SB_URL+path,Object.assign({},opts,{signal:ctl?ctl.signal:undefined,headers:Object.assign({apikey:SB_KEY,'Content-Type':'application/json'},k?{Authorization:'Bearer '+k}:{},opts.headers||{})})).finally(()=>{if(t)clearTimeout(t)});
+ };
+ const r=await go(tk);
+ if(r.status===401&&tk){const a=await authRefresh();return go(a&&a.at&&a.at!==tk?a.at:null)}
+ return r;
+}
+/* Llamada a la función «cuentas» (comprueba la contraseña en el servidor y abre la cuenta segura) */
+async function authApi(body){
+ const ctl=typeof AbortController!=='undefined'?new AbortController():null, t=ctl?setTimeout(()=>ctl.abort(),12000):null;
+ try{const r=await fetch(AUTH_URL,{method:'POST',signal:ctl?ctl.signal:undefined,headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({}));return {ok:r.ok,st:r.status,j:j}}
+ catch(e){return {ok:false,st:0,j:{}}}finally{if(t)clearTimeout(t)}
+}
+function authFromResp(j,empId){return {at:j.access_token,rt:j.refresh_token,exp:(Number(j.expires_at)||0)*1000||Date.now()+3600000,emp:empId}}
+/* ===== V2 · Base de datos cerrada: la fila 'acceso' dice si hace falta la cuenta segura para todo =====
+   Con la base de datos cerrada, sin cuenta segura solo se ve la puerta (empleados y fotos). Un dispositivo que tenía
+   la sesión abierta de antes, sin cuenta segura, vuelve a la puerta para entrar con la tarjeta. */
+var ACC={cerrado:false,t:0};try{ACC=Object.assign(ACC,JSON.parse(localStorage.getItem('harrington_acceso')||'{}'))}catch(e){}
+function accClosed(){return !!ACC.cerrado&&!SANDBOX}
+async function accLoad(){
+ try{const r=await sbFetch('/rest/v1/datos?select=valor,actualizado&clave=eq.acceso');if(!r.ok)return;const L=await r.json(), x=L[0];
+  ACC={cerrado:!!(x&&x.valor&&x.valor.cerrado),t:x?Date.parse(x.actualizado):0};try{localStorage.setItem('harrington_acceso',JSON.stringify(ACC))}catch(e){}
+  accEnforce()}catch(e){}
+}
+function accEnforce(){
+ if(!accClosed()||!ME||ME.id==='prueba'||navigator.onLine===false||cloud.ok===false)return;
+ if(AUTH&&AUTH.emp===ME.id)return;
+ if(accEnforce.busy)return;accEnforce.busy=true;
+ setTimeout(()=>{accEnforce.busy=false;if(!accClosed()||!ME||(AUTH&&AUTH.emp===ME.id))return;
+  try{logoutToGate('Por seguridad, la base de datos ahora pide tu cuenta segura: vuelve a entrar con tu tarjeta.')}catch(e){}},300);
 }
 function saveDirty(){try{localStorage.setItem('harrington_cloud_dirty',JSON.stringify(cloud.dirty))}catch(e){}}
 let savingN=0;
@@ -4819,6 +4902,7 @@ function cloudPush(clave){
  clearTimeout(cloud.timers[clave]);cloud.timers[clave]=setTimeout(()=>cloudFlush(clave),400);
 }
 async function cloudFlush(clave){
+ if(accClosed()&&!AUTH)return;
  const key=CLOUD_REV[clave]; let val;
  try{val=JSON.parse(localStorage.getItem(key))}catch(e){return}
  if(val===null||val===undefined){delete cloud.dirty[clave];saveDirty();return}
@@ -4868,7 +4952,7 @@ function cloudPut(clave,valor){
 }
 function cloudDel(clave){cloudPut(clave,{deleted:true,ts:Date.now()})}
 async function cloudFlushOutbox(){
- if(!cloud.outbox.length||cloud.flushing)return;
+ if(!cloud.outbox.length||cloud.flushing||(accClosed()&&!AUTH))return;
  cloud.flushing=true;
  const batch=cloud.outbox.slice(0,40), stamp=new Date().toISOString();
  try{
@@ -5224,7 +5308,7 @@ async function applyResetRow(){
 }
 async function cloudPoll(force){
  try{
-  const cfg=Object.keys(CLOUD_REV).concat(['rev','reset']).join(',');
+  const cfg=Object.keys(CLOUD_REV).concat(['rev','reset','acceso']).join(',');
   const r=await sbFetch('/rest/v1/datos?select=clave,actualizado&clave=in.('+cfg+')');
   if(!r.ok)throw new Error(r.status);
   const rows=await r.json();setCloudState(true);
@@ -5238,6 +5322,7 @@ async function cloudPoll(force){
    if(!r2.ok)throw new Error(r2.status);
    (await r2.json()).forEach(x=>applyRemote(x.clave,x.valor,Date.parse(x.actualizado)));
   }
+  const ac=rows.find(x=>x.clave==='acceso');if(ac&&Date.parse(ac.actualizado)!==ACC.t)accLoad();else{if(!ac&&ACC.cerrado){ACC={cerrado:false,t:0};try{localStorage.setItem('harrington_acceso',JSON.stringify(ACC))}catch(e){}}accEnforce()}
   const rs=rows.find(x=>x.clave==='reset');
   if(rs&&Date.parse(rs.actualizado)>cloud.resetSeen)await applyResetRow();
   const rv=rows.find(x=>x.clave==='rev'), rt=rv?Date.parse(rv.actualizado):0;
@@ -5256,12 +5341,15 @@ setTimeout(()=>{try{updateFinish();renderEmpWeek();updateAusBtn();renderPayPlate
 /* Aviso instantáneo: Supabase avisa en el momento en que cambia algo y este móvil se actualiza al instante.
    Si ese canal no funciona, se sigue preguntando a la nube cada 6 segundos como siempre. */
 const rt={ws:null,ref:0,hb:null,ok:false,got:0,retry:0,timer:null};
+/* la sesión del empleado también viaja por el aviso instantáneo; al renovarse se le pasa la nueva */
+function rtToken(){if(rt.ws&&rt.ok&&rt.send&&authFresh())rt.send('realtime:harrington','access_token',{access_token:AUTH.at})}
 function rtConnect(){
  try{
   if(rt.ws||typeof WebSocket==='undefined'||document.visibilityState!=='visible')return;
   const ws=new WebSocket(SB_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+encodeURIComponent(SB_KEY)+'&vsn=1.0.0');rt.ws=ws;
   const send=(topic,event,payload)=>{try{if(ws.readyState===1)ws.send(JSON.stringify({topic:topic,event:event,payload:payload,ref:String(++rt.ref)}))}catch(e){}};
-  ws.onopen=()=>{send('realtime:harrington','phx_join',{config:{broadcast:{self:false},presence:{key:''},postgres_changes:[{event:'*',schema:'public',table:'datos'},{event:'*',schema:'public',table:'stock'}]}});clearInterval(rt.hb);rt.hb=setInterval(()=>send('phoenix','heartbeat',{}),25000)};
+  rt.send=send;
+  ws.onopen=()=>{const jp={config:{broadcast:{self:false},presence:{key:''},postgres_changes:[{event:'*',schema:'public',table:'datos'},{event:'*',schema:'public',table:'stock'}]}};if(authFresh())jp.access_token=AUTH.at;send('realtime:harrington','phx_join',jp);clearInterval(rt.hb);rt.hb=setInterval(()=>send('phoenix','heartbeat',{}),25000)};
   ws.onmessage=ev=>{
    let m;try{m=JSON.parse(ev.data)}catch(e){return}
    if(m.topic==='realtime:harrington'&&m.event==='phx_reply'){rt.ok=!!(m.payload&&m.payload.status==='ok');if(rt.ok)rt.retry=0}
@@ -5298,7 +5386,7 @@ const ICO_USER='<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle c
 function meEmp(){return ME&&ME.id?empleados.find(e=>e.id===ME.id)||null:null}
 function isJefe(e){return !!e&&e.puesto==='Jefe'}
 function hasJefes(){return empleados.some(isJefe)}
-function setMe(e){ME=e?{id:e.id,at:Date.now()}:null;try{if(ME)sessionStorage.setItem('harrington_me_v1',JSON.stringify(ME));else sessionStorage.removeItem('harrington_me_v1')}catch(x){}sesSave();applyMe();presencePing(true);try{pushRefresh()}catch(x){}}
+function setMe(e){const tk0=AUTH&&AUTH.at||null;ME=e?{id:e.id,at:Date.now()}:null;if(!ME||(AUTH&&AUTH.emp!==ME.id))authClear();try{if(ME)sessionStorage.setItem('harrington_me_v1',JSON.stringify(ME));else sessionStorage.removeItem('harrington_me_v1')}catch(x){}sesSave();applyMe();presencePing(true,tk0);try{pushRefresh()}catch(x){}}
 function sesSave(){try{if(SANDBOX||!ME||!ME.id||ME.id==='prueba'){localStorage.removeItem(SES_KEY);return}const e=empleados.find(x=>x.id===ME.id);localStorage.setItem(SES_KEY,JSON.stringify({me:ME,boss:!!bossActive,jefe:!!(e&&e.puesto==='Jefe'),tab:typeof DEV_ID==='string'?DEV_ID:'',seen:Date.now()}))}catch(x){}}
 document.addEventListener('visibilitychange',()=>{try{if(ME)sesSave()}catch(x){}});
 window.addEventListener('pagehide',()=>{try{if(ME)sesSave()}catch(x){}});
@@ -5332,10 +5420,10 @@ async function empKick(id){
 /* una fila por pestaña abierta (se guarda en la pestaña, así sobrevive a recargar la página) */
 var DEV_ID='';try{DEV_ID=sessionStorage.getItem('harrington_tab')||'';if(!DEV_ID){DEV_ID='t'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);sessionStorage.setItem('harrington_tab',DEV_ID)}}catch(e){DEV_ID='t'+Math.random().toString(36).slice(2,9)}
 var PRES={map:{},at:0,was:''};
-function presencePing(force){
+function presencePing(force,tk0){
  const me=meEmp();if(!me&&!PRES.was)return;
  if(me)PRES.was=me.id;
- sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify([{clave:'presencia-'+DEV_ID,valor:{emp:me?me.id:'',prev:PRES.was,ts:Date.now()},actualizado:new Date().toISOString()}])}).catch(()=>{});
+ sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',_tk:!me&&tk0?tk0:undefined,headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify([{clave:'presencia-'+DEV_ID,valor:{emp:me?me.id:'',prev:PRES.was,ts:Date.now()},actualizado:new Date().toISOString()}])}).catch(()=>{});
  if(!me)PRES.was='';
 }
 setInterval(()=>{if(document.visibilityState==='visible'&&meEmp())presencePing()},120000);
@@ -5463,7 +5551,7 @@ function cardInner(e,abs){
  return `${isJefe(e)?`<span class="gc-wax" title="Pide la contraseña de jefe">${G_KEY}</span>`:''}<i class="gc-cn tl">${G_CN}</i><i class="gc-cn tr">${G_CN}</i><i class="gc-cn bl">${G_CN}</i><i class="gc-cn br">${G_CN}</i><span class="gc-oval${ph?' has-photo':''}">${ph?`<img class="gc-photo" src="${ph}" alt="">`:''}<span class="gc-mono">${esc(ini)}</span></span><span class="gc-name" style="--nl:${Math.max(8,(e.name||'').length)}">${esc(e.name)}</span><span class="gc-role" style="--rl:${Math.max(8,(e.puesto||'Empleado').length)}">${esc(e.puesto||'Empleado')}</span><span class="gc-rank">${G_RANK[e.puesto]||''}</span><span class="gc-studio">Saint Denis, 1880</span>${abs?'<span class="gc-stamp">AUSENTE</span>':''}${e.id==='prueba'?'<span class="gc-stamp prueba">PRUEBA</span>':''}`;
 }
 function gateCards(){
- gClear();G.big=null;{const ob=document.getElementById('gBig');if(ob)ob.remove()}
+ gClear();G.big=null;try{gate.scrollLeft=0;gate.scrollTop=0}catch(x){}{const ob=document.getElementById('gBig');if(ob)ob.remove()}
  gPh('cards');
  const rank=e=>{const i=PUESTOS.indexOf(e.puesto);return i<0?99:i};
  const L=empleados.slice().sort((a,b)=>rank(a)-rank(b)||a.name.localeCompare(b.name,'es'));
@@ -5605,15 +5693,17 @@ async function gPwSubmit(){
   if(s.mode==='create'){
    if(v1.length<4)return gPwErr('Mínimo 4 caracteres');
    if(v1!==v2)return gPwErr('Las dos contraseñas no coinciden');
+   if(s.srvTry)return await gPwSrv(s,e,v1);
    const hh=await empHash(e.id,v1);
    let ok=false;try{ok=await claimRow('clave-'+e.id,{h:hh,ts:Date.now()})}catch(x){return gPwErr('Sin conexión: no se ha podido guardar. Inténtalo de nuevo')}
    if(!ok){const r=await fetchClave(e.id);gPwShow(e,'login',r.hash);return gPwErr('Esta tarjeta ya tiene contraseña: escríbela')}
    CLAVES[e.id]=hh;try{localStorage.setItem('harrington_claves_v1',JSON.stringify(CLAVES))}catch(x){}
-   return gateHello(e);
+   gateHello(e);authOpen(e.id,v1);return;
   }
   if(!v1)return gPwErr('Escribe la contraseña');
-  const good=s.mode==='boss'?await checkPw(v1):(await empHash(e.id,v1))===s.hash;
-  if(good){G.fails[e.id]=0;if(s.mode==='boss')setBoss(true);return gateHello(e)}
+  if(s.srvTry){const x=await gPwSrv(s,e,v1);if(x!=='mal')return}
+  const good=s.srvTry?false:s.mode==='boss'?await checkPw(v1):(await empHash(e.id,v1))===s.hash;
+  if(good){G.fails[e.id]=0;if(s.mode==='boss')setBoss(true);gateHello(e);authOpen(e.id,v1);return}
   G.fails[e.id]=(G.fails[e.id]||0)+1;
   const i=document.getElementById('gPw1');if(i){i.value='';i.focus()}
   if(G.fails[e.id]>=5){G.fails[e.id]=0;G.lock[e.id]=Date.now()+60000;gPwErr('Demasiados intentos: la tarjeta queda bloqueada un minuto');setTimeout(gBigClose,1600)}
@@ -5627,6 +5717,7 @@ async function gatePick(id){
  if(G.lock[id]>Date.now())return say('Demasiados intentos: espera un minuto para volver a probar con '+e.name);
  try{playClick()}catch(x){}
  gBigOpen(e,gUi.querySelector('[data-gcard="'+id+'"]'));
+ if(accClosed()&&id!=='prueba')return gatePickSrv(e);
  if(isJefe(e)){
   if(!bossCreds()){G.pending=e;G.pendMode='setup';setTimeout(()=>openBoss(),300);return}
   return gPwShow(e,'boss');
@@ -5636,6 +5727,43 @@ async function gatePick(id){
  if(!G.big||!G.pw||G.pw.e.id!==id)return;
  if(r.err&&!r.hash)return gPwShow(e,'offline');
  gPwShow(e,r.hash?'login':'create',r.hash);
+}
+/* Base de datos cerrada: la tarjeta se comprueba en el servidor (función «cuentas») */
+async function gatePickSrv(e){
+ gPwShow(e,'wait');
+ const r=await authApi({accion:'estado',empId:e.id});
+ if(!G.big||!G.pw||G.pw.e.id!==e.id)return;
+ let mode;
+ if(r.ok)mode=isJefe(e)||r.j.jefe?'boss':(r.j.tiene?'login':'create');
+ else if(r.st===404)return gPwShow(e,'offline');
+ else{ /* sin conexión: solo con lo que este dispositivo ya conoce (modo consulta) */
+  if(isJefe(e)){if(!bossCreds())return gPwShow(e,'offline');mode='boss'}
+  else{if(!CLAVES[e.id])return gPwShow(e,'offline');mode='login'}
+ }
+ gPwShow(e,mode,isJefe(e)?null:(CLAVES[e.id]||null));G.pw.srv=r.ok;G.pw.srvTry=true;
+}
+async function gPwSrv(s,e,v1){
+ const r=await authApi({accion:s.mode==='create'?'crear':'entrar',empId:e.id,pw:v1});
+ if(r.ok&&r.j.access_token){
+  G.fails[e.id]=0;
+  if(s.mode!=='boss'){try{CLAVES[e.id]=await empHash(e.id,v1);localStorage.setItem('harrington_claves_v1',JSON.stringify(CLAVES))}catch(x){}}
+  authSave(authFromResp(r.j,e.id));
+  if(s.mode==='boss')setBoss(true);
+  gateHello(e);try{rtToken()}catch(x){}return;
+ }
+ if(r.st===409){gPwShow(e,'login',CLAVES[e.id]||null);G.pw.srv=true;G.pw.srvTry=true;return gPwErr('Esta tarjeta ya tiene contraseña: escríbela')}
+ if(r.st===404&&r.j.error==='SIN_CONTRASENA'){gPwShow(e,'create');G.pw.srv=true;G.pw.srvTry=true;return gPwErr('Esta tarjeta todavía no tiene contraseña: créala')}
+ if(r.st===429){G.lock[e.id]=Date.now()+60000;gPwErr('Demasiados intentos: la tarjeta queda bloqueada un minuto');return setTimeout(gBigClose,1600)}
+ if(r.st===401)return 'mal';
+ if(r.st===0){ /* sin conexión: se comprueba aquí y se entra en modo consulta */
+  if(s.mode==='create')return gPwErr('Sin conexión: no se ha podido guardar. Inténtalo de nuevo');
+  const good=s.mode==='boss'?await checkPw(v1):!!s.hash&&(await empHash(e.id,v1))===s.hash;
+  if(!good)return 'mal';
+  try{setCloudState(false)}catch(x){}
+  if(s.mode==='boss')setBoss(true);
+  return gateHello(e);
+ }
+ return gPwErr('No se ha podido comprobar ahora ('+(r.j.error||r.st)+'). Inténtalo en un momento');
 }
 function gateHello(e){
  if(e.id==='prueba'&&!SANDBOX){try{sessionStorage.setItem('harrington_sandbox','1');sessionStorage.setItem('harrington_me_v1',JSON.stringify({id:'prueba',at:Date.now()}));sessionStorage.setItem('harrington_boss_active_v1','1')}catch(x){}gPh('close');setTimeout(()=>location.reload(),300);return}
@@ -6397,7 +6525,8 @@ const PARCHES=[
  {f:'12/10/2026',t:'Copias de seguridad diarias en la nube',v:'2.0',i:['Cada día a las 5:00 se guarda en la base de datos una copia de todo; siempre las 7 últimas (la del día 8 sustituye a la más antigua)','Dirección → COPIAS DE SEGURIDAD: ver, descargar y restaurar cada copia, con una copia «antes de restaurar» por si acaso','Al restaurar, todos los dispositivos se ponen al día solos; las contraseñas, la auditoría y el número de las ventas no retroceden']},
  {f:'12/10/2026',t:'Consulta sin conexión',v:'2.0',i:['Sin internet, la web y la aplicación se abren igual en modo consulta: catálogo, stock, materiales, encargos y pedidos','Vender, guardar encargos, fichar, fabricar, recibir pedidos y recuentos esperan a que vuelva la conexión, para no duplicar nada','Franja «Sin conexión · solo consulta» y el botón de finalizar lo indica']},
  {f:'12/10/2026',t:'Modo mostrador',v:'2.0',i:['Botón ▦ MOSTRADOR (tableta y ordenador): venta rápida a pantalla completa con fichas grandes por categorías y buscador','Pedido, cliente y total a la derecha (abajo en vertical), con − y +, y FINALIZAR VENTA de siempre','La pantalla no se apaga mientras el mostrador está abierto']},
- {f:'12/10/2026',t:'Avisos en el móvil',v:'2.0',i:['Avisos aunque la aplicación esté cerrada: encargo nuevo y encargo listo para entregar (a todos); material bajo mínimo y revisión del NPC sin hacer (a los jefes)','Se activan en tu ficha con 🔔 ACTIVAR AVISOS, con aviso de prueba','Función «avisos» en Supabase con sus claves en una tabla protegida']}
+ {f:'12/10/2026',t:'Avisos en el móvil',v:'2.0',i:['Avisos aunque la aplicación esté cerrada: encargo nuevo y encargo listo para entregar (a todos); material bajo mínimo y revisión del NPC sin hacer (a los jefes)','Se activan en tu ficha con 🔔 ACTIVAR AVISOS, con aviso de prueba','Función «avisos» en Supabase con sus claves en una tabla protegida']},
+ {f:'12/10/2026',t:'Cuenta segura de cada empleado',v:'2.0',i:['Al entrar con la tarjeta, cada empleado recibe su propia cuenta en la base de datos (función «cuentas» de Supabase, que vuelve a comprobar la contraseña)','La sesión viaja en cada petición y en el aviso instantáneo, y se renueva sola cada hora','Se borra al cerrar sesión o si entra otra persona en el dispositivo','Dirección → COPIAS DE SEGURIDAD: quién tiene ya su cuenta segura','Base de datos cerrada: sin cuenta segura solo se ve la puerta; la tarjeta y la contraseña se comprueban en el servidor, también al crearla o al recuperar la de jefe','Las ventas, el stock, el contador y las copias comprueban la cuenta en la propia base de datos; restaurar una copia, solo un jefe','Un empleado que ya no está en la plantilla pierde el acceso al momento']}
 ];
 let phQ='';
 /* Versiones: cada parche lleva su versión (v); los que no la llevan son de la 1.0 */
@@ -6904,6 +7033,29 @@ async function nubeCopiaRes(id){
  try{await refreshStock()}catch(e){}try{await cloudPullRecords()}catch(e){}
  NC.list=null;renderDir();say('Copia restaurada en todos los dispositivos');
 }
+/* ===== V2 · Estado de las cuentas seguras (Dirección → Copias de seguridad) ===== */
+let CU={list:null,err:''};
+async function cuentasLoad(){
+ try{const tk=await authToken();if(!tk){CU.list=[];CU.err='sin';}
+  else{const r=await fetch(AUTH_URL,{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY,Authorization:'Bearer '+tk},body:JSON.stringify({accion:'resumen'})});
+   const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||r.status);CU.list=Array.isArray(j.cuentas)?j.cuentas:[];CU.err=''}}
+ catch(e){CU.list=[];CU.err=/SOLO_JEFES/.test(String(e.message))?'sin':'red'}
+ if(!dirModal.hidden&&dirMod==='copia'&&!document.activeElement.matches('input'))renderDir();
+}
+function cuentasHTML(){
+ const head='<div class="dir-sec-title">CUENTAS SEGURAS EN LA BASE DE DATOS</div><p class="bk-note">Al entrar con su tarjeta, cada empleado recibe su propia cuenta en la base de datos. Cuando hayáis entrado todos al menos una vez, la base de datos se podrá cerrar para que nadie sin cuenta pueda leer ni tocar nada.</p>';
+ const here=authFresh()||(AUTH&&ME&&AUTH.emp===ME.id)?'<div class="enc-note">✓ Este dispositivo ya habla con la base de datos con tu cuenta segura.</div>':'<div class="enc-note warnote">Este dispositivo todavía no tiene tu cuenta segura: cierra sesión y vuelve a entrar con tu tarjeta.</div>';
+ if(SANDBOX)return head+'<div class="enc-empty">En el modo prueba no se usan cuentas.</div>';
+ if(CU.list===null){cuentasLoad();return head+here+'<div class="enc-empty">Cargando…</div>'}
+ if(CU.err==='sin')return head+here;
+ if(CU.err==='red')return head+here+'<div class="enc-note warnote">Sin conexión: no se puede ver el estado de las cuentas ahora.</div><div class="enc-actions"><button type="button" data-dir="cu-reload">REINTENTAR</button></div>';
+ const m={};CU.list.forEach(c=>{m[c.emp_id]=c});
+ const L=empleados.filter(e=>e&&e.id&&e.id!=='prueba'), ok=L.filter(e=>m[e.id]).length;
+ return head+here+`<div class="enc-note${ok===L.length?'':' warnote'}"><b>${ok} de ${L.length}</b> empleados ya tienen su cuenta segura.</div>`+
+  L.map(e=>{const c=m[e.id],t=c&&Date.parse(c.ultima);return `<div class="enc-card dir-item"><div class="it"><b>${esc(e.name)}</b>${isJefe(e)?' · jefe':''}<br><small>${c?'✓ Cuenta segura · última entrada '+esc(fmtDate(t))+' '+esc(fmtTime(t)):'Todavía no ha entrado con la versión nueva'}</small></div></div>`}).join('')+
+  '<div class="enc-actions" style="margin-top:8px"><button type="button" data-dir="cu-reload">ACTUALIZAR</button></div>';
+}
+dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir="cu-reload"]');if(!b)return;e.stopImmediatePropagation();CU.list=null;renderDir()});
 dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir^="nc-"]');if(!b)return;e.stopImmediatePropagation();const d=b.dataset.dir, i=d.indexOf(':'), a=i<0?d:d.slice(0,i), arg=i<0?'':d.slice(i+1);
  if(a==='nc-reload'){NC.list=null;renderDir()}else if(a==='nc-hoy')once('nch',nubeCopiaHoy,b);else if(a==='nc-dl')once('ncd',()=>nubeCopiaDl(arg),b);else if(a==='nc-res')once('ncr',()=>nubeCopiaRes(arg),b)});
 /* Si la tarea de las 5:00 no la hizo, la primera vez del día que se abre la web se pide la copia (la base de datos solo guarda una por día) */
@@ -6965,7 +7117,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)mostWake()
 
 /* ===== V2 · Avisos en el móvil aunque la aplicación esté cerrada (Web Push con la función «avisos» de Supabase) ===== */
 const PUSH_URL=SB_URL+'/functions/v1/avisos', PUSH_PUB='BLAuxcZaK5ZoYWUoW5S8kVDHQ_-C-LADTaKeYDiH41GA2vNM-ARN3ojrp5bwrC-IXcRoD53dD5FOI7XoOq0Ekwo';
-function pushApi(body){return fetch(PUSH_URL,{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify(body)}).then(r=>r.ok?r.json():r.json().catch(()=>({})).then(j=>Promise.reject(new Error(j.error||r.status))))}
+async function pushApi(body){let tk=null;try{tk=await authToken()}catch(e){}return fetch(PUSH_URL,{method:'POST',headers:Object.assign({'Content-Type':'application/json',apikey:SB_KEY},tk?{Authorization:'Bearer '+tk}:{}),body:JSON.stringify(body)}).then(r=>r.ok?r.json():r.json().catch(()=>({})).then(j=>Promise.reject(new Error(j.error||r.status))))}
 function pushSupported(){return 'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window}
 function pushEp(){try{return localStorage.getItem('harrington_push')||''}catch(e){return ''}}
 function pushKey(b){const p='='.repeat((4-b.length%4)%4), r=atob((b+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(r,c=>c.charCodeAt(0))}

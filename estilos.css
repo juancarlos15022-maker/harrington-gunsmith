@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261012p
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261012r
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -950,7 +950,7 @@ body.theme-night .hero-banner:before{background:radial-gradient(ellipse at 50% 0
 #ausBody textarea,#ausModal textarea{display:block;width:100%;min-height:80px;margin-top:4px;padding:10px;border-radius:6px;border:1px solid #5d4928;background:#040b08;color:#eee0bd;font:inherit;font-size:16px;resize:vertical}
 .au-mot{margin:6px 0;padding:6px 8px;border-left:3px solid #5A6E8C;background:#0a1420;color:#dfe6f0;font-size:14px;overflow-wrap:anywhere}
 /* ===== Entrada ===== */
-.gate{position:fixed;inset:0;z-index:110;overflow:hidden;background:#04060a;color:#f3e2b5;--gimg:none;-webkit-user-select:none;user-select:none}
+.gate{position:fixed;inset:0;z-index:110;overflow:hidden;overflow:clip;background:#04060a;color:#f3e2b5;--gimg:none;-webkit-user-select:none;user-select:none}
 .gate[hidden]{display:none}
 body.gate-open{overflow:hidden}
 body.gate-open .modal-overlay{z-index:130}
