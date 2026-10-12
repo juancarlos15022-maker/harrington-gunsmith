@@ -9,6 +9,7 @@
 //      colaborador → solo el rol (mismos canales que el personal, sin ficha ni web). Nadie más puede aprobar.
 //   4. /despedir o clic derecho → Apps → «Despedir de Harrington»: quita la ficha de la web y deja a la persona como visita.
 //   5. La web (Jefe o Gerente con sesión) avisa de altas, ascensos y despidos para ajustar los roles.
+//   6. Canal de plantilla (dirección): cada ficha tiene Ascender y Despedir, con confirmación; cambian la web, el rol y avisan por carta.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -79,6 +80,19 @@ async function ajustarRoles(c: Record<string, string>, uid: string, motivo: stri
   if (quiero && !tiene.includes(quiero)) { await api(c, "PUT", `/guilds/${c.guild_id}/members/${uid}/roles/${quiero}`, undefined, motivo); n++; }
   return { puesto: emp?.puesto || null, cambios: n };
 }
+const SIGUIENTE: Record<string, string> = { "Aprendiz de armero": "Armero", "Armero": "Armero experto", "Armero experto": "Gerente" };
+const SUELDO: Record<string, number> = { "Gerente": 4000, "Armero experto": 3000, "Armero": 2500, "Aprendiz de armero": 2000 };
+const dolar = (c: unknown) => "$" + (Number(c || 0) / 100).toFixed(2);
+const CARTA_DESPIDO = "Por la presente se le comunica que **ha sido despedido de Harrington Gunsmith**.\n\nDesde este momento deja de pertenecer al personal de la casa: ya no tiene entrada a la web ni a los canales de la empresa. Sigue siendo bienvenido en el salón de visitas.";
+// carta privada del Señor Harrington (si la persona tiene los mensajes privados cerrados, no pasa nada)
+async function carta(c: Record<string, string>, uid: string, texto: string) {
+  try {
+    const dm = await api(c, "POST", "/users/@me/channels", { recipient_id: uid });
+    if (dm.d?.id) await api(c, "POST", `/channels/${dm.d.id}/messages`, { content: "🎩 **Casa Harrington · Saint Denis**\n\n" + texto + FIRMA });
+  } catch { /* */ }
+}
+// las fichas del canal de plantilla se ponen al día al momento (si no, la revisión de cada medio minuto lo hace)
+const refrescarPlantilla = (c: Record<string, string>) => fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/discord-puerta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ secreto: c.secreto, solo: "plantilla" }) }).catch(() => null);
 const limpio = (s: unknown, n: number) => String(s ?? "").replace(/@(everyone|here)/gi, "@​$1").replace(/<@[!&]?\d+>/g, "").trim().slice(0, n);
 
 // La web avisa de un cambio de plantilla (alta, ascenso, despido): se ajustan los roles según lo que diga la base de datos
@@ -126,7 +140,7 @@ Deno.serve(async (req: Request) => {
       if (esPlantilla || ["rol_visitante", "rol_paso1", "rol_paso2", "rol_paso3", "rol_aspirante"].some(tiene)) return efimero("Ya dio usted su palabra sobre las normas de esta casa. ✅");
       const r = await poner("rol_paso1", "Aceptó la normativa de Discord");
       if (r.st >= 300) return efimero(NO_PUEDO);
-      return efimero(`✅ Queda usted enterado de las normas. Sírvase pasar ahora a ${ch("canal_seleccion")} y declarar a qué viene.`);
+      return efimero(`✅ Gracias. Ahora pase a ${ch("canal_seleccion")} y díganos si viene de visita o a trabajar.`);
     }
     if (paso === "visitante" || paso === "empleado") {
       if (!tiene("rol_paso1") && !tiene("rol_visitante")) return efimero("Antes ha de dar usted su palabra sobre las normas de esta casa.");
@@ -136,13 +150,13 @@ Deno.serve(async (req: Request) => {
         const r = await poner("rol_visitante", "Eligió acceso de visitante");
         if (r.st >= 300) return efimero(NO_PUEDO);
         await quitar("rol_paso1", "Ya eligió acceso");
-        return efimero("🚪 Sea usted bienvenido. Tiene a su disposición el salón de visitas y el catálogo de la casa. Si algún día desea servir en ella, vuelva aquí y pulse «Para servir en la casa».");
+        return efimero("🚪 Sea usted bienvenido. Ya tiene abierto el salón de visitas, con el catálogo y la aplicación de la casa. Si algún día quiere trabajar con nosotros, vuelva aquí y pulse «Para servir en la casa».");
       }
       if (tiene("rol_paso2") || tiene("rol_paso3") || tiene("rol_aspirante")) return efimero("Su trámite de ingreso ya está en curso.");
       const r = await poner("rol_paso2", "Eligió entrar como empleado");
       if (r.st >= 300) return efimero(NO_PUEDO);
       await quitar("rol_paso1", "Ya eligió acceso");
-      return efimero(`🛠️ Excelente disposición. Sírvase leer y acatar ${ch("canal_normas_servidor")}.`);
+      return efimero(`🛠️ Muy bien. **Paso 1 de 3:** lea ${ch("canal_normas_servidor")} y pulse «Leídas y acatadas».`);
     }
     if (paso === "servidor") {
       if (esPlantilla || tiene("rol_paso3") || tiene("rol_aspirante")) return efimero("Ya dio usted fe de las normas del servidor. ✅");
@@ -150,7 +164,7 @@ Deno.serve(async (req: Request) => {
       const r = await poner("rol_paso3", "Aceptó la normativa del servidor");
       if (r.st >= 300) return efimero(NO_PUEDO);
       await quitar("rol_paso2", "Paso completado");
-      return efimero(`✅ Normas del servidor acatadas. Último requisito: ${ch("canal_normas_empresa")}.`);
+      return efimero(`✅ Hecho. **Paso 2 de 3:** lea ${ch("canal_normas_empresa")} y pulse «Empeño mi palabra».`);
     }
     if (paso === "empresa") {
       if (esPlantilla) return efimero("Usted ya pertenece a la Casa Harrington. 🎩");
@@ -159,7 +173,7 @@ Deno.serve(async (req: Request) => {
       const r = await poner("rol_aspirante", "Aceptó la normativa de Harrington Gunsmith");
       if (r.st >= 300) return efimero(NO_PUEDO);
       await quitar("rol_paso3", "Paso completado");
-      return efimero(`✅ Palabra empeñada. Presente ahora su solicitud en ${ch("canal_solicitud")}.`);
+      return efimero(`✅ Hecho. **Paso 3 de 3:** presente su solicitud en ${ch("canal_solicitud")}.`);
     }
     return efimero("Este botón ha caído en desuso.");
   }
@@ -186,15 +200,60 @@ Deno.serve(async (req: Request) => {
     const b = await sb.rpc("hg_baja_empleado", { p_discord: uid, p_por: quien });
     if (b.error) return json({ type: 7, data: { content: b.error.message.includes("JEFE") ? "A un Jefe no se le despide desde Discord." : "No he podido despedirle: " + b.error.message, components: [] } });
     const r = await ajustarRoles(c, uid, "Despedido por " + quien);
-    enSegundoPlano((async () => {
-      try {
-        const dm = await api(c, "POST", "/users/@me/channels", { recipient_id: uid });
-        if (dm.d?.id) await api(c, "POST", `/channels/${dm.d.id}/messages`, { content: "🎩 **Casa Harrington · Saint Denis**\n\nPor la presente se le comunica que ha dejado usted de servir en esta casa. Sigue siendo bienvenido en el salón de visitas." + FIRMA });
-      } catch { /* */ }
-    })());
+    enSegundoPlano((async () => { await carta(c, uid, CARTA_DESPIDO); await refrescarPlantilla(c); })());
     const bd = b.data as Record<string, string> | null;
     const fic = bd?.estaba ? `Su ficha «${bd.nombre}» se ha retirado de la web y ya no podrá entrar en ella` : "No tenía ficha en la web";
     return json({ type: 7, data: { content: `✅ Queda despedido. ${fic}; ${("fuera" in r && r.fuera) ? "ya no se halla en el servidor" : "en Discord ha quedado como visita"}.`, components: [] } });
+  }
+
+  // plantilla: botones Ascender y Despedir de cada ficha (canal de la dirección)
+  if (i.type === 3 && id.startsWith("plt:")) {
+    if (!esDireccion()) return efimero("Solo la Dirección puede usar estos botones.");
+    const [, acc, empId] = id.split(":");
+    if (acc === "no") return json({ type: 7, data: { content: "Cancelado. Todo sigue como estaba.", components: [] } });
+    const quien = limpio(i.member?.nick || user.global_name || user.username, 60);
+    const { data } = await sb.from("datos").select("valor").eq("clave", "empleados").maybeSingle();
+    const e = (Array.isArray(data?.valor) ? data!.valor as Array<Record<string, string>> : []).find((x) => x && x.id === empId);
+    if (!e) { enSegundoPlano(refrescarPlantilla(c)); return efimero("Esa persona ya no está en la plantilla. Retiro su ficha."); }
+    const nom = limpio(e.name, 60), sig = SIGUIENTE[e.puesto];
+    if (acc === "asc") {
+      if (!sig) return efimero(`${nom} no tiene un rango superior al que ascender.`);
+      return json({ type: 4, data: { flags: 64, content: `¿Ascender a **${nom}** de **${e.puesto}** a **${sig}**?\n\nSueldo: ${dolar(e.sueldo)} → **${dolar(SUELDO[sig])}** a la semana (el nuevo cuenta desde mañana).\n${e.discord ? "Se le cambiará el rol en Discord y se" : "No tiene Discord enlazado, así que su rol no cambiará; sí se"} publicará su contrato nuevo en el canal de contratos.`,
+        components: [{ type: 1, components: [{ type: 2, style: 3, label: "Sí, ascender", custom_id: `plt:asc-si:${empId}` }, { type: 2, style: 2, label: "Mejor no", custom_id: "plt:no" }] }] } });
+    }
+    if (acc === "desp") {
+      if (e.puesto === "Jefe") return efimero("Al Jefe no se le despide desde Discord.");
+      return json({ type: 4, data: { flags: 64, content: `¿Despedir a **${nom}** (${limpio(e.puesto, 40)})?\n\nSe borrará su ficha de la web y perderá la entrada a ella${e.discord ? ", se le quitarán los canales de la casa, quedará como visita y recibirá una carta avisándole" : ". No tiene Discord enlazado: sus roles no se tocarán"}.`,
+        components: [{ type: 1, components: [{ type: 2, style: 4, label: "Sí, despedir", custom_id: `plt:desp-si:${empId}` }, { type: 2, style: 2, label: "Mejor no", custom_id: "plt:no" }] }] } });
+    }
+    // lo que tarda (base de datos, roles, carta) se hace después de contestar; luego se cambia el mensaje con el resultado
+    const fin = (content: string) => fetch(`https://discord.com/api/v10/webhooks/${c.app_id}/${i.token}/messages/@original`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content, components: [] }) });
+    if (acc === "asc-si") {
+      enSegundoPlano((async () => {
+        const r = await sb.rpc("hg_ascenso_empleado", { p_id: empId, p_por: quien });
+        if (r.error) return fin(r.error.message.includes("SIN_ASCENSO") ? `${nom} ya no tiene un rango superior.` : r.error.message.includes("SIN_CONTRATO") ? `A ${nom} le faltan los datos del contrato en la web: complételos primero.` : "No he podido ascenderle: " + r.error.message);
+        const a = r.data as Record<string, string>;
+        let rol = "";
+        if (a.discord) { const x = await ajustarRoles(c, a.discord, `Ascendido a ${a.a} por ${quien}`); rol = ("fuera" in x && x.fuera) ? " Ya no está en el servidor, así que su rol no ha cambiado." : " Su rol de Discord ya está cambiado."; }
+        await fin(`✅ **${nom}** asciende a **${a.a}** (${dolar(a.nuevo)} a la semana desde mañana).${rol} Su contrato nuevo saldrá en el canal de contratos en cuanto haya una web abierta.`);
+        if (a.discord) await carta(c, a.discord, `Tengo el gusto de comunicarle que la Dirección le ha **ascendido a ${a.a}**. Su nuevo sueldo es de **${dolar(a.nuevo)}** a la semana, desde mañana, y su contrato nuevo se publicará en el canal de contratos.\n\nEnhorabuena, y siga sirviendo a la casa con el mismo empeño.`);
+        await refrescarPlantilla(c);
+      })());
+      return json({ type: 6 });
+    }
+    if (acc === "desp-si") {
+      enSegundoPlano((async () => {
+        const r = await sb.rpc("hg_baja_por_id", { p_id: empId, p_por: quien });
+        if (r.error) return fin(r.error.message.includes("JEFE") ? "Al Jefe no se le despide desde Discord." : "No he podido despedirle: " + r.error.message);
+        const d = r.data as Record<string, string>;
+        let rol = " No tenía Discord enlazado.";
+        if (d.discord) { const x = await ajustarRoles(c, d.discord, "Despedido por " + quien); rol = ("fuera" in x && x.fuera) ? " Ya no estaba en el servidor." : " En Discord ha quedado como visita, sin los canales de la casa."; await carta(c, d.discord, CARTA_DESPIDO); }
+        await fin(`✅ **${nom}** ha sido despedido. Su ficha se ha borrado de la web y ya no puede entrar en ella.${rol}`);
+        await refrescarPlantilla(c);
+      })());
+      return json({ type: 6 });
+    }
+    return efimero("Este botón ha caído en desuso.");
   }
 
   // 1 · el aspirante pide entrar: formulario
@@ -202,7 +261,7 @@ Deno.serve(async (req: Request) => {
     if (PLANTILLA.some((k) => c[k] && roles.includes(c[k]))) return efimero("Usted ya pertenece a la Casa Harrington. 🎩");
     if (c.rol_aspirante && !roles.includes(c.rol_aspirante)) return efimero("Antes ha de acatar las normas del servidor y las de la Casa.");
     const { data: ya } = await sb.from("bot_solicitudes").select("estado").eq("user_id", user.id).maybeSingle();
-    if (ya?.estado === "pendiente") return efimero("Su solicitud obra ya en poder de la Dirección. Tenga a bien aguardar respuesta.");
+    if (ya?.estado === "pendiente") return efimero("Su solicitud ya está en manos de la Dirección. En cuanto la lea, le contestará por mensaje privado.");
     return json({ type: 9, data: { custom_id: "sol:form", title: "Solicitud · Casa Harrington", components: [
       { type: 1, components: [{ type: 4, custom_id: "nombre", label: "Nombre y apellido de su personaje", style: 1, min_length: 3, max_length: 60, required: true, placeholder: "Ej.: Arthur Morgan" }] },
       { type: 1, components: [{ type: 4, custom_id: "telegrama", label: "Telegrama de su personaje", style: 1, min_length: 1, max_length: 10, required: true, placeholder: "Letras, números y guiones (máx. 10)" }] },
@@ -236,7 +295,7 @@ Deno.serve(async (req: Request) => {
     });
     if (m.st >= 300) return efimero("No he podido hacer llegar su solicitud. Inténtelo de nuevo dentro de un instante.");
     await sb.from("bot_solicitudes").upsert({ user_id: user.id, usuario: limpio(user.username, 60), nombre, telegrama: tel, motivo, estado: "pendiente", mensaje_id: m.d?.id || null, creada: new Date().toISOString(), decidida: null, decidida_por: null, puesto: null });
-    return efimero("✅ Su solicitud obra ya en poder de la Dirección de la Casa Harrington. Recibirá usted aviso por carta privada en cuanto se resuelva.");
+    return efimero("✅ Solicitud entregada. La Dirección la leerá y le contestará por mensaje privado.");
   }
 
   // 3 · Dirección decide
@@ -267,11 +326,12 @@ Deno.serve(async (req: Request) => {
         await sb.from("bot_solicitudes").update({ estado: "aceptada", puesto: p.n, decidida: new Date().toISOString(), decidida_por: quien }).eq("user_id", uid);
         try {
           const dm = await api(c, "POST", "/users/@me/channels", { recipient_id: uid });
-          const web = p.web ? `\n\nEn ${ch("canal_enlaces_personal")} hallará la web de la casa: la primera vez que entre, se le pedirá que cree su contraseña. Su contrato se le extenderá en el canal de contratos.` : "";
+          const web = p.web ? `\n\n**Para empezar:**\n**1.** Lea los avisos en ${ch("canal_bandos")}.\n**2.** Entre en la web desde ${ch("canal_enlaces_personal")}: toque su tarjeta y cree su contraseña.\n**3.** Su contrato aparecerá en el canal de contratos.` : `\n\nComo colaborador no necesita la web: le basta con los canales de Discord. Empiece por ${ch("canal_bandos")}.`;
           if (dm.d?.id) await api(c, "POST", `/channels/${dm.d.id}/messages`, { content: `🎩 **Casa Harrington · Saint Denis**\n\nDistinguido aspirante:\n\nTengo el gusto de comunicarle que la Dirección ha tenido a bien admitirle como **${p.n}** de esta casa. Desde este momento tiene usted abiertas las dependencias del personal en nuestro Discord.${web}` + FIRMA });
         } catch { /* mensajes privados cerrados */ }
         const como = p.web ? `que desde hoy sirve en la Casa Harrington como **${p.n}**` : "que desde hoy colabora con la Casa Harrington";
         if (c.canal_bienvenida) await api(c, "POST", `/channels/${c.canal_bienvenida}/messages`, { content: `🎩 Sírvanse dar la bienvenida a <@${uid}>, ${como}.`, allowed_mentions: { users: [uid] } });
+        await refrescarPlantilla(c);
       })();
       enSegundoPlano(resto);
       return json({ type: 7, data: { content: "", embeds: [{ ...embed, color: 0x3d8b52, footer: { text: `✅ Admitido como ${p.n} por ${quien}${p.web ? " · ficha abierta en la web" : " · sin ficha en la web"}` } }], components: [] } });

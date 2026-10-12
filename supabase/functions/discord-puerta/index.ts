@@ -28,6 +28,82 @@ function foto(g: string, m: Miembro) {
 }
 const nombreDe = (m: Miembro) => limpio(m.nick || m.user.global_name || m.user.username, 60) || "Un forastero";
 
+// ── Plantilla: una ficha por empleado en el canal de la dirección, con los botones Ascender y Despedir ──
+type Emp = Record<string, unknown> & { id: string; name: string; puesto?: string; sueldo?: number; inicio?: string; prueba?: string; fijo?: boolean; sinPrueba?: boolean; telegrama?: string; discord?: string };
+const ASC: Record<string, string> = { "Aprendiz de armero": "Armero", "Armero": "Armero experto", "Armero experto": "Gerente" };
+const COLOR: Record<string, number> = { "Jefe": 0x8b2e25, "Gerente": 0x3498db, "Armero experto": 0xa85d00, "Armero": 0xa86400, "Aprendiz de armero": 0xf1c40f };
+const dolar = (c: unknown) => "$" + (Number(c || 0) / 100).toFixed(2);
+const fecha = (iso: unknown) => /^\d{4}-\d{2}-\d{2}$/.test(String(iso || "")) ? String(iso).split("-").reverse().join("/") : "—";
+function ficha(e: Emp) {
+  const jefe = e.puesto === "Jefe", sig = ASC[e.puesto || ""];
+  const contrato = jefe ? "Dueño de la casa" : e.fijo ? "Fijo" : e.sinPrueba ? "Sin periodo de prueba (ascendido)" : e.prueba ? `En prueba hasta el ${fecha(e.prueba)}` : "—";
+  const botones = [];
+  if (sig) botones.push({ type: 2, style: 1, label: `Ascender a ${sig}`, emoji: { name: "⬆️" }, custom_id: `plt:asc:${e.id}` });
+  if (!jefe) botones.push({ type: 2, style: 4, label: "Despedir", emoji: { name: "🚪" }, custom_id: `plt:desp:${e.id}` });
+  return {
+    allowed_mentions: { parse: [] },
+    embeds: [{
+      title: `${jefe ? "👑" : e.puesto === "Gerente" ? "🌟" : e.puesto === "Aprendiz de armero" ? "🔰" : "⚒"} ${limpio(e.name, 80)}`,
+      color: COLOR[e.puesto || ""] ?? 0xd7ae54,
+      fields: [
+        { name: "Rango", value: limpio(e.puesto, 40) || "—", inline: true },
+        { name: "Telegrama", value: limpio(e.telegrama, 20) || "—", inline: true },
+        { name: "Discord", value: e.discord ? `<@${e.discord}>` : "sin enlazar", inline: true },
+        { name: "Sueldo", value: Number(e.sueldo) > 0 ? dolar(e.sueldo) + " a la semana" : "—", inline: true },
+        { name: "En la casa desde", value: fecha(e.inicio), inline: true },
+        { name: "Contrato", value: contrato, inline: true },
+      ],
+      footer: { text: jefe ? "Al Jefe no se le asciende ni se le despide desde aquí" : !sig ? "Gerente: el rango más alto del personal" : "Señor Harrington · Plantilla de la casa" },
+    }],
+    components: botones.length ? [{ type: 1, components: botones }] : [],
+  };
+}
+async function plantilla(c: Record<string, string>, H: Record<string, string>) {
+  const canal = c.canal_plantilla;
+  if (!canal) return { sin: true };
+  const api = (m: string, ruta: string, cuerpo?: unknown) => fetch("https://discord.com/api/v10" + ruta, { method: m, headers: H, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo) });
+  // cabecera explicativa (una sola vez)
+  if (!c.msg_plantilla) {
+    const r = await api("POST", `/channels/${canal}/messages`, { embeds: [{
+      title: "📋 " + gotica("Plantilla de la Casa"), color: 0xd7ae54,
+      description: "Aquí tiene una ficha por cada miembro del personal, siempre al día con la web.\n\n" +
+        "⬆️ **Ascender** — le sube al rango siguiente con su nuevo sueldo (desde mañana), le cambia el rol en Discord y se publica su contrato nuevo en el canal de contratos.\n\n" +
+        "🚪 **Despedir** — se borra su ficha de la web y pierde la entrada a ella, se le quitan los canales de la casa, queda como visita y recibe una carta avisándole.\n\n" +
+        "Ambos botones piden confirmación y solo los puede usar la Dirección.",
+      footer: { text: "Señor Harrington · Harrington Gunsmith · Saint Denis, 1880" } }] });
+    if (r.ok) { const d = await r.json(); await sb.from("bot_cfg").upsert({ clave: "msg_plantilla", valor: d.id }); await api("PUT", `/channels/${canal}/pins/${d.id}`); }
+  }
+  const { data: fila } = await sb.from("datos").select("valor").eq("clave", "empleados").maybeSingle();
+  const emps = (Array.isArray(fila?.valor) ? fila!.valor : []) as Emp[];
+  const { data: hechas } = await sb.from("bot_fichas").select("emp_id,mensaje_id,firma,creada");
+  const F = new Map(((hechas ?? []) as Array<{ emp_id: string; mensaje_id: string | null; firma: string; creada: string }>).map((r) => [r.emp_id, r]));
+  let n = 0;
+  for (const e of emps.filter((x) => x && x.id && x.name)) {
+    const cuerpo = ficha(e), firma = JSON.stringify(cuerpo);
+    const f = F.get(e.id);
+    if (f && f.firma === firma && f.mensaje_id) continue;
+    if (f && !f.mensaje_id && Date.now() - Date.parse(f.creada) < 120000) continue; // otra revisión la está creando
+    if (f?.mensaje_id) {
+      const r = await api("PATCH", `/channels/${canal}/messages/${f.mensaje_id}`, cuerpo);
+      if (r.ok) { await sb.from("bot_fichas").update({ firma }).eq("emp_id", e.id); n++; continue; }
+      if (r.status !== 404) continue;
+    }
+    if (!f) { const { data: ok } = await sb.from("bot_fichas").insert({ emp_id: e.id, firma: "" }).select("emp_id"); if (!ok?.length) continue; }
+    else await sb.from("bot_fichas").update({ mensaje_id: null, creada: new Date().toISOString() }).eq("emp_id", e.id);
+    const r = await api("POST", `/channels/${canal}/messages`, cuerpo);
+    if (r.ok) { const d = await r.json(); await sb.from("bot_fichas").update({ mensaje_id: d.id, firma }).eq("emp_id", e.id); n++; }
+    else await sb.from("bot_fichas").delete().eq("emp_id", e.id);
+  }
+  // quien ya no está en la plantilla: se retira su ficha
+  const vivos = new Set(emps.map((e) => e && e.id));
+  for (const [id, f] of F) {
+    if (vivos.has(id)) continue;
+    if (f.mensaje_id) { const r = await api("DELETE", `/channels/${canal}/messages/${f.mensaje_id}`); if (!r.ok && r.status !== 404) continue; }
+    await sb.from("bot_fichas").delete().eq("emp_id", id); n++;
+  }
+  return { cambios: n };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "solo POST" }, 405);
   let b: Record<string, unknown> = {};
@@ -37,6 +113,10 @@ Deno.serve(async (req: Request) => {
   if (!c.secreto || c.secreto.length < 20 || b.secreto !== c.secreto) return json({ error: "NO" }, 403);
   const H = { Authorization: "Bot " + c.token, "Content-Type": "application/json" };
   const G = c.guild_id;
+  // fichas de la plantilla (en cada revisión, o al momento tras Ascender o Despedir)
+  let pl: unknown = null;
+  try { pl = await plantilla(c, H); } catch (e) { pl = { error: String(e).slice(0, 120) }; }
+  if (b.solo === "plantilla") return json({ ok: true, plantilla: pl });
 
   // 1 · lista completa de miembros (de 1000 en 1000)
   const todos: Miembro[] = [];
