@@ -3,6 +3,8 @@
 // y se responde. Flujo de solicitud de empleo:
 //   1. El aspirante pulsa «📝 SOLICITAR ENTRAR» en su canal → rellena un formulario (nombre IC y por qué).
 //   2. Señor Harrington publica la solicitud en el canal de Dirección con botones APRENDIZ · ARMERO · RECHAZAR.
+//   0. Antes, el recorrido de entrada con botones: normas de Discord → visitante o empleado → normas del servidor →
+//      normas de la empresa → aspirante (cada paso exige el anterior y quita el rol del paso ya hecho).
 //   3. Un JEFE o GERENTE pulsa un botón → se le da el rol del puesto (y se le quita el de aspirante) automáticamente,
 //      se le avisa por mensaje privado y queda apuntado. Nadie más puede aprobar.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
@@ -36,9 +38,14 @@ async function api(c: Record<string, string>, metodo: string, ruta: string, cuer
   const t = await r.text();
   try { return { st: r.status, d: t ? JSON.parse(t) : null }; } catch { return { st: r.status, d: t }; }
 }
+// trabajo que sigue después de contestar a Discord (tiene 3 segundos para recibir la respuesta)
+function enSegundoPlano(p: Promise<unknown>) {
+  const er = (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime;
+  if (er?.waitUntil) er.waitUntil(p.catch(() => {})); else p.catch(() => {});
+}
 const efimero = (content: string) => json({ type: 4, data: { content, flags: 64 } });
 const PUESTOS: Record<string, { k: string; n: string }> = { aprendiz: { k: "rol_aprendiz", n: "Aprendiz" }, armero: { k: "rol_armero", n: "Armero" } };
-const limpio = (s: unknown, n: number) => String(s ?? "").replace(/@(everyone|here)/gi, "@​$1").replace(/<@[!&]?\d+>/g, "").trim().slice(0, n);
+const limpio = (s: unknown, n: number) => String(s ?? "").replace(/@(everyone|here)/gi, "@\u200b$1").replace(/<@[!&]?\d+>/g, "").trim().slice(0, n);
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "solo POST" }, 405);
@@ -52,9 +59,60 @@ Deno.serve(async (req: Request) => {
   const user = i.member?.user || i.user || {}, roles: string[] = i.member?.roles || [];
   const id = String(i.data?.custom_id || "");
 
+  // 0 · recorrido de entrada: aceptar normas y elegir acceso (cada botón exige el paso anterior)
+  if (i.type === 3 && id.startsWith("onb:")) {
+    const tiene = (k: string) => !!c[k] && roles.includes(c[k]);
+    const esPlantilla = ["rol_aprendiz", "rol_armero", "rol_gerente", "rol_jefe"].some(tiene);
+    const poner = (k: string, why: string) => api(c, "PUT", `/guilds/${c.guild_id}/members/${user.id}/roles/${c[k]}`, undefined, why);
+    const quitar = (k: string, why: string) => tiene(k) ? api(c, "DELETE", `/guilds/${c.guild_id}/members/${user.id}/roles/${c[k]}`, undefined, why) : Promise.resolve({ st: 204, d: null });
+    const ch = (k: string) => c[k] ? `<#${c[k]}>` : "el siguiente canal";
+    const paso = id.slice(4);
+    if (paso === "discord") {
+      if (esPlantilla || tiene("rol_visitante") || tiene("rol_paso1") || tiene("rol_paso2") || tiene("rol_paso3") || tiene("rol_aspirante")) return efimero("Ya habías aceptado la normativa de Discord. ✅");
+      const r = await poner("rol_paso1", "Aceptó la normativa de Discord");
+      if (r.st >= 300) return efimero("No he podido darte acceso ahora. Inténtalo en un momento.");
+      return efimero(`✅ Normativa aceptada. Ahora elige tu acceso en ${ch("canal_seleccion")}.`);
+    }
+    if (paso === "visitante" || paso === "empleado") {
+      if (!tiene("rol_paso1") && !tiene("rol_visitante")) return efimero("Primero tienes que aceptar la normativa de Discord.");
+      if (esPlantilla) return efimero("Ya formas parte de la plantilla de Harrington Gunsmith. 🎩");
+      if (paso === "visitante") {
+        if (tiene("rol_visitante")) return efimero("Ya tienes el acceso de visitante. 🚪");
+        const r = await poner("rol_visitante", "Eligió acceso de visitante");
+        if (r.st >= 300) return efimero("No he podido darte acceso ahora. Inténtalo en un momento.");
+        await quitar("rol_paso1", "Ya eligió acceso");
+        return efimero("🚪 Bienvenido. Ya tienes abiertos los canales de visitantes. Si algún día quieres trabajar con nosotros, vuelve aquí y pulsa «EMPLEADO».");
+      }
+      if (tiene("rol_paso2") || tiene("rol_paso3") || tiene("rol_aspirante")) return efimero("Ya has empezado el proceso para trabajar con nosotros.");
+      const r = await poner("rol_paso2", "Eligió entrar como empleado");
+      if (r.st >= 300) return efimero("No he podido darte acceso ahora. Inténtalo en un momento.");
+      await quitar("rol_paso1", "Ya eligió acceso");
+      return efimero(`🛠️ Perfecto. Lee y acepta la ${ch("canal_normas_servidor")}.`);
+    }
+    if (paso === "servidor") {
+      if (esPlantilla || tiene("rol_paso3") || tiene("rol_aspirante")) return efimero("Ya habías aceptado la normativa del servidor. ✅");
+      if (!tiene("rol_paso2")) return efimero("Primero elige «Empleado» en la selección de rol.");
+      const r = await poner("rol_paso3", "Aceptó la normativa del servidor");
+      if (r.st >= 300) return efimero("No he podido darte acceso ahora. Inténtalo en un momento.");
+      await quitar("rol_paso2", "Paso completado");
+      return efimero(`✅ Normativa del servidor aceptada. Último paso: la ${ch("canal_normas_empresa")}.`);
+    }
+    if (paso === "empresa") {
+      if (esPlantilla) return efimero("Ya formas parte de la plantilla de Harrington Gunsmith. 🎩");
+      if (tiene("rol_aspirante")) return efimero(`Ya habías aceptado la normativa. Pide tu entrada en ${ch("canal_solicitud")}.`);
+      if (!tiene("rol_paso3")) return efimero("Primero acepta la normativa del servidor.");
+      const r = await poner("rol_aspirante", "Aceptó la normativa de Harrington Gunsmith");
+      if (r.st >= 300) return efimero("No he podido darte acceso ahora. Inténtalo en un momento.");
+      await quitar("rol_paso3", "Paso completado");
+      return efimero(`✅ Normativa de Harrington Gunsmith aceptada. Ahora pide tu entrada en ${ch("canal_solicitud")}.`);
+    }
+    return efimero("Este botón ya no está disponible.");
+  }
+
   // 1 · el aspirante pide entrar: formulario
   if (i.type === 3 && id === "sol:pedir") {
     if ([c.rol_aprendiz, c.rol_armero, c.rol_gerente, c.rol_jefe].some((r) => r && roles.includes(r))) return efimero("Ya formas parte de Harrington Gunsmith. 🎩");
+    if (c.rol_aspirante && !roles.includes(c.rol_aspirante)) return efimero("Primero tienes que aceptar la normativa del servidor y la de Harrington Gunsmith.");
     const { data: ya } = await sb.from("bot_solicitudes").select("estado").eq("user_id", user.id).maybeSingle();
     if (ya?.estado === "pendiente") return efimero("Tu solicitud ya está enviada. La Dirección te responderá pronto.");
     return json({ type: 9, data: { custom_id: "sol:form", title: "Solicitud · Harrington Gunsmith", components: [
@@ -101,20 +159,26 @@ Deno.serve(async (req: Request) => {
       const a = await api(c, "PUT", `/guilds/${c.guild_id}/members/${uid}/roles/${c[p.k]}`, undefined, `Solicitud aceptada por ${quien} como ${p.n}`);
       if (a.st === 404) return efimero("Esa persona ya no está en el servidor.");
       if (a.st >= 300) return efimero("No he podido dar el rol (" + a.st + "). Revisa que el rol de Sr Harrington esté por encima de " + p.n + ".");
-      if (c.rol_aspirante) await api(c, "DELETE", `/guilds/${c.guild_id}/members/${uid}/roles/${c.rol_aspirante}`, undefined, "Ya es empleado");
-      await sb.from("bot_solicitudes").update({ estado: "aceptada", puesto: p.n, decidida: new Date().toISOString(), decidida_por: quien }).eq("user_id", uid);
-      try {
-        const dm = await api(c, "POST", "/users/@me/channels", { recipient_id: uid });
-        if (dm.d?.id) await api(c, "POST", `/channels/${dm.d.id}/messages`, { content: `🎩 **¡Bienvenido a Harrington Gunsmith!** Tu solicitud ha sido aceptada como **${p.n}**. Ya tienes abiertos los canales de la empresa.` });
-      } catch { /* mensajes privados cerrados */ }
-      if (c.canal_bienvenida) await api(c, "POST", `/channels/${c.canal_bienvenida}/messages`, { content: `🎩 Demos la bienvenida a <@${uid}>, nuevo **${p.n}** de Harrington Gunsmith.`, allowed_mentions: { users: [uid] } });
+      // lo demás (quitar roles de los pasos, apuntarlo, avisarle) sigue en segundo plano para responder a tiempo a Discord
+      const resto = (async () => {
+        for (const k of ["rol_aspirante", "rol_paso1", "rol_paso2", "rol_paso3"]) if (c[k]) await api(c, "DELETE", `/guilds/${c.guild_id}/members/${uid}/roles/${c[k]}`, undefined, "Ya es empleado");
+        await sb.from("bot_solicitudes").update({ estado: "aceptada", puesto: p.n, decidida: new Date().toISOString(), decidida_por: quien }).eq("user_id", uid);
+        try {
+          const dm = await api(c, "POST", "/users/@me/channels", { recipient_id: uid });
+          if (dm.d?.id) await api(c, "POST", `/channels/${dm.d.id}/messages`, { content: `🎩 **¡Bienvenido a Harrington Gunsmith!** Tu solicitud ha sido aceptada como **${p.n}**. Ya tienes abiertos los canales de la empresa.` });
+        } catch { /* mensajes privados cerrados */ }
+        if (c.canal_bienvenida) await api(c, "POST", `/channels/${c.canal_bienvenida}/messages`, { content: `🎩 Demos la bienvenida a <@${uid}>, nuevo **${p.n}** de Harrington Gunsmith.`, allowed_mentions: { users: [uid] } });
+      })();
+      enSegundoPlano(resto);
       return json({ type: 7, data: { content: "", embeds: [{ ...embed, color: 0x3d8b52, footer: { text: `✅ Aceptado como ${p.n} por ${quien}` } }], components: [] } });
     }
-    await sb.from("bot_solicitudes").update({ estado: "rechazada", decidida: new Date().toISOString(), decidida_por: quien }).eq("user_id", uid);
-    try {
-      const dm = await api(c, "POST", "/users/@me/channels", { recipient_id: uid });
-      if (dm.d?.id) await api(c, "POST", `/channels/${dm.d.id}/messages`, { content: "Gracias por tu interés en Harrington Gunsmith. Por ahora tu solicitud no ha sido aceptada." });
-    } catch { /* */ }
+    enSegundoPlano((async () => {
+      await sb.from("bot_solicitudes").update({ estado: "rechazada", decidida: new Date().toISOString(), decidida_por: quien }).eq("user_id", uid);
+      try {
+        const dm = await api(c, "POST", "/users/@me/channels", { recipient_id: uid });
+        if (dm.d?.id) await api(c, "POST", `/channels/${dm.d.id}/messages`, { content: "Gracias por tu interés en Harrington Gunsmith. Por ahora tu solicitud no ha sido aceptada." });
+      } catch { /* */ }
+    })());
     return json({ type: 7, data: { content: "", embeds: [{ ...embed, color: 0x8b2e25, footer: { text: `❌ Rechazada por ${quien}` } }], components: [] } });
   }
   return efimero("Este botón ya no está disponible.");
