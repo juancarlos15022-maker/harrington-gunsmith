@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
-<!-- HARRINGTON GUNSMITH · versión 20261012s · tres archivos: index.html, estilos.css y app.js -->
+<!-- HARRINGTON GUNSMITH · versión 20261012u · tres archivos: index.html, estilos.css y app.js -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#07140f">
@@ -16,8 +16,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
 <title>Harrington Gunsmith · Saint Denis</title>
-<link rel="stylesheet" href="estilos.css?v=20261012s" fetchpriority="high">
-<link rel="preload" href="app.js?v=20261012s" as="script" fetchpriority="high">
+<link rel="stylesheet" href="estilos.css?v=20261012u" fetchpriority="high">
+<link rel="preload" href="app.js?v=20261012u" as="script" fetchpriority="high">
 <script data-head>/* la fachada de la entrada solo se adelanta si va a salir la entrada (si ya has entrado hoy en esta pestaña, no) */
 try{if(!sessionStorage.getItem('harrington_me_v1')){[['entrada-fachada.webp','(max-aspect-ratio: 23/20)'],['entrada-fachada-ancha.webp','(min-aspect-ratio: 23/20)']].forEach(function(x){var l=document.createElement('link');l.rel='preload';l.as='image';l.href=x[0];l.media=x[1];document.head.appendChild(l)})}}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -466,6 +466,16 @@ try{if(!sessionStorage.getItem('harrington_me_v1')){[['entrada-fachada.webp','(m
   <button type="button" class="mn-clock" data-mn="clock"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V9.5M12 13.5l3 2M10.5 3h3M12 3v3.5"/></svg><span class="mn-l">FICHAR</span></button>
 </nav>
 <button type="button" class="to-top" id="toTop" aria-label="Volver arriba" title="Volver arriba">↑</button>
+<button type="button" class="ai-fab" id="aiFab" aria-label="Harrington AI: asistente por voz" title="Harrington AI · asistente por voz"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg></button>
+<div class="modal-overlay" id="aiModal" hidden>
+  <div class="enc-panel ai-panel" role="dialog" aria-modal="true" aria-labelledby="aiTitle">
+    <div class="enc-head"><span id="aiTitle">HARRINGTON AI</span><span class="ai-head-btns"><button type="button" class="ai-snd" id="aiSnd" aria-label="Respuesta hablada">🔊</button><button type="button" class="danger" id="aiClose">Cerrar</button></span></div>
+    <div class="ai-log" id="aiLog" aria-live="polite"></div>
+    <div class="ai-st" id="aiSt" role="status"></div>
+    <div class="ai-in"><button type="button" class="ai-mic" id="aiMic" aria-label="Hablar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg></button><input id="aiTxt" type="text" maxlength="300" autocomplete="off" enterkeyhint="send" placeholder="Pulsa el micrófono o escribe…" aria-label="Orden para Harrington"><button type="button" class="primary" id="aiSend">ENVIAR</button></div>
+    <div class="ai-tips" id="aiTips"></div>
+  </div>
+</div>
 <div class="gate" id="gate" hidden>
  <div class="g-stage" id="gStage">
   <div class="g-img"></div>
@@ -735,6 +745,6 @@ try{if(!sessionStorage.getItem('harrington_me_v1')){[['entrada-fachada.webp','(m
   </div>
 </div>
 
-<script src="app.js?v=20261012s"></script>
+<script src="app.js?v=20261012u"></script>
 </body>
 </html>
