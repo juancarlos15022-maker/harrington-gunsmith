@@ -1,5 +1,15 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261012k
+/* HARRINGTON GUNSMITH · app.js · versión 20261012l
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
+/* ===== V2 · La sesión no se cierra al salir de la aplicación =====
+   Se guarda en el dispositivo y se recupera al volver, aunque el móvil haya cerrado la aplicación por detrás para ahorrar memoria.
+   Se cierra con CERRAR SESIÓN (en tu ficha), al fichar la salida si lo eliges, o tras 3 horas sin usarla.
+   El Modo Jefe solo se recupera si fue hace menos de 5 minutos (o si eres jefe), como siempre. */
+var SES_KEY='harrington_ses_v1', SES_MAX=3*3600000;
+(function(){try{if(sessionStorage.getItem('harrington_me_v1'))return;const s=JSON.parse(localStorage.getItem(SES_KEY)||'null');
+ if(!s||!s.me||!s.me.id||Date.now()-(s.seen||0)>SES_MAX){localStorage.removeItem(SES_KEY);return}
+ sessionStorage.setItem('harrington_me_v1',JSON.stringify(s.me));if(s.tab)sessionStorage.setItem('harrington_tab',s.tab);
+ if(s.boss&&(s.jefe||Date.now()-(s.seen||0)<300000))sessionStorage.setItem('harrington_boss_active_v1','1');
+ window.__sesRestored=true}catch(e){}})();
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
    Al entrar se copia una vez lo que hay en la nube (solo lectura) para probar con datos reales;
@@ -1230,6 +1240,7 @@ try{bossActive=sessionStorage.getItem(KEY_BOSS_ACTIVE)==='1'}catch(e){}
 function setBoss(v){
  bossActive=v;
  try{if(v)sessionStorage.setItem(KEY_BOSS_ACTIVE,'1');else sessionStorage.removeItem(KEY_BOSS_ACTIVE)}catch(e){}
+ try{if(typeof ME!=='undefined'&&ME)sesSave()}catch(e){}
  dirBtn.hidden=!v;bossBtn.classList.toggle('on',v);bossBtn.textContent=v?'JEFE ✓':'JEFE';bumpBoss();
  try{const c=document.getElementById('meChip'), me=meEmp();if(c&&me)c.innerHTML=ICO_USER+esc(me.name)+(v?' · JEFE':'')}catch(e){}
 }
@@ -4459,7 +4470,7 @@ const TUTORIAL=[
 ['Modo prueba (Arthur Ayudante)',`<ul><li>En la entrada, la última tarjeta es <b>Arthur Ayudante</b>, con el sello «PRUEBA». Sirve para probar las novedades sin miedo.</li><li>La primera vez te pide crear su contraseña; después, siempre la misma (es la única cosa que se guarda de verdad).</li><li>Dentro entras como jefe, con DIRECCIÓN, y ves una copia de los datos reales del momento.</li><li><b>Nada de lo que hagas se guarda</b> en la base de datos ni afecta a la web de verdad, y <b>no se envía nada a Discord</b>. Arriba sale la franja amarilla «MODO PRUEBA».</li><li>El botón <b>DISCORD (n)</b> de la franja enseña los mensajes que se habrían enviado, para comprobar que salen bien.</li><li><b>SALIR</b> (o cerrar la pestaña) borra la prueba y vuelve a la entrada normal.</li><li>Arthur Ayudante no aparece en Empleados, Sueldos ni en ningún listado.</li></ul>`],
 ['Objetivo, buscador y revisión',`<ul><li><b>Objetivo semanal</b> (Dirección → Ventas y caja → OBJETIVO SEMANAL): pon una meta de ventas para la semana (viernes a jueves). En la pantalla principal sale una barra dorada que se va llenando con lo cobrado; al llegar a la meta se pone verde y salta la celebración.</li><li><b>Buscador</b> (arriba en la consola de Dirección): escribe un cliente, un número de serie, un ticket, un encargo, un pedido o un empleado y pulsa ABRIR para ir a su apartado.</li><li><b>Revisión de datos</b> (Dirección → Sistema): comprueba stock negativo, turnos abiertos de hace mucho, ventas sin empleado, gastos o clientes repetidos, encargos y pedidos atascados y productos que se van a acabar, y te dice cómo arreglarlo. No cambia nada sola.</li><li><b>Productos que se acaban</b>: si al ritmo de ventas de las dos últimas semanas a un producto le quedan 5 días o menos, sale un aviso en Dirección.</li><li><b>Ficha completa</b> (Empleados → 📋 FICHA COMPLETA): ventas, cobrado, horas, sueldos, ausencias y ascensos de cada empleado.</li><li>Detalles nuevos: monedas de oro que caen al total al cobrar, el reloj de bolsillo junto a tu nombre mientras estás fichado, el cartel de «SE BUSCA» del empleado de la semana, los sellos ENTREGADO y RECIBIDO, la tablilla de AGOTADO y los mensajes de Discord con su imagen.</li></ul>`],
 ['Instalar la aplicación',`<p>Abajo del todo de la página principal está <b>DESCARGAR APLICACIÓN</b>. Instala Harrington Gunsmith como una aplicación: con su icono, en su propia ventana y con los mismos datos que la web, sincronizados al momento en todos los dispositivos.</p>
-<ul><li><b>Ordenador (Chrome o Edge) y Android</b>: al pulsarlo pone «PREPARANDO LA DESCARGA…» y sale la ventana del navegador para instalarla; confirma con «Instalar». Si el navegador todavía no la ofrece (a veces la primera vez hay que usar la web un momento), salen los pasos y, en cuanto puede, aparece <b>INSTALAR AHORA</b>.</li><li><b>Samsung Internet</b> (el navegador de serie de los Samsung) no deja instalar desde un botón: el botón ofrece <b>ABRIR EN CHROME E INSTALAR</b>, o los pasos para instalarla desde el menú de Samsung Internet.</li><li><b>iPhone y iPad</b>: Apple no deja instalarla con un botón; el botón te enseña los pasos (Safari → Compartir → «Añadir a pantalla de inicio»).</li><li><b>Firefox en el ordenador</b> no instala aplicaciones: usa Chrome o Edge.</li><li><b>Se actualiza sola</b> con cada parche, sin pulsar nada: al abrirla ya carga la versión más reciente y, si la tienes abierta cuando sale un parche, se pone al día sola en cuanto es seguro (al volver a la aplicación o cuando lleva un minuto sin tocarla; nunca mientras escribes o tienes una ventana abierta). La venta que tengas a medias se conserva. Sale el aviso «Actualizada a la versión nueva».</li><li>Cuando ya la estás usando como aplicación, el botón no sale.</li><li>Sigue haciendo falta internet para vender, fichar o fabricar.</li></ul>`],
+<ul><li><b>Ordenador (Chrome o Edge) y Android</b>: al pulsarlo pone «PREPARANDO LA DESCARGA…» y sale la ventana del navegador para instalarla; confirma con «Instalar». Si el navegador todavía no la ofrece (a veces la primera vez hay que usar la web un momento), salen los pasos y, en cuanto puede, aparece <b>INSTALAR AHORA</b>.</li><li><b>Samsung Internet</b> (el navegador de serie de los Samsung) no deja instalar desde un botón: el botón ofrece <b>ABRIR EN CHROME E INSTALAR</b>, o los pasos para instalarla desde el menú de Samsung Internet.</li><li><b>iPhone y iPad</b>: Apple no deja instalarla con un botón; el botón te enseña los pasos (Safari → Compartir → «Añadir a pantalla de inicio»).</li><li><b>Firefox en el ordenador</b> no instala aplicaciones: usa Chrome o Edge.</li><li><b>Se actualiza sola</b> con cada parche, sin pulsar nada: al abrirla ya carga la versión más reciente y, si la tienes abierta cuando sale un parche, se pone al día sola en cuanto es seguro (al volver a la aplicación o cuando lleva un minuto sin tocarla; nunca mientras escribes o tienes una ventana abierta). La venta que tengas a medias se conserva. Sale el aviso «Actualizada a la versión nueva».</li><li>Cuando ya la estás usando como aplicación, el botón no sale.</li><li><b>Atajos</b>: mantén pulsado el icono de la aplicación y salen <b>Nueva venta</b>, <b>Fichar</b> y <b>Encargos</b> para ir directo (si no has entrado, primero te pide tu tarjeta).</li><li><b>Tu sesión no se cierra al salir de la aplicación</b>, aunque el móvil la cierre por detrás para ahorrar memoria: al volver sigues dentro. Se cierra con <b>⏻ CERRAR SESIÓN</b> (en tu ficha, tocando tu nombre arriba), al fichar la salida si eliges cerrarla, o sola tras 3 horas sin usarla. El Modo Jefe solo sigue activo si eres jefe o si saliste hace menos de 5 minutos.</li><li>Sigue haciendo falta internet para vender, fichar o fabricar.</li></ul>`],
 ['Si algo no funciona',`<ul><li><b>No deja finalizar</b>: lee el aviso; suele faltar cliente, empleado, telegrama, pago adelantado o stock.</li><li><b>Producto SIN STOCK</b>: el jefe debe sumar existencias.</li><li><b>No suena</b>: en ⚙ comprueba que el sonido diga «♪ SÍ» y el volumen del móvil.</li><li><b>Un botón no responde</b>: si muestra ⏳, está guardando; espera a que termine.</li><li><b>No suena la música</b>: los navegadores no dejan sonar nada hasta que tocas la pantalla; toca cualquier sitio. Si sigue sin sonar, en ⚙ comprueba que «Música de fondo» diga «♫ SÍ».</li><li><b>Se lee poco</b>: usa A+ o el alto contraste ◐.</li><li><b>No ves un cambio reciente</b>: abre la web en una pestaña privada.</li></ul>`]];
 const tutModal=document.getElementById('tutModal');
 /* Buscador: muestra solo los apartados que hablan de lo que escribes, abiertos y con la palabra resaltada */
@@ -5277,7 +5288,11 @@ const ICO_USER='<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle c
 function meEmp(){return ME&&ME.id?empleados.find(e=>e.id===ME.id)||null:null}
 function isJefe(e){return !!e&&e.puesto==='Jefe'}
 function hasJefes(){return empleados.some(isJefe)}
-function setMe(e){ME=e?{id:e.id,at:Date.now()}:null;try{if(ME)sessionStorage.setItem('harrington_me_v1',JSON.stringify(ME));else sessionStorage.removeItem('harrington_me_v1')}catch(x){}applyMe();presencePing(true)}
+function setMe(e){ME=e?{id:e.id,at:Date.now()}:null;try{if(ME)sessionStorage.setItem('harrington_me_v1',JSON.stringify(ME));else sessionStorage.removeItem('harrington_me_v1')}catch(x){}sesSave();applyMe();presencePing(true)}
+function sesSave(){try{if(SANDBOX||!ME||!ME.id||ME.id==='prueba'){localStorage.removeItem(SES_KEY);return}const e=empleados.find(x=>x.id===ME.id);localStorage.setItem(SES_KEY,JSON.stringify({me:ME,boss:!!bossActive,jefe:!!(e&&e.puesto==='Jefe'),tab:typeof DEV_ID==='string'?DEV_ID:'',seen:Date.now()}))}catch(x){}}
+document.addEventListener('visibilitychange',()=>{try{if(ME)sesSave()}catch(x){}});
+window.addEventListener('pagehide',()=>{try{if(ME)sesSave()}catch(x){}});
+setInterval(()=>{if(!document.hidden&&ME)sesSave()},60000);
 function applyMe(){
  const me=meEmp(), chip=document.getElementById('meChip');
  document.body.classList.toggle('has-me',!!me);
@@ -5878,9 +5893,12 @@ function renderMi(){
  document.getElementById('miBody').innerHTML=`<div class="mi-photo">${ph?`<img src="${ph}" alt="">`:`<b>${esc(ini)}</b>`}</div><div class="mi-name">${esc(e.name)}</div><div class="mi-role">${esc(e.puesto||'Empleado')}</div>
   ${miWeekHTML(e)}
   <div class="enc-actions"><button type="button" class="primary" id="miFoto">📷 ${ph?'CAMBIAR MI FOTO':'SUBIR MI FOTO'}</button>${ph?'<button type="button" class="warn" id="miNoFoto">QUITAR MI FOTO</button>':''}</div>
-  <p class="bk-note" style="margin:4px 0 0">Sale en tu tarjeta de la entrada en tono sepia, como un retrato antiguo. Por ejemplo, una captura de tu personaje.</p>`;
+  <p class="bk-note" style="margin:4px 0 0">Sale en tu tarjeta de la entrada en tono sepia, como un retrato antiguo. Por ejemplo, una captura de tu personaje.</p>
+  <div class="enc-actions" style="margin-top:12px"><button type="button" class="warn" id="miLogout">⏻ CERRAR SESIÓN</button></div>
+  <p class="bk-note" style="margin:4px 0 0">Tu sesión se queda abierta aunque salgas de la aplicación. Ciérrala aquí cuando acabes, para que nadie use la web a tu nombre (se cierra sola tras 3 horas sin usarla).</p>`;
  document.getElementById('miFoto').onclick=()=>empPickFoto(e.id);
  const nf=document.getElementById('miNoFoto');if(nf)nf.onclick=()=>empNoFoto(e.id);
+ document.getElementById('miLogout').onclick=async()=>{if(await askConfirm('Cerrar sesión','Se cerrará tu sesión en este dispositivo. Para volver a entrar tendrás que tocar tu tarjeta y poner tu contraseña.','Cerrar sesión'))logoutToGate('Sesión cerrada. ¡Hasta la próxima, '+e.name.split(' ')[0]+'!')};
 }
 function openMi(){if(!meEmp()||meEmp().id==='prueba'&&!SANDBOX)return;loadPhotos().then(()=>{if(!miModal.hidden)renderMi()});renderMi();openModal(miModal)}
 document.getElementById('meChip').addEventListener('click',openMi);
@@ -6363,7 +6381,8 @@ const PARCHES=[
  {f:'12/10/2026',t:'Final versión 1.0',v:'1.0',fin:true,i:['NPC de la tienda: unidades asignadas dentro del inventario general, precios NPC en Dirección, revisión al abrir la tienda con aviso hasta que se haga, ventas del NPC apuntadas a sus precios y descontadas del stock, sin contar nada dos veces','Página para CLIENTES en la entrada: catálogo, categorías, precios, cantidades y total, en una página aparte sin nada privado','Alerta de materias primas bajas con mínimos de cada material, que se quita sola al reponer','Auditoría e incidencias: todo lo que hace cada empleado con filtros por empleado, fechas y tipo; incidencias para revisar sin acusar a nadie; registros que no se pueden borrar','Recepción parcial de pedidos: pedidas, recibidas y pendientes, sumando solo lo que llega y con historial de entregas','Recuento de inventario opcional al empezar o terminar el turno, con diferencias, sin cambiar el stock','Armas reservadas con anticipo: no se venden a otro cliente y el encargo solo se entrega a su cliente','Fabricación para empleados: 1 unidad (o 15 de munición, trapo y aceite) y bloqueo hasta vender lo fabricado','Optimización y depuración general de la web','Se cierra la versión 1.0']},
  {f:'12/10/2026',t:'Aplicación instalable',v:'2.0',i:['Botón DESCARGAR APLICACIÓN abajo del todo de la página principal','Se instala en el ordenador (Chrome o Edge), en Android y en iPhone/iPad (con sus pasos), con el icono de Harrington y su propia ventana','La misma web y los mismos datos de Supabase, sincronizados en todos los dispositivos, y se actualiza sola con cada parche','Base de datos: reglas del parche final instaladas e índices para que la sincronización siga siendo rápida']},
  {f:'12/10/2026',t:'Ordenador, tableta y móvil',v:'2.0',i:['Revisadas todas las pantallas en móvil, tableta vertical, tableta horizontal, portátil y ordenador grande: sin desbordes','Tableta en vertical: el catálogo se ve como tabla completa (producto, precio, cantidad y subtotal) en vez de descolocado','Pantallas táctiles: botones de cerrar, vaciar, +10/+50/+100, filtros, pestañas y casillas más grandes para el dedo','Letra pequeña más legible','DESCARGAR APLICACIÓN lanza la instalación directa en cuanto el navegador lo permite, con INSTALAR AHORA; en Samsung Internet, ABRIR EN CHROME E INSTALAR','Se actualiza sola con cada parche, sin pulsar nada, en cuanto es seguro (nunca mientras escribes)']},
- {f:'12/10/2026',t:'Más rápida y siempre al día',v:'2.0',i:['Se actualiza sola con cada parche, sin pulsar nada: al abrirla y, si está abierta, en cuanto es seguro (nunca mientras escribes o tienes una ventana abierta); la venta a medias se conserva','Arranque más rápido: el programa y los estilos se descargan primero y las imágenes que no se ven al abrir, después','La fachada de la entrada solo se descarga cuando va a salir la entrada','Si internet va lento, la aplicación abre con la versión guardada en 1,5 segundos y se pone al día sola después','Quitado un manifiesto antiguo duplicado que podía confundir a algunos navegadores al instalarla']}
+ {f:'12/10/2026',t:'Más rápida y siempre al día',v:'2.0',i:['Se actualiza sola con cada parche, sin pulsar nada: al abrirla y, si está abierta, en cuanto es seguro (nunca mientras escribes o tienes una ventana abierta); la venta a medias se conserva','Arranque más rápido: el programa y los estilos se descargan primero y las imágenes que no se ven al abrir, después','La fachada de la entrada solo se descarga cuando va a salir la entrada','Si internet va lento, la aplicación abre con la versión guardada en 1,5 segundos y se pone al día sola después','Quitado un manifiesto antiguo duplicado que podía confundir a algunos navegadores al instalarla']},
+ {f:'12/10/2026',t:'Sesión abierta y atajos del icono',v:'2.0',i:['La sesión no se cierra al salir de la aplicación, aunque el móvil la cierre por detrás: se cierra con ⏻ CERRAR SESIÓN (en tu ficha), al fichar la salida si lo eliges o tras 3 horas sin usarla','El Modo Jefe solo se recupera si eres jefe o si fue hace menos de 5 minutos','Atajos al mantener pulsado el icono: Nueva venta, Fichar y Encargos']}
 ];
 let phQ='';
 /* Versiones: cada parche lleva su versión (v); los que no la llevan son de la 1.0 */
@@ -6815,6 +6834,22 @@ setInterval(()=>updTry(false),30000);
 /* al volver a la aplicación (después de haber salido) se comprueba y, si hay versión nueva, se pone al momento */
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){verCheck().then(()=>updTry(true))}});
 setTimeout(verCheck,20000);
+
+/* ===== V2 · Atajos del icono (mantener pulsado el icono de la aplicación): Nueva venta, Fichar, Encargos ===== */
+(function(){
+ let acc='';try{acc=new URLSearchParams(location.search).get('accion')||''}catch(e){}
+ if(!/^(venta|fichar|encargos)$/.test(acc))return;
+ try{history.replaceState(null,'',location.pathname+location.hash)}catch(e){}
+ const t0=Date.now();
+ const run=()=>{
+  if(Date.now()-t0>180000)return;
+  if(!meEmp()||(typeof G!=='undefined'&&G.open)||document.querySelector('.modal-overlay:not([hidden])')){setTimeout(run,600);return}
+  if(acc==='venta'){try{document.querySelector('.mode-tab[data-mode="venta"]').click()}catch(e){}setTimeout(()=>{try{document.getElementById('products').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){}},200)}
+  else if(acc==='fichar'){const me=meEmp();if(shifts.some(x=>x.empId===me.id))clockOutBtn.click();else clockBtn.click()}
+  else if(acc==='encargos')openEnc();
+ };
+ setTimeout(run,900);
+})();
 
 /* El nombre del cartel de la fachada: si no cabe en la placa (según la letra que cargue cada móvil), se hace un poco más pequeño */
 function fitSign(){try{const sg=document.querySelector('.g-sign'), t=document.getElementById('gSignTxt');if(!sg||!t||!sg.clientWidth)return;t.style.fontSize='';const max=sg.clientWidth*.9, w=t.scrollWidth;if(w>max)t.style.fontSize=(parseFloat(getComputedStyle(t).fontSize)*max/w).toFixed(2)+'px'}catch(e){}}

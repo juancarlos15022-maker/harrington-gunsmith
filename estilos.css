@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261012k
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261012l
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -801,8 +801,8 @@ body{background:radial-gradient(ellipse at 50% -8%,#8a4f2133,transparent 44%),ra
 .lvl u{position:absolute;top:-3px;width:2px;height:12px;background:#f0e2bd;text-decoration:none}
 .reg-line.lv span{flex:1;min-width:0}
 /* transición de páginas en Dirección */
-@keyframes pgIn{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}
-@keyframes pgBack{from{opacity:0;transform:translateX(-26px)}to{opacity:1;transform:none}}
+@keyframes pgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes pgBack{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
 #dirModal .enc-panel{overflow:clip}
 #dirBody.pg-in{animation:pgIn .22s ease-out}
 #dirBody.pg-back{animation:pgBack .22s ease-out}
