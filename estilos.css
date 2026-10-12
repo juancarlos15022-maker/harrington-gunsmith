@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261012h
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261012i
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1789,4 +1789,5 @@ html.lite .ev-plate.soon{animation:none}
 .app-dl b{font-family:'Cinzel Decorative',Georgia,serif;font-size:15px;letter-spacing:.06em}
 .app-dl small{font-size:12px;color:#cbb886;letter-spacing:.02em}
 .app-steps{margin:8px 0 0;padding-left:22px;line-height:1.55}.app-steps li{margin:6px 0}
+.app-chrome{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;padding:12px;border-radius:6px;border:1px solid #b88931;background:linear-gradient(#80601f,#3a2a0c);color:#fff0b6;font-weight:bold;text-decoration:none;letter-spacing:.06em}
 .app-ico{display:block;width:84px;height:84px;margin:4px auto 10px;border-radius:16px;box-shadow:0 4px 14px #000a}
