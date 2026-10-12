@@ -2,8 +2,13 @@
 // Puerta segura para manejar el servidor de Discord (crear o borrar canales, roles, webhooks, mensajes…).
 // Solo responde con la contraseña interna guardada en la tabla protegida bot_cfg; el token del bot nunca sale de aquí.
 // Cada operación queda apuntada en bot_registro.
+// Además atiende (cabecera x-hg-modo, siempre con la contraseña interna):
+//   · «extra»: las órdenes y botones de la segunda tanda que le reenvía discord-interacciones (extra.ts);
+//   · «cronica»: la crónica de la casa, que la tarea programada harrington-cronica llama cada minuto (cronica.ts).
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { atender as extra } from "./extra.ts";
+import { atender as cronica } from "./cronica.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 const json = (o: unknown, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { "Content-Type": "application/json" } });
@@ -18,6 +23,9 @@ async function cfg() {
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "solo POST" }, 405);
+  const modo = req.headers.get("x-hg-modo");
+  if (modo === "extra") return extra(req);
+  if (modo === "cronica") return cronica(req);
   let b: Record<string, unknown> = {};
   try { b = await req.json(); } catch { return json({ error: "JSON" }, 400); }
   try {
