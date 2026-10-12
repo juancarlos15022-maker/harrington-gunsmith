@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261012m
+/* HARRINGTON GUNSMITH · app.js · versión 20261012o
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== V2 · La sesión no se cierra al salir de la aplicación =====
    Se guarda en el dispositivo y se recupera al volver, aunque el móvil haya cerrado la aplicación por detrás para ahorrar memoria.
@@ -940,6 +940,7 @@ function renderEnc(){
 }
 let encSaving=false;
 async function saveEncDraft(){
+ if(offlineBlock('cambiar un encargo'))return;
  let e=pendingEncs().find(x=>x.id===encView);
  if(!e||!encDraft||encDraft.id!==e.id||encSaving)return;
  if(encDraft.fab===e.fab&&encDraft.avisado===e.avisado)return say('No hay cambios que guardar');
@@ -1868,7 +1869,7 @@ function finishMissing(){
 }
 function updateFinish(){
  const f=document.getElementById('finish'), go=document.getElementById('obGo'); if(!f)return;
- let miss='';try{miss=finishMissing()}catch(e){}
+ let miss='';try{miss=offline()?'Sin conexión · solo consulta':finishMissing()}catch(e){}
  const enc=customer.op==='encargo'&&!loadedEnc, ready=enc?'GUARDAR ENCARGO':'FINALIZAR VENTA';
  const t=miss||ready; if(f.textContent!==t)f.textContent=t;
  f.classList.toggle('not-ready',!!miss);
@@ -2616,8 +2617,8 @@ pedModal.addEventListener('click',e=>{
  if(c){pedView=c.dataset.popen;pedDraft=null;renderPed();pedModal.scrollTop=0;return}
  const a=e.target.closest('[data-pact]'); if(!a)return;
  if(a.dataset.pact==='back'){pedView=null;pedDraft=null;renderPed()}
- else if(a.dataset.pact==='save')once('ped',savePedido,a);
- else if(a.dataset.pact==='partial')once('pedp',savePartial,a);
+ else if(a.dataset.pact==='save'){if(!offlineBlock('recibir o pagar un pedido'))once('ped',savePedido,a)}
+ else if(a.dataset.pact==='partial'){if(!offlineBlock('apuntar una entrega'))once('pedp',savePartial,a)}
  else if(a.dataset.pact==='cancel')once('pedc',()=>cancelPedido(pedView),a);
  else if(a.dataset.pact==='tele'){const x=pendingPed().find(p=>p.id===pedView);if(x)copyMsg(pedidoTelegram(x.proveedor,x.items,x.paid,x.code),'Pedido copiado · pégalo en el telegrama al proveedor')}
 });
@@ -4462,6 +4463,8 @@ const TUTORIAL=[
 <ul><li>Precios, productos, convenios y ofertas.</li><li>Empleados (contrataciones, puesto, sueldo, horas, expulsiones, turnos cerrados a mano y ausencias borradas).</li><li>Fichas de clientes y de proveedores (qué dato cambió y, en los precios, de cuánto a cuánto).</li><li>Stock sumado o fabricado, recetas y mínimos.</li><li>Gastos y sueldos pagados o borrados, ventas anuladas, encargos cancelados y pedidos emitidos, recibidos, pagados o cancelados.</li><li>Discord, contraseña de jefe, objetivo semanal y reseteos.</li></ul>
 <p>Arriba puedes filtrar por tipo (Catálogo, Personal, Clientes…) o buscar una persona, un producto o un cliente. Las ventas normales y los fichajes no salen aquí: están en sus registros.</p>`],
 ['Copias de seguridad en la nube <span class="tag boss">SOLO JEFE</span>',`<p><b>Dirección → AJUSTES → COPIAS DE SEGURIDAD</b>.</p><ul><li>Cada día a las <b>5:00</b> se guarda en la base de datos una copia de todo: ventas, encargos, gastos, pedidos, fichajes, stock, materiales y configuración. Si ese día no se pudo hacer, la hace la web la primera vez que alguien la abra.</li><li>Se guardan siempre <b>las 7 últimas</b>: al hacer la del día 8 se borra la más antigua. Nada se guarda en los teléfonos.</li><li><b>⬇ DESCARGAR</b>: baja esa copia como archivo.</li><li><b>↺ RESTAURAR</b>: todo vuelve a como estaba ese día, en todos los dispositivos (pide escribir RESTAURAR). Antes se guarda una copia «antes de restaurar» por si acaso. Las contraseñas, la auditoría y el número de las ventas no retroceden.</li><li>Debajo sigue la copia en este dispositivo de siempre.</li></ul>`],
+['Modo mostrador (tableta)',`<p>Para dejar la tableta fija en la tienda: botón <b>▦ MOSTRADOR</b> arriba (en tableta y ordenador). Se abre a pantalla completa y la pantalla no se apaga mientras está abierto.</p><ul><li>A la izquierda, los productos en <b>fichas grandes</b>, por categorías y con buscador (busca en todo el catálogo). Toca una ficha para añadir una unidad; el número dorado es lo que llevas. Lo agotado sale apagado.</li><li>A la derecha (abajo en la tableta en vertical): <b>cliente</b>, el pedido con <b>−</b> y <b>+</b>, y el <b>total</b>.</li><li><b>FINALIZAR VENTA</b> hace la venta de siempre: mismos precios, convenios, stock, reservas, ticket y Discord. El botón te dice qué falta.</li><li><b>SALIR DEL MOSTRADOR</b> vuelve a la web normal; el pedido sigue ahí.</li></ul>`],
+['Sin conexión',`<p>Si se va internet, arriba sale la franja roja <b>«Sin conexión · solo consulta»</b>.</p><ul><li>Puedes <b>consultar</b> todo lo que ya tenías: catálogo y precios, stock, materiales, encargos y pedidos.</li><li><b>No</b> se puede vender, guardar encargos, fichar, fabricar, recibir pedidos ni hacer recuentos: así nunca se duplica nada ni se descuadra el stock. El botón de abajo lo dice: «Sin conexión · solo consulta».</li><li>En cuanto vuelve la conexión, la franja desaparece sola y todo funciona como siempre.</li></ul>`],
 ['Datos y dispositivos',`<p>Todos los datos están en la <b>nube</b> y se comparten entre los móviles en pocos segundos:</p>
 <ul><li><b>Configuración</b>: empleados, clientes, proveedores, convenios y ofertas, precios, productos nuevos, Discord, mínimos de stock y la contraseña del jefe.</li><li><b>Operación</b>: stock, ventas, encargos, pedidos a proveedores, fichajes, gastos y cierres. Los números de venta y el stock los controla la nube, así que nunca se repiten ni se vende lo que ya no hay.</li></ul>
 <p>Los cambios llegan a los demás móviles <b>al instante</b>: la nube avisa en cuanto algo cambia. Si ese aviso no funcionara, cada móvil sigue comprobando la nube cada pocos segundos. Arriba, junto a FICHAJE, ves «☁ conectado», «☁ guardando…», «☁ guardado ✓» o «☁ sin conexión». <b>Sin conexión</b> puedes mirar el catálogo y hacer presupuestos, pero no finalizar ventas ni cambiar el stock. Los cambios de configuración se suben solos al volver la conexión.</p>
@@ -4663,6 +4666,7 @@ function openExit(){
  openModal(entryModal);setTimeout(()=>employeeInput.focus(),60);
 }
 function acceptEntry(){
+ if(offlineBlock('fichar'))return;
  if(entryMode==='out'){
   const id=employeeInput.value;
   if(!shifts.some(x=>x.empId===id))return say('Selecciona un empleado');
@@ -4688,6 +4692,7 @@ function showShift(r){
 }
 function doExit(empId){
  const sh=shifts.find(x=>x.empId===empId); if(!sh)return;
+ if(offlineBlock('fichar la salida'))return;
  endShift(sh,Date.now(),false);showShift(lastShift);
  const s=todaySalesOf(sh.name);
  say(s.n?`Buen trabajo, ${sh.name}: hoy has vendido ${money(s.c)} en ${s.n} ${plural(s.n,'operación','operaciones')}.`:`Buen trabajo, ${sh.name}. ¡Hasta la próxima jornada!`,'long');
@@ -4805,7 +4810,7 @@ function paintCloud(){
  else if(cloud.ok){t='☁ conectado';c='ok'}else{t='☁ …';c=''}
  if(el.textContent!==t)el.textContent=t;el.className='cloud-st '+c;
 }
-function setCloudState(ok){cloud.ok=ok;paintCloud();const nb=document.getElementById('netBar');if(!nb)return;
+function setCloudState(ok){const was=cloud.ok;cloud.ok=ok;paintCloud();if(was!==ok)try{updateFinish()}catch(e){}const nb=document.getElementById('netBar');if(!nb)return;
  if(ok){clearTimeout(cloud.netT);cloud.netT=0;nb.hidden=true}else if(!cloud.netT&&nb.hidden)cloud.netT=setTimeout(()=>{cloud.netT=0;if(!cloud.ok)nb.hidden=false},4000)}
 function cloudPush(clave){
  cloud.dirty[clave]=true;saveDirty();
@@ -5040,6 +5045,7 @@ async function stockPrepare(){
  }
 }
 async function ensureSaleCloud(){
+ if(offlineBlock(customer.op==='encargo'&&!loadedEnc?'guardar un encargo':'vender'))return null;
  const items=selected();
  if(!items.length){say('Añade algún producto primero');return null}
  if(!customerOk())return null;
@@ -6384,7 +6390,9 @@ const PARCHES=[
  {f:'12/10/2026',t:'Ordenador, tableta y móvil',v:'2.0',i:['Revisadas todas las pantallas en móvil, tableta vertical, tableta horizontal, portátil y ordenador grande: sin desbordes','Tableta en vertical: el catálogo se ve como tabla completa (producto, precio, cantidad y subtotal) en vez de descolocado','Pantallas táctiles: botones de cerrar, vaciar, +10/+50/+100, filtros, pestañas y casillas más grandes para el dedo','Letra pequeña más legible','DESCARGAR APLICACIÓN lanza la instalación directa en cuanto el navegador lo permite, con INSTALAR AHORA; en Samsung Internet, ABRIR EN CHROME E INSTALAR','Se actualiza sola con cada parche, sin pulsar nada, en cuanto es seguro (nunca mientras escribes)']},
  {f:'12/10/2026',t:'Más rápida y siempre al día',v:'2.0',i:['Se actualiza sola con cada parche, sin pulsar nada: al abrirla y, si está abierta, en cuanto es seguro (nunca mientras escribes o tienes una ventana abierta); la venta a medias se conserva','Arranque más rápido: el programa y los estilos se descargan primero y las imágenes que no se ven al abrir, después','La fachada de la entrada solo se descarga cuando va a salir la entrada','Si internet va lento, la aplicación abre con la versión guardada en 1,5 segundos y se pone al día sola después','Quitado un manifiesto antiguo duplicado que podía confundir a algunos navegadores al instalarla']},
  {f:'12/10/2026',t:'Sesión abierta y atajos del icono',v:'2.0',i:['La sesión no se cierra al salir de la aplicación, aunque el móvil la cierre por detrás: se cierra con ⏻ CERRAR SESIÓN (en tu ficha), al fichar la salida si lo eliges o tras 3 horas sin usarla','El Modo Jefe solo se recupera si eres jefe o si fue hace menos de 5 minutos','Atajos al mantener pulsado el icono: Nueva venta, Fichar y Encargos']},
- {f:'12/10/2026',t:'Copias de seguridad diarias en la nube',v:'2.0',i:['Cada día a las 5:00 se guarda en la base de datos una copia de todo; siempre las 7 últimas (la del día 8 sustituye a la más antigua)','Dirección → COPIAS DE SEGURIDAD: ver, descargar y restaurar cada copia, con una copia «antes de restaurar» por si acaso','Al restaurar, todos los dispositivos se ponen al día solos; las contraseñas, la auditoría y el número de las ventas no retroceden']}
+ {f:'12/10/2026',t:'Copias de seguridad diarias en la nube',v:'2.0',i:['Cada día a las 5:00 se guarda en la base de datos una copia de todo; siempre las 7 últimas (la del día 8 sustituye a la más antigua)','Dirección → COPIAS DE SEGURIDAD: ver, descargar y restaurar cada copia, con una copia «antes de restaurar» por si acaso','Al restaurar, todos los dispositivos se ponen al día solos; las contraseñas, la auditoría y el número de las ventas no retroceden']},
+ {f:'12/10/2026',t:'Consulta sin conexión',v:'2.0',i:['Sin internet, la web y la aplicación se abren igual en modo consulta: catálogo, stock, materiales, encargos y pedidos','Vender, guardar encargos, fichar, fabricar, recibir pedidos y recuentos esperan a que vuelva la conexión, para no duplicar nada','Franja «Sin conexión · solo consulta» y el botón de finalizar lo indica']},
+ {f:'12/10/2026',t:'Modo mostrador',v:'2.0',i:['Botón ▦ MOSTRADOR (tableta y ordenador): venta rápida a pantalla completa con fichas grandes por categorías y buscador','Pedido, cliente y total a la derecha (abajo en vertical), con − y +, y FINALIZAR VENTA de siempre','La pantalla no se apaga mientras el mostrador está abierto']}
 ];
 let phQ='';
 /* Versiones: cada parche lleva su versión (v); los que no la llevan son de la 1.0 */
@@ -6508,6 +6516,7 @@ function renderInv(){
   <div class="enc-actions" style="margin-top:10px"><button type="button" class="primary" data-inv="guardar">GUARDAR RECUENTO</button></div>`;
 }
 async function saveRecuento(){
+ if(offlineBlock('guardar un recuento'))return;
  const ks=Object.keys(invDraft.q).filter(k=>invDraft.q[k]!==''&&invDraft.q[k]!==undefined);
  if(!ks.length)return say('Escribe lo que has contado de algún artículo');
  try{await refreshStock()}catch(e){}
@@ -6555,6 +6564,7 @@ function npcRevHTML(){
   <div class="enc-actions" style="margin-top:10px"><button type="button" class="primary" data-inv="npcsave">GUARDAR REVISIÓN</button></div>`;
 }
 async function npcRevSave(){
+ if(offlineBlock('guardar la revisión del NPC'))return;
  let L=Object.keys(npc.asig).filter(n=>npc.asig[n]>0);
  for(const n of L)if(invDraft.q[n]===undefined||invDraft.q[n]==='')return say('Falta lo que queda de '+n,'err');
  try{await cloudPullRecords();await refreshStock()}catch(e){return say('Sin conexión: no se puede guardar la revisión ahora','err')}
@@ -6650,6 +6660,7 @@ function empFabHTML(){
 }
 let fabBusy=false;
 async function empFabricar(n){
+ if(offlineBlock('fabricar'))return;
  const me=meEmp();if(!me||fabBusy)return;fabBusy=true;
  try{
   try{await cloudPullRecords();await refreshStock()}catch(e){return say('Sin conexión: no se puede fabricar ahora','err')}
@@ -6893,6 +6904,59 @@ dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-dir^="nc-"
 /* Si la tarea de las 5:00 no la hizo, la primera vez del día que se abre la web se pide la copia (la base de datos solo guarda una por día) */
 setTimeout(()=>{try{if(SANDBOX||location.protocol==='file:'&&!window.__hgTest)return;const d=todayISO();if(localStorage.getItem('harrington_copia_dia')===d)return;
  sbRpc('hacer_copia',{p_tipo:'diaria'}).then(()=>{try{localStorage.setItem('harrington_copia_dia',d)}catch(e){}}).catch(()=>{})}catch(e){}},15000);
+
+/* ===== V2 · Sin conexión: modo consulta (se ve todo; vender, fichar, fabricar y mover stock esperan a internet) ===== */
+function offline(){return navigator.onLine===false||cloud.ok===false}
+function offlineBlock(what){if(!offline())return false;say('Sin conexión: para '+what+' hace falta internet. Mientras tanto puedes consultar el catálogo, el stock, los encargos y los pedidos.','err');return true}
+window.addEventListener('offline',()=>{try{setCloudState(false)}catch(e){}});
+window.addEventListener('online',()=>{try{cloudPoll(true)}catch(e){}try{updateFinish()}catch(e){}});
+
+/* ===== V2 · Modo mostrador: la misma venta de siempre, con fichas grandes para la tableta ===== */
+const MOST={open:false,cat:'todos',q:'',lock:null,raf:0};
+const mostEl=document.getElementById('most');
+function mostIcon(i){const p=i.closest('.product'), im=p&&p.querySelector('.weapon-icon img');return im&&im.getAttribute('src')?im.getAttribute('src'):'icono-'+(p?p.dataset.cat:'revolveres').replace('blancas','armas-blancas')+'.webp'}
+function mostRender(){
+ if(!MOST.open)return;
+ const q=norm(MOST.q), cats=CATS.filter(c=>inputs.some(i=>i.closest('.product').dataset.cat===c[0]));
+ document.getElementById('mostChips').innerHTML=[['todos','Todo']].concat(cats).map(c=>`<button type="button" class="${MOST.cat===c[0]?'on':''}" data-mc="${c[0]}">${esc(c[1])}</button>`).join('');
+ const L=inputs.filter(i=>{const c=i.closest('.product').dataset.cat;return q?norm(i.dataset.name).includes(q):(MOST.cat==='todos'||c===MOST.cat)});
+ document.getElementById('mostGrid').innerHTML=L.map(i=>{const n=i.dataset.name, qty=readQty(i), pr=priceCents(i), lim=limitFor(n), off=!(pr>0)||lim<=0&&!qty;
+  return `<button type="button" class="most-tile${qty?' on':''}${off?' off':''}" data-mt="${esc(n)}"${off?' aria-disabled="true"':''}>${qty?`<span class="q">${qty}</span>`:''}<img src="${esc(mostIcon(i))}" alt="" loading="lazy" decoding="async"><b>${esc(n)}</b>${pr>0?`<span class="pr">${money(pr)}</span>`:'<span class="ag">SIN PRECIO</span>'}${pr>0&&lim<=0&&!qty?'<span class="ag">AGOTADO</span>':''}</button>`}).join('')||'<div class="most-empty">Ningún producto con eso.</div>';
+ const S=selected();
+ document.getElementById('mostList').innerHTML=S.length?S.map(x=>`<div class="most-line"><div><b>${esc(x.name)}</b><br><small>${money(x.cents)} · ${money(x.cents*x.qty)}</small></div><div class="most-q"><button type="button" data-mm="${esc(x.name)}" aria-label="Quitar uno">−</button><span>${x.qty}</span><button type="button" data-mp="${esc(x.name)}" aria-label="Añadir uno">+</button></div></div>`).join(''):'<div class="most-empty">Toca un producto para añadirlo.</div>';
+ const f=computeFin();
+ document.getElementById('mostTot').innerHTML=`<span>${S.reduce((a,x)=>a+x.qty,0)} ${S.reduce((a,x)=>a+x.qty,0)===1?'unidad':'unidades'}${f.discount>0?' · descuento '+money(f.discount):''}</span><b>${money(f.final)}</b>`;
+ const g=document.getElementById('mostGo'), miss=(()=>{try{return offline()?'Sin conexión · solo consulta':finishMissing()}catch(e){return ''}})();
+ g.textContent=miss||'FINALIZAR VENTA';g.classList.toggle('not-ready',!!miss);
+ const me=meEmp();document.getElementById('mostWho').textContent=me?me.name:'';
+ const nm=document.getElementById('mostName');if(document.activeElement!==nm&&nm.value!==customer.name)nm.value=customer.name||'';
+ const tp=document.getElementById('mostType');if(tp.value!==customer.type)tp.value=customer.type||'particular';nm.disabled=customer.type==='sheriff';
+}
+function mostSoon(){if(!MOST.open||MOST.raf)return;MOST.raf=requestAnimationFrame(()=>{MOST.raf=0;mostRender()})}
+function mostSet(n,d){const i=inputs.find(x=>x.dataset.name===n);if(!i)return;i.value=Math.max(0,readQty(i)+d);i.dispatchEvent(new Event('input',{bubbles:true}));mostSoon()}
+async function mostWake(){try{if(MOST.open&&navigator.wakeLock&&!MOST.lock){MOST.lock=await navigator.wakeLock.request('screen');MOST.lock.addEventListener('release',()=>{MOST.lock=null})}}catch(e){}}
+function mostOpen(){
+ if(appMode!=='venta'){try{document.querySelector('.mode-tab[data-mode="venta"]').click()}catch(e){}}
+ if(customer.op!=='venta'&&!loadedEnc){customer.op='venta';try{renderCustomer();customerChanged()}catch(e){}}
+ MOST.open=true;mostEl.hidden=false;document.body.classList.add('modal-open');mostRender();mostWake();
+}
+function mostClose(){MOST.open=false;mostEl.hidden=true;document.body.classList.remove('modal-open');try{if(MOST.lock)MOST.lock.release()}catch(e){}MOST.lock=null}
+document.getElementById('mostBtn').addEventListener('click',()=>{try{playClick()}catch(e){}mostOpen()});
+document.getElementById('mostExit').onclick=mostClose;
+mostEl.addEventListener('click',e=>{
+ const t=e.target.closest('[data-mt],[data-mm],[data-mp],[data-mc]');if(!t)return;
+ if(t.dataset.mc){MOST.cat=t.dataset.mc;mostRender();document.getElementById('mostGrid').scrollTop=0}
+ else if(t.dataset.mt){if(t.getAttribute('aria-disabled'))return say('No hay unidades disponibles de '+t.dataset.mt);mostSet(t.dataset.mt,1)}
+ else if(t.dataset.mm)mostSet(t.dataset.mm,-1);else if(t.dataset.mp)mostSet(t.dataset.mp,1);
+});
+document.getElementById('mostQ').addEventListener('input',e=>{MOST.q=e.target.value;mostRender()});
+document.getElementById('mostName').addEventListener('input',e=>{nameInput.value=e.target.value;nameInput.dispatchEvent(new Event('input',{bubbles:true}));mostSoon()});
+document.getElementById('mostType').addEventListener('change',e=>{const s=document.getElementById('clientType');if(s){s.value=e.target.value;s.dispatchEvent(new Event('change',{bubbles:true}))}mostSoon()});
+document.getElementById('mostGo').onclick=()=>{document.getElementById('finish').click();setTimeout(mostSoon,300);setTimeout(mostSoon,2500)};
+document.getElementById('mostClear').onclick=()=>{document.getElementById('clear').click();setTimeout(mostSoon,300)};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)mostWake()});
+(function(){const _c=calc;calc=function(){const r=_c.apply(this,arguments);mostSoon();return r}})();
+(function(){const _u=updateFinish;updateFinish=function(){const r=_u.apply(this,arguments);mostSoon();return r}})();
 
 /* El nombre del cartel de la fachada: si no cabe en la placa (según la letra que cargue cada móvil), se hace un poco más pequeño */
 function fitSign(){try{const sg=document.querySelector('.g-sign'), t=document.getElementById('gSignTxt');if(!sg||!t||!sg.clientWidth)return;t.style.fontSize='';const max=sg.clientWidth*.9, w=t.scrollWidth;if(w>max)t.style.fontSize=(parseFloat(getComputedStyle(t).fontSize)*max/w).toFixed(2)+'px'}catch(e){}}

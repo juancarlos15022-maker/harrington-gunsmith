@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261012m
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261012o
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1777,6 +1777,49 @@ html.lite .ev-plate.soon{animation:none}
 /* ===== V2 · Letra legible: nada por debajo de 11 px ===== */
 .pname small,.dash-card small,.lowtag{font-size:11px}
 @media(max-width:650px){.carthead{font-size:11px}}
+
+/* ===== V2 · Modo mostrador (tableta fija en la tienda) ===== */
+.most{position:fixed;inset:0;z-index:58;display:flex;flex-direction:column;background:linear-gradient(rgba(5,12,9,.86),rgba(3,8,6,.94)),url(textura-cuero.webp) 0 0/300px,#050d09;color:var(--ink);padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0)}
+.most[hidden]{display:none}
+.most-head{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:2px solid #8b6a2e;background:linear-gradient(#2a1c0d,#120b06)}
+.most-head b{font-family:'Cinzel Decorative',Georgia,serif;color:var(--gold2);font-size:20px;letter-spacing:.08em}
+.most-head span{flex:1;color:#cbb886;font-size:14px}
+.most-head button{min-height:44px;padding:8px 14px;border-radius:6px;font-weight:bold;cursor:pointer;font-family:inherit}
+.most-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 360px}
+.most-cat{display:flex;flex-direction:column;min-height:0;min-width:0;padding:10px 12px;gap:8px}
+.most-side{min-width:0}
+.most-chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;flex:none}
+.most-chips button{flex:none;min-height:42px;padding:8px 14px;border-radius:999px;border:1px solid #5d4928;background:#1a120b;color:var(--ink);font-family:inherit;font-size:14px;letter-spacing:.04em;cursor:pointer}
+.most-chips button.on{border-color:var(--gold2);background:linear-gradient(#80601f,#3a2a0c);color:#fff0b6}
+#mostQ{flex:none;min-height:44px;padding:8px 12px;border-radius:8px;border:1px solid #5d4928;background:#040b08;color:var(--ink);font:inherit;font-size:16px}
+.most-grid{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;align-content:start;padding:2px 2px 12px}
+.most-tile{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;min-height:150px;padding:12px 8px;border:1px solid #3b2c17;border-radius:10px;background:linear-gradient(160deg,#16231a,#0b130e);color:var(--ink);font-family:inherit;cursor:pointer;text-align:center;transition:transform .12s,border-color .12s}
+.most-tile:active{transform:scale(.97)}
+.most-tile img{width:72px;height:52px;object-fit:contain}
+.most-tile b{font-size:15px;line-height:1.2}
+.most-tile .pr{color:var(--gold2);font-weight:bold;font-size:16px}
+.most-tile.on{border-color:var(--gold);box-shadow:0 0 0 1px #8b6a2e,0 0 14px #d7ae5444}
+.most-tile .q{position:absolute;top:6px;right:6px;min-width:30px;height:30px;padding:0 6px;border-radius:15px;background:var(--gold);color:#1a1006;font-weight:bold;line-height:30px;font-size:15px}
+.most-tile.off{opacity:.45;cursor:not-allowed}
+.most-tile .ag{font-size:12px;color:#f0a58f;letter-spacing:.08em}
+.most-side{display:flex;flex-direction:column;min-height:0;border-left:2px solid #8b6a2e;background:linear-gradient(#120d08ee,#08110ccc);padding:10px 12px;gap:8px}
+.most-cli{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.most-cli label{display:block;font-size:11px;letter-spacing:.1em;color:#f0d278;font-weight:bold}
+.most-cli input,.most-cli select{display:block;width:100%;min-height:44px;margin-top:3px;padding:8px 10px;border-radius:6px;border:1px solid #5d4928;background:#040b08;color:var(--ink);font:inherit;font-size:16px}
+.most-list{flex:1;min-height:0;overflow-y:auto}
+.most-line{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;padding:8px 0;border-bottom:1px dashed #2f4536}
+.most-line b{font-size:15px}.most-line small{color:#cbb886}
+.most-q{display:flex;align-items:center;gap:6px}
+.most-q button{width:42px;height:42px;border-radius:8px;border:1px solid #8b6a2e;background:#1a120b;color:var(--gold2);font-size:20px;cursor:pointer}
+.most-q span{min-width:28px;text-align:center;font-weight:bold;font-size:17px}
+.most-empty{color:#a99a7d;text-align:center;padding:30px 6px;font-style:italic}
+.most-tot{display:flex;justify-content:space-between;align-items:baseline;padding:10px 4px;border-top:2px solid #8b6a2e;font-size:15px}
+.most-tot b{font-size:26px;color:var(--gold2)}
+.most-go{min-height:58px;border-radius:8px;border:2px solid #e3c26a;background:linear-gradient(#b38a2e,#6a4c14);color:#fff6d6;font-family:'Cinzel Decorative',Georgia,serif;font-size:19px;letter-spacing:.06em;cursor:pointer}
+.most-go.not-ready{border-color:#6d5430;background:#1a120b;color:#cbb886;font-family:inherit;font-size:15px}
+.most-clear{min-height:40px;border-radius:6px;border:1px solid #6b1818;background:#1a0806;color:#f0b0a0;cursor:pointer;font-family:inherit}
+@media(max-width:900px){.most-body{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}.most-side{border-left:0;border-top:2px solid #8b6a2e;max-height:46vh}.most-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
+@media(max-width:699px){.most-btn{display:none!important}}
 /* ===== V2 · Aplicación instalable ===== */
 .app-dl{display:flex;align-items:center;gap:12px;margin:16px auto 4px;padding:10px 18px 10px 12px;border:2px solid var(--gold);border-radius:10px;background:linear-gradient(#2a1c0d,#0d1c14);color:var(--gold2);cursor:pointer;font-family:inherit;text-transform:none;letter-spacing:normal;box-shadow:0 4px 16px #000a,inset 0 0 18px #d7ae5418;transition:transform .2s,box-shadow .2s;min-height:52px}
 .app-dl[hidden]{display:none}
