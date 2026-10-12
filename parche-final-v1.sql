@@ -27,8 +27,7 @@ begin
   return old;                          -- no se cambia: se queda como estaba
 end $$;
 
-drop trigger if exists hg_solo_adicion on public.datos;
-create trigger hg_solo_adicion
+create or replace trigger hg_solo_adicion
   before update or delete on public.datos
   for each row
   when (old.clave like 'act:%' or old.clave like 'recu:%' or old.clave like 'npcrev:%' or old.clave like 'fablote:%')
@@ -197,7 +196,11 @@ begin
   return res;
 end $$;
 
--- 4) Permisos -------------------------------------------------------------
+-- 4) Índices para que la sincronización siga siendo rápida aunque crezcan los registros
+create index if not exists datos_actualizado_idx on public.datos (actualizado);
+create index if not exists datos_clave_prefijo_idx on public.datos (clave text_pattern_ops);
+
+-- 5) Permisos -------------------------------------------------------------
 grant execute on function public.vender_stock(jsonb, jsonb)              to anon, authenticated;
 grant execute on function public.fabricar_empleado(text, jsonb, jsonb)   to anon, authenticated;
 grant execute on function public.hg_reservadas(text, text)               to anon, authenticated;

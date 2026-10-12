@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261012e
+/* HARRINGTON GUNSMITH · app.js · versión 20261012f
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== MODO PRUEBA (Arthur Ayudante) =====
    Si esta pestaña está en modo prueba, nada sale de este móvil: la nube y Discord se simulan en memoria.
@@ -5901,7 +5901,7 @@ function shopState(){
 async function cloudJanitor(force){
  if(!bossActive)return;
  const day=String(todayNum());try{if(!force&&localStorage.getItem('harrington_janitor')===day)return;localStorage.setItem('harrington_janitor',day)}catch(e){}
- const RULES=[['mensual-',400],['presencia-',14],['semanal-',35],['recibido-',60],['sueldo-',70],['sueldos-',70]], now=Date.now();let n=0;
+ const RULES=[['mensual-',400],['presencia-',14],['semanal-',35],['recibido-',60],['sueldo-',70],['sueldos-',70],['npc-rev-',60],['fab-',60]], now=Date.now();let n=0;
  for(const [pre,days] of RULES){
   try{
    const r=await sbFetch('/rest/v1/datos?select=clave,actualizado&clave=like.'+encodeURIComponent(pre+'*'));if(!r.ok)continue;
