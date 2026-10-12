@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
-<!-- HARRINGTON GUNSMITH · versión 20261012f · tres archivos: index.html, estilos.css y app.js -->
+<!-- HARRINGTON GUNSMITH · versión 20261012g · tres archivos: index.html, estilos.css y app.js -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#07140f">
@@ -9,12 +9,14 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Harrington">
-<link rel="apple-touch-icon" href="emblema-harrington.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icono-app-192.png">
+<link rel="apple-touch-icon" href="icono-app-apple-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
 <title>Harrington Gunsmith · Saint Denis</title>
-<link rel="stylesheet" href="estilos.css?v=20261012f">
+<link rel="stylesheet" href="estilos.css?v=20261012g">
 <link rel="preload" as="image" href="entrada-fachada.webp" media="(max-aspect-ratio: 23/20)">
 <link rel="preload" as="image" href="entrada-fachada-ancha.webp" media="(min-aspect-ratio: 23/20)">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -445,7 +447,7 @@
   <div class="stamp"><img class="emblem" src="emblema-harrington.png" alt="">HARRINGTON GUNSMITH<br>FINE FIREARMS · AMMUNITION · REPAIRS<br>SAINT DENIS</div>
 </aside>
 </div>
-<footer><img class="emblem" src="emblema-harrington.png" alt="">Harrington Gunsmith · Saint Denis · 1880</footer>
+<footer><img class="emblem" src="emblema-harrington.png" alt="">Harrington Gunsmith · Saint Denis · 1880<button type="button" class="app-dl" id="appDl" hidden><img src="icono-app-192.png" alt="" width="34" height="34"><span><b>DESCARGAR APLICACIÓN</b><small>Para ordenador, móvil y tableta · siempre al día</small></span></button></footer>
 </div>
 
 <div class="order-bar" id="orderBar" hidden>
@@ -605,6 +607,13 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="appModal" hidden>
+  <div class="enc-panel" role="dialog" aria-modal="true" aria-labelledby="appTitle">
+    <div class="enc-head"><span id="appTitle">INSTALAR LA APLICACIÓN</span><button type="button" class="danger" id="appClose">Cerrar</button></div>
+    <div id="appBody"></div>
+  </div>
+</div>
+
 <!-- Números de serie de la venta -->
 <div class="modal-overlay" id="serModal" hidden>
   <div class="enc-panel" role="dialog" aria-modal="true" aria-labelledby="serTitle">
@@ -710,6 +719,6 @@
   </div>
 </div>
 
-<script src="app.js?v=20261012f"></script>
+<script src="app.js?v=20261012g"></script>
 </body>
 </html>

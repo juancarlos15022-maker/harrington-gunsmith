@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261012f
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261012g
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -730,7 +730,7 @@ body{background:radial-gradient(ellipse at 50% -8%,#8a4f2133,transparent 44%),ra
 .mode-tabs{grid-template-columns:1fr 1.25fr 1.1fr}
 @media(max-width:560px){.mode-tab{font-size:12px;letter-spacing:.06em;padding:0 4px}.mode-tab.on:before,.mode-tab.on:after{content:none}}
 .mat-tab{color:#d8c690}
-#matBody{padding:6px 12px 12px}
+#matBody,#invBody,#appBody{padding:6px 12px 12px}
 .mat-line{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px solid #26382d;font-size:16px;color:#e8dcbc}
 .mat-line small{display:block;color:#a99a7d;font-size:12px;margin-top:2px}
 .mat-line span{flex:none;font-weight:bold;color:var(--gold2)}
@@ -1747,15 +1747,27 @@ html.lite .ev-plate.soon{animation:none}
 .npc-row small{display:block;font-size:12.5px;color:#cbb886}.npc-row label{font-size:11px;letter-spacing:.08em}.npc-row .min-in{width:100%}
 @media(max-width:420px){.npc-row{grid-template-columns:1fr 64px 80px}}
 .fab-emp{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px dashed #2f4536}
-.fab-emp small{display:block;font-size:12.5px;color:#cbb886}.fab-emp button{flex:0 0 auto;white-space:nowrap}.fab-emp.off{opacity:.6}
+.fab-emp small{display:block;font-size:12.5px;color:#cbb886}.fab-emp button{flex:0 0 auto;white-space:nowrap;padding:10px 12px;min-height:44px;border-radius:6px;border:1px solid #b88931;background:linear-gradient(#80601f,#3a2a0c);color:#fff0b6;font-weight:bold;cursor:pointer;font-family:inherit;letter-spacing:.04em}.fab-emp button:disabled{opacity:.45;cursor:not-allowed}.fab-emp.off{opacity:.6}
 .mat-acts{margin-bottom:10px}
 .pr-row .min-in,.npc-row .min-in,#invModal .min-in{display:inline-block;width:76px;min-height:38px;margin:0;padding:4px 8px;border:1px solid #6d5430;border-radius:6px;background:#0d0905;color:var(--ink);font-size:16px;text-align:center}
 #invModal label select{width:100%}
 .inc-open{border-left:4px solid #d08a1e}
 .inc-nota{margin:8px 0 0}
+.seg.seg3 button{padding-left:4px;padding-right:4px;font-size:clamp(11px,3.1vw,14px);letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis}
 .aud-f select{width:100%}
 .g-cli{display:flex;flex-direction:column;align-items:center;gap:4px;width:min(520px,100%);margin:26px auto 0;padding:16px 18px 18px;border:2px solid #8b6a2e;border-radius:12px;background:linear-gradient(160deg,#2a1c0d,#0d1c14);color:#f3d47c;text-decoration:none;box-shadow:0 6px 22px #000b,inset 0 0 26px #d7ae5418;transition:transform .2s,box-shadow .2s}
 .g-cli:hover,.g-cli:focus-visible{transform:translateY(-2px);box-shadow:0 10px 28px #000c,0 0 18px #d7ae5455}
 .g-cli svg{width:min(260px,70%);height:auto;color:#d7ae54}
 .g-cli b{font-family:'Cinzel Decorative',Georgia,serif;font-size:24px;letter-spacing:.08em}
 .g-cli span{font:italic 14px/1.35 'IM Fell English',Georgia,serif;color:#cfe0cf;text-align:center}
+
+/* ===== V2 · Aplicación instalable ===== */
+.app-dl{display:flex;align-items:center;gap:12px;margin:16px auto 4px;padding:10px 18px 10px 12px;border:2px solid var(--gold);border-radius:10px;background:linear-gradient(#2a1c0d,#0d1c14);color:var(--gold2);cursor:pointer;font-family:inherit;text-transform:none;letter-spacing:normal;box-shadow:0 4px 16px #000a,inset 0 0 18px #d7ae5418;transition:transform .2s,box-shadow .2s;min-height:52px}
+.app-dl[hidden]{display:none}
+.app-dl:hover,.app-dl:focus-visible{transform:translateY(-1px);box-shadow:0 6px 20px #000c,0 0 14px #d7ae5455}
+.app-dl img{display:block;width:34px;height:34px;margin:0;opacity:1;border-radius:6px}
+.app-dl span{display:flex;flex-direction:column;align-items:flex-start;text-align:left}
+.app-dl b{font-family:'Cinzel Decorative',Georgia,serif;font-size:15px;letter-spacing:.06em}
+.app-dl small{font-size:12px;color:#cbb886;letter-spacing:.02em}
+.app-steps{margin:8px 0 0;padding-left:22px;line-height:1.55}.app-steps li{margin:6px 0}
+.app-ico{display:block;width:84px;height:84px;margin:4px auto 10px;border-radius:16px;box-shadow:0 4px 14px #000a}
