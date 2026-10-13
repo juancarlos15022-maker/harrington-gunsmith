@@ -5,6 +5,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { catalogo, diaNum, dolar, duracion, fecha, gotica, hora, hoyNum, limpio, madrid, medianoche, ORO, PIE } from "./comun.ts";
 import { atenderMas } from "./mas.ts";
+import { atenderIA, botonesIA, preguntasDelBanco } from "./ia.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 const json = (o: unknown, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { "Content-Type": "application/json" } });
@@ -59,7 +60,9 @@ const PREGUNTAS: Array<[string, string[], number]> = [
   ["¿Cómo se trata a los clientes en la casa?", ["Con trato correcto y profesional", "Como a cada uno le parezca", "Solo se atiende a los conocidos"], 0],
 ];
 async function examenNuevo() {
-  const P = [...PREGUNTAS].sort(() => Math.random() - 0.5).slice(0, 7).map(([q, o, k]) => ({ q, o, k }));
+  // hasta 4 preguntas nuevas del banco que la IA saca del Tutorial (si lo hay); el resto, las de siempre
+  const N = await preguntasDelBanco(4);
+  const P = [...PREGUNTAS].sort(() => Math.random() - 0.5).slice(0, 7 - N.length).map(([q, o, k]) => ({ q, o, k })).concat(N);
   const L = (await catalogo(sb)).filter((p) => p.precio > 0);
   for (let n = 0; n < 3 && L.length >= 3; n++) {
     const p = L.splice(Math.floor(Math.random() * L.length), 1)[0];
@@ -388,6 +391,9 @@ export async function atender(req: Request): Promise<Response> {
     await sb.from("bot_visitas").update({ estado: "publicada", mensaje_id: m.d?.id || null }).eq("id", lid);
     return json({ type: 7, data: { embeds: [{ ...emb, footer: { text: `✅ Publicada por ${yoNombre}` } }], components: [] } });
   }
+  // con IA (ia.ts): /harrington, /resumen y /redactar
+  const conIA = (await atenderIA({ i, c, user, yoNombre, orden, opt, esPersonal })) || (await botonesIA({ i, c, user, yoNombre, orden, opt, esPersonal, id, esDir }));
+  if (conIA) return conIA;
   // tercera tanda (mas.ts): pedidos, compra, agenda, se busca, periodo de prueba, Veintiuno y bitácora
   const mas = await atenderMas({ i, c, user, yoNombre, id, orden, opt, esDir, esPersonal, v });
   if (mas) return mas;

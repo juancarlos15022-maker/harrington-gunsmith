@@ -7,6 +7,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { catalogo, CATS, dolar, duracion, fecha, gotica, hora, hoyNum, limpio, madrid, medianoche, ORO, PIE, versalita } from "./comun.ts";
 import { cronicaMas } from "./mas.ts";
+import { bancoExamen, botonAvisado, cronAprobaciones, cronAvisos, ia, informeLunes, menciones, parteManana, textoEncargoListo } from "./ia.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 const json = (o: unknown, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { "Content-Type": "application/json" } });
@@ -117,7 +118,7 @@ async function escaparate() {
 }
 const ORDENES = [
   ["🌐 Para todos", [["/precio", "Precio de mostrador de cualquier artículo. Empiece a escribir el nombre y elíjalo. 🔒"], ["/duelo @persona", "Reta a alguien a un duelo al amanecer: gana quien dispare primero al oír «¡FUEGO!»."], ["/tiradores", "Ranking de los mejores tiradores de los duelos."]]],
-  ["🛠 Para el personal", [["/mis-horas", "Sus horas de esta semana, las que le faltan y lo que cobraría si la semana acabara hoy. 🔒"], ["/pedidos", "Pedidos a proveedores pendientes de recibir, con el botón «Recibido entero». 🔒"], ["/stock", "Cuántas unidades quedan de un producto o material. 🔒"], ["/encargos", "Encargos por fabricar o por entregar. 🔒"], ["/cliente", "Ficha resumida de un cliente: telegrama y armas registradas. 🔒"], ["/telegrama @persona texto", "Manda un telegrama de la época por mensaje privado."], ["/cumpleanos día mes", "Apunta el cumpleaños de su personaje: ese día la casa le felicitará. 🔒"], ["/examen", "Examen de la casa (también con el botón del libro del aprendiz). 🔒"]]],
+  ["🛠 Para el personal", [["/harrington pregunta", "Pregúntele al Señor Harrington lo que quiera sobre la casa: existencias, encargos, pedidos, ausencias, cómo se hace algo en la web… También puede mencionarle (@Sr Harrington) en los canales del personal. 🔒"], ["/resumen", "Lo que ha pasado en este canal en las últimas horas, resumido. 🔒"], ["/redactar", "Le escribe un telegrama para un cliente o proveedor, el aviso de un encargo o un anuncio, listo para copiar. 🔒"], ["/mis-horas", "Sus horas de esta semana, las que le faltan y lo que cobraría si la semana acabara hoy. 🔒"], ["/pedidos", "Pedidos a proveedores pendientes de recibir, con el botón «Recibido entero». 🔒"], ["/stock", "Cuántas unidades quedan de un producto o material. 🔒"], ["/encargos", "Encargos por fabricar o por entregar. 🔒"], ["/cliente", "Ficha resumida de un cliente: telegrama y armas registradas. 🔒"], ["/telegrama @persona texto", "Manda un telegrama de la época por mensaje privado."], ["/cumpleanos día mes", "Apunta el cumpleaños de su personaje: ese día la casa le felicitará. 🔒"], ["/examen", "Examen de la casa (también con el botón del libro del aprendiz). 🔒"]]],
   ["🎩 Para la Dirección", [["/caja", "Lo cobrado y lo gastado hoy y esta semana. 🔒"], ["/compra material cantidad precio", "Apunta una compra a un particular: entra al almacén como lote con su precio y, si sale de la caja, como gasto. 🔒"], ["/agenda nombre", "Ficha de un contacto de la agenda (telegrama y observaciones). 🔒"], ["/se-busca nombre motivo", "Cuelga un cartel de Se busca; la web avisará si alguien compra a ese nombre."], ["/evento", "Anuncia un evento con los botones Me apunto / Me borro."], ["/reunion", "Convoca una reunión; aviso a todo el personal una hora antes."], ["/votacion", "Abre una votación con botones (2 a 5 opciones)."], ["/despedir @persona", "Despide a alguien (también: clic derecho → Aplicaciones → Despedir de Harrington)."]]],
 ];
 async function ordenes() {
@@ -161,8 +162,9 @@ async function encargosListos() {
     if (e.fab !== "FABRICADO" || e.finished || e.cancelled || e.avisado || !e.id) continue;
     if (!(await marcar("enc-listo-" + e.id))) continue;
     const items = (e.items || []).map((x: any) => x.qty + " × " + x.name).join(", ");
-    const txt = `Nos complace anunciarle, Sr./Sra. ${e.client}, que su encargo en Armería Harrington Gunsmith ya está fabricado (${items}).${e.pendingCents > 0 ? `\n\nImporte pendiente al recogerlo: ${dolar(e.pendingCents)}.` : ""}\n\nPuede pasar a recogerlo cuando quiera. Dispone de un plazo de 10 días para hacerlo: transcurrido ese plazo, perderá el producto y el dinero depositado como fianza.\n\nAtentamente, Vincent Harrington · Telegrama SD8112\n\nEl precio de un apellido.`;
-    await post(c.canal_encargos, { embeds: [{ title: "📦 Encargo listo · " + limpio(e.client, 60), color: 0x3d8b52, description: `**${items}**\nTelegrama del cliente: **${limpio(e.telegram, 12) || "—"}**\n\nCopie este aviso y mándeselo por telegrama; luego márquelo como avisado en la web:\n\`\`\`\n${txt}\n\`\`\``, footer: PIE }] });
+    const ia_t = await textoEncargoListo(c, e).catch(() => null);
+    const txt = ia_t || `Nos complace anunciarle, Sr./Sra. ${e.client}, que su encargo en Armería Harrington Gunsmith ya está fabricado (${items}).${e.pendingCents > 0 ? `\n\nImporte pendiente al recogerlo: ${dolar(e.pendingCents)}.` : ""}\n\nPuede pasar a recogerlo cuando quiera. Dispone de un plazo de 10 días para hacerlo: transcurrido ese plazo, perderá el producto y el dinero depositado como fianza.\n\nAtentamente, Vincent Harrington · Telegrama SD8112\n\nEl precio de un apellido.`;
+    await post(c.canal_encargos, { embeds: [{ title: "📦 Encargo listo · " + limpio(e.client, 60), color: 0x3d8b52, description: `**${items}**\nTelegrama del cliente: **${limpio(e.telegram, 12) || "—"}**\n\nCopie este aviso y mándeselo por telegrama; luego pulse **Ya le he avisado** (o márquelo en la web):\n\`\`\`\n${txt}\n\`\`\``, footer: PIE }], components: botonAvisado(e.id) });
   }
 }
 async function reuniones() {
@@ -296,6 +298,11 @@ async function domingo() {
       { name: "📅 " + versalita("Sociedad"), value: [((ev ?? []) as Array<{ titulo: string; cuando: string }>).map((x) => `Se anuncia: **${limpio(x.titulo, 60)}** (${limpio(x.cuando, 40)}).`).join("\n"), tirador ? `En el campo del honor, **${limpio(tirador[0], 40)}** se lleva ${tirador[1]} ${tirador[1] === 1 ? "duelo" : "duelos"}.` : ""].filter(Boolean).join("\n").slice(0, 1024) || "La semana transcurrió sin eventos ni duelos." },
       { name: "📜 " + versalita("Pensamiento del armero"), value: `«${REFRANES[azar(hoy + 11, REFRANES.length)]}»` },
     ];
+    // la crónica de la semana la escribe la IA con estos mismos datos (si no responde, se queda la de siempre)
+    try {
+      const r = await ia(c, "discord_gaceta", { ventas: V.length, total: dolar(total), mas_vendido: top ? `${top[0]} (${top[1]})` : "", destaca: mejor ? `${mejor[0]} (${dolar(mejor[1])})` : "", noticias: fields[1].value, sociedad: fields[2].value }, "", { quien: "Señor Harrington", emp_id: "discord" });
+      if (!("error" in r)) { const [a1, a2] = r.texto.split(/\n\s*\n/); if (a1) fields[0].value = a1.trim().slice(0, 1024); if (a2) fields[1].value = a2.trim().slice(0, 1024); }
+    } catch { /* la de siempre */ }
     await post(c.canal_bandos, { embeds: [{ title: "📰 " + gotica("La Gaceta de Saint Denis"), color: 0xe8dcc0, description: `*Edición dominical · ${dia} de ${MESES[mes - 1]} de 1880 · Precio: un centavo*`, fields, footer: { text: "Impreso por el Señor Harrington en la Casa Harrington, Saint Denis" } }] });
   }
 }
@@ -344,7 +351,15 @@ export async function atender(req: Request): Promise<Response> {
   await paso("diarios", diarios);
   await paso("domingo", domingo);
   await paso("mes", empleadoDelMes);
+  // con IA: contestar a quien le menciona, parte de la mañana y preguntas nuevas para el examen
+  let menc: unknown = null;
+  await paso("menciones", async () => { menc = await menciones(c); });
+  await paso("parte_ia", async () => { hecho.parte_ia_r = String(await parteManana(c, marcar)); });
+  await paso("aprobaciones", async () => { hecho.apr_r = String(await cronAprobaciones(c)); });
+  await paso("informe_lunes", async () => { hecho.informe_r = String(await informeLunes(c, marcar)); });
+  if (+madrid(Date.now()).minute % 10 === 3 || b.todo) await paso("avisos", async () => { hecho.avisos_r = String(await cronAvisos(c, marcar)); });
+  if (+madrid(Date.now()).minute % 30 === 7 || b.todo) await paso("banco_examen", async () => { hecho.banco_r = String(await bancoExamen(c)); });
   let mas: Record<string, string> = {};
   try { mas = await cronicaMas(c, +madrid(Date.now()).minute % 10 === 0 || !!b.todo); } catch (e) { mas = { error: String((e as Error)?.message || e).slice(0, 120) }; }
-  return json({ ok: true, hecho, mas });
+  return json({ ok: true, hecho, mas, menc });
 }
