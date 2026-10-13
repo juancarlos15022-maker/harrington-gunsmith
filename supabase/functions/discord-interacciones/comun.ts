@@ -12,7 +12,7 @@ export const gotica = (s: string) => [...s].map((ch) => {
 }).join("");
 const SC: Record<string, string> = Object.fromEntries([..."abcdefghijklmnopqrstuvwxyz"].map((c, i) => [c, [..."ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢ"][i]]));
 export const versalita = (s: string) => [...s.toLowerCase()].map((c) => SC[c] ?? c).join("");
-export const limpio = (s: unknown, n: number) => String(s ?? "").replace(/@(everyone|here)/gi, "@​$1").replace(/<@[!&]?\d+>/g, "").trim().slice(0, n);
+export const limpio = (s: unknown, n: number) => String(s ?? "").replace(/@(everyone|here)/gi, "@\u200b$1").replace(/<@[!&]?\d+>/g, "").trim().slice(0, n);
 export const dolar = (c: unknown) => "$" + (Number(c || 0) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // ── fechas en hora de Madrid (igual que la web) ──

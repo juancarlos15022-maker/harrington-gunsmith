@@ -4,6 +4,7 @@
 //   /duelo /tiradores (todos) · examen del libro del aprendiz · buzón anónimo · libro de visitas
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { catalogo, diaNum, dolar, duracion, fecha, gotica, hora, hoyNum, limpio, madrid, medianoche, ORO, PIE } from "./comun.ts";
+import { atenderMas } from "./mas.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 const json = (o: unknown, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { "Content-Type": "application/json" } });
@@ -387,5 +388,8 @@ export async function atender(req: Request): Promise<Response> {
     await sb.from("bot_visitas").update({ estado: "publicada", mensaje_id: m.d?.id || null }).eq("id", lid);
     return json({ type: 7, data: { embeds: [{ ...emb, footer: { text: `✅ Publicada por ${yoNombre}` } }], components: [] } });
   }
+  // tercera tanda (mas.ts): pedidos, compra, agenda, se busca, periodo de prueba, Veintiuno y bitácora
+  const mas = await atenderMas({ i, c, user, yoNombre, id, orden, opt, esDir, esPersonal, v });
+  if (mas) return mas;
   return efimero("Este botón ha caído en desuso.");
 }

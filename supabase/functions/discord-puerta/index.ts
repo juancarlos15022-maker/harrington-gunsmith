@@ -149,11 +149,15 @@ async function paneles(c: Record<string, string>, H: Record<string, string>) {
   const ahora = Date.now();
   const ausentes = (await registros<Aus>("ausencia:")).filter((a) => !a.cancelled && !a.returned && a.start <= ahora && (!a.end || a.end > ahora));
   const abierto = turnos.length > 0;
+  // telegramas de la Dirección para dejar recado con la tienda cerrada (los de las fichas de la web; Vincent, el de la casa)
+  const { data: fe } = await sb.from("datos").select("valor").eq("clave", "empleados").maybeSingle();
+  const tels = ((Array.isArray(fe?.valor) ? fe!.valor : []) as Array<Record<string, string>>).filter((e) => e && e.puesto === "Jefe")
+    .map((e) => ({ n: limpio(e.name, 40), t: limpio(e.telegrama || (e.name === "Vincent Harrington" ? "SD8112" : ""), 12) })).filter((x) => x.t);
   await fijo(c, H, c.canal_estado, "msg_estado", { allowed_mentions: { parse: [] }, components: [], embeds: [{
     title: abierto ? "🟢 " + gotica("Abierto") : "🔴 " + gotica("Cerrado"), color: abierto ? 0x3d8b52 : 0x8b2e25,
     description: abierto
       ? `Las puertas de la Casa Harrington están abiertas. Pase usted.\n\n**Le atienden:** ${turnos.map((t) => limpio(t.name, 40)).join(", ")}\n**Abierto desde las** ${hora(turnos[0].start)}`
-      : "Ahora mismo no hay nadie tras el mostrador.\n\nVuelva más tarde o deje un telegrama: le atenderemos en cuanto abramos.",
+      : "Ahora mismo no hay nadie tras el mostrador.\n\nVuelva más tarde o deje un telegrama: le atenderemos en cuanto abramos." + (tels.length ? "\n\n📨 **Telegramas de la Dirección:**\n" + tels.map((x) => `${x.n} · **${x.t}**`).join("\n") : ""),
     footer: { text: "Se pone al día solo con los fichajes · Señor Harrington" } }] });
   await fijo(c, H, c.canal_fichar, "msg_fichar", { allowed_mentions: { parse: [] }, embeds: [{
     title: "🕰 " + gotica("Fichar y Ausencias"), color: ORO,

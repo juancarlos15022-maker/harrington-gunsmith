@@ -6,6 +6,7 @@
 // Día 1 a las 12:00: empleado del mes. Cada aviso diario se apunta en bot_hechos para no repetirse nunca.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { catalogo, CATS, dolar, duracion, fecha, gotica, hora, hoyNum, limpio, madrid, medianoche, ORO, PIE, versalita } from "./comun.ts";
+import { cronicaMas } from "./mas.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 const json = (o: unknown, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { "Content-Type": "application/json" } });
@@ -116,8 +117,8 @@ async function escaparate() {
 }
 const ORDENES = [
   ["🌐 Para todos", [["/precio", "Precio de mostrador de cualquier artículo. Empiece a escribir el nombre y elíjalo. 🔒"], ["/duelo @persona", "Reta a alguien a un duelo al amanecer: gana quien dispare primero al oír «¡FUEGO!»."], ["/tiradores", "Ranking de los mejores tiradores de los duelos."]]],
-  ["🛠 Para el personal", [["/mis-horas", "Sus horas de esta semana, las que le faltan y lo que cobraría si la semana acabara hoy. 🔒"], ["/stock", "Cuántas unidades quedan de un producto o material. 🔒"], ["/encargos", "Encargos por fabricar o por entregar. 🔒"], ["/cliente", "Ficha resumida de un cliente: telegrama y armas registradas. 🔒"], ["/telegrama @persona texto", "Manda un telegrama de la época por mensaje privado."], ["/cumpleanos día mes", "Apunta el cumpleaños de su personaje: ese día la casa le felicitará. 🔒"], ["/examen", "Examen de la casa (también con el botón del libro del aprendiz). 🔒"]]],
-  ["🎩 Para la Dirección", [["/caja", "Lo cobrado y lo gastado hoy y esta semana. 🔒"], ["/evento", "Anuncia un evento con los botones Me apunto / Me borro."], ["/reunion", "Convoca una reunión; aviso a todo el personal una hora antes."], ["/votacion", "Abre una votación con botones (2 a 5 opciones)."], ["/despedir @persona", "Despide a alguien (también: clic derecho → Aplicaciones → Despedir de Harrington)."]]],
+  ["🛠 Para el personal", [["/mis-horas", "Sus horas de esta semana, las que le faltan y lo que cobraría si la semana acabara hoy. 🔒"], ["/pedidos", "Pedidos a proveedores pendientes de recibir, con el botón «Recibido entero». 🔒"], ["/stock", "Cuántas unidades quedan de un producto o material. 🔒"], ["/encargos", "Encargos por fabricar o por entregar. 🔒"], ["/cliente", "Ficha resumida de un cliente: telegrama y armas registradas. 🔒"], ["/telegrama @persona texto", "Manda un telegrama de la época por mensaje privado."], ["/cumpleanos día mes", "Apunta el cumpleaños de su personaje: ese día la casa le felicitará. 🔒"], ["/examen", "Examen de la casa (también con el botón del libro del aprendiz). 🔒"]]],
+  ["🎩 Para la Dirección", [["/caja", "Lo cobrado y lo gastado hoy y esta semana. 🔒"], ["/compra material cantidad precio", "Apunta una compra a un particular: entra al almacén como lote con su precio y, si sale de la caja, como gasto. 🔒"], ["/agenda nombre", "Ficha de un contacto de la agenda (telegrama y observaciones). 🔒"], ["/se-busca nombre motivo", "Cuelga un cartel de Se busca; la web avisará si alguien compra a ese nombre."], ["/evento", "Anuncia un evento con los botones Me apunto / Me borro."], ["/reunion", "Convoca una reunión; aviso a todo el personal una hora antes."], ["/votacion", "Abre una votación con botones (2 a 5 opciones)."], ["/despedir @persona", "Despide a alguien (también: clic derecho → Aplicaciones → Despedir de Harrington)."]]],
 ];
 async function ordenes() {
   await fijo(c.canal_ordenes, "msg_ordenes", { allowed_mentions: { parse: [] }, embeds: [
@@ -129,6 +130,9 @@ async function ordenes() {
       `${c.canal_buzon ? `<#${c.canal_buzon}>` : "Buzón"} — sugerencias anónimas para la Dirección.`,
       `${c.canal_libro_visitas ? `<#${c.canal_libro_visitas}>` : "Libro de visitas"} — deje su recomendación de la casa.`,
       `${c.canal_eventos ? `<#${c.canal_eventos}>` : "Eventos"} — Me apunto / Me borro en cada anuncio.`,
+      `${c.canal_pedidos ? `<#${c.canal_pedidos}>` : "Pedidos"} — «Recibido entero» cuando llega un pedido: el material entra solo en la web.`,
+      `${c.canal_juego ? `<#${c.canal_juego}>` : "Mesa de juego"} — el Veintiuno, con fichas de mentira y ranking semanal.`,
+      "Al pulsar **Salgo de turno**, puede apuntar en la bitácora del taller lo que ha hecho.",
       "Dirección: fichas de la **plantilla** (Ascender / Despedir), **sanciones** y **solicitudes de empleo**.",
     ].join("\n"), footer: PIE },
   ] });
@@ -340,5 +344,7 @@ export async function atender(req: Request): Promise<Response> {
   await paso("diarios", diarios);
   await paso("domingo", domingo);
   await paso("mes", empleadoDelMes);
-  return json({ ok: true, hecho });
+  let mas: Record<string, string> = {};
+  try { mas = await cronicaMas(c, +madrid(Date.now()).minute % 10 === 0 || !!b.todo); } catch (e) { mas = { error: String((e as Error)?.message || e).slice(0, 120) }; }
+  return json({ ok: true, hecho, mas });
 }

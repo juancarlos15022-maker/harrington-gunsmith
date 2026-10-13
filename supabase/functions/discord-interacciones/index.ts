@@ -14,6 +14,8 @@
 //      /evento con «Me apunto»; sanciones con formulario y carta. Las piezas comunes están en comun.ts.
 //   8. La segunda tanda (/encargos, /cliente, /caja, /telegrama, /mis-horas, /reunion, /votacion, /duelo, /tiradores,
 //      /cumpleanos, /examen, buzón, libro de visitas) se reenvía a discord-bot (modo «extra») tras comprobar la firma.
+//   9. La tercera tanda (/pedidos, /compra, /agenda, /se-busca, «Recibido entero», periodo de prueba, Veintiuno, bitácora)
+//      también va a discord-bot; y lo que aquí no se reconozca se le pasa igualmente, por si es de una tanda nueva.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { catalogo, diaNum, duracion, fecha, hora, hoyNum, madrid, medianoche, ORO } from "./comun.ts";
@@ -51,7 +53,7 @@ function enSegundoPlano(p: Promise<unknown>) {
   const er = (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime;
   if (er?.waitUntil) er.waitUntil(p.catch(() => {})); else p.catch(() => {});
 }
-const efimero = (content: string) => json({ type: 4, data: { content, flags: 64 } });
+const efimero = (content: string, extra: Record<string, unknown> = {}) => json({ type: 4, data: { content, flags: 64, ...extra } });
 // letra gótica de imprenta para los títulos (sin tildes ni eñes: esas letras no existen en gótica)
 const gotica = (s: string) => [...s].map((ch) => {
   const n = ch.charCodeAt(0);
@@ -99,7 +101,7 @@ async function carta(c: Record<string, string>, uid: string, texto: string) {
 // las fichas del canal de plantilla se ponen al día al momento (si no, la revisión de cada medio minuto lo hace)
 const refrescarPlantilla = (c: Record<string, string>) => fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/discord-puerta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ secreto: c.secreto, solo: "plantilla" }) }).catch(() => null);
 const norm = (s: string) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
-const EXTRA_ORDENES = ["encargos", "cliente", "caja", "telegrama", "mis-horas", "reunion", "votacion", "duelo", "tiradores", "cumpleanos", "examen"];
+const EXTRA_ORDENES = ["encargos", "cliente", "caja", "telegrama", "mis-horas", "reunion", "votacion", "duelo", "tiradores", "cumpleanos", "examen", "pedidos", "compra", "agenda", "se-busca"];
 const AUS_CATS = ["Viaje", "Trabajo", "Estudios", "Salud", "Asuntos personales", "Otro"];
 type Aus = { id: string; empId: string; name: string; start: number; end: number; returned?: boolean; cancelled?: boolean };
 // empleado de la web enlazado con este usuario de Discord
@@ -167,7 +169,7 @@ Deno.serve(async (req: Request) => {
   const ch = (k: string) => c[k] ? `<#${c[k]}>` : "el canal siguiente";
   const esDireccion = () => [c.rol_jefe, c.rol_gerente].filter(Boolean).some((r) => roles.includes(r));
   // segunda tanda de órdenes y botones: las atiende discord-bot en modo «extra» (la firma de Discord ya está comprobada aquí)
-  if (((i.type === 2 || i.type === 4) && EXTRA_ORDENES.includes(String(i.data?.name || ""))) || ((i.type === 3 || i.type === 5) && /^(reu|vot|duel|exa|buz|vis):/.test(id))) {
+  if (((i.type === 2 || i.type === 4) && EXTRA_ORDENES.includes(String(i.data?.name || ""))) || ((i.type === 3 || i.type === 5) && /^(reu|vot|duel|exa|buz|vis|ped|prb|sb|bj|bit):/.test(id))) {
     try {
       const r = await fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/discord-bot", { method: "POST", headers: { "Content-Type": "application/json", "x-hg-secreto": c.secreto, "x-hg-modo": "extra" }, body: cuerpo });
       if (r.ok) return new Response(await r.text(), { status: 200, headers: { "Content-Type": "application/json" } });
@@ -354,7 +356,7 @@ Deno.serve(async (req: Request) => {
         description: (mismo ? `Fecha: ${fecha(ahora)}\nEntrada: ${hora(abierto.start)}\nSalida: ${hora(ahora)}` : `Entrada: ${fecha(abierto.start)} ${hora(abierto.start)}\nSalida: ${fecha(ahora)} ${hora(ahora)}`) + `\nTiempo: ${duracion(abierto.start, ahora)}\nFichada desde Discord.` });
       await refrescarPaneles(c);
     })());
-    return efimero(`Buen trabajo, ${limpio(e.name, 40)}. Salida a las **${hora(ahora)}** tras ${duracion(abierto.start, ahora)}. ¡Hasta la próxima jornada! 🔴`);
+    return efimero(`Buen trabajo, ${limpio(e.name, 40)}. Salida a las **${hora(ahora)}** tras ${duracion(abierto.start, ahora)}. ¡Hasta la próxima jornada! 🔴\n\nSi quiere, deje apuntado en la bitácora del taller lo que ha hecho hoy (no es obligatorio).`, { components: [{ type: 1, components: [{ type: 2, style: 2, label: "Apuntar en la bitácora", emoji: { name: "📓" }, custom_id: "bit:new" }] }] });
   }
 
   // ── ausencias desde Discord: motivo (lista) → ficha (formulario) → apuntada en la web ──
@@ -570,6 +572,13 @@ Deno.serve(async (req: Request) => {
       } catch { /* */ }
     })());
     return json({ type: 7, data: { content: "", embeds: [{ ...embed, color: 0x8b2e25, footer: { text: `❌ Rechazada por ${quien}` } }], components: [] } });
+  }
+  // lo que no se reconoce aquí se le pasa a discord-bot (modo «extra»), por si es de una tanda nueva
+  if ([2, 3, 4, 5].includes(i.type)) {
+    try {
+      const r = await fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/discord-bot", { method: "POST", headers: { "Content-Type": "application/json", "x-hg-secreto": c.secreto, "x-hg-modo": "extra" }, body: cuerpo });
+      if (r.ok) return new Response(await r.text(), { status: 200, headers: { "Content-Type": "application/json" } });
+    } catch { /* */ }
   }
   return efimero("Este botón ha caído en desuso.");
 });
