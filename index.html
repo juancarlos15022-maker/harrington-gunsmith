@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
-<!-- HARRINGTON GUNSMITH · versión 20261013e · tres archivos: index.html, estilos.css y app.js -->
+<!-- HARRINGTON GUNSMITH · versión 20261013f · tres archivos: index.html, estilos.css y app.js -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#07140f">
@@ -16,8 +16,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
 <title>Harrington Gunsmith · Saint Denis</title>
-<link rel="stylesheet" href="estilos.css?v=20261013e" fetchpriority="high">
-<link rel="preload" href="app.js?v=20261013e" as="script" fetchpriority="high">
+<link rel="stylesheet" href="estilos.css?v=20261013f" fetchpriority="high">
+<link rel="preload" href="app.js?v=20261013f" as="script" fetchpriority="high">
 <script data-head>/* la fachada de la entrada solo se adelanta si va a salir la entrada (si ya has entrado hoy en esta pestaña, no) */
 try{if(!sessionStorage.getItem('harrington_me_v1')){[['entrada-fachada.webp','(max-aspect-ratio: 23/20)'],['entrada-fachada-ancha.webp','(min-aspect-ratio: 23/20)']].forEach(function(x){var l=document.createElement('link');l.rel='preload';l.as='image';l.href=x[0];l.media=x[1];document.head.appendChild(l)})}}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -725,6 +725,11 @@ try{if(!sessionStorage.getItem('harrington_me_v1')){[['entrada-fachada.webp','(m
         <div class="receipt-motto">El precio de un apellido.</div>
       </div>
     </div>
+    <div class="bit-box" id="shBit" hidden>
+      <label for="shBitTxt">📓 Bitácora del taller <i>(opcional)</i></label>
+      <textarea id="shBitTxt" maxlength="800" rows="3" placeholder="¿Qué ha hecho hoy? Ej.: Fabriqué 30 de munición y atendí a 4 clientes."></textarea>
+      <button type="button" id="shBitSave">APUNTAR EN LA BITÁCORA</button>
+    </div>
     <div class="receipt-actions">
       <button type="button" class="primary" id="shCopy">Copiar para Discord</button>
       <button type="button" id="shDownload">Descargar</button>
@@ -745,6 +750,6 @@ try{if(!sessionStorage.getItem('harrington_me_v1')){[['entrada-fachada.webp','(m
   </div>
 </div>
 
-<script src="app.js?v=20261013e"></script>
+<script src="app.js?v=20261013f"></script>
 </body>
 </html>

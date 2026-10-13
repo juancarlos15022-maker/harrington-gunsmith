@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261013e
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261013f
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -126,6 +126,12 @@ box-shadow:0 20px 60px #000,inset 0 0 70px #8a5d2488}
 .receipt-total{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:10px 4px;border-top:3px double #7a5a22;border-bottom:3px double #7a5a22;font-size:24px;font-weight:bold;color:#1b3022}
 .receipt-foot{margin-top:14px;font-size:11px;letter-spacing:.16em;color:#6b4c1d;line-height:1.6}
 .receipt-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.bit-box{margin-top:12px;padding:10px;border:1px solid #b88931;border-radius:6px;background:rgba(10,24,18,.85);display:grid;gap:8px}
+.bit-box[hidden]{display:none}
+.bit-box label{color:#f3e2b0;font-weight:bold;font-size:15px}.bit-box label i{font-weight:normal;opacity:.75}
+.bit-box textarea{width:100%;box-sizing:border-box;min-height:70px;resize:vertical;padding:9px;border-radius:5px;border:1px solid #8a6a2c;background:#f6ecd2;color:#2b1d0e;font:inherit;font-size:16px}
+.bit-box button{padding:12px 8px;min-height:44px;border-radius:6px;border:1px solid #b88931;background:linear-gradient(#1b2a1a,#0a1812);color:#f3e2b0;font-weight:bold;cursor:pointer}
+.bit-box button:disabled{opacity:.6;cursor:default}
 .receipt-actions button{padding:13px 8px;border-radius:6px;border:1px solid #b88931;background:linear-gradient(#1b2a1a,#0a1812);color:#f3e2b0;font-weight:bold;cursor:pointer;touch-action:manipulation}
 .receipt-actions .primary{background:linear-gradient(#1b6c16,#0a430b);border-color:#d2a733;color:#fff7c9}
 
