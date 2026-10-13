@@ -5284,7 +5284,7 @@ async function moverStock(items,why){const m=await sbRpc('mover_stock',{p_items:
    tienen un solo montón, en el almacén de materiales. Vender, fabricar con ellos o fabricarlos mueve ese montón.
    En las recetas cuestan lo que cuesta fabricarlos (su propia receta), no su precio de venta. */
 function matProdList(){return ['Pólvora']}
-function isMatProd(n){try{return matProdList().indexOf(n)>=0&&inputs.some(i=>i.dataset.name===n)}catch(e){return false}}
+function isMatProd(n){return matProdList().indexOf(n)>=0}
 function matKey(n){return isMatProd(n)?n:'mat:'+n}
 function isMatK(k){return isMat(k)||isMatProd(k)}
 function matNameK(k){return isMat(k)?String(k).slice(4):k}
