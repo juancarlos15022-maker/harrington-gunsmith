@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261013c
+/* HARRINGTON GUNSMITH · app.js · versión 20261013d
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== V2 · La sesión no se cierra al salir de la aplicación =====
    Se guarda en el dispositivo y se recupera al volver, aunque el móvil haya cerrado la aplicación por detrás para ahorrar memoria.

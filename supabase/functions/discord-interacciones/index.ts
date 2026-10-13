@@ -98,7 +98,7 @@ async function carta(c: Record<string, string>, uid: string, texto: string) {
 }
 // las fichas del canal de plantilla se ponen al día al momento (si no, la revisión de cada medio minuto lo hace)
 const refrescarPlantilla = (c: Record<string, string>) => fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/discord-puerta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ secreto: c.secreto, solo: "plantilla" }) }).catch(() => null);
-const norm = (s: string) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+const norm = (s: string) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
 const EXTRA_ORDENES = ["encargos", "cliente", "caja", "telegrama", "mis-horas", "reunion", "votacion", "duelo", "tiradores", "cumpleanos", "examen"];
 const AUS_CATS = ["Viaje", "Trabajo", "Estudios", "Salud", "Asuntos personales", "Otro"];
 type Aus = { id: string; empId: string; name: string; start: number; end: number; returned?: boolean; cancelled?: boolean };
@@ -131,7 +131,7 @@ function anuncio(ev: { id: string; titulo: string; cuando: string; lugar?: strin
     components: [{ type: 1, components: [{ type: 2, style: 3, label: "Me apunto", emoji: { name: "✋" }, custom_id: "ev:si:" + ev.id }, { type: 2, style: 2, label: "Me borro", custom_id: "ev:no:" + ev.id }] }],
   };
 }
-const limpio = (s: unknown, n: number) => String(s ?? "").replace(/@(everyone|here)/gi, "@​$1").replace(/<@[!&]?\d+>/g, "").trim().slice(0, n);
+const limpio = (s: unknown, n: number) => String(s ?? "").replace(/@(everyone|here)/gi, "@\u200b$1").replace(/<@[!&]?\d+>/g, "").trim().slice(0, n);
 
 // La web avisa de un cambio de plantilla (alta, ascenso, despido): se ajustan los roles según lo que diga la base de datos
 async function desdeLaWeb(req: Request, cuerpo: string, c: Record<string, string>) {
