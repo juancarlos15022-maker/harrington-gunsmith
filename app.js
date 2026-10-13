@@ -3988,7 +3988,7 @@ async function saveStockDraft(){
  Object.keys(stockDraft).forEach(name=>{const q=parseInt(stockDraft[name])||0;if(q>0)items.push({producto:name,delta:q})});
  if(items.length){
   try{await refreshStock()}catch(e){}
-  {const np=items.filter(x=>recipeOf(x.producto).length&&!(productPrice(x.producto)>0)).map(x=>x.producto);if(np.length){const e=document.getElementById('stErr');if(e){e.innerHTML='<b>Sin precio: no se puede fabricar.</b> '+np.map(esc).join(', ')+(np.length===1?' no tiene':' no tienen')+' precio todavía. Ponlo en PRODUCTOS Y PRECIOS y después fabrícalo.';e.hidden=false;e.scrollIntoView({block:'nearest'})}return say('Sin precio: no se puede fabricar '+np.join(', '),'err')}}
+  {const np=items.filter(x=>recipeOf(x.producto).length&&!isMatProd(x.producto)&&!(productPrice(x.producto)>0)).map(x=>x.producto);if(np.length){const e=document.getElementById('stErr');if(e){e.innerHTML='<b>Sin precio: no se puede fabricar.</b> '+np.map(esc).join(', ')+(np.length===1?' no tiene':' no tienen')+' precio todavía. Ponlo en PRODUCTOS Y PRECIOS y después fabrícalo.';e.hidden=false;e.scrollIntoView({block:'nearest'})}return say('Sin precio: no se puede fabricar '+np.join(', '),'err')}}
   const need=needMaterials(items), miss=missingMaterials(need);
   if(miss.length)return err('<b>No hay materiales suficientes.</b> No se ha sumado nada.<br>'+miss.map(esc).join('<br>'));
   if(Object.keys(need).length&&!await askConfirm('Fabricar','Vas a fabricar: '+items.map(x=>x.delta+' × '+x.producto).join(', ')+'. Se gastarán del almacén: '+Object.keys(need).map(k=>need[k]+' '+k).join(', ')+'.','Fabricar'))return;
@@ -4026,7 +4026,7 @@ function fqSumHTML(){
 function fqRefresh(){const s=document.getElementById('fqSum');if(s)s.innerHTML=fqSumHTML();fqErrMsg='';const e=document.getElementById('fqErr');if(e)e.hidden=true;const b=dirModal.querySelector('[data-dir="fq-save"]');if(b){const n=fqItems().reduce((a,x)=>a+x.delta,0);b.textContent=n?'FABRICAR ('+n+(n===1?' unidad)':' unidades)'):'FABRICAR'}}
 function renderModFabricar(){
  const lf=lastFab();
- const L=inputs.map((inp,idx)=>({n:inp.dataset.name,idx:idx,cat:inp.closest('.product').dataset.cat})).filter(x=>recipeOf(x.n).length);
+ const L=inputs.map((inp,idx)=>({n:inp.dataset.name,idx:idx,cat:inp.closest('.product').dataset.cat})).concat(matProdList().filter(n=>recipeOf(n).length&&!inputs.some(inp=>inp.dataset.name===n)).map(n=>({n:n,idx:-1,cat:'materiales'}))).filter(x=>recipeOf(x.n).length);
  if(!L.length)return `<div class="enc-empty">Todavía no hay recetas.<br>Primero indica qué materiales gasta cada producto en RECETAS.</div><div class="enc-actions" style="margin-top:10px"><button type="button" class="primary" data-dir="open:fabricacion">IR A RECETAS</button></div>`;
  const rows=L.filter(x=>fqCat==='todos'||x.cat===fqCat).map(x=>{const cm=canMake(x.n), v=fqDraft[x.n]||'0';
   return `<div class="stock-row fq-row" data-q="${esc(norm(x.n))}"><div><b><span class="dot ${cm>0?'g':'r'}"></span>${esc(x.n)}</b><small class="rc">${esc(recipeText(x.n))}</small><small>Puedes fabricar: <b>${cm}</b> · ${isMatProd(x.n)?'En el almacén':'En la tienda'}: ${stockMap[x.n]||0}</small></div><div class="qty stock-qty"><button type="button" data-dir="fqminus:${x.idx}" aria-label="Una menos de ${esc(x.n)}">−</button><input type="text" inputmode="numeric" data-fq="${esc(x.n)}" value="${esc(v)}" aria-label="Unidades a fabricar de ${esc(x.n)}"><button type="button" data-dir="fqplus:${x.idx}" aria-label="Una más de ${esc(x.n)}">+</button></div></div>`}).join('');
@@ -4040,7 +4040,7 @@ async function fabricarLista(){
  fqErrMsg='';
  if(!items.length)return say('Elige cuántas unidades quieres fabricar','err');
  try{await refreshStock()}catch(e){return say('Sin conexión: no se puede fabricar ahora','err')}
- const np=items.filter(x=>!(productPrice(x.producto)>0)).map(x=>x.producto);
+ const np=items.filter(x=>!isMatProd(x.producto)&&!(productPrice(x.producto)>0)).map(x=>x.producto);
  if(np.length){err('<b>Sin precio: no se puede fabricar.</b> '+np.map(esc).join(', ')+(np.length===1?' no tiene':' no tienen')+' precio todavía. Ponlo en PRODUCTOS Y PRECIOS y después fabrícalo.');return say('Sin precio: no se puede fabricar '+np.join(', '),'err')}
  const P=fqPlan(items);
  if(P.miss.length){fqRefresh();err('<b>No hay materiales suficientes.</b> No se ha fabricado nada.<br>'+P.miss.map(x=>esc(ingLabel(x.k))+': necesitas '+x.need+' y hay '+x.have).join('<br>'));return say('Faltan materiales para fabricar','err')}
@@ -4452,7 +4452,7 @@ dirModal.addEventListener('click',e=>{
  else if(act==='tr-cancel'){trWork=null;renderDir()}
  else if(act==='tr-go')once('trgo',trGo,b);
  else if(act==='fqcat'){fqCat=arg;renderDir()}
- else if(act==='fqplus'||act==='fqminus'){const n=inputs[+arg]&&inputs[+arg].dataset.name;if(!n)return;const v=Math.min(99999,Math.max(0,(parseInt(fqDraft[n])||0)+(act==='fqplus'?1:-1)));if(v>0)fqDraft[n]=String(v);else delete fqDraft[n];const inp=[...dirModal.querySelectorAll('[data-fq]')].find(x=>x.dataset.fq===n);if(inp)inp.value=String(v);fqRefresh()}
+ else if(act==='fqplus'||act==='fqminus'){const n=(+arg===-1?'Pólvora':inputs[+arg]&&inputs[+arg].dataset.name);if(!n)return;const v=Math.min(99999,Math.max(0,(parseInt(fqDraft[n])||0)+(act==='fqplus'?1:-1)));if(v>0)fqDraft[n]=String(v);else delete fqDraft[n];const inp=[...dirModal.querySelectorAll('[data-fq]')].find(x=>x.dataset.fq===n);if(inp)inp.value=String(v);fqRefresh()}
  else if(act==='fq-save')once('fabricar',fabricarLista,b);
  else if(act==='fab-go'){const n=parseInt(fabWant)||0;if(fabEdit&&n>0){fqDraft={};fqDraft[fabEdit]=String(n);fqCat='todos';fabEdit=null;fabDraft=[];dirMod='fabricar';dirRemember('fabricar');renderDir();dirModal.scrollTop=0}}
  else if(act==='exit-boss'){setBoss(false);closeModal(dirModal);say('Modo Jefe desactivado')}
