@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · app.js · versión 20261013f
+/* HARRINGTON GUNSMITH · app.js · versión 20261013g
    Este archivo va junto a index.html y estilos.css en la misma carpeta. */
 /* ===== V2 · La sesión no se cierra al salir de la aplicación =====
    Se guarda en el dispositivo y se recupera al volver, aunque el móvil haya cerrado la aplicación por detrás para ahorrar memoria.
@@ -4251,7 +4251,7 @@ function pgApply(){
 }
 dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-pgm]');if(!b)return;e.stopImmediatePropagation();const k=b.dataset.pgm, y=dirModal.scrollTop;PGL[k]=(PGL[k]||50)+50;renderDir();dirModal.scrollTop=y});
 function renderDir(){
- try{return renderDir0()}finally{try{pzAfterRender()}catch(e){}try{pgApply()}catch(e){}}
+ try{return renderDir0()}finally{try{aiDirBox()}catch(e){}try{pzAfterRender()}catch(e){}try{pgApply()}catch(e){}}
 }
 function renderDir0(){
  const body=document.getElementById('dirBody'), title=document.getElementById('dirTitle');
@@ -4726,6 +4726,7 @@ const TUTORIAL=[
 <ul><li><b>Trabajador fijo</b>: cuando termina su semana de prueba y sigue en la lista, la web le pasa sola a <b>FIJO</b>: se actualiza su contrato (tipo de contrato «Fijo», prueba «Superado») y se publica en el canal «Empleados» de Discord. Su puesto y su sueldo no cambian. A partir de ahí, el contrato solo se vuelve a publicar con un <b>ascenso</b>.</li><li><b>✎ EDITAR</b>: cambia sus datos. Marca «Publicar el contrato actualizado» si quieres que salga otra vez en Discord. Los empleados que ya tenías aparecen con «Faltan los datos del contrato» hasta que los completes.</li><li><b>📜 CONTRATO</b>: descarga la imagen del contrato.</li><li><b>🗑 PAPELERA</b>: lo quita de las listas, sin borrar sus ventas ni fichajes.</li><li>Los sueldos se pagan en <b>Dirección → SUELDOS</b> (mira la sección «Sueldos» de este tutorial).</li><li>Las fotos de los empleados se guardan más ligeras y cada móvil solo baja las que han cambiado, así la entrada carga las tarjetas antes.</li><li>Cada empleado muestra si está <b>conectado ahora</b> o cuándo se le vio por última vez, y si ya ha creado su contraseña.</li><li><b>🔑 RESET CONTRASEÑA</b>: borra la contraseña del empleado; la próxima vez que entre tendrá que crear una nueva. Nadie puede ver las contraseñas, ni siquiera la dirección.</li><li><b>📷 FOTO</b>: sube una foto del personaje (por ejemplo una captura del juego). Sale en el óvalo de su tarjeta de la entrada, en tono sepia, como un retrato antiguo. Sin foto, salen sus iniciales.</li><li><b>⏏ EXPULSAR</b>: cierra su sesión en todos sus dispositivos (por ejemplo, si se le ha quedado pillada) y, si estaba fichado, le ficha la salida en ese momento (sale en Discord como «fichada por la dirección al expulsarle»). Tendrá que volver a elegir su ficha. Los jefes también se pueden expulsar entre sí; a uno mismo, no.</li><li><b>⬆ ASCENSO</b>: sube al empleado al siguiente puesto con su sueldo: Aprendiz de armero ($20) → Armero ($25) → Armero experto ($30) → Gerente ($40, el tope). Se publica el contrato nuevo en Discord, sin periodo de prueba. El día del ascenso cobra todavía el sueldo antiguo y el nuevo cuenta desde el día siguiente.</li><li>Al crear un empleado, el sueldo se rellena solo según el puesto (Jefe $50, Gerente $40, Armero experto $30, Armero $25, Aprendiz $20). Puedes cambiarlo.</li><li>En <b>Registros semanales → Fichaje</b> ves las horas fichadas frente a las contratadas («8 h de 10 h»).</li><li>En el resumen de Dirección te avisa cuando termina el periodo de prueba de alguien.</li><li><b>Altas desde Discord</b>: cuando aceptas una solicitud de empleo en Discord como aprendiz o armero, su ficha aparece sola aquí con su nombre, su telegrama, su sueldo y su periodo de prueba, marcada «🎩 entró por Discord». El primer dispositivo que esté abierto publica su <b>contrato</b> en el canal de contratos. La primera vez que entre en la web creará su contraseña.</li><li><b>Roles de Discord al día</b>: si asciendes, cambias de puesto o mandas a la papelera a alguien que entró por Discord, el Señor Harrington le cambia los roles solo: el de su nuevo puesto o, si ya no está en la plantilla, Visitante (pierde los canales de la empresa).</li></ul>`],
 ['Admisiones y despidos en Discord <span class="tag boss">SOLO JEFE</span>',`<p>El bot <b>Señor Harrington</b> lleva la puerta del Discord y habla como en 1880.</p>
 <ul><li><b>Solicitudes</b>: en el canal de solicitudes de la dirección llega cada una con el nombre del personaje, su telegrama y el motivo. Un solo botón: <b>Admitir como aprendiz</b>, <b>Admitir como armero</b>, <b>Admitir como colaborador</b> o <b>Rechazar</b>. Solo pueden pulsarlos el Jefe y el Gerente.</li><li><b>Aprendiz o armero</b>: se le crea la ficha en la web, se publica su contrato, se le abren los canales de la empresa y recibe una carta privada.</li><li><b>Colaborador</b>: ve los mismos canales de Discord que los empleados, pero <b>no tiene ficha ni entra en la web</b>.</li><li><b>Despedir</b>: escribe <b>/despedir</b> y elige a la persona, o clic derecho sobre ella → Aplicaciones → <b>Despedir de Harrington</b>. Pide confirmación; al aceptar se quita su ficha de la web, ya no puede entrar y en Discord queda como Visitante. A un Jefe no se le puede despedir desde Discord.</li><li><b>Canal 📋 plantilla</b> (solo dirección): una ficha por empleado con su nombre, rango, telegrama, sueldo y contrato, siempre al día con la web. Botones <b>Ascender</b> (sube al rango siguiente con su sueldo desde mañana, le cambia el rol en Discord, le avisa por carta y la web publica su contrato nuevo) y <b>Despedir</b> (borra su ficha de la web, le quita la entrada y los canales, le deja como Visitante y le manda una carta: «Ha sido despedido de Harrington Gunsmith»). Los dos piden confirmación.</li><li><b>Bienvenidas y despedidas</b>: el Señor Harrington recibe a cada recién llegado con su foto de perfil y los pasos para entrar, y despide con su foto a quien se marcha (tarda hasta medio minuto en salir).</li><li><b>/evento</b>: escribe la orden, rellena título, cuándo, dónde y detalles, y el Señor Harrington lo anuncia en el tablón de eventos con los botones <b>Me apunto</b> y <b>Me borro</b>.</li><li><b>Libro de sanciones</b>: botón <b>Anotar una sanción</b> → eliges al empleado → escribes la falta y la sanción. Queda en el libro con su fecha, en la auditoría de la web, y al empleado le llega una carta.</li><li><b>Recordatorios</b> en el despacho de dirección: cada día a las 10:00 (fin de periodos de prueba, material bajo mínimo, quién vuelve hoy de una ausencia; si no hay nada, no escribe) y el domingo a las 17:00 la paga, con quién está pagado ✅ y quién pendiente ⏳.</li><li>Por defecto, solo los administradores ven la orden /despedir. Para que el Gerente también la vea: Ajustes del servidor → Integraciones → Señor Harrington → permitir el rol Gerente.</li></ul>`],
+['Harrington, tu ayudante',`<p><b>Harrington</b> es el ayudante de la casa. Está dentro de la web y te echa una mano en casi todo lo que haces. Trabaja <b>con los datos reales</b> de la web, pero <b>nunca hace nada por su cuenta</b>: te escribe, te aconseja y te explica, y lo que propone lo copias o lo pasas a la web con un botón. Solo funciona si has entrado con tu tarjeta.</p><p><b>✦ El recuadro de Harrington</b>: en muchas pantallas verás un recuadro verde con el sello <b>H</b>. Tiene unos botones con lo que te puede hacer en esa pantalla y, a veces, una casilla para preguntarle lo que quieras. La respuesta sale en un papel con <b>COPIAR</b>, <b>OTRA VERSIÓN</b> (escribe otra distinta) y <b>✕</b> (la cierra). Algunas traen un botón más para usarla directamente.</p><ul><li><b>Al fichar la entrada</b>: en los avisos de «Para hoy», Harrington te hace solo el <b>parte del día</b> (encargos, pedidos, lo que falta y lo urgente). Lo hace una vez al día; si quieres otro, pulsa <b>Resúmeme el día</b>.</li><li><b>En la venta</b>: al escribir el nombre de un cliente de la casa sale <b>¿Qué sé de…?</b>: lo que suele comprar, cuánto ha gastado, sus encargos y si tiene armas sin registrar.</li><li><b>En un encargo</b>: <b>Telegrama a mi manera</b> te redacta la confirmación, el aviso o el recordatorio. En la casilla puedes pedirle algo (por ejemplo, «discúlpate por el retraso»); luego, <b>COPIAR TELEGRAMA</b>.</li><li><b>En el almacén de materiales</b>: <b>¿Qué fabrico?</b> te propone qué fabricar según los encargos, lo que está bajo mínimo y lo que más se vende, con los materiales que hay.</li><li><b>En el libro de turno</b>: dile lo que quieres dejar dicho y te escribe la nota; con <b>PONERLA EN LA NOTA</b> pasa al cuadro para que la revises.</li><li><b>Al fichar la salida</b>: en la bitácora, <b>Escríbela por mí</b> redacta lo que has hecho en la jornada (ventas, fabricación, pedidos recibidos). Revísala y pulsa APUNTAR.</li><li><b>En el Tutorial</b>: arriba hay una casilla para preguntarle cómo se hace algo; te contesta con los pasos y los nombres de los botones.</li><li><b>En Dirección</b>: cada apartado tiene su recuadro. En STOCK, FABRICACIÓN y RECETAS, <b>¿Qué fabrico?</b> con el botón <b>RELLENAR LA LISTA DE FABRICACIÓN</b> (pone las cantidades en FABRICACIÓN, sin pasar de lo que se puede fabricar; tú revisas y guardas). En PROVEEDORES y PEDIDOS, <b>¿Qué pido a los proveedores?</b> y telegramas para ellos.</li><li><b>Más en Dirección</b>: el informe de la semana y la lectura de las cuentas (VENTAS, GASTOS, BALANCE, ESTADÍSTICAS…), cómo va el personal (EMPLEADOS, HORARIOS, SUELDOS…), revisar precios y márgenes (PRODUCTOS Y PRECIOS, CONVENIOS), explicar las incidencias (AUDITORÍA, REGISTRO DE STOCK), el resumen de un cliente, telegramas a los contactos de la AGENDA y el anuncio de los sorteos (EVENTOS). En la consola de Dirección hay un recuadro con todo lo principal.</li><li><b>Pregúntale sobre la pantalla</b>: en los apartados de Dirección, la casilla <b>Pregúntale sobre esta pantalla</b> le pasa lo que estás viendo («¿en qué gastamos más?», «¿qué ves raro?»). En DISCORD, NUBE, COPIAS y RESETEAR no está, porque tienen enlaces y claves privadas.</li></ul><p><b>🎙 El botón redondo de Harrington</b> (abajo a la izquierda) abre la conversación: pulsa el micrófono y habla, o escríbelo. Hace consultas y gestiones con la lógica de siempre (vender, fabricar, encargos, recibir pedidos, fichas de clientes) y ahora también <b>aconseja</b> («¿qué fabrico hoy?», «resúmeme el día»), <b>explica la web</b> («¿cómo hago un pedido?») y <b>escribe telegramas</b> («escribe un telegrama a Sadie para decirle que su encargo se retrasa»). Lo que hace queda en la auditoría como «Harrington AI».</p><p><b>Si no puede</b>: si no hay conexión o se ha agotado por un rato el uso gratuito de la IA, lo dice en el recuadro y puedes pulsar <b>REINTENTAR</b> más tarde. La web sigue funcionando igual sin él. En el modo prueba no está.</p>`],
 ['Discord y el Señor Harrington',`<ul><li><b>🚂 Pedidos en Discord</b>: cada pedido a un proveedor sale en el canal de pedidos con el botón <b>Recibido entero</b>; al pulsarlo, el material entra solo en el almacén de la web (y si estaba pagado, se apunta el gasto). Si llega solo una parte, apúntalo en la web. Con <b>/pedidos</b> ves los pendientes.</li><li><b>🧾 /compra</b> (Dirección): apunta una compra a un particular desde Discord — material, cantidad, precio por unidad, vendedor y si salió de la caja. Entra como lote con su precio, igual que en la web.</li><li><b>📇 /agenda</b> (Dirección): consulta la ficha de un contacto de la agenda.</li><li><b>📜 /se-busca</b> (Dirección): cuelga un cartel en el tablón de Se busca de las visitas; con <b>Retirar cartel</b> se quita. Mientras esté colgado, la web avisa si alguien intenta cobrar a ese nombre.</li><li><b>🎟 Ofertas y sorteos</b>: las visitas ven en su canal las ofertas, los convenios y los sorteos en marcha, con la cuenta atrás y los números repartidos. Se pone al día solo con la web.</li><li><b>⬆️ Ascensos sugeridos</b>: cuando alguien cumple lo que pide la casa para su siguiente rango (horas, ventas, antigüedad y, para el aprendiz, el examen), el despacho recibe una propuesta con el botón <b>Ascender</b>.</li><li><b>📜 Fin del periodo de prueba</b>: el día que acaba la semana de prueba, el despacho recibe sus horas, ventas y examen con <b>Se queda</b> (le llega una carta) o <b>Despedir</b>.</li><li><b>🎲 Mesa de juego</b>: el Veintiuno contra la banca, con fichas de mentira (100 por semana) y ranking semanal. Solo lo ves tú mientras juegas.</li><li><b>📓 Bitácora del taller</b>, <b>💵 nómina por carta</b>, <b>⏳ plazo de los encargos</b> y <b>📝 aviso de armas sin registrar</b> al vendedor: ver los capítulos de Fichaje, Sueldos, Encargos y Hacer una venta.</li><li><b>📜 Libro de mandatos</b>: un canal con la lista de todas las órdenes (escribe <b>/</b> en cualquier canal) y para qué sirve cada una. Las marcadas con 🔒 solo te responden a ti.</li><li><b>Para el personal</b>: <b>/mis-horas</b> (horas de la semana, las que faltan y el sueldo si la semana acabara hoy), <b>/encargos</b> (lo que queda por fabricar o entregar), <b>/cliente</b> (ficha resumida con telegrama y armas), <b>/telegrama</b> (manda un telegrama de la época por mensaje privado), <b>/cumpleanos</b> (apunta el cumpleaños de tu personaje: ese día la casa te felicita) y <b>/examen</b>.</li><li><b>Para la Dirección</b>: <b>/caja</b> (cobrado y gastado hoy y esta semana), <b>/reunion</b> (convoca una reunión con «Asistiré / No podré» y aviso a todo el personal una hora antes) y <b>/votacion</b> (de 2 a 5 opciones con barras de votos; la Dirección la cierra).</li><li><b>Para todos</b>: <b>/duelo @persona</b> (duelo al amanecer: gana quien dispare primero al oír «¡FUEGO!»; disparar antes de tiempo hace perder) y <b>/tiradores</b> (ranking de duelos).</li><li><b>Canales con botón</b>: <b>📚 libro del aprendiz</b> (examen de 10 preguntas sobre normas, oficio y precios; se aprueba con 8 y queda en la ficha de la plantilla), <b>📮 buzón</b> (sugerencias anónimas que llegan al despacho sin saber quién las escribe) y <b>📖 libro de visitas</b> (los clientes dejan su recomendación; la Dirección la publica o la descarta).</li><li><b>Se pone al día solo</b>: <b>🎯 objetivo de la semana</b> con barra y quién va en cabeza (y anuncio al conseguirlo), <b>🖼 escaparate</b> con las ilustraciones y los precios del catálogo, y <b>🏅 cuadro de honor</b> con las medallas (primera venta, 50 y 100 ventas, 10/50/100 horas de taller, uno y tres meses, un año, primer ascenso y examen aprobado). Las medallas también salen en la ficha de la plantilla.</li><li><b>Avisos automáticos</b>: campanilla en la charla IC al abrir y cerrar la tienda; encargos recién fabricados con el texto del telegrama para el cliente; el tiempo de Saint Denis y un refrán (9:00); aniversarios en la casa y cumpleaños (10:00); personal que lleva 5 días sin fichar ni avisar, con carta amable, y armas sin registrar IC (11:00, en el despacho); domingo a las 18:00 resumen semanal del personal y a las 21:00 <b>la Gaceta de Saint Denis</b>; el día 1, <b>empleado del mes</b> (rol 🏅, medalla y carta).</li><li>Para entrar al Discord se pasa por la puerta del <b>Señor Harrington</b>: normas → visita o servir en la casa → normas del servidor → normas de la casa → solicitud de empleo (nombre del personaje y telegrama obligatorios; el motivo, si quieres).</li><li>En <b>🔗 la-web-de-la-casa</b> y en <b>📜 catalogo-y-enlaces</b> están el enlace a la web, el del catálogo para clientes y el de <b>descarga directa de la aplicación</b>.</li><li>En <b>🏷 lista-de-precios</b> está la lista de precios del mostrador, <b>que se pone al día sola</b> cuando la dirección cambia un precio o añade un producto en la web. En <b>📯 bandos-de-la-casa</b>, los avisos y la guía de canales.</li><li><b>🕰 fichar-y-ausencias</b>: botones <b>Entro de turno</b> y <b>Salgo de turno</b> (es lo mismo que fichar en la web: sale en el registro de turnos y en la web al momento), <b>Avisar una ausencia</b> (eliges el motivo y rellenas desde cuándo, cuántos días y la explicación) y <b>He vuelto</b>. El panel muestra quién está en el taller y quién está ausente. Solo funciona si tu ficha de la web está enlazada con tu Discord.</li><li><b>🏪 estado-de-la-tienda</b> (salón de visitas): dice a las visitas si la armería está <b>abierta</b> (y quién atiende) o <b>cerrada</b>, según los fichajes.</li><li><b>/precio</b> (cualquiera) y <b>/stock</b> (personal): escribes la orden, empiezas a teclear el producto y lo eliges de la lista; la respuesta solo la ves tú.</li><li><b>Eventos</b>: en los anuncios de la dirección, pulsa <b>Me apunto</b> (o <b>Me borro</b>); la lista de apuntados se actualiza sola.</li><li>Fichando desde Discord no se manda el «resumen del día» ni se hace la revisión del NPC al abrir: eso lo hace la web cuando se ficha desde ella.</li></ul>`],
 ['Eventos y sorteos',`<p>Cuando la dirección organiza un <b>sorteo</b>, sale un <b>cartel</b> en la pantalla principal («EVENTO DE ESTA SEMANA»): el arma que se sortea, desde cuánto hay que gastar para participar, cuándo termina y cuántos números se han repartido. Tócalo para ver todos los detalles.</p>
 <ul><li>El cartel lleva una <b>cuenta atrás en directo</b> y se pone a brillar en las <b>últimas 24 horas</b>. En la ventana del evento, <b>BUSCAR LOS NÚMEROS DE UN CLIENTE</b>: escribes su nombre y ves cuántos números tiene y cuáles, por si te lo pregunta.</li><li><b>Cada compra da un número</b> al cliente (si compra 3 veces, tiene 3 números). Solo cuentan las compras desde el mínimo que haya puesto la dirección.</li><li>Mientras hay sorteo, en la venta sale la casilla <b>Telegrama de contacto</b> y es <b>obligatoria</b> (el botón te dirá «Falta el telegrama (sorteo)»). Si el cliente ya tiene ficha, se rellena sola. Es para poder avisarle si gana.</li><li>El número sale en el <b>ticket</b> («Sorteo: n.º 12»), en el mensaje de Discord de la venta y en la <b>ficha del cliente</b> («NÚMEROS DE SORTEO»).</li><li>Los <b>encargos</b> cuentan cuando se entregan y se cobran (al pulsar FINALIZAR ENCARGO), no al crearlos.</li><li>Si se anula una venta, su número deja de participar.</li><li>Al llegar la hora de fin, la web <b>hace el sorteo sola</b> (si nadie tiene la web abierta en ese momento, se hace en cuanto alguien la abra; se hace una sola vez y todos ven el mismo ganador). El cartel cambia a <b>¡YA HAY GANADOR!</b>: tócalo para ver el ganador, su número y su telegrama.</li><li><b>📨 COPIAR TELEGRAMA PARA EL GANADOR</b> copia el mensaje ya escrito y firmado por Vincent Harrington (telegrama SD8112) para pegarlo y avisarle.</li></ul>`],
@@ -6909,7 +6910,8 @@ const PARCHES=[
  {f:'13/10/2026',t:'Compras a particulares y lotes del almacén',v:'3.0',i:['COMPRA A UN PARTICULAR (Dirección → COMPRAS, y botón en PROVEEDORES): material, cantidad, precio por unidad y vendedor; entra directo al almacén y, si se marca, se apunta como gasto de caja','Lotes: cada entrada de material guarda su precio y al fabricar se gasta primero el lote más antiguo; el coste de las recetas y el balance de fabricación usan el precio de ese lote y pasan al siguiente cuando se acaba','La pólvora fabricada entra como lote con lo que costó de verdad fabricarla','«📦 Lotes del almacén» muestra cada lote en el orden en que se gastará']},
  {f:'13/10/2026',t:'Traspaso de armas y agenda de contactos',v:'3.0',i:['Ficha del cliente → Armas → TRASPASAR A OTRO DUEÑO: el arma pasa a nombre de otro cliente (existente o nuevo), con el traspaso apuntado y pendiente de registrar IC a su nombre','AGENDA DE CONTACTOS (Dirección → TIENDA Y CLIENTES): nombre, telegrama, quién es y observaciones de gente que interesa; se busca, edita y elimina','Cada contacto se publica y se actualiza en el canal ✉️ telegramas de Discord (solo Dirección)']},
  {f:'13/10/2026',t:'El Señor Harrington: segunda tanda',v:'3.0',i:['Libro de mandatos: canal con todas las órdenes y qué hace cada una','Personal: /mis-horas, /encargos, /cliente, /telegrama, /cumpleanos y /examen; Dirección: /caja, /reunion (aviso una hora antes) y /votacion; todos: /duelo y /tiradores','Libro del aprendiz con examen, buzón de sugerencias anónimo y libro de visitas con aprobación de la Dirección','Objetivo de la semana con barra y ranking, escaparate ilustrado y cuadro de honor con medallas (también en la ficha de la plantilla)','Avisos automáticos: campanilla al abrir y cerrar, encargos listos, el tiempo y un refrán, aniversarios y cumpleaños, inactividad y armas sin registrar, resumen del domingo, la Gaceta de Saint Denis y el empleado del mes']},
- {f:'13/10/2026',t:'El Señor Harrington: tercera tanda',v:'3.0',i:['Pedidos en Discord con el botón «Recibido entero» (el material entra solo en la web) y la orden /pedidos','Dirección: /compra (compra a un particular desde Discord, como lote con su precio), /agenda y /se-busca con su tablón para las visitas','Al cobrar a alguien con cartel de Se busca, la web avisa antes; si se cobra igual, queda como incidencia','Nómina por carta al pagar los sueldos; plazo de 10 días de los encargos avisados (recordatorio a los 8 y aviso a la Dirección a los 10)','Carta al vendedor si un arma lleva 2 horas sin registrar IC (la web guarda quién la vendió)','Panel de ofertas, convenios y sorteos para las visitas, con cuenta atrás','Propuestas de ascenso cuando se cumplen los requisitos y ficha de fin del periodo de prueba con «Se queda» / «Despedir»','Mesa de juego: el Veintiuno con fichas de mentira y ranking semanal','Bitácora del taller: nota opcional al fichar la salida (en la web y en Discord), publicada por el Señor Harrington']}
+ {f:'13/10/2026',t:'El Señor Harrington: tercera tanda',v:'3.0',i:['Pedidos en Discord con el botón «Recibido entero» (el material entra solo en la web) y la orden /pedidos','Dirección: /compra (compra a un particular desde Discord, como lote con su precio), /agenda y /se-busca con su tablón para las visitas','Al cobrar a alguien con cartel de Se busca, la web avisa antes; si se cobra igual, queda como incidencia','Nómina por carta al pagar los sueldos; plazo de 10 días de los encargos avisados (recordatorio a los 8 y aviso a la Dirección a los 10)','Carta al vendedor si un arma lleva 2 horas sin registrar IC (la web guarda quién la vendió)','Panel de ofertas, convenios y sorteos para las visitas, con cuenta atrás','Propuestas de ascenso cuando se cumplen los requisitos y ficha de fin del periodo de prueba con «Se queda» / «Despedir»','Mesa de juego: el Veintiuno con fichas de mentira y ranking semanal','Bitácora del taller: nota opcional al fichar la salida (en la web y en Discord), publicada por el Señor Harrington']},
+ {f:'13/10/2026',t:'Harrington en toda la web',v:'3.0',i:['Harrington deja de estar en pausa: el botón de la conversación sale a quien ha entrado con su tarjeta','Recuadro «✦ Harrington» en cada pantalla, con ayudas propias y una pregunta libre sobre lo que se ve (en los 36 apartados de Dirección, salvo los que tienen claves)','Parte del día automático al fichar la entrada (una vez al día)','Plan de fabricación con botón para rellenar la lista de FABRICACIÓN sin pasar de lo que se puede fabricar','Propuestas de pedidos a proveedores, informe de la semana, lectura de las cuentas, valoración del personal, revisión de precios y explicación de las incidencias','Resumen del cliente en la venta, telegramas a tu manera en los encargos y para proveedores y contactos, anuncio de los sorteos','Escribe la nota del libro de turno y la bitácora del taller al fichar la salida; responde dudas en el Tutorial','La conversación también aconseja, explica la web y escribe telegramas; reconoce al proveedor por su tipo («la mina»)','Harrington solo escribe y propone: nada se hace sin que el empleado lo pase a la web']}
 ];
 let phQ='';
 /* Versiones: cada parche lleva su versión (v); los que no la llevan son de la 1.0 */
@@ -7496,6 +7498,8 @@ function aiCatOf(n){const i=inputs.find(x=>x.dataset.name===n);return i?i.closes
 function aiNo(what,q,m){return m.amb.length?{ask:true,t:`¿Qué ${what} quieres decir con «${q}»: ${m.amb.join(', ')}?`}:{err:true,t:`No encuentro ${what==='producto'?'el producto':what==='material'?'el material':what==='cliente'?'al cliente':'el '+what} «${q}» en la web.`}}
 function aiFindProd(q){const m=aiMatch(q,aiProds());return m.v?{v:m.v}:aiNo('producto',q,m)}
 function aiFindMat(q){const m=aiMatch(q,matNames());if(m.v)return {v:m.v};const p=aiMatch(q,aiProds());if(p.v&&isProdIng(p.v))return {v:p.v,prod:true};return aiNo('material',q,m)}
+function aiProvTipo(x){return x.proveedorTipo||((proveedores.find(v=>v.id===x.proveedorId||v.name===x.proveedor)||{}).tipo)||''}
+function aiPedFilter(L,q){let m=aiMatch(q,[...new Set(L.map(x=>x.proveedor))]);if(m.v)return {L:L.filter(x=>x.proveedor===m.v)};const t=aiMatch(q,[...new Set(L.map(aiProvTipo).filter(Boolean))]);if(t.v)return {L:L.filter(x=>aiProvTipo(x)===t.v)};if(m.amb.length)return {err:aiNo('proveedor',q,m)};if(t.amb.length)return {err:aiNo('proveedor',q,t)};return {L:[]}}
 function aiFindClient(q){const m=aiMatch(q,clientes.map(c=>c.name));return m.v?{v:clientes.find(c=>c.name===m.v)}:m.amb.length?aiNo('cliente',q,m):{none:true}}
 /* ---------- datos al día (de Supabase) antes de responder o hacer nada ---------- */
 async function aiFresh(){if(offline())throw new Error('OFFLINE');await Promise.all([cloudPullRecords(),refreshStock()])}
@@ -7580,7 +7584,7 @@ const AI_DO={
  async consultar_pedidos(a){
   await aiFresh();
   let L=a.estado==='todos'?pedidos.slice().reverse():pendingPed();
-  if(a.proveedor){const m=aiMatch(a.proveedor,[...new Set(L.map(x=>x.proveedor))]);if(m.amb.length)return aiNo('proveedor',a.proveedor,m);L=m.v?L.filter(x=>x.proveedor===m.v):[]}
+  if(a.proveedor){const f=aiPedFilter(L,a.proveedor);if(f.err)return f.err;L=f.L}
   if(!L.length)return {t:a.estado==='todos'?'No hay pedidos a proveedores.':'No hay pedidos pendientes de recibir.',ok:true};
   return {t:`${a.estado==='todos'?'Pedidos':'Pedidos pendientes'} (${L.length}):\n`+L.slice(0,6).map(x=>{const r=pedRecv(x);return `· ${x.code} · ${x.proveedor}: ${x.items.map(i=>i.qty+' × '+i.material).join(', ')} · ${x.received?'recibido':r.r?'recibido en parte '+r.r+'/'+r.q:'por recibir'} · ${x.paid?'pagado':'sin pagar'}`}).join('\n'),ok:true,ent:L.length===1?L[0].code:''};
  },
@@ -7699,7 +7703,7 @@ const AI_DO={
   try{await aiFresh()}catch(e){return {err:true,t:'Sin conexión: no se puede registrar la recepción ahora.'}}
   let L=pendingPed().filter(x=>!x.received);
   if(a.pedido){const q=norm(a.pedido).replace(/\s/g,'');L=L.filter(x=>norm(x.code).replace(/\s/g,'').includes(q))}
-  if(a.proveedor){const m=aiMatch(a.proveedor,[...new Set(L.map(x=>x.proveedor))]);if(m.amb.length)return aiNo('proveedor',a.proveedor,m);L=m.v?L.filter(x=>x.proveedor===m.v):[]}
+  if(a.proveedor){const f=aiPedFilter(L,a.proveedor);if(f.err)return f.err;L=f.L}
   if(!L.length)return {err:true,t:'No hay ningún pedido pendiente de recibir así.'};
   if(L.length>1)return {ask:true,t:`Hay ${L.length} pedidos pendientes: ${L.slice(0,4).map(x=>x.code+' ('+x.proveedor+')').join('; ')}. ¿Cuál?`};
   const x=L[0], me=meEmp();if(!me)return {err:true,t:'Entra con tu tarjeta para registrar la recepción.'};
@@ -7746,7 +7750,7 @@ const AI_DO={
   return {t:`Precio de ${n} cambiado: de ${money(old)} a ${money(productPrice(n))}. Vale para las ventas nuevas.`,ok:true,act:true,ent:n};
  }
 };
-const AI_HELP='Puedo consultar existencias, materiales, precios, recetas, encargos, ventas, pedidos, clientes y proveedores, y también vender, fabricar, crear encargos, marcar encargos como fabricados o avisados, registrar recepciones de pedidos y crear fichas de clientes. Dirección además puede cambiar precios, crear proveedores y sumar stock. Por ejemplo: «¿Cuánto hierro queda?», «Fabrica 15 de munición de revólver» o «Vende dos Cattleman a Arthur Morgan».';
+const AI_HELP='Puedo consultar existencias, materiales, precios, recetas, encargos, ventas, pedidos, clientes y proveedores; vender, fabricar, crear encargos, marcarlos como fabricados o avisados, registrar recepciones de pedidos y crear fichas de clientes. También te aconsejo (el parte del día, qué fabricar, qué pedir, cómo va la semana), te explico cómo se hace cualquier cosa en la web y te escribo telegramas. Dirección además puede cambiar precios, crear proveedores, sumar stock y pedirme informes de cuentas, personal y precios. Por ejemplo: «¿Qué fabrico hoy?», «¿Cómo hago un pedido?» o «Escribe un telegrama a Sadie para decirle que su encargo se retrasa».';
 async function aiRun(res){
  const h=res.herramienta, a=res.args||{};
  if(h==='preguntar')return {t:a.pregunta,ask:true};
@@ -7767,14 +7771,14 @@ function aiAdd(who,t,cls){
  AI.hist.push({r:who,t:String(t).slice(0,400)});if(AI.hist.length>12)AI.hist=AI.hist.slice(-12);AI.last=Date.now();
 }
 function aiStatus(t,k){aiSt.textContent=t||'';aiSt.className='ai-st'+(k?' '+k:'')}
-function aiTips(){const T=['¿Cuánto hierro queda?','Encargos pendientes','¿Qué está agotado?','Fabrica munición de revólver','Ventas de hoy'];document.getElementById('aiTips').innerHTML=T.map(t=>`<button type="button" data-aitip="${esc(t)}">${esc(t)}</button>`).join('')}
+function aiTips(){const T=['Resúmeme el día','¿Qué fabrico hoy?','¿Cuánto hierro queda?','Encargos pendientes','¿Cómo hago un pedido?','Escribe un telegrama a…'];document.getElementById('aiTips').innerHTML=T.map(t=>`<button type="button" data-aitip="${esc(t)}">${esc(t)}</button>`).join('')}
 async function aiApi(body){
  const tk=await authToken().catch(()=>null);if(!tk)return {st:401,j:{error:'SIN_CUENTA'}};
  const ctl=typeof AbortController!=='undefined'?new AbortController():null, to=ctl?setTimeout(()=>ctl.abort(),25000):null;
  try{const r=await fetch(AI_URL,{method:'POST',signal:ctl?ctl.signal:undefined,headers:{'Content-Type':'application/json',apikey:SB_KEY,Authorization:'Bearer '+tk},body:JSON.stringify(body)});return {st:r.status,j:await r.json().catch(()=>({}))}}
  catch(e){return {st:0,j:{}}}finally{if(to)clearTimeout(to)}
 }
-function aiErrTxt(r){const e=r.j&&r.j.error;return {SIN_CUENTA:'Para usar Harrington AI tienes que haber entrado con tu tarjeta (cuenta segura). Cierra sesión y vuelve a entrar.',SIN_CLAVE:'Harrington AI todavía no tiene su clave de IA. Dirección tiene que configurarla (mira el Tutorial → Harrington AI).',CLAVE_MALA:'La clave de la IA no es válida: Dirección tiene que revisarla en Supabase.',LIMITE:'Se ha agotado por ahora el uso gratuito de la IA. Prueba en un rato; mientras, la web funciona como siempre.',DEMASIADAS:'Demasiadas órdenes seguidas: espera un minuto.',IA_LENTA:'La IA está tardando demasiado. Inténtalo otra vez.',IA_CAIDA:'El servicio de IA no responde ahora mismo. Inténtalo en un rato.'}[e]||(r.st===0?'Sin conexión con el asistente.':'No he podido entenderlo ahora mismo ('+(e||r.st)+').')}
+function aiErrTxt(r){const e=r.j&&r.j.error;return {SIN_CUENTA:'Para usar Harrington AI tienes que haber entrado con tu tarjeta (cuenta segura). Cierra sesión y vuelve a entrar.',SIN_CLAVE:'Harrington AI todavía no tiene su clave de IA. Dirección tiene que configurarla (mira el Tutorial → Harrington, tu ayudante).',CLAVE_MALA:'La clave de la IA no es válida: Dirección tiene que revisarla en Supabase.',LIMITE:'Se ha agotado por ahora el uso gratuito de la IA. Prueba en un rato; mientras, la web funciona como siempre.',DEMASIADAS:'Demasiadas órdenes seguidas: espera un minuto.',IA_LENTA:'La IA está tardando demasiado. Inténtalo otra vez.',IA_CAIDA:'El servicio de IA no responde ahora mismo. Inténtalo en un rato.'}[e]||(r.st===0?'Sin conexión con el asistente.':'No he podido entenderlo ahora mismo ('+(e||r.st)+').')}
 async function aiAsk(text){
  text=String(text||'').trim();if(!text||AI.busy)return;
  if(SANDBOX){aiAdd('a','En el modo prueba Harrington AI no está disponible.','err');return}
@@ -7842,8 +7846,8 @@ async function aiRecord(){
  mr.start();AI.listening=true;aiMicPaint();AI.recT=setTimeout(()=>{try{mr.state!=='inactive'&&mr.stop()}catch(e){}},9000);
 }
 /* ---------- abrir y cerrar ---------- */
-/* Harrington AI está en pausa por orden del jefe: el botón no sale (body.ai-on lo activaría) */
-const AI_ACTIVA=false;if(AI_ACTIVA)document.body.classList.add('ai-on');
+/* Harrington AI activo (V3, 13/10/2026): el botón y los recuadros «✦ Harrington» salen a quien ha entrado con su tarjeta */
+const AI_ACTIVA=true;if(AI_ACTIVA)document.body.classList.add('ai-on');
 function aiOpen(){
  if(!AI_ACTIVA)return;
  if(!meEmp())return say('Entra con tu tarjeta para usar Harrington AI');
@@ -7852,6 +7856,252 @@ function aiOpen(){
  setTimeout(()=>{try{if(!matchMedia('(pointer:coarse)').matches)aiTxt.focus()}catch(e){}},200);
 }
 function aiClose(){aiStop();try{speechSynthesis.cancel()}catch(e){}closeModal(aiModal)}
+/* ===== V3 · Harrington en toda la web: el ayudante dentro de cada pantalla =====
+   Un mismo recuadro «✦ Harrington» aparece en cada sitio con lo que tiene sentido allí (plan de fabricación, pedidos,
+   informes, telegramas, resúmenes de clientes, la bitácora, el Tutorial…) y con una pregunta libre sobre la pantalla.
+   La web prepara los DATOS reales con su propia lógica; la IA solo ESCRIBE (función «harrington-ai», acción «redactar»).
+   Nada se ejecuta por su cuenta: lo que propone se copia o se pasa a la web con un botón, y la web lo hace como siempre. */
+var AIB={}, AIBDEF={}, AIW_CACHE={};
+function aiOn(){return AI_ACTIVA&&!SANDBOX&&!!meEmp()}
+async function aiWrite(tarea,datos,extra,fresh){
+ let ds='';try{ds=JSON.stringify(datos||{})}catch(e){ds='{}'}
+ const key=tarea+'|'+(extra||'')+'|'+ds.length+'|'+ds.slice(0,3000);
+ const c=AIW_CACHE[key];if(!fresh&&c&&Date.now()-c.t<10*60000)return c.v;
+ if(SANDBOX)throw new Error('En el modo prueba Harrington no está disponible.');
+ if(offline())throw new Error('Sin conexión: ahora Harrington no puede echarte una mano. La web sigue funcionando como siempre.');
+ const r=await aiApi({accion:'redactar',tarea:tarea,datos:datos||{},extra:String(extra||'').slice(0,300)});
+ if(!r.j||!r.j.ok)throw new Error(r.j&&r.j.error==='SOLO_DIRECCION'?'Esto es solo para la Dirección.':aiErrTxt(r));
+ AIW_CACHE[key]={t:Date.now(),v:r.j.texto};return r.j.texto;
+}
+/* ---------- el recuadro ---------- */
+function aiBox(id,def){
+ if(!aiOn()||!def)return '';
+ AIBDEF[id]=def;const s=AIB[id]||{}, e=esc(id);
+ const chips=(def.chips||[]).map((c,k)=>`<button type="button" class="ai-chip${s.chip===k?' on':''}" data-aigo="${e}|${k}"${s.busy?' disabled':''}>✦ ${esc(c.l)}</button>`).join('');
+ const ask=def.ask?`<div class="ai-ask"><input type="text" maxlength="300" autocomplete="off" enterkeyhint="send" data-aiq-in="${e}" placeholder="${esc(def.ask)}" value="${esc(s.q||'')}" aria-label="${esc(def.ask)}"><button type="button" data-aiq="${e}"${s.busy?' disabled':''}>PREGUNTAR</button></div>`:'';
+ let out='';
+ if(s.busy)out='<div class="ai-out busy" role="status"><span class="ai-quill">✒</span> Harrington está escribiendo…</div>';
+ else if(s.err)out=`<div class="ai-out err" role="status">${esc(s.err)}</div><div class="ai-out-acts"><button type="button" data-aiact="${e}|again">REINTENTAR</button><button type="button" data-aiact="${e}|close">✕</button></div>`;
+ else if(s.text)out=`<div class="ai-out" aria-live="polite">${esc(s.text)}</div><div class="ai-out-acts">${s.use?`<button type="button" class="primary" data-aiact="${e}|use">${esc(s.useL||'USAR')}</button>`:''}<button type="button" data-aiact="${e}|copy">COPIAR</button><button type="button" data-aiact="${e}|again">OTRA VERSIÓN</button><button type="button" data-aiact="${e}|close" aria-label="Cerrar la respuesta">✕</button></div>`;
+ return `<div class="ai-box${def.compact?' compact':''}" data-aibox="${e}"><div class="ai-box-h"><span class="ai-seal" aria-hidden="true">H</span><b>HARRINGTON</b><small>${esc(def.t||'te echa una mano')}</small></div>${chips?`<div class="ai-chips">${chips}</div>`:''}${ask}${out}</div>`;
+}
+function aiPaintBox(id){document.querySelectorAll('[data-aibox]').forEach(el=>{if(el.dataset.aibox===id){const h=aiBox(id,AIBDEF[id]);if(h)el.outerHTML=h;else el.remove()}})}
+/* texto de lo que se ve en una pantalla (sin el propio recuadro) */
+function aiScreen(el){
+ if(!el)return '';const P=[];
+ [...el.children].forEach(c=>{if(c.classList&&c.classList.contains('ai-box'))return;const t=(c.innerText||'').trim();if(t)P.push(t)});
+ return P.join('\n').replace(/\n{3,}/g,'\n\n').slice(0,9000);
+}
+function aiScreenJob(title,el){return q=>({tarea:'pantalla',datos:{pantalla:title,texto:aiScreen(el)},extra:q})}
+async function aiGo(id,k,q,fresh){
+ const def=AIBDEF[id];if(!def)return;const s=AIB[id]=AIB[id]||{};if(s.busy)return;
+ const c=k==='ask'?{run:def.askRun}:(def.chips||[])[+k];if(!c||!c.run)return;
+ if(k==='ask'&&!String(q||'').trim()){s.err='Escribe primero tu pregunta.';s.text='';aiPaintBox(id);return}
+ s.busy=true;s.err='';s.text='';s.use=null;s.chip=k==='ask'?null:+k;s.q=k==='ask'?q:s.q;s.last=[k,q];aiPaintBox(id);
+ try{
+  const job=await c.run(String(q||'').trim());
+  if(job&&job.err)throw new Error(job.err);
+  const t=await aiWrite(job.tarea,job.datos,job.extra,fresh);
+  const r=job.post?job.post(t):{text:t};
+  s.text=r.text||t;s.use=r.use||(job.use?()=>job.use(s.text):null);s.useL=r.useL||job.useL||'';
+ }catch(e){s.err=String(e&&e.message||e).slice(0,300)||'No ha podido ser.'}
+ finally{s.busy=false;aiPaintBox(id)}
+}
+document.addEventListener('click',e=>{
+ const g=e.target.closest('[data-aigo],[data-aiq],[data-aiact]');if(!g)return;
+ if(g.dataset.aigo){const i=g.dataset.aigo.lastIndexOf('|');aiGo(g.dataset.aigo.slice(0,i),g.dataset.aigo.slice(i+1),'');return}
+ if(g.dataset.aiq){const id=g.dataset.aiq, inp=[...document.querySelectorAll('[data-aiq-in]')].find(x=>x.dataset.aiqIn===id);aiGo(id,'ask',inp?inp.value:'');return}
+ const v=g.dataset.aiact, i=v.lastIndexOf('|'), id=v.slice(0,i), a=v.slice(i+1), s=AIB[id];if(!s)return;
+ if(a==='close'){AIB[id]={q:s.q};aiPaintBox(id)}
+ else if(a==='copy')copyMsg(s.text,'Copiado · ya puedes pegarlo');
+ else if(a==='use'&&s.use){try{s.use()}catch(x){say('No se ha podido usar: '+(x&&x.message||x),'err')}}
+ else if(a==='again'&&s.last)aiGo(id,s.last[0],s.last[1],true);
+});
+document.addEventListener('input',e=>{const t=e.target;if(t&&t.dataset&&t.dataset.aiqIn){(AIB[t.dataset.aiqIn]=AIB[t.dataset.aiqIn]||{}).q=t.value;e.stopPropagation()}},true);
+document.addEventListener('keydown',e=>{const t=e.target;if(e.key==='Enter'&&t&&t.dataset&&t.dataset.aiqIn){e.preventDefault();aiGo(t.dataset.aiqIn,'ask',t.value)}});
+
+/* ---------- los datos reales que se le pasan (siempre con la lógica de la web) ---------- */
+function aiSales(from,to){return loadLog(KEY_SALELOG).filter(r=>!r.voided&&!r.admin&&!r.npc&&saleDay(r)>=from&&saleDay(r)<=to)}
+function aiSoldUnits(days){const t=todayNum(),U={};aiSales(t-days+1,t).forEach(r=>{if(r.op!=='encargo')(r.items||[]).forEach(i=>U[i.name]=(U[i.name]||0)+i.qty)});return U}
+function aiMatUse(days){const t0=Date.now()-days*86400000,U={};loadLog(KEY_STOCKLOG).forEach(x=>{if(x.ts>=t0&&x.delta<0){const n=String(x.name||'').replace(/ \(material\)$/,'');U[n]=(U[n]||0)-x.delta}});return U}
+function aiWeek(off){
+ const ws=weekStart(off), L=aiSales(ws,ws+6), U={}, E={};
+ L.forEach(r=>{if(r.op!=='encargo')(r.items||[]).forEach(i=>U[i.name]=(U[i.name]||0)+i.qty);if(r.employee)E[r.employee]=(E[r.employee]||0)+collected(r)});
+ const G=(gastos||[]).filter(g=>g&&g.day>=ws&&g.day<=ws+6), gc={};G.forEach(g=>{const k=g.cat||'otros';gc[k]=(gc[k]||0)+(g.cents||0)});
+ const cob=L.reduce((a,r)=>a+collected(r),0), gas=G.reduce((a,g)=>a+(g.cents||0),0);
+ let coste=0;L.forEach(r=>{if(r.op!=='encargo')(r.items||[]).forEach(i=>{const c=productCost(i.name);if(c>0)coste+=c*i.qty})});
+ return {semana:dayStr(ws).slice(0,5)+' – '+dayStr(ws+6).slice(0,5)+(off===0?' (en curso)':''),operaciones:L.length,cobrado:money(cob),gastos:money(gas),balance:money(cob-gas),coste_de_lo_fabricado_vendido:money(coste),
+  gastos_por_tipo:Object.fromEntries(Object.entries(gc).map(([k,v])=>[k,money(v)])),mas_vendido:Object.entries(U).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([n,q])=>n+' × '+q),por_empleado:Object.entries(E).sort((a,b)=>b[1]-a[1]).map(([n,v])=>n+': '+money(v))};
+}
+function aiDataDia(){
+ const b=briefItems(), me=meEmp(), E=pendingEncs();
+ return {hoy:dayStr(todayNum()),quien_pregunta:me?me.name:'',fichados_ahora:shifts.map(s=>s.name),ausentes:ausNowList().map(a=>a.name+(a.end?' (vuelve el '+fmtDate(a.end)+')':'')),
+  encargos_vencidos:b.venc.map(x=>x.client+': '+encItemsTxt(x)),encargos_para_hoy:b.hoyE.map(x=>x.client+': '+encItemsTxt(x)+(x.fab==='FABRICADO'?' (fabricado)':' (sin fabricar)')),
+  fabricados_sin_avisar:b.listos.map(x=>x.client+' (telegrama '+(x.telegram||'—')+'): '+encItemsTxt(x)),por_fabricar:E.filter(x=>x.fab!=='FABRICADO').map(x=>x.client+': '+encItemsTxt(x)),
+  pedidos_por_recibir:b.P.map(p=>p.proveedor+' '+p.code+' ('+ago(p.ts)+')'),productos_bajo_minimo:lowStock().map(n=>n+' '+(stockMap[n]||0)+'/'+stockMin[n]),
+  materiales_bajo_minimo:lowMats().map(n=>n+' '+(stockMap[matKey(n)]||0)+'/'+stockMin[matKey(n)]),armas_sin_registrar_IC:b.IC.map(x=>x.c.name+': '+(x.r.a||'arma')+' n.º '+x.r.s),
+  notas_del_libro:b.N.slice(-5).map(n=>n.text),objetivo_semana:OBJ.cents>0?{cobrado:money(goalWeekCash()),meta:money(OBJ.cents)}:'sin objetivo'};
+}
+function aiDataFab(){
+ const U=aiSoldUnits(14), R=reservas(), jefe=isJefe(meEmp())&&bossActive;
+ const enc=pendingEncs().filter(e=>e.fab!=='FABRICADO').map(e=>({cliente:e.client,productos:encItemsTxt(e),para:e.promise?fmtISO(e.promise):''}));
+ const P=inputs.map(i=>i.dataset.name).filter(n=>recipeOf(n).length).map(n=>({producto:n,stock:stockMap[n]||0,minimo:stockMin[n]||0,reservadas_encargos:(R[n]||[]).reduce((a,r)=>a+r.qty,0),vendidas_14_dias:U[n]||0,max_fabricable:canMake(n)||0,receta:recipeText(n),...(jefe?{}:{lote_por_operacion:fabLote(n)})}));
+ return {quien:jefe?'Dirección (puede fabricar cualquier cantidad)':'empleado (fabrica por lotes fijos)',encargos_pendientes:enc,productos:P};
+}
+function aiDataCompras(){
+ const use=aiMatUse(14);
+ const M=matNames().map(n=>{const k=matKey(n);return {material:n,stock:stockMap[k]||0,minimo:stockMin[k]||0,gastado_14_dias:use[n]||0,proveedores:proveedores.filter(v=>(v.prods||[]).some(p=>norm(p.name)===norm(n)||(MAT_ALIAS[norm(p.name)]&&norm(MAT_ALIAS[norm(p.name)])===norm(n)))).map(v=>{const p=v.prods.find(p=>norm(p.name)===norm(n)||(MAT_ALIAS[norm(p.name)]&&norm(MAT_ALIAS[norm(p.name)])===norm(n)));return v.name+' '+money(p.price||0)})}});
+ return {materiales:M,pedidos_pendientes:pendingPed().map(p=>p.code+' '+p.proveedor+': '+p.items.map(i=>i.qty+' × '+i.material).join(', ')),proveedores:proveedores.map(v=>({nombre:v.name,tipo:v.tipo||'',telegrama:v.tel||'',vende:(v.prods||[]).map(p=>p.name+' '+money(p.price||0))}))};
+}
+function aiDataPersonal(){
+ const t=todayNum(), mon=t-((new Date(t*86400000).getUTCDay()+6)%7), V=aiSales(mon,t);
+ return {semana:'del lunes '+dayStr(mon).slice(0,5)+' al domingo '+dayStr(mon+6).slice(0,5)+' (en curso)',personal:empleados.filter(e=>e&&e.name).map(e=>{let k=null;try{k=sueCalc(e,mon)}catch(x){}
+  return {nombre:e.name,puesto:e.puesto||'',en_la_casa_desde:e.inicio||'',fin_periodo_prueba:e.prueba||'',horas_semana:k?hm(k.worked):'',le_tocan:k?k.req+' h':'',le_faltan:k&&k.miss?hm(k.miss):'0',horas_de_mas:k&&k.extra?hm(k.extra):'0',dias_ausente:k?k.abs:0,fichado_ahora:shifts.some(s=>s.empId===e.id),ventas_semana:V.filter(r=>r.employee===e.name).length,cobrado_semana:money(V.filter(r=>r.employee===e.name).reduce((a,r)=>a+collected(r),0))}})};
+}
+function aiDataPrecios(){
+ const U=aiSoldUnits(30);
+ return {productos:inputs.map(i=>i.dataset.name).filter(n=>productPrice(n)>0).map(n=>{const p=productPrice(n), c=productCost(n);return {producto:n,precio:money(p),coste_fabricar:c>0?money(c):'sin receta',margen:c>0?Math.round((p-c)/p*100)+' %':'',vendidas_30_dias:U[n]||0,stock:stockMap[n]||0}})};
+}
+function aiDataAudit(){
+ const I=incidencias();
+ return {incidencias_sin_revisar:I.filter(x=>!x.rev).slice(0,25).map(x=>fmtDate(x.ts)+' '+fmtTime(x.ts)+' · '+(x.who||'—')+' · '+x.txt),revisadas:I.filter(x=>x.rev).length,
+  ajustes_recientes:actAll().filter(x=>x.tipo==='stock'||x.tipo==='incidencia'||x.tipo==='recuento').slice(0,25).map(x=>fmtDate(x.ts)+' · '+(x.who||'—')+' · '+x.txt)};
+}
+function aiDataCliente(c){
+ const S=clientSales(c).filter(r=>!r.voided), U={};S.forEach(r=>(r.items||[]).forEach(i=>U[i.name]=(U[i.name]||0)+i.qty));
+ const E=pendingEncs().filter(e=>norm(e.client)===norm(c.name));
+ return {cliente:c.name,tipo:TYPE_NAMES[c.type]||c.type||'',telegrama:c.telegram||'',operaciones:S.length,gastado:money(S.reduce((a,r)=>a+collected(r),0)),ultima_visita:S[0]?S[0].date:'nunca',
+  lo_que_compra:Object.entries(U).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([n,q])=>n+' × '+q),encargos_abiertos:E.map(e=>encItemsTxt(e)+' · '+(e.fab==='FABRICADO'?(e.avisado?'fabricado y avisado':'fabricado sin avisar'):'por fabricar')),
+  armas_sin_registrar_IC:(c.series||[]).filter(r=>r&&r.ic===false).map(r=>(r.a||'arma')+' n.º '+r.s),precios_especiales:Object.keys(c.precios||{}).map(n=>n+' '+money(Math.round(c.precios[n]*100))),
+  se_busca:(typeof sebuscaDe==='function'&&sebuscaDe(c.name))?'SÍ: tiene cartel de Se busca':'no'};
+}
+function aiDataEncargo(e){return {cliente:e.client,telegrama:e.telegram||'',productos:encItemsTxt(e),total:money(e.totalCents),anticipo:money(e.depositCents||0),pendiente:money(e.pendingCents||0),estado:e.fab,avisado:e.avisado?'sí':'no',fecha_prevista:e.promise?fmtISO(e.promise):'',
+ tipo:e.fab!=='FABRICADO'?'confirmacion':e.avisado?'recordatorio':'aviso'}}
+function aiDataBitacora(name,start,end){
+ const t=todayNum(), V=loadLog(KEY_SALELOG).filter(r=>!r.voided&&r.employee===name&&saleDay(r)===t);
+ const F=loadLog(KEY_STOCKLOG).filter(x=>x.who===name&&/^Fabricaci/.test(String(x.why||''))&&x.delta>0&&x.ts>=start-60000&&x.ts<=end+60000);
+ const P=[];pedidos.forEach(p=>(p.recs||[]).forEach(r=>{if(r.by===name&&r.ts>=start-60000&&r.ts<=end+60000)P.push(p.code+' de '+p.proveedor)}));
+ return {empleado:name,jornada:fmtTime(start)+' – '+fmtTime(end)+' ('+fmtDuration(start,end)+')',ventas:V.filter(r=>r.op!=='encargo').map(r=>(r.client||'cliente')+': '+(r.items||[]).map(i=>i.qty+' × '+i.name).join(', ')),
+  encargos_tomados:V.filter(r=>r.op==='encargo').map(r=>(r.client||'cliente')+': '+(r.items||[]).map(i=>i.qty+' × '+i.name).join(', ')),fabricado:F.map(x=>x.delta+' × '+String(x.name).replace(/ \(material\)$/,'')),pedidos_recibidos:P,cobrado:money(V.reduce((a,r)=>a+collected(r),0))};
+}
+function aiTutData(q){
+ const boss=bossActive||isJefe(meEmp()), T=TUTORIAL.filter(t=>boss||!tutIsBoss(t)), qt=aiTok(q);
+ const sc=T.map(t=>{const body=(boss?t[1]:tutClean(t[1])).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(), tit=t[0].replace(/<[^>]+>/g,'').trim(), nb=norm(body), nt=norm(tit);
+  return {titulo:tit,texto:body.slice(0,2600),s:qt.reduce((a,w)=>a+(nt.indexOf(w)>=0?4:0)+(nb.indexOf(w)>=0?1:0),0)}}).filter(x=>x.texto).sort((a,b)=>b.s-a.s);
+ return {capitulos:sc.slice(0,3).map(x=>({titulo:x.titulo,texto:x.texto})),otros_capitulos:sc.slice(3).map(x=>x.titulo)};
+}
+function aiDataEventos(){return {eventos:(eventos||[]).filter(e=>e&&e.status==='activo').map(e=>({tipo:e.tipo||'sorteo',premio:e.arma||'',termina:e.end?fmtDate(e.end)+' '+fmtTime(e.end):'',compra_minima:e.min?money(e.min):'cualquier compra',nota:e.nota||''}))}}
+/* el plan de fabricación termina con «LISTA: …»: la web la lee y puede rellenar la lista de FABRICACIÓN */
+function aiPostLista(t){
+ const L=String(t).split('\n'), i=L.findIndex(x=>/^\s*LISTA\s*:/i.test(x)), raw=i>=0?L[i].replace(/^\s*LISTA\s*:/i,''):'';
+ const text=L.filter((x,k)=>k!==i).join('\n').trim(), items=[];
+ raw.split(';').forEach(p=>{const m=/^\s*(.+?)\s*[=:]\s*(\d+)\s*$/.exec(p);if(m)items.push([m[1],+m[2]])});
+ const can=isJefe(meEmp())&&bossActive&&items.length;
+ return {text:text||t,use:can?()=>aiFillFab(items):null,useL:'RELLENAR LA LISTA DE FABRICACIÓN'};
+}
+function aiFillFab(items){
+ const P=inputs.map(i=>i.dataset.name).filter(n=>recipeOf(n).length), set={};
+ items.forEach(([p,q])=>{const m=aiMatch(p,P);if(!m.v)return;const v=Math.min(q,canMake(m.v)||0);if(v>0)set[m.v]=String(v)});
+ const n=Object.keys(set).length;if(!n)return say('Ahora mismo no hay materiales para fabricar lo propuesto','err');
+ fqDraft=set;fqCat='todos';fqErrMsg='';dirMod='fabricar';dirForm=null;try{dirRemember('fabricar')}catch(e){}
+ if(dirModal.hidden){renderDir();openModal(dirModal)}else renderDir();dirModal.scrollTop=0;
+ say('Lista de fabricación rellenada con la propuesta de Harrington ('+n+' '+(n===1?'producto':'productos')+'): revísala y pulsa GUARDAR');
+}
+/* ---------- qué ayudas lleva cada módulo de Dirección ---------- */
+const AI_CHIP={
+ fab:()=>({l:'¿Qué fabrico?',run:()=>({tarea:'plan_fabricacion',datos:aiDataFab(),post:aiPostLista})}),
+ compras:()=>({l:'¿Qué pido a los proveedores?',run:()=>({tarea:'plan_compras',datos:aiDataCompras()})}),
+ semana:()=>({l:'Informe de la semana',run:()=>({tarea:'informe_semana',datos:{esta_semana:aiWeek(0),semana_anterior:aiWeek(-1),objetivo:OBJ.cents>0?money(OBJ.cents):'sin objetivo'}})}),
+ cuentas:()=>({l:'Lectura de las cuentas',run:()=>({tarea:'cuentas',datos:{semanas:[aiWeek(0),aiWeek(-1),aiWeek(-2),aiWeek(-3)]}})}),
+ personal:()=>({l:'¿Cómo va el personal?',run:()=>({tarea:'personal',datos:aiDataPersonal()})}),
+ precios:()=>({l:'Revisar precios y márgenes',run:()=>({tarea:'precios',datos:aiDataPrecios()})}),
+ audit:()=>({l:'Explícame las incidencias',run:()=>({tarea:'auditoria',datos:aiDataAudit()})}),
+ anuncio:()=>({l:'Redactar el anuncio de los sorteos',run:q=>{const d=aiDataEventos();return d.eventos.length?{tarea:'anuncio_evento',datos:d,extra:q,use:t=>copyMsg(t,'Anuncio copiado · pégalo en Discord'),useL:'COPIAR PARA DISCORD'}:{err:'No hay ningún evento ni sorteo activo.'}}}),
+ cliente:()=>{const c=clView&&clientes.find(x=>x.id===clView);return c?{l:'Resumen de '+c.name.split(' ')[0],run:()=>({tarea:'cliente',datos:aiDataCliente(c)})}:null},
+ tel_contacto:()=>({l:'Escribir un telegrama a un contacto',run:q=>q?{tarea:'telegrama',datos:{contactos:(agenda||[]).map(a=>({nombre:a.name,telegrama:a.tel,quien_es:a.tipo,observaciones:a.obs}))},extra:q}:{err:'Escribe abajo para quién es y qué quieres decirle (ej.: «a Mr. Thompson, para invitarle a invertir»).'}}),
+ tel_prov:()=>({l:'Escribir un telegrama a un proveedor',run:q=>q?{tarea:'telegrama_proveedor',datos:aiDataCompras(),extra:q}:{err:'Escribe abajo para qué proveedor y qué quieres pedirle (ej.: «a la mina, 200 de azufre»).'}}),
+};
+const AI_MODS={stock:['fab','compras'],regstock:['audit'],balfab:['fab','precios'],fabricar:['fab'],fabricacion:['fab','precios'],horarios:['personal'],ausencias:['personal'],ventas:['semana'],semanales:['semana','cuentas'],gastos:['cuentas'],sueldos:['personal'],
+ estadisticas:['semana','cuentas'],objetivo:['semana'],revision:['audit'],empficha:['personal'],balance:['cuentas'],cierre:['cuentas','semana'],particular:['compras'],agenda:['tel_contacto'],proveedores:['compras','tel_prov'],nuevopedido:['compras','tel_prov'],
+ regpedidos:['compras','tel_prov'],npc:['semana'],publico:[],auditoria:['audit'],parches:[],historial:['audit'],convenios:['precios'],empleados:['personal'],clientes:['cliente'],eventos:['anuncio'],productos:['precios']};
+const AI_NO_PANT={discord:1,nube:1,reset:1,copia:1}; /* pantallas con claves o acciones delicadas: sin «pregúntale» */
+function aiDirBox(){
+ const body=document.getElementById('dirBody');if(!body||!aiOn()||!bossActive)return;
+ if(!dirMod){
+  const def={t:'para la Dirección',chips:['semana','cuentas','personal','compras','precios','fab'].map(k=>AI_CHIP[k]()),ask:'Pregúntale lo que quieras sobre la casa…',askRun:aiScreenJob('Consola de Dirección (resumen)',body)};
+  const anchor=body.querySelector('.mod-sec');if(anchor)anchor.insertAdjacentHTML('beforebegin',aiBox('dir:home',def));return;
+ }
+ if(!(dirMod in AI_MODS)&&!AI_NO_PANT[dirMod])AI_MODS[dirMod]=[];
+ if(AI_NO_PANT[dirMod]||!AI_MODS[dirMod])return;
+ const m=DIRECCION_MODULOS.find(x=>x.id===dirMod), chips=AI_MODS[dirMod].map(k=>AI_CHIP[k]&&AI_CHIP[k]()).filter(Boolean);
+ const def={t:'en '+(m?m.titulo.toLowerCase():'esta pantalla'),chips:chips,ask:'Pregúntale sobre esta pantalla…',askRun:aiScreenJob(m?m.titulo:'Dirección',body)};
+ if(!chips.length)def.chips=[{l:'¿Qué ves aquí?',run:aiScreenJob(m?m.titulo:'Dirección',body)}];
+ const top=body.querySelector('.dir-top');if(top)top.insertAdjacentHTML('afterend',aiBox('mod:'+dirMod,def));
+}
+/* ---------- pantallas del empleado ---------- */
+function aiBriefBox(){return aiBox('brief',{t:'el parte del día',chips:[{l:'Resúmeme el día',run:()=>({tarea:'parte_dia',datos:aiDataDia()})}],compact:true})}
+function aiBriefAuto(){
+ if(!aiOn())return;const k='harrington_ai_parte_'+(meEmp()||{}).id, d=todayISO();let last='';try{last=localStorage.getItem(k)||''}catch(e){}
+ if(last===d||(AIB.brief&&(AIB.brief.text||AIB.brief.busy)))return;try{localStorage.setItem(k,d)}catch(e){}
+ setTimeout(()=>{if(document.querySelector('[data-aibox="brief"]'))aiGo('brief',0,'')},400);
+}
+function aiLibroBox(){return aiBox('libro',{t:'te escribe la nota',ask:'Dime qué quieres dejar dicho y te la escribo…',askRun:q=>({tarea:'nota_turno',datos:aiDataDia(),extra:q,use:t=>{libroDraft=t;const x=document.getElementById('lbText');if(x){x.value=t;x.focus()}say('Nota preparada: revísala y pulsa DEJAR NOTA')},useL:'PONERLA EN LA NOTA'}),compact:true})}
+function aiEncBox(e){
+ const tipo=aiDataEncargo(e).tipo, lab={confirmacion:'Telegrama de confirmación',aviso:'Telegrama de aviso',recordatorio:'Telegrama de recordatorio'}[tipo];
+ const job=q=>({tarea:'telegrama_encargo',datos:aiDataEncargo(e),extra:q,use:t=>copyMsg(t,'Telegrama copiado · pégalo en el juego'),useL:'COPIAR TELEGRAMA'});
+ return aiBox('enc:'+e.id,{t:'te redacta el telegrama',chips:[{l:lab+' a mi manera',run:job}],ask:'¿Algo que añadir? (ej.: «discúlpate por el retraso»)',askRun:job,compact:true});
+}
+function aiMatBox(){const el=document.getElementById('matBody');return aiBox('mat',{t:'en el almacén',chips:[AI_CHIP.fab(),...(isJefe(meEmp())?[AI_CHIP.compras()]:[])],ask:'Pregúntale sobre el almacén…',askRun:aiScreenJob('Almacén de materiales',el),compact:true})}
+function aiPedBox(){const el=document.getElementById('pedBody');return aiBox('ped',{t:'con los pedidos',chips:[],ask:'Pregúntale sobre los pedidos…',askRun:aiScreenJob('Pedidos a proveedores pendientes',el),compact:true})}
+function aiEncListBox(){const el=document.getElementById('encBody');return aiBox('encs',{t:'con los encargos',chips:[],ask:'Pregúntale sobre los encargos (ej.: «¿cuál corre más prisa?»)…',askRun:aiScreenJob('Encargos pendientes',el),compact:true})}
+function aiCliPaint(){
+ const el=document.getElementById('aiCli');if(!el)return;
+ const n=customerName(), c=aiOn()&&appMode==='venta'&&customer.type!=='sheriff'&&n.length>=3?clientes.find(x=>norm(x.name)===norm(n)):null;
+ if(!c){el.innerHTML='';el.hidden=true;delete AIB.cli;el.dataset.c='';return}
+ if(el.dataset.c!==c.id){delete AIB.cli;el.dataset.c=c.id}
+ el.innerHTML=aiBox('cli',{t:'conoce a este cliente',chips:[{l:'¿Qué sé de '+c.name.split(' ')[0]+'?',run:()=>({tarea:'cliente',datos:aiDataCliente(c)})}],compact:true});el.hidden=false;
+}
+function aiBitBox(){
+ return aiBox('bit',{t:'te la escribe',chips:[{l:'Escríbela por mí',run:()=>{const r=bitShift;if(!r)return {err:'Esta jornada ya está apuntada.'};return {tarea:'bitacora',datos:aiDataBitacora(r.name,r.start,r.end),use:t=>{const x=document.getElementById('shBitTxt');if(x&&!x.disabled){x.value=t.slice(0,800);x.focus();say('Revisa la nota y pulsa APUNTAR EN LA BITÁCORA')}},useL:'PONERLA EN LA BITÁCORA'}}}],compact:true});
+}
+function aiBitPaint(){const el=document.getElementById('shBitAi');if(!el)return;delete AIB.bit;el.innerHTML=bitShift?aiBitBox():''}
+function aiTutBox(){return aiBox('tut',{t:'te lo explica',ask:'Pregúntale cómo se hace algo (ej.: «¿cómo pago los sueldos?»)…',askRun:q=>({tarea:'tutorial',datos:aiTutData(q),extra:q}),compact:true})}
+
+/* ---------- el chat también aconseja, explica y escribe ---------- */
+const AI_TEMA={dia:'parte_dia',semana:'informe_semana',fabricacion:'plan_fabricacion',compras:'plan_compras',cliente:'cliente',personal:'personal',precios:'precios',cuentas:'cuentas'};
+const AI_TEMA_JEFE={informe_semana:1,plan_compras:1,personal:1,precios:1,cuentas:1};
+Object.assign(AI_DO,{
+ async explicar_web(a){return {t:await aiWrite('tutorial',aiTutData(a.pregunta),a.pregunta),ok:true}},
+ async analizar(a){
+  const t=AI_TEMA[a.tema];if(!t)return {ask:true,t:'¿Sobre qué quieres que te aconseje: el día, la semana, la fabricación, las compras, un cliente, el personal, los precios o las cuentas?'};
+  if(AI_TEMA_JEFE[t]&&!isJefe(meEmp()))return {err:true,t:'Eso es de Dirección: no tienes permisos para verlo.'};
+  await aiFresh();
+  let d;
+  if(t==='cliente'){if(!a.cliente)return {ask:true,t:'¿De qué cliente?'};const c=aiFindClient(a.cliente);if(c.ask)return c;if(!c.v)return {err:true,t:`No hay ninguna ficha de cliente llamada «${a.cliente}».`};d=aiDataCliente(c.v)}
+  else d={parte_dia:aiDataDia,informe_semana:()=>({esta_semana:aiWeek(0),semana_anterior:aiWeek(-1)}),plan_fabricacion:aiDataFab,plan_compras:aiDataCompras,personal:aiDataPersonal,precios:aiDataPrecios,cuentas:()=>({semanas:[aiWeek(0),aiWeek(-1),aiWeek(-2),aiWeek(-3)]})}[t]();
+  let x=await aiWrite(t,d,'');if(t==='plan_fabricacion')x=aiPostLista(x).text;
+  return {t:x,ok:true};
+ },
+ async redactar_telegrama(a){
+  const q=String(a.para||'').trim(), all=[...clientes.map(c=>({n:c.name,tel:c.telegram,tipo:'cliente '+(TYPE_NAMES[c.type]||'')})),...(agenda||[]).map(x=>({n:x.name,tel:x.tel,tipo:x.tipo||'contacto',obs:x.obs})),...proveedores.map(v=>({n:v.name,tel:v.tel,tipo:'proveedor '+(v.tipo||'')}))];
+  let p=null;if(q){const m=aiMatch(q,all.map(x=>x.n));if(m.amb.length)return aiNo('destinatario',q,m);p=m.v?all.find(x=>x.n===m.v):null}
+  const t=await aiWrite('telegrama',{para:p?{nombre:p.n,telegrama:p.tel||'',quien_es:p.tipo,observaciones:p.obs||''}:{nombre:q||'(sin decir)'}},a.motivo);
+  return {t:t+(p&&p.tel?`\n\n(Telegrama de ${p.n}: ${p.tel})`:''),ok:true};
+ }
+});
+
+/* enganches: cada pantalla se pinta como siempre y después se le añade su recuadro */
+(function(){
+ const W=(name,after)=>{const o=window[name];if(typeof o!=='function')return;window[name]=function(){const r=o.apply(this,arguments);try{after.apply(this,arguments)}catch(e){}return r}};
+ W('renderEnc',()=>{const b=document.getElementById('encBody');if(!b||!aiOn())return;const e=encView?pendingEncs().find(x=>x.id===encView):null;if(e)b.insertAdjacentHTML('beforeend',aiEncBox(e));else if(pendingEncs().length)b.insertAdjacentHTML('afterbegin',aiEncListBox())});
+ W('renderPed',()=>{const b=document.getElementById('pedBody');if(b&&aiOn()&&!pedView&&pendingPed().length)b.insertAdjacentHTML('afterbegin',aiPedBox())});
+ W('renderMat',()=>{const b=document.getElementById('matBody');if(b&&aiOn())b.insertAdjacentHTML('afterbegin',aiMatBox())});
+ W('renderLibro',()=>{const b=document.getElementById('libroBody');if(!b||!aiOn())return;if(libroView==='brief'){b.insertAdjacentHTML('afterbegin',aiBriefBox());aiBriefAuto()}else{const f=b.querySelector('.lb-new');if(f)f.insertAdjacentHTML('afterend',aiLibroBox())}});
+ W('openTutorial',()=>{const b=document.getElementById('tutBody');if(!b||!aiOn())return;const t=b.querySelector('.tour-wrap');if(t)t.insertAdjacentHTML('afterend',aiTutBox());else b.insertAdjacentHTML('afterbegin',aiTutBox())});
+ W('bitReset',()=>aiBitPaint());
+ W('customerChanged',()=>aiCliPaint());
+ W('applyClient',()=>aiCliPaint());
+})();
 aiFab.onclick=aiOpen;
 document.getElementById('aiClose').onclick=aiClose;
 aiModal.addEventListener('click',e=>{if(e.target===aiModal)return aiClose();const t=e.target.closest('[data-aitip]');if(t)aiAsk(t.dataset.aitip)});

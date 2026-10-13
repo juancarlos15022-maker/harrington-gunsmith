@@ -1,4 +1,4 @@
-/* HARRINGTON GUNSMITH · estilos.css · versión 20261013f
+/* HARRINGTON GUNSMITH · estilos.css · versión 20261013g
    Este archivo va junto a index.html y app.js en la misma carpeta. */
 *{box-sizing:border-box}
 :root{--gold:#d7ae54;--gold2:#f3d47c;--green:#071a13;--green2:#0d281d;--wood:#26170f;--ink:#e9dec2;--muted:#a99a7d;--red:#6b1818}
@@ -1794,6 +1794,27 @@ body:not(.has-me) .ai-fab,body.gate-open .ai-fab{display:none}
 body:not(.ai-on) .ai-fab{display:none!important}
 @media(max-width:900px){body.has-mnav .ai-fab{bottom:calc(74px + env(safe-area-inset-bottom,0px))}body.has-mnav.has-bar .ai-fab{bottom:calc(152px + env(safe-area-inset-bottom,0px))}}
 .ai-panel{display:flex;flex-direction:column;max-height:min(92vh,760px)}
+.ai-box{margin:10px 0 12px;padding:10px 12px;border:1px solid #b88931;border-radius:8px;background:linear-gradient(135deg,rgba(24,54,38,.95),rgba(10,24,18,.97));box-shadow:inset 0 0 0 1px rgba(227,194,106,.14),0 2px 8px rgba(0,0,0,.35);text-align:left}
+.ai-box.compact{margin:6px 0 10px;padding:8px 10px}
+.ai-cli{grid-column:1/-1}.ai-cli[hidden]{display:none}.ai-cli .ai-box{margin:0}
+.ai-box-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;color:#f3d47c;font-family:var(--f-sc);letter-spacing:.12em;font-size:13px}
+.ai-box-h small{letter-spacing:.02em;color:#c9b27a;font-size:12.5px;opacity:.9;text-transform:none}
+.ai-seal{flex:0 0 auto;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#a07a2c,#3a2a0c 70%);border:1px solid #e3c26a;color:#fff3c4;font:bold 13px/1 Georgia,serif;letter-spacing:0}
+.ai-chips{display:flex;flex-wrap:wrap;gap:6px}
+.ai-chip{min-height:38px;padding:6px 12px;border:1px solid #8b6a2e;border-radius:19px;background:#0d1c14;color:#f0d278;font-size:14px;line-height:1.2;cursor:pointer;text-align:left}
+.ai-chip:hover{border-color:#e3c26a}.ai-chip.on{border-color:#e3c26a;background:#1d3a28}.ai-chip:disabled{opacity:.55;cursor:default}
+.ai-ask{display:flex;gap:6px;margin-top:8px}
+.ai-ask input{flex:1 1 auto;min-width:0;min-height:42px;padding:0 10px;border:1px solid #8b6a2e;border-radius:6px;background:#0b140f;color:#f6e7bf;font-size:16px}
+.ai-ask button,.ai-out-acts button{flex:0 0 auto;min-height:42px;padding:0 12px;border:1px solid #b88931;border-radius:6px;background:linear-gradient(#1b2a1a,#0a1812);color:#f3e2b0;font-weight:bold;font-size:13px;cursor:pointer}
+.ai-out-acts .primary{background:linear-gradient(#1b6c16,#0a430b);border-color:#d2a733;color:#fff7c9}
+.ai-ask button:disabled{opacity:.55;cursor:default}
+.ai-out{margin-top:10px;padding:10px 12px;border-radius:6px;background:#f3e8cc;color:#2b1d0e;border:1px solid #c9a54e;white-space:pre-line;line-height:1.5;font-size:15px;overflow-wrap:anywhere;max-height:420px;overflow-y:auto}
+.ai-out.busy{background:transparent;color:#d9c79a;border-style:dashed;border-color:#8b6a2e}
+.ai-out.err{background:#2a1210;color:#ffd8cf;border-color:#a8453c}
+.ai-out-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ai-quill{display:inline-block;animation:aiQuill 1.1s ease-in-out infinite}
+@keyframes aiQuill{0%,100%{transform:translateX(0) rotate(-10deg)}50%{transform:translateX(7px) rotate(8deg)}}
+@media (prefers-reduced-motion:reduce){.ai-quill{animation:none}}
 .ai-head-btns{display:flex;gap:8px;align-items:center}
 .ai-snd{min-width:44px;min-height:40px;border:1px solid #8b6a2e;border-radius:8px;background:#0d1c14;color:#f0d278;font-size:18px;cursor:pointer}
 .ai-snd.off{opacity:.55}
