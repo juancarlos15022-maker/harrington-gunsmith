@@ -3497,7 +3497,8 @@ async function recetasBase(){
 /* --- Proveedores (jefe) --- */
 const TIPOS_PROV=['Herrería','Mina','Tala','Aserradero','Ganadería','Granja','Otro'];
 function pvRows(d){const L=(d.prods||[]).filter(r=>r&&(r.n||r.p)).map(r=>({n:r.n||'',p:r.p||''}));if(L.length<MAX_PPROD)L.push({n:'',p:''});d.prods=L;return L}
-function pvRowHTML(r,i){return `<div class="pv-prod"><input data-pvp="n" data-i="${i}" type="text" maxlength="40" autocomplete="off" placeholder="Producto ${i+1}" value="${esc(r.n)}"><div class="money"><i>$</i><input data-pvp="p" data-i="${i}" inputmode="decimal" autocomplete="off" placeholder="Precio" value="${esc(r.p)}"></div></div>`}
+function pvMatSuggestions(){const names=[...matNames(),...Object.keys(recetas).flatMap(k=>recipeOf(k).filter(x=>!x.p).map(x=>x.m)),...proveedores.flatMap(v=>(v.prods||[]).map(x=>x.name))];return [...new Set(names.map(n=>canonMat(n)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'))}
+function pvRowHTML(r,i){return `<div class="pv-prod"><input data-pvp="n" data-i="${i}" list="pvMatSuggestions" type="text" maxlength="40" autocomplete="off" placeholder="Producto ${i+1}" value="${esc(r.n)}"><div class="money"><i>$</i><input data-pvp="p" data-i="${i}" inputmode="decimal" autocomplete="off" placeholder="Precio" value="${esc(r.p)}"></div></div>`}
 const PUEBLOS=['Saint Denis','Rhodes','Valentine','Annesburg','Van Horn','Strawberry','Blackwater','Armadillo','Tumbleweed','Emerald Ranch','Lagras','Colter','Wapiti','Butcher Creek',"Thieves' Landing",'Manzanita Post','Riggs Station','Flatneck Station',"MacFarlane's Ranch",'Benedict Point','Brandywine Drop','Bayou Nwa','Heartlands'];
 function provUbics(){return Array.from(new Set(PUEBLOS.concat(proveedores.map(v=>v.ubic).filter(Boolean)))).sort((a,b)=>a.localeCompare(b,'es'))}
 function provTipos(){return Array.from(new Set(TIPOS_PROV.concat(proveedores.map(v=>v.tipo).filter(Boolean)))).sort((a,b)=>a.localeCompare(b,'es'))}
@@ -3538,7 +3539,7 @@ function renderModProveedores(){
   ${exSecHTML(pvDraft,'pv')}
   <div class="dir-sec-title">PRODUCTOS Y PRECIOS (<span id="pvCount">${pvRows(pvDraft).filter(r=>r.n).length}</span>)</div>
   <p class="bk-note" style="margin:0 0 8px">Precio por unidad. Al escribir un producto aparece otro hueco. Puedes ampliar o cambiar la lista cuando quieras.</p>
-  <div id="pvList">${pvRows(pvDraft).map((r,i)=>pvRowHTML(r,i)).join('')}</div>
+  <datalist id="pvMatSuggestions">${pvMatSuggestions().map(n=>`<option value="${esc(n)}"></option>`).join('')}</datalist><div id="pvList">${pvRows(pvDraft).map((r,i)=>pvRowHTML(r,i)).join('')}</div>
   <div class="pay-err" id="pvErr" hidden></div>
   <div class="enc-actions ${pvEdit?'two':''}">${pvEdit?'<button type="button" data-dir="pv-cancel">Cancelar</button>':''}<button type="button" class="primary" data-dir="pv-save">${pvEdit?'GUARDAR CAMBIOS':'CREAR NUEVO PROVEEDOR'}</button></div>
   <p class="bk-note" style="margin:8px 0 0">La ficha con su lista de precios se publica en el canal de Discord «Proveedores» y se actualiza sola cada vez que la cambies.</p></div>
@@ -3550,7 +3551,7 @@ function saveProveedor(){
  if(proveedores.some(x=>x.id!==pvEdit&&norm(x.name)===norm(name)))return err('Ya existe un proveedor con ese nombre');
  const prods=[], seen={};
  for(const r of (pvDraft.prods||[])){
-  const n=String(r.n||'').trim().replace(/\s+/g,' '), p=String(r.p||'').trim();
+  const n=canonMat(String(r.n||'').trim().replace(/\s+/g,' ')), p=String(r.p||'').trim();
   if(!n&&!p)continue;
   if(!n)return err('Falta el nombre del producto que vale $'+p);
   const pr=parsePrice(p);
