@@ -5294,7 +5294,7 @@ function matUnitCost(n){const c=lotCost(n,1,1);return c===undefined?null:c}
 /* Un ingrediente es un PRODUCTO de la tienda (pólvora, arco, lazo…) si alguna receta lo marca así (p:true),
    o si no existe como material y sí como producto. Entonces se gasta del stock de productos. */
 function isProdIng(m){if(isMatProd(m))return false;for(const k in recetas){const L=recetas[k];if(Array.isArray(L)&&L.some(r=>r&&r.m===m&&r.p))return true}return stockMap[matKey(m)]===undefined&&inputs.some(i=>i.dataset.name===m)}
-function ingKey(m){return isProdIng(m)?m:matKey(m)}
+function ingKey(m){if(isProdIng(m))return m;const alias=MAT_ALIAS[norm(m)];return matKey(alias||m)}
 function ingLabel(m){return isProdIng(m)?m+' (producto)':m}
 function isMat(k){return String(k).indexOf('mat:')===0}
 function matNames(){const L=Object.keys(stockMap).filter(isMat).map(k=>k.slice(4)).filter(n=>!(MAT_ALIAS[norm(n)]&&!stockMap[matKey(n)])&&!isMatProd(n));matProdList().forEach(n=>{if(isMatProd(n))L.push(n)});return L.sort((a,b)=>a.localeCompare(b,'es'))}
