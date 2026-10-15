@@ -58,8 +58,10 @@
    let pending=JSON.parse(localStorage.getItem(key())||'null');
    if(!pending){pending={p_peticion:crypto.randomUUID(),p_modo:mode,p_items:items(),p_base:snapshot};localStorage.setItem(key(),JSON.stringify(pending))}
    let result;try{result=await rpc('npc_operar',pending)}catch(e){
-    const t=String(e.message||'');if(/NPC_CAMBIADO|STOCK_CAMBIADO|NPC_INSUFICIENTE|ALMACEN_INSUFICIENTE|NPC_SOBRANTE|CANTIDAD_INVALIDA|SOLO_JEFES|RECUENTO_INCOMPLETO|PRECIO_NPC_INVALIDO|SIN_CUENTA|NPC_DESCUADRADO/.test(t)){
-     localStorage.removeItem(key());snapshot=await fresh();values={};preview=false;render();say('No se ha guardado ningún cambio. Revisa y vuelve a contar: '+t,'err');
+    const t=String(e.message||'');if(/NPC_CAMBIADO|STOCK_CAMBIADO|NPC_INSUFICIENTE|ALMACEN_INSUFICIENTE|NPC_SOBRANTE|CANTIDAD_INVALIDA|SOLO_JEFES|RECUENTO_INCOMPLETO|RECUENTO_VACIO|ARTICULO_DUPLICADO|PRECIO_NPC_INVALIDO|SIN_CUENTA|NPC_DESCUADRADO/.test(t)){
+     localStorage.removeItem(key());snapshot=await fresh();values={};preview=false;render();
+     const message=/NPC_CAMBIADO|STOCK_CAMBIADO/.test(t)?'El stock o la asignación al NPC han cambiado. Los datos están actualizados: vuelve a contar.':/NPC_SOBRANTE/.test(t)?'Hay más unidades de las esperadas. Registra una entrega o usa HACER INVENTARIO DEL NPC.':/NPC_INSUFICIENTE|ALMACEN_INSUFICIENTE/.test(t)?'No hay suficientes unidades para ese traslado o retirada. Revisa las cantidades.':/NPC_DESCUADRADO/.test(t)?'La asignación al NPC supera el total registrado. Revisa primero el inventario del almacén propio.':'Revisa las cantidades, los precios y tu cuenta antes de guardar.';
+     say('No se ha guardado ningún cambio. '+message,'err');
     }else{render();say('Respuesta pendiente. Usa RECUPERAR OPERACIÓN para evitar duplicados.','err')}return;
    }
    if(!result||!result.id||!result.npc||!result.stock)throw Error('Respuesta incompleta');
