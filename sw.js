@@ -1,7 +1,7 @@
 /* HARRINGTON GUNSMITH · sw.js
    Guarda la web en el móvil para que se abra al instante y aunque no haya conexión.
    Va en la misma carpeta que index.html. No hace falta tocarlo nunca. */
-const CACHE = 'harrington-seguridad-20261015';
+const CACHE = 'harrington-acceso-discord-20261015-2';
 
 self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => {
@@ -33,12 +33,7 @@ self.addEventListener('fetch', e => {
 
   /* la página: primero internet (para tener siempre la última versión); si internet tarda más de 1,5 s o no hay, la guardada (y se pone al día sola después) */
   if (req.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('.html')) {
-    e.respondWith(new Promise(resolve => {
-      let done = false;
-      const t = setTimeout(() => { caches.match(req, { ignoreSearch: true }).then(r => { if (r && !done) { done = true; resolve(r); } }); }, 1500);
-      fromNet(req).then(r => { if (!done) { done = true; clearTimeout(t); resolve(r); } })
-        .catch(() => caches.match(req, { ignoreSearch: true }).then(r => { if (!done) { done = true; clearTimeout(t); resolve(r || Response.error()); } }));
-    }));
+    e.respondWith(fromNet(new Request(req,{cache:'no-store'})).catch(() => caches.match(req,{ignoreSearch:true}).then(r=>r||Response.error())));
     return;
   }
 
