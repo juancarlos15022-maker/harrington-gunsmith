@@ -5508,8 +5508,10 @@ async function autoVentaConfirmar(){
   let pending=JSON.parse(store.get(key)||'null');
   if(!pending){
    if(!customerOk())return null;
-   const items=selected();if(!items.length){say('Añade algún producto primero');return null}
+   const before=signature(selected());if(!selected().length){say('Añade algún producto primero');return null}
    try{await Promise.all([cloudPullRecords(),refreshStock()])}catch(e){say('Sin conexión: no se puede comprobar el almacén','err');return null}
+   if(signature(selected())!==before){calc(false);say('El pedido o sus precios han cambiado durante la comprobación. Revísalo y pulsa FINALIZAR de nuevo.','err');return null}
+   const items=selected();
    if(!stockOk(items))return null;
    const me=meEmp();if(!me){say('Selecciona tu empleado','err');return null}
    pending={p_peticion:crypto.randomUUID(),p_venta:Object.assign(snapshot(items,new Date()),{empId:me.id,dueCents:computeFin().due})};

@@ -47,3 +47,11 @@ test('DOM: respuesta perdida conserva petición; reintento recupera venta sin se
  const s=await w.autoVentaConfirmar();assert.equal(s.id,'HG-PRUEBA');assert.equal(calls[0].p.p_peticion,calls[1].p.p_peticion);assert.equal(w.localStorage.getItem('harrington_autoventa_pendiente_v1'),null);
  }finally{dom.window.close()}
 });
+test('DOM: cambios de precio durante la sincronización requieren revisar antes de cobrar',async()=>{
+ const {dom,w}=mount();try{
+ w.eval(`offlineBlock=()=>false;customerOk=()=>true;refreshStock=async()=>{};`);
+ const input=w.document.querySelector('[data-name="Cattleman Revolver"]');input.value='1';
+ w.cloudPullRecords=async()=>{input.value='2'};let calls=0;w.sbRpc=async()=>{calls++;throw Error('No debe llamar')};
+ assert.equal(await w.autoVentaConfirmar(),null);assert.equal(calls,0);assert.equal(w.localStorage.getItem('harrington_autoventa_pendiente_v1'),null);
+ }finally{dom.window.close()}
+});
