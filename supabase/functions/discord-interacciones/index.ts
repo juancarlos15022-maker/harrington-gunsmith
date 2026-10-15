@@ -171,6 +171,15 @@ Deno.serve(async (req: Request) => {
   if (i.guild_id && c.guild_id && i.guild_id !== c.guild_id) return efimero("Esta no es la Casa Harrington: aquí no puedo servirle.");
   const user = i.member?.user || i.user || {}, roles: string[] = i.member?.roles || [];
   const id = String(i.data?.custom_id || "");
+  if(i.type===3&&id.startsWith('hgweb:')){
+    const rid=id.slice(6);if(!/^[a-f0-9-]{36}$/.test(rid))return efimero('Solicitud inválida.');
+    const {data:r,error}=await sb.from('hg_discord_checks').select('emp_id,discord_id,expires_at,approved_at').eq('id',rid).maybeSingle();
+    if(error||!r||r.discord_id!==String(user.id)||Date.parse(r.expires_at)<=Date.now())return efimero('Esta solicitud no te corresponde, ya se utilizó o ha caducado.');
+    const emp=await empleadoDe(String(user.id));
+    if(!emp||emp.id!==r.emp_id)return efimero('La cuenta ya no está vinculada a ese perfil.');
+    const {error:e}=await sb.from('hg_discord_checks').update({approved_at:new Date().toISOString()}).eq('id',rid).eq('discord_id',String(user.id));
+    return efimero(e?'No se pudo verificar. Vuelve a solicitarlo en la web.':'Identidad confirmada. Vuelve a la web para completar el acceso o la contraseña.');
+  }
   const ch = (k: string) => c[k] ? `<#${c[k]}>` : "el canal siguiente";
   const esDireccion = () => String(user.id) === "1398183011232518164";
   // segunda tanda de órdenes y botones: las atiende discord-bot en modo «extra» (la firma de Discord ya está comprobada aquí)

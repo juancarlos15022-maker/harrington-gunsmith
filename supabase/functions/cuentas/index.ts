@@ -28,7 +28,7 @@ Deno.serve(async(req:Request)=>{
  if(Number(req.headers.get('content-length')||0)>4096)return json({error:'TAMANO'},413);
  try{
  const b=await req.json();const acc=String(b.accion||'');const id=String(b.empId||'').slice(0,40);
- const {data:owner}=await admin.from('hg_security_config').select('owner_uid,owner_emp').eq('id',1).single();if(!owner)return json({error:'NO_CONFIGURADO'},503);
+ const {data:owner}=await admin.from('hg_security_config').select('owner_uid,owner_emp,owner_discord').eq('id',1).single();if(!owner)return json({error:'NO_CONFIGURADO'},503);
  const token=(req.headers.get('authorization')||'').replace(/^Bearer\s+/i,'');
  const {data:u}=token?await admin.auth.getUser(token):{data:null};
  const emps=await fila('empleados');const emp=Array.isArray(emps)?emps.find((e:any)=>e.id===id):null;
@@ -66,27 +66,59 @@ Deno.serve(async(req:Request)=>{
  }
  if(!emp||id==='prueba')return json({error:'EMPLEADO'},404);
  const {data:cred}=await admin.from('hg_security_credentials').select('hash,salt,iterations').eq('emp_id',id).maybeSingle();
- if(acc==='estado')return json({tiene:!!cred||(emp.puesto!=='Jefe'&&!!(await fila('clave-'+id))?.h),jefe:id===owner.owner_emp,personal:!!cred,requiereInvitacion:!cred&&id!==owner.owner_emp,requierePersonal:!cred&&id===owner.owner_emp});
+ if(acc==='estado')return json({tiene:!!cred||(emp.puesto!=='Jefe'&&!!(await fila('clave-'+id))?.h),jefe:id===owner.owner_emp,personal:!!cred,requiereInvitacion:!cred&&id!==owner.owner_emp,requierePersonal:!cred&&id===owner.owner_emp,discordObligatorio:true});
  const ip=(req.headers.get('x-forwarded-for')||'sin-ip').split(',')[0].trim();
- for(const clave of ['ip:'+await sha(ip),'empleado:'+id]){const {data,error}=await admin.rpc('hg_login_attempt',{p_key:clave});if(error||data!==true)return json({error:'BLOQUEADA'},429);}
+ if(acc!=='discord_estado')for(const clave of ['ip:'+await sha(ip),'empleado:'+id]){const {data,error}=await admin.rpc('hg_login_attempt',{p_key:clave});if(error||data!==true)return json({error:'BLOQUEADA'},429);}
+ async function pruebaDiscord(purpose:string,consume=false){
+  const dc=b.discord||{};if(!/^[a-f0-9-]{36}$/.test(String(dc.id||''))||!String(dc.secret||''))return false;
+  const did=id===owner.owner_emp?owner.owner_discord:emp?.discord;if(!did)return false;
+  const hash=await sha(String(dc.secret));
+  if(consume){const {data,error}=await admin.rpc('hg_discord_consumir',{p_id:dc.id,p_emp:id,p_hash:hash,p_purpose:purpose,p_discord:String(did)});return !error&&data===true;}
+  const {data,error}=await admin.from('hg_discord_checks').select('approved_at,expires_at').eq('id',dc.id).eq('emp_id',id).eq('discord_id',String(did)).eq('secret_hash',hash).eq('purpose',purpose).maybeSingle();
+  return !error&&!!data?.approved_at&&Date.parse(data.expires_at)>Date.now();
+ }
+ if(acc==='discord_iniciar'){
+  const purpose=String(b.purpose||'');if(!['entrar','crear','recuperar'].includes(purpose)||purpose==='recuperar'&&id!==owner.owner_emp)return json({error:'ACCION'},400);
+  const did=String(id===owner.owner_emp?owner.owner_discord:emp.discord||'');if(!/^\d{15,22}$/.test(did))return json({error:'DISCORD_NO_VINCULADO_CONTACTA_CON_DIRECCION'},403);
+  const {count,error:ce}=await admin.from('hg_discord_checks').select('id',{count:'exact',head:true}).eq('emp_id',id).gte('created_at',new Date(Date.now()-600000).toISOString());if(ce)throw Error('COMPROBACION');if((count||0)>=3)return json({error:'Espera diez minutos antes de pedir otra confirmación.'},429);
+  const dc={id:crypto.randomUUID(),secret:crypto.randomUUID()+crypto.randomUUID()};
+  const {data:cfg,error:cf}=await admin.from('bot_cfg').select('clave,valor').eq('clave','token');if(cf||!cfg?.[0]?.valor)throw Error('BOT_NO_CONFIGURADO');
+  const api=async(path:string,body:any)=>{const r=await fetch('https://discord.com/api/v10'+path,{method:'POST',headers:{Authorization:'Bot '+cfg[0].valor,'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error('DISCORD_PRIVADOS_BLOQUEADOS');return d;};
+  const {error}=await admin.from('hg_discord_checks').insert({id:dc.id,emp_id:id,discord_id:did,purpose,secret_hash:await sha(dc.secret),expires_at:new Date(Date.now()+300000).toISOString()});if(error)throw Error('COMPROBACION');
+  const canal=await api('/users/@me/channels',{recipient_id:did});
+  try{await api('/channels/'+canal.id+'/messages',{content:'**Harrington · Verificación de identidad**\nPerfil: **'+String(emp.name).replace(/[*_`@<>]/g,'')+'**\nOperación: **'+({entrar:'iniciar sesión',crear:'crear contraseña',recuperar:'recuperar contraseña'} as any)[purpose]+'**\nCódigo de esta solicitud: **'+dc.id.slice(0,8)+'**\nComprueba que coincide con la web. Aprueba únicamente si tú acabas de solicitarlo. Caduca en 5 minutos.',allowed_mentions:{parse:[]},components:[{type:1,components:[{type:2,style:3,label:'Confirmar mi identidad',custom_id:'hgweb:'+dc.id}]}]});}catch(e){await admin.from('hg_discord_checks').delete().eq('id',dc.id);throw e;}
+  return json({ok:true,discord:dc,codigo:dc.id.slice(0,8),caduca:300});
+ }
+ if(acc==='discord_estado')return json({ok:true,aprobado:await pruebaDiscord(String(b.purpose||''))});
+ if(acc==='recuperar'){
+  if(id!==owner.owner_emp)return json({error:'SOLO_PROPIETARIO'},403);
+  const pw=String(b.pw||'');if(pw.length<12||pw.length>80)return json({error:'MINIMO_12_CARACTERES'},400);
+  if(!await pruebaDiscord('recuperar'))return json({error:'CONFIRMA_TU_DISCORD'},403);
+  const {data:rc}=await admin.from('hg_owner_recovery').select('hash,salt,iterations').eq('id',1).single();
+  if(!rc||!igual(await derivar(String(b.word||''),rc.salt,rc.iterations),rc.hash))return json({error:'PALABRA_INCORRECTA'},401);
+  if(!await pruebaDiscord('recuperar',true))return json({error:'CONFIRMACION_USADA_O_CADUCADA'},403);
+  const {error}=await admin.rpc('hg_resetear_clave',{p_emp:id});if(error)throw Error('RESET_NO_REALIZADO');await guardarClave(id,pw);return json({ok:true,...await abrirSesion(emp,owner)});
+ }
+
  const pw=String(b.pw||'');if(!pw||pw.length>80)return json({error:'CONTRASENA'},400);
  if(acc==='nueva_jefe')return json({error:'RECUPERACION_COMPARTIDA_DESACTIVADA'},403);
  if(acc==='crear'){
   if(cred)return json({error:'YA_TIENE'},409);
   if(pw.length<12)return json({error:'MINIMO_12_CARACTERES'},400);
+  if(!await pruebaDiscord('crear'))return json({error:'CONFIRMA_TU_DISCORD'},403);
   const {data:inv}=await admin.from('hg_security_invitations').select('hash,expires_at').eq('emp_id',id).maybeSingle();
-  if(!inv||Date.parse(inv.expires_at)<=Date.now()||!igual(await sha(String(b.invitacion||'')),inv.hash))return json({error:'INVITACION_NECESARIA'},403);
-  // Consumir de forma condicional: no puede reutilizarse ni canjearse simultáneamente.
-  const {data:used,error}=await admin.from('hg_security_invitations').delete().eq('emp_id',id).eq('hash',inv.hash).select('emp_id');if(error||!used?.length)return json({error:'INVITACION_USADA'},409);
+  if(!await pruebaDiscord('crear',true))return json({error:'CONFIRMACION_USADA_O_CADUCADA'},403);
+  if(inv)await admin.from('hg_security_invitations').delete().eq('emp_id',id).eq('hash',inv.hash);
   await guardarClave(id,pw);return json({ok:true,...await abrirSesion(emp,owner)});
  }
  if(acc==='entrar'){
+  if(!await pruebaDiscord('entrar'))return json({error:'CONFIRMA_TU_DISCORD'},403);
   let ok=false;
   if(cred)ok=igual(await derivar(pw,cred.salt,cred.iterations),cred.hash);
   else if(emp.puesto!=='Jefe'){const c=await fila('clave-'+id);ok=!!c?.h&&igual(await legacy('emp|'+id+'|'+pw),c.h);if(ok)await guardarClave(id,pw);}
   else return json({error:id===owner.owner_emp?'CONFIGURA_CLAVE_PERSONAL_DESDE_TU_SESION':'INVITACION_NECESARIA'},403);
-  if(!ok)return json({error:'MAL'},401);return json({ok:true,...await abrirSesion(emp,owner)});
+  if(!ok)return json({error:'MAL'},401);if(!await pruebaDiscord('entrar',true))return json({error:'CONFIRMACION_USADA_O_CADUCADA'},403);return json({ok:true,...await abrirSesion(emp,owner)});
  }
  return json({error:'ACCION'},400);
- }catch(e){console.error('Cuentas seguras',e instanceof Error?e.message:'error');return json({error:'NO_DISPONIBLE'},500);}
+ }catch(e){console.error('Cuentas seguras',e instanceof Error?e.message:'error');return json({error:e instanceof Error&&e.message==='DISCORD_PRIVADOS_BLOQUEADOS'?'Abre los mensajes privados de Discord para el bot y vuelve a intentarlo.':'NO_DISPONIBLE'},500);}
 });
