@@ -31,14 +31,14 @@ return new Response(JSON.stringify(rows),{status:200,headers:{'Content-Type':'ap
 gPwSrv=async function(s,e,pw){
 if(s.mode==='create'&&pw.length<12)return gPwErr('Mínimo 12 caracteres');
 const r=await authApi({accion:s.mode==='create'?'crear':'entrar',empId:e.id,pw});
-if(r.ok&&r.j.access_token){G.fails[e.id]=0;authSave(authFromResp(r.j,e.id));setBoss(!!r.j.jefe);gateHello(e);try{rtToken()}catch{}return;}
+if(r.ok&&r.j.access_token){invitacion={};try{sessionStorage.removeItem('hg_alta')}catch{}G.fails[e.id]=0;authSave(authFromResp(r.j,e.id));setBoss(!!r.j.jefe);gateHello(e);try{rtToken()}catch{}return;}
 if(r.st===401)return 'mal';
 if(r.st===429)return gPwErr('Demasiados intentos. Espera 15 minutos.');
 if(r.j.error==='INVITACION_NECESARIA')return gPwErr('Abre el enlace privado que recibiste al aceptar tu solicitud o al resetear tu contraseña.');
 if(r.j.error==='CONFIGURA_CLAVE_PERSONAL_DESDE_TU_SESION')return gPwErr('Crea tu contraseña personal desde la sesión de Vincent que tienes abierta.');
 return gPwErr(r.st===0?'Sin conexión: no se puede verificar tu cuenta.':r.j.error||'No se pudo iniciar sesión.');
 };
-const gPick=gatePickSrv;gatePickSrv=async function(e){await gPick(e);if(!G.pw)return;if(invitacion.emp===e.id){gPwShow(e,'create');G.pw.srv=true;G.pw.srvTry=true;}};
+const gPick=gatePickSrv;gatePickSrv=async function(e){await gPick(e);if(!G.pw)return;if(invitacion.emp===e.id){const estadoAlta=await authApi({accion:'estado',empId:e.id});if(estadoAlta.ok&&!estadoAlta.j.tiene){gPwShow(e,'create');G.pw.srv=true;G.pw.srvTry=true;}else if(estadoAlta.ok){invitacion={};try{sessionStorage.removeItem('hg_alta')}catch{}}}};
 const restringidas=new Set(['empleados','descuentos','precios','productos','discord','stockmin','proveedores','recetas','jefe','sebusca']);
 const pushOriginal=cloudPush,flushOriginal=cloudFlush;
 cloudPush=function(k){if(ME?.id!==OWNER&&restringidas.has(k)){delete cloud.dirty[k];saveDirty();return;}return pushOriginal(k);};
