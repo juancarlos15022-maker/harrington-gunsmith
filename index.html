@@ -21,6 +21,7 @@
 <script data-head>/* la fachada de la entrada solo se adelanta si va a salir la entrada (si ya has entrado hoy en esta pestaña, no) */
 try{if(!sessionStorage.getItem('harrington_me_v1')){[['entrada-fachada.webp','(max-aspect-ratio: 23/20)'],['entrada-fachada-ancha.webp','(min-aspect-ratio: 23/20)']].forEach(function(x){var l=document.createElement('link');l.rel='preload';l.as='image';l.href=x[0];l.media=x[1];document.head.appendChild(l)})}}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="barra-gestion.css?v=20261015-nav1">
 </head>
 <body>
 <div class="wrap">
@@ -37,6 +38,7 @@ try{if(!sessionStorage.getItem('harrington_me_v1')){[['entrada-fachada.webp','(m
   <div class="clock-actions">
     <span class="pocket" id="pocket" hidden aria-hidden="true"><i class="ph h"></i><i class="ph m"></i><i class="ph s"></i></span>
     <span class="me-chip" id="meChip" role="button" tabindex="0" title="Mi ficha" hidden></span>
+    <div class="management-nav" role="group" aria-label="Gestión de la armería">
     <button type="button" class="clock-link enc-btn" id="dirBtn" hidden>DIRECCIÓN</button>
     <button type="button" class="clock-link enc-btn" id="hacerInventarioBtn" hidden>HACER INVENTARIO</button>
     <button type="button" class="clock-link enc-btn only-venta" id="encBtn">ENCARGOS</button>
@@ -45,6 +47,7 @@ try{if(!sessionStorage.getItem('harrington_me_v1')){[['entrada-fachada.webp','(m
     <button type="button" class="clock-link enc-btn bell-btn" id="bellBtn" aria-label="Avisos">🔔</button>
     <button type="button" class="clock-link enc-btn" id="libroBtn">NOTAS</button>
     <button type="button" class="clock-link enc-btn only-venta most-btn" id="mostBtn" title="Modo mostrador para la tableta">▦ MOSTRADOR</button>
+    </div>
     <button type="button" class="clock-link boss-btn" id="bossBtn">JEFE</button>
     <div class="set-wrap"><button type="button" class="clock-link boss-btn" id="setBtn" aria-label="Ajustes" aria-expanded="false" title="Ajustes">⚙</button>
      <div class="set-pop" id="setPop" hidden role="dialog" aria-label="Ajustes">
