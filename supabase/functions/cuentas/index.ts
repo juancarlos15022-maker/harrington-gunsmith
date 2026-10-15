@@ -66,7 +66,12 @@ Deno.serve(async(req:Request)=>{
  }
  if(!emp||id==='prueba')return json({error:'EMPLEADO'},404);
  const {data:cred}=await admin.from('hg_security_credentials').select('hash,salt,iterations').eq('emp_id',id).maybeSingle();
- if(acc==='estado')return json({tiene:!!cred||(emp.puesto!=='Jefe'&&!!(await fila('clave-'+id))?.h),jefe:id===owner.owner_emp,personal:!!cred,requiereInvitacion:!cred&&id!==owner.owner_emp,requierePersonal:!cred&&id===owner.owner_emp,discordObligatorio:true});
+ const discordId=String(id===owner.owner_emp?owner.owner_discord:emp.discord||'');
+ const {data:vinculo,error:errorVinculo}=await admin.from('hg_discord_bindings').select('discord_id').eq('emp_id',id).maybeSingle();
+ if(errorVinculo)throw Error('VINCULO_NO_DISPONIBLE');
+ const vinculado=!!discordId&&vinculo?.discord_id===discordId;
+ async function guardarVinculo(){const {error}=await admin.from('hg_discord_bindings').upsert({emp_id:id,discord_id:discordId,verified_at:new Date().toISOString()});if(error)throw Error('VINCULO_NO_GUARDADO');}
+ if(acc==='estado')return json({tiene:!!cred||(emp.puesto!=='Jefe'&&!!(await fila('clave-'+id))?.h),jefe:id===owner.owner_emp,personal:!!cred,requiereInvitacion:!cred&&id!==owner.owner_emp,requierePersonal:!cred&&id===owner.owner_emp,discordObligatorio:!vinculado,discordDisponible:true,discordVinculado:vinculado});
  const ip=(req.headers.get('x-forwarded-for')||'sin-ip').split(',')[0].trim();
  if(acc!=='discord_estado')for(const clave of ['ip:'+await sha(ip),'empleado:'+id]){const {data,error}=await admin.rpc('hg_login_attempt',{p_key:clave});if(error||data!==true)return json({error:'BLOQUEADA'},429);}
  async function pruebaDiscord(purpose:string,consume=false){
@@ -97,7 +102,7 @@ Deno.serve(async(req:Request)=>{
   const {data:rc}=await admin.from('hg_owner_recovery').select('hash,salt,iterations').eq('id',1).single();
   if(!rc||!igual(await derivar(String(b.word||''),rc.salt,rc.iterations),rc.hash))return json({error:'PALABRA_INCORRECTA'},401);
   if(!await pruebaDiscord('recuperar',true))return json({error:'CONFIRMACION_USADA_O_CADUCADA'},403);
-  await guardarClave(id,pw);const {error}=await admin.rpc('hg_cerrar_otras_sesiones',{p_uid:owner.owner_uid,p_session:crypto.randomUUID()});if(error)throw Error('SESIONES_NO_CERRADAS');return json({ok:true,...await abrirSesion(emp,owner)});
+  await guardarVinculo();await guardarClave(id,pw);const {error}=await admin.rpc('hg_cerrar_otras_sesiones',{p_uid:owner.owner_uid,p_session:crypto.randomUUID()});if(error)throw Error('SESIONES_NO_CERRADAS');return json({ok:true,...await abrirSesion(emp,owner)});
  }
 
  const pw=String(b.pw||'');if(!pw||pw.length>80)return json({error:'CONTRASENA'},400);
@@ -109,15 +114,15 @@ Deno.serve(async(req:Request)=>{
   const {data:inv}=await admin.from('hg_security_invitations').select('hash,expires_at').eq('emp_id',id).maybeSingle();
   if(!await pruebaDiscord('crear',true))return json({error:'CONFIRMACION_USADA_O_CADUCADA'},403);
   if(inv)await admin.from('hg_security_invitations').delete().eq('emp_id',id).eq('hash',inv.hash);
-  await guardarClave(id,pw);return json({ok:true,...await abrirSesion(emp,owner)});
+  await guardarVinculo();await guardarClave(id,pw);return json({ok:true,...await abrirSesion(emp,owner)});
  }
  if(acc==='entrar'){
-  if(!await pruebaDiscord('entrar'))return json({error:'CONFIRMA_TU_DISCORD'},403);
+  if(!vinculado&&!await pruebaDiscord('entrar'))return json({error:'CONFIRMA_TU_DISCORD'},403);
   let ok=false;
   if(cred)ok=igual(await derivar(pw,cred.salt,cred.iterations),cred.hash);
   else if(emp.puesto!=='Jefe'){const c=await fila('clave-'+id);ok=!!c?.h&&igual(await legacy('emp|'+id+'|'+pw),c.h);if(ok)await guardarClave(id,pw);}
   else return json({error:id===owner.owner_emp?'CONFIGURA_CLAVE_PERSONAL_DESDE_TU_SESION':'INVITACION_NECESARIA'},403);
-  if(!ok)return json({error:'MAL'},401);if(!await pruebaDiscord('entrar',true))return json({error:'CONFIRMACION_USADA_O_CADUCADA'},403);return json({ok:true,...await abrirSesion(emp,owner)});
+  if(!ok)return json({error:'MAL'},401);if(!vinculado){if(!await pruebaDiscord('entrar',true))return json({error:'CONFIRMACION_USADA_O_CADUCADA'},403);await guardarVinculo();}return json({ok:true,...await abrirSesion(emp,owner)});
  }
  return json({error:'ACCION'},400);
  }catch(e){console.error('Cuentas seguras',e instanceof Error?e.message:'error');return json({error:e instanceof Error&&e.message==='DISCORD_PRIVADOS_BLOQUEADOS'?'Abre los mensajes privados de Discord para el bot y vuelve a intentarlo.':'NO_DISPONIBLE'},500);}
