@@ -8,6 +8,7 @@
 // si la lista llega incompleta, no despide a nadie; como mucho 5 mensajes de cada tipo por revisión.
 // En cada revisión, además: fichas de la plantilla, aviso de tienda abierta/cerrada, panel de fichar y ausencias,
 // lista de precios al día con la web y recordatorios para la dirección (10:00 cada día; domingo 17:00, día de paga).
+import { revisarTelegramas } from "./telegramas.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { catalogo, fecha as fechaMs, hora, hoyNum, listaPrecios, madrid, ORO, PIE } from "./comun.ts";
@@ -225,6 +226,9 @@ Deno.serve(async (req: Request) => {
   if (!c.secreto || c.secreto.length < 20 || b.secreto !== c.secreto) return json({ error: "NO" }, 403);
   const H = { Authorization: "Bot " + c.token, "Content-Type": "application/json" };
   const G = c.guild_id;
+  let telegramas: unknown = null;
+  try { telegramas = await revisarTelegramas(sb, c, H); } catch(e) { telegramas = {error:String(e).slice(0,120)}; console.error("Agenda de telegramas", String(e)); }
+  if (b.solo === "telegramas") return json({ok:true,telegramas});
   // fichas de la plantilla (en cada revisión, o al momento tras Ascender o Despedir)
   let pl: unknown = null;
   try { pl = await plantilla(c, H); } catch (e) { pl = { error: String(e).slice(0, 120) }; }
