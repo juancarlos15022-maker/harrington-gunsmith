@@ -71,7 +71,7 @@ Deno.serve(async(req:Request)=>{
  if(errorVinculo)throw Error('VINCULO_NO_DISPONIBLE');
  const vinculado=!!discordId&&vinculo?.discord_id===discordId;
  async function guardarVinculo(){const {error}=await admin.from('hg_discord_bindings').upsert({emp_id:id,discord_id:discordId,verified_at:new Date().toISOString()});if(error)throw Error('VINCULO_NO_GUARDADO');}
- if(acc==='estado')return json({tiene:!!cred||(emp.puesto!=='Jefe'&&!!(await fila('clave-'+id))?.h),jefe:id===owner.owner_emp,personal:!!cred,requiereInvitacion:!cred&&id!==owner.owner_emp,requierePersonal:!cred&&id===owner.owner_emp,discordObligatorio:!vinculado,discordDisponible:true,discordVinculado:vinculado});
+ if(acc==='estado')return json({tiene:!!cred||(emp.puesto!=='Jefe'&&!!(await fila('clave-'+id))?.h),jefe:id===owner.owner_emp,personal:!!cred,requiereInvitacion:!cred&&id!==owner.owner_emp,requierePersonal:!cred&&id===owner.owner_emp,discordObligatorio:!vinculado||!cred,discordDisponible:true,discordVinculado:vinculado});
  const ip=(req.headers.get('x-forwarded-for')||'sin-ip').split(',')[0].trim();
  if(acc!=='discord_estado')for(const clave of ['ip:'+await sha(ip),'empleado:'+id]){const {data,error}=await admin.rpc('hg_login_attempt',{p_key:clave});if(error||data!==true)return json({error:'BLOQUEADA'},429);}
  async function pruebaDiscord(purpose:string,consume=false){
