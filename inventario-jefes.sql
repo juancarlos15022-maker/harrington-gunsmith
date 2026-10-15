@@ -4,7 +4,7 @@ returns jsonb language plpgsql security invoker set search_path=public as $$
 declare emp text := public.hg_claims()->'app_metadata'->>'emp_id';
 begin
  if not public.hg_permitido() or not exists(select 1 from public.datos d,jsonb_array_elements(d.valor) e where d.clave='empleados' and e->>'id'=emp and e->>'puesto'='Jefe') then raise exception 'SOLO_JEFES'; end if;
- return (select coalesce(jsonb_object_agg(producto,jsonb_build_object('q',cantidad,'v',xmin::text)),'{}') from public.stock);
+ return (select coalesce(jsonb_object_agg(producto,jsonb_build_object('q',cantidad,'v',s.xmin::text,'npc',coalesce((d.valor->'asig'->>producto)::int,0),'nv',d.xmin::text)),'{}') from public.stock s left join public.datos d on d.clave='npc:estado');
 end $$;
 
 create or replace function public.inventario_guardar(p_peticion text,p_items jsonb)
@@ -13,7 +13,7 @@ declare
  emp text:=public.hg_claims()->'app_metadata'->>'emp_id'; jefe text; old jsonb; it jsonb; val jsonb;
  records jsonb:='[]'; items jsonb:='[]'; moves jsonb:='[]'; conflicts jsonb:='[]'; warnings jsonb:='[]'; result jsonb;
  k text; token text; rid text; uid text; n text; actual integer; teo integer; fis integer; dif integer; idx integer:=0; changed integer:=0;
- stamp timestamptz:=clock_timestamp();ms bigint; npc_data jsonb; npc_changed boolean:=false;
+ stamp timestamptz:=clock_timestamp();ms bigint; npc_data jsonb; npc_changed boolean:=false;npc_version text;npc_q int;
 begin
  if not public.hg_permitido() then raise exception 'SOLO_JEFES'; end if;
  if p_peticion is null or p_peticion !~ '^[a-zA-Z0-9-]{20,80}$' then raise exception 'PETICION_INVALIDA'; end if;
@@ -27,11 +27,18 @@ begin
  end if;
  if jsonb_typeof(p_items) is distinct from 'array' or jsonb_array_length(p_items) not between 1 and 5000 then raise exception 'RECUENTO_VACIO'; end if;
  if (select count(*)<>count(distinct x->>'k') from jsonb_array_elements(p_items) x) then raise exception 'ARTICULO_DUPLICADO'; end if;
+ select valor,xmin::text into npc_data,npc_version from public.datos where clave='npc:estado';
  for it in select * from jsonb_array_elements(p_items) loop
   k:=it->>'k';
   if coalesce(k,'')='' or length(k)>200 or coalesce(it->>'fis','')!~'^[0-9]{1,6}$' or coalesce(it->>'teo','')!~'^[0-9]{1,9}$' then raise exception 'CANTIDAD_INVALIDA'; end if;
   teo:=(it->>'teo')::integer;fis:=(it->>'fis')::integer;
   actual:=null;token:=null;select cantidad,xmin::text into actual,token from public.stock where producto=k;
+  npc_q:=coalesce((npc_data->'asig'->>k)::int,0);
+  if npc_q>0 and coalesce(it->>'ubicacion','')<>'almacen' then raise exception 'NPC_UBICACION_REQUERIDA: cuenta solo tu almacén y actualiza la página';end if;
+  if it->>'ubicacion'='almacen' then
+   if npc_version is distinct from (it->>'npcVersion') or npc_q<>coalesce((it->>'npcTeo')::int,0) then conflicts:=conflicts||jsonb_build_array(k);end if;
+   if fis<npc_q then raise exception 'CANTIDAD_INVALIDA';end if;
+  end if;
   if coalesce(actual,0)<>teo or token is distinct from (it->>'version') then conflicts:=conflicts||jsonb_build_array(k); end if;
  end loop;
  if jsonb_array_length(conflicts)>0 then raise exception 'STOCK_CAMBIADO' using detail=conflicts::text; end if;

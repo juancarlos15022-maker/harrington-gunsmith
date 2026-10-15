@@ -1433,7 +1433,7 @@ const DIRECCION_MODULOS=[
  {id:'proveedores',titulo:'PROVEEDORES',desc:'Crear y gestionar tus proveedores (herrerías, minas, talas…).',render:()=>renderModProveedores()},
  {id:'nuevopedido',titulo:'REALIZAR NUEVO PEDIDO',desc:'Pedir materiales a un proveedor.',render:()=>renderModNuevoPedido()},
  {id:'regpedidos',titulo:'REGISTRO DE PEDIDOS',desc:'Pedidos completados, diarios y semanales.',render:()=>renderModRegPedidos()},
- {id:'npc',titulo:'NPC DE LA TIENDA',desc:'Lo que vende el NPC con la tienda cerrada: unidades asignadas y sus precios.',render:()=>renderModNpc()},
+ {id:'npc',titulo:'NPC',desc:'Traslados, revisión de ventas e inventario del NPC.',render:()=>renderModNpc()},
  {id:'publico',titulo:'PÁGINA PARA CLIENTES',desc:'Enlace público con el catálogo y los precios, sin nada privado.',render:()=>renderModPublico()},
  {id:'auditoria',titulo:'AUDITORÍA E INCIDENCIAS',desc:'Todo lo que hace cada empleado, con filtros, e incidencias para revisar.',render:()=>renderModAuditoria()},
  {id:'parches',titulo:'HISTORIAL DE PARCHES',desc:'Todos los parches de la web, numerados, con lo que trajo cada uno.',render:()=>renderModParches()},
@@ -4018,7 +4018,7 @@ function renderModStock(){
  const rows=inputs.map((inp,idx)=>({inp:inp,idx:idx,cat:inp.closest('.product').dataset.cat})).filter(x=>(stockCat==='todos'||x.cat===stockCat)&&!isMatProd(x.inp.dataset.name)).map(x=>{
   const n=x.inp.dataset.name;
   const rc=recipeText(n);
-  return `<div class="stock-row"><div><b><span class="dot ${dotCls(n)}"></span>${esc(n)}</b>${rc?`<small class="rc">Receta: ${esc(rc)}</small>`:''}<small>Stock actual: ${stockMap[n]||0}${(stockMin[n]||0)>0&&(stockMap[n]||0)<=(stockMin[n]||0)?' <span class="lowtag">BAJO</span>':''}</small><label class="minlbl">Mínimo <input class="min-in" type="text" inputmode="numeric" data-min="${esc(n)}" value="${esc(minDraft[n]!==undefined?minDraft[n]:(stockMin[n]||''))}" placeholder="0" aria-label="Stock mínimo"></label></div><div class="qty stock-qty"><button type="button" data-dir="sminus:${x.idx}" aria-label="Quitar una unidad">−</button><input type="text" inputmode="numeric" data-stock="${esc(n)}" value="${esc(stockDraft[n]||'0')}" aria-label="Unidades a añadir"><button type="button" data-dir="splus:${x.idx}" aria-label="Añadir una unidad">+</button></div></div>`;
+  return `<div class="stock-row"><div><b><span class="dot ${dotCls(n)}"></span>${esc(n)}</b>${rc?`<small class="rc">Receta: ${esc(rc)}</small>`:''}<small>Total: ${stockMap[n]||0} · Almacén: ${Math.max(0,(stockMap[n]||0)-((npc&&npc.asig&&npc.asig[n])||0))} · NPC: ${(npc&&npc.asig&&npc.asig[n])||0}${(stockMin[n]||0)>0&&(stockMap[n]||0)<=(stockMin[n]||0)?' <span class="lowtag">BAJO</span>':''}</small><label class="minlbl">Mínimo <input class="min-in" type="text" inputmode="numeric" data-min="${esc(n)}" value="${esc(minDraft[n]!==undefined?minDraft[n]:(stockMin[n]||''))}" placeholder="0" aria-label="Stock mínimo"></label></div><div class="qty stock-qty"><button type="button" data-dir="sminus:${x.idx}" aria-label="Quitar una unidad">−</button><input type="text" inputmode="numeric" data-stock="${esc(n)}" value="${esc(stockDraft[n]||'0')}" aria-label="Unidades a añadir"><button type="button" data-dir="splus:${x.idx}" aria-label="Añadir una unidad">+</button></div></div>`;
  }).join('');
  const lf=lastFab();
  return `${lf?`<div class="enc-actions" style="margin-bottom:8px"><button type="button" class="warn" data-dir="fab-undo">↶ DESHACER ÚLTIMA FABRICACIÓN (${esc(lf.items.map(x=>x.delta+' × '+x.producto).join(', '))} · ${ago(lf.ts)})</button></div>`:''}<p class="bk-note">Para fabricar, mejor usa <b>FABRICACIÓN</b>. Si aquí sumas unidades de un producto con receta, también se gastan sus materiales del almacén. Antes te pide confirmación, y durante ${UNDO_MIN} minutos puedes deshacerlo. Si falta algún material, no se suma nada.</p><div class="cat-nav stock-cats">${cats}</div>${rows}<div class="pay-err" id="stErr" hidden></div><div class="enc-actions" style="margin-top:12px"><button type="button" class="primary" data-dir="stock-save">GUARDAR STOCK</button></div>`;
@@ -4271,7 +4271,7 @@ async function undoFab(){
  try{fbAuto(f.items,true)}catch(e){}
  renderDir();calc(false);say('Fabricación deshecha');
 }
-const DIR_SECCIONES=[['HOY',['revision']],['DINERO',['ventas','cierre','gastos','balance','estadisticas','objetivo','semanales']],['PERSONAL',['empleados','sueldos','horarios','ausencias','auditoria']],['TIENDA Y CLIENTES',['productos','convenios','clientes','agenda','eventos','npc','publico']],['ALMACÉN',['fabricar','stock','fabricacion','balfab','regstock']],['COMPRAS',['proveedores','nuevopedido','particular','regpedidos']],['AJUSTES',['parches','discord','nube','copia','historial','reset']]];
+const DIR_SECCIONES=[['HOY',['revision']],['DINERO',['ventas','cierre','gastos','balance','estadisticas','objetivo','semanales']],['PERSONAL',['empleados','sueldos','horarios','ausencias','auditoria']],['TIENDA',['productos','convenios','clientes','agenda','eventos','npc','publico']],['ALMACÉN',['fabricar','stock','fabricacion','balfab','regstock']],['COMPRAS',['proveedores','nuevopedido','particular','regpedidos']],['AJUSTES',['parches','discord','nube','copia','historial','reset']]];
 /* Lo que tiene pendiente cada apartado (se ve en su tarjeta): [número, texto, 'bad' rojo | 'pend' ámbar | 'info'] */
 function modBadge(id){
  try{
@@ -7370,8 +7370,8 @@ matModal.addEventListener('click',e=>{const b=e.target.closest('[data-mx]');if(!
 /* Libro de turno: revisión del NPC pendiente y recuento opcional */
 (function(){const _bi=briefItems;briefItems=function(){const b=_bi.apply(this,arguments);b.NPC=!!(npc.rev&&npc.rev.pending&&npcTotal()>0);if(b.NPC)b.n++;return b};
  const _bh=briefHTML;briefHTML=function(name){let o=_bh.apply(this,arguments);const b=briefItems();
-  const npcH=b.NPC?`<div class="br-sec"><div class="dir-sec-title">⚠ REVISIÓN DEL NPC PENDIENTE</div><p class="bk-note" style="margin:0 0 6px">La tienda ha estado cerrada y el NPC ha podido vender. Mira lo que le queda en el juego y apúntalo. El aviso seguirá hasta que se haga.</p><div class="enc-actions"><button type="button" class="warn" data-lb="npc">HACER LA REVISIÓN DEL NPC</button></div></div>`:'';
-  const rc=`<div class="enc-actions" style="margin-top:8px"><button type="button" data-lb="recu">☰ HACER UN RECUENTO (OPCIONAL)</button></div>`;
+  const npcH=b.NPC?`<div class="br-sec"><div class="dir-sec-title">⚠ REVISIÓN DEL NPC PENDIENTE</div><p class="bk-note" style="margin:0 0 6px">La tienda ha estado cerrada y el NPC ha podido vender. Mira lo que le queda en el juego y apúntalo. El aviso seguirá hasta que se haga.</p><p class="bk-note">Dirección → Tienda → NPC → Revisar ventas del NPC.</p></div>`:'';
+  const rc='';
   const i=o.lastIndexOf('<div class="enc-actions');return o.slice(0,i).replace(/(<p class="bk-note" style="margin:0 0 4px">[^<]*<\/p>)/,'$1'+npcH)+rc+o.slice(i)}})();
 libroModal.addEventListener('click',e=>{const b=e.target.closest('[data-lb="npc"],[data-lb="recu"]');if(!b)return;e.stopImmediatePropagation();closeModal(libroModal);libroView='libro';if(b.dataset.lb==='npc')openNpcRev();else openRecuento()},true);
 /* ENCARGOS: lista de armas reservadas (encargo, cliente, arma, cantidad, anticipo y lo que falta por pagar) */
