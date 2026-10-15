@@ -97,7 +97,7 @@ Deno.serve(async(req:Request)=>{
   const {data:rc}=await admin.from('hg_owner_recovery').select('hash,salt,iterations').eq('id',1).single();
   if(!rc||!igual(await derivar(String(b.word||''),rc.salt,rc.iterations),rc.hash))return json({error:'PALABRA_INCORRECTA'},401);
   if(!await pruebaDiscord('recuperar',true))return json({error:'CONFIRMACION_USADA_O_CADUCADA'},403);
-  const {error}=await admin.rpc('hg_resetear_clave',{p_emp:id});if(error)throw Error('RESET_NO_REALIZADO');await guardarClave(id,pw);return json({ok:true,...await abrirSesion(emp,owner)});
+  await guardarClave(id,pw);const {error}=await admin.rpc('hg_cerrar_otras_sesiones',{p_uid:owner.owner_uid,p_session:crypto.randomUUID()});if(error)throw Error('SESIONES_NO_CERRADAS');return json({ok:true,...await abrirSesion(emp,owner)});
  }
 
  const pw=String(b.pw||'');if(!pw||pw.length>80)return json({error:'CONTRASENA'},400);
