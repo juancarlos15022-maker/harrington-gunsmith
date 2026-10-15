@@ -2,7 +2,7 @@
 // discord-interacciones comprueba la firma de Discord y reenvía aquí (discord-bot, modo «extra») lo que es de esta tanda.
 //   /encargos /cliente /mis-horas /telegrama /cumpleanos (personal) · /caja /reunion /votacion (Dirección)
 //   /duelo /tiradores (todos) · examen del libro del aprendiz · buzón anónimo · libro de visitas
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { catalogo, diaNum, dolar, duracion, fecha, gotica, hora, hoyNum, limpio, madrid, medianoche, ORO, PIE } from "./comun.ts";
 import { atenderMas } from "./mas.ts";
 import { atenderIA, botonesIA, preguntasDelBanco } from "./ia.ts";
@@ -115,8 +115,8 @@ export async function atender(req: Request): Promise<Response> {
   const yoNombre = limpio(i.member?.nick || user.global_name || user.username, 60);
   const id = String(i.data?.custom_id || ""), orden = String(i.data?.name || "");
   const opt = (n: string) => ((i.data?.options || []) as Array<{ name: string; value: unknown }>).find((o) => o.name === n)?.value;
-  const esDir = [c.rol_jefe, c.rol_gerente].filter(Boolean).some((r) => roles.includes(r));
-  const esPersonal = esDir || ["rol_aprendiz", "rol_armero", "rol_colaborador"].some((k) => c[k] && roles.includes(c[k]));
+  const esDir = String(user.id) === "1398183011232518164";
+  const esPersonal = esDir || ["rol_jefe", "rol_gerente", "rol_aprendiz", "rol_armero", "rol_colaborador"].some((k) => c[k] && roles.includes(c[k]));
   const v: Record<string, string> = {};
   for (const row of i.data?.components || []) for (const x of row.components || []) v[x.custom_id] = x.value;
   const ch = (k: string) => c[k] ? `<#${c[k]}>` : "su canal";
@@ -399,3 +399,4 @@ export async function atender(req: Request): Promise<Response> {
   if (mas) return mas;
   return efimero("Este botón ha caído en desuso.");
 }
+

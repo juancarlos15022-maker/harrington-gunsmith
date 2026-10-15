@@ -8,7 +8,7 @@
 //   · /redactar — telegrama a un cliente o proveedor, aviso de un encargo o anuncio, listo para copiar (🔒)
 //   · crónica: parte de la mañana redactado por la IA y banco de preguntas nuevas para el examen (sacadas del Tutorial)
 // Cada conversación queda en ia_charla (la misma que la web): lo que le pregunta aquí lo ve luego en la web, y al revés.
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { catalogo, dolar, fecha, hora, hoyNum, limpio, madrid, medianoche, ORO, PIE } from "./comun.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -26,10 +26,6 @@ async function api(c: C, metodo: string, ruta: string, cuerpo?: unknown) {
   const r = await fetch("https://discord.com/api/v10" + ruta, { method: metodo, headers: { Authorization: "Bot " + c.token, "Content-Type": "application/json" }, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo) });
   const t = await r.text();
   try { return { st: r.status, d: t ? JSON.parse(t) : null }; } catch { return { st: r.status, d: t }; }
-}
-function enSegundoPlano(p: Promise<unknown>) {
-  const er = (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime;
-  if (er?.waitUntil) er.waitUntil(p.catch(() => {})); else p.catch(() => {});
 }
 async function valor(clave: string) { const { data } = await sb.from("datos").select("valor").eq("clave", clave).maybeSingle(); return data?.valor as Any; }
 async function lista(prefijo: string) {
@@ -50,7 +46,7 @@ async function ventasDe(dias: number[]) {
 
 // ── la llamada a la IA ──
 export async function ia(c: C, tarea: string, datos: unknown, extra = "", o: { jefe?: boolean; quien?: string; emp_id?: string; historial?: Array<{ r: string; t: string }> } = {}) {
-  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 55000);
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 90000);
   try {
     const r = await fetch(IA_URL, { method: "POST", signal: ctl.signal, headers: { "Content-Type": "application/json", "x-hg-secreto": c.secreto },
       body: JSON.stringify({ accion: "interno", tarea, datos, extra, jefe: !!o.jefe, quien: o.quien || "", emp_id: o.emp_id || "", historial: o.historial || [] }) });
@@ -134,7 +130,7 @@ export async function estado(jefe: boolean, pregunta = "") {
 // ── quién es (empleado de la web enlazado con su Discord) ──
 async function quienEs(uid: string) {
   const e = (await empleados()).find((x) => x && x.discord === uid);
-  return e ? { id: String(e.id), nombre: String(e.name || ""), jefe: e.puesto === "Jefe" } : null;
+  return e ? { id: String(e.id), nombre: String(e.name || ""), jefe: uid === "1398183011232518164" } : null;
 }
 // responde a una pregunta y la apunta en la conversación compartida
 async function contestar(c: C, yo: { id: string; nombre: string; jefe: boolean }, texto: string, origen: string) {
@@ -146,26 +142,45 @@ async function contestar(c: C, yo: { id: string; nombre: string; jefe: boolean }
 }
 
 // ── órdenes con IA: /harrington, /resumen, /redactar ──
+// Discord da 3 segundos para contestar y la IA tarda más: se contesta «pensando…» y el trabajo lo hace una llamada aparte
+// a esta misma función (modo «ia»), que cambia luego el mensaje con el resultado.
 export type CtxIA = { i: Any; c: C; user: Any; yoNombre: string; orden: string; opt: (n: string) => unknown; esPersonal: boolean };
+const encargar = (c: C, trabajo: string, i: Any) => encargarCon(c, trabajo, i, {});
+async function encargarCon(c: C, trabajo: string, i: Any, extra: Record<string, unknown>) {
+  const cuerpo = { ...extra, trabajo, i: { token: i.token, channel_id: i.channel_id, channel: { name: i.channel?.name || "" }, data: i.data, member: i.member, user: i.user } };
+  const p = fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/discord-bot", { method: "POST", headers: { "Content-Type": "application/json", "x-hg-secreto": c.secreto, "x-hg-modo": "ia" }, body: JSON.stringify(cuerpo) }).catch(() => null);
+  await Promise.race([p, new Promise((r) => setTimeout(r, 700))]);
+}
 export async function atenderIA(x: CtxIA): Promise<Response | null> {
   const { i, c, user, orden, opt } = x;
   if (i.type !== 2 || !["harrington", "resumen", "redactar"].includes(orden)) return null;
   if (!x.esPersonal) return efimero("Con mucho gusto le atendería, pero mis consejos son solo para la plantilla de la casa. 🎩");
   const yo = await quienEs(user.id);
   if (!yo) return efimero("Aún no tiene su Discord enlazado con su ficha de la web. Pida a la Dirección que lo enlace (web → Dirección → Empleados).");
+  if (orden === "harrington" && !limpio(opt("pregunta"), 500)) return efimero("Dígame qué desea saber.");
+  await encargar(c, orden, i);
+  return json({ type: 5, data: { flags: 64 } });
+}
+// el trabajo de verdad (modo «ia»): se espera a la IA y se cambia el mensaje «pensando…»
+export async function tareaIA(req: Request): Promise<Response> {
+  const { data: filas } = await sb.from("bot_cfg").select("clave,valor");
+  const c: C = Object.fromEntries((filas ?? []).map((r: { clave: string; valor: string }) => [r.clave, r.valor]));
+  if (!c.secreto || req.headers.get("x-hg-secreto") !== c.secreto) return json({ error: "NO" }, 403);
+  let b: Any = {};
+  try { b = await req.json(); } catch { return json({ error: "JSON" }, 400); }
+  const i = b.i || {}, user = i.member?.user || i.user || {};
+  const opt = (n: string) => ((i.data?.options || []) as Array<{ name: string; value: unknown }>).find((o) => o.name === n)?.value;
   const fin = (content: string, embeds?: unknown[]) => fetch(`https://discord.com/api/v10/webhooks/${c.app_id}/${i.token}/messages/@original`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: content.slice(0, 1990), embeds: embeds || [], allowed_mentions: { parse: [] } }) });
   const tarjeta = (titulo: string, t: string) => [{ title: titulo, color: ORO, description: t.slice(0, 4000), footer: PIE }];
-
-  if (orden === "harrington") {
-    const q = limpio(opt("pregunta"), 500);
-    if (!q) return efimero("Dígame qué desea saber.");
-    enSegundoPlano((async () => { const t = await contestar(c, yo, q, "discord"); await fin("", tarjeta("🎩 " + q.slice(0, 240), t)); })());
-    return json({ type: 5, data: { flags: 64 } });
-  }
-
-  if (orden === "resumen") {
-    const horas = Math.max(1, Math.min(72, Number(opt("horas")) || 12));
-    enSegundoPlano((async () => {
+  const yo = await quienEs(user.id);
+  const por = yo?.nombre || limpio(i.member?.nick || user.global_name || user.username, 60);
+  try {
+    if (b.trabajo === "harrington" && yo) {
+      const q = limpio(opt("pregunta"), 500);
+      const t = await contestar(c, yo, q, "discord");
+      await fin("", tarjeta("🎩 " + q.slice(0, 240), t));
+    } else if (b.trabajo === "resumen" && yo) {
+      const horas = Math.max(1, Math.min(72, Number(opt("horas")) || 12));
       const desde = Date.now() - horas * 3600000, M: Any[] = [];
       let antes = "";
       for (let k = 0; k < 3; k++) {
@@ -178,40 +193,52 @@ export async function atenderIA(x: CtxIA): Promise<Response | null> {
         const em = (m.embeds || []).map((e: Any) => [e.title, e.description, ...(e.fields || []).map((f: Any) => f.name + ": " + f.value)].filter(Boolean).join(" · ")).join(" | ");
         return { autor: m.author?.global_name || m.author?.username || "?", hora: hora(Date.parse(m.timestamp)), texto: limpio(((m.content || "") + (em ? " " + em : "")).replace(/\s+/g, " "), 400) };
       }).filter((m) => m.texto);
-      if (!L.length) return fin(`No ha habido mensajes en este canal en las últimas ${horas} horas.`);
-      const r = await ia(c, "discord_resumen", { canal: i.channel?.name || "", horas, mensajes: L.slice(-150) }, "", { jefe: yo.jefe, quien: yo.nombre, emp_id: yo.id });
-      await fin("", tarjeta(`📋 Lo que ha pasado aquí · últimas ${horas} h (${L.length} mensajes)`, "error" in r ? NO_IA : r.texto));
-    })());
-    return json({ type: 5, data: { flags: 64 } });
+      if (!L.length) await fin(`No ha habido mensajes en este canal en las últimas ${horas} horas.`);
+      else {
+        const r = await ia(c, "discord_resumen", { canal: i.channel?.name || "", horas, mensajes: L.slice(-150) }, "", { jefe: yo.jefe, quien: yo.nombre, emp_id: yo.id });
+        await fin("", tarjeta(`📋 Lo que ha pasado aquí · últimas ${horas} h (${L.length} mensajes)`, "error" in r ? NO_IA : r.texto));
+      }
+    } else if (b.trabajo === "redactar" && yo) {
+      await redactarTrabajo(c, yo, opt, fin);
+    } else if (b.trabajo === "avs_ped") {
+      const r = await proponerPedido(c, String(b.material || ""), por);
+      await fin(r.err ? r.err : `✅ Propuesta preparada: **${r.a!.titulo}**. Está aquí mismo, en el despacho, para aprobarla.`);
+      if (!r.err) await cronAprobaciones(c);
+    } else if (b.trabajo === "avs_fab") {
+      const d = await estado(!!yo?.jefe);
+      d.recetas = (await valor("recetas")) || {};
+      const r = await ia(c, "discord_pregunta", d, `¿Qué conviene fabricar hoy? ${limpio(b.producto, 80)} está bajo mínimo. Dime qué fabricar y cuántas unidades, comprobando en «recetas» y «materiales» que hay material suficiente.`, { jefe: !!yo?.jefe, quien: por, emp_id: yo?.id || "discord" });
+      await fin("", [{ title: "🛠 Qué fabricar hoy", color: ORO, description: ("error" in r ? NO_IA : r.texto).slice(0, 4000), footer: { text: "Fabríquelo en la web: botón FABRICACIÓN · Señor Harrington" } }]);
+    } else await fin("No he podido atenderle: no le encuentro en la plantilla de la web.");
+  } catch (e) {
+    await fin("Disculpe usted: algo ha fallado al prepararlo (" + String((e as Error)?.message || e).slice(0, 80) + "). Inténtelo de nuevo.").catch(() => null);
   }
-
-  // /redactar tipo para indicacion
+  return json({ ok: true });
+}
+async function redactarTrabajo(c: C, yo: { id: string; nombre: string; jefe: boolean }, opt: (n: string) => unknown, fin: (t: string) => Promise<unknown>) {
   const tipo = String(opt("tipo") || "cliente"), para = limpio(opt("para"), 80), ind = limpio(opt("indicacion"), 400);
-  enSegundoPlano((async () => {
-    let tarea = "telegrama", datos: Record<string, unknown> = {}, extra = ind;
-    if (tipo === "proveedor") {
-      const P = ((await valor("proveedores")) || []) as Any[], p = P.find((v) => norm(v.name).includes(norm(para))) || P.find((v) => norm(para).includes(norm(v.name).split(" ")[0]));
-      const peds = (await lista("pedido:")).filter((x) => !x.cancelled && !x.received && (!p || x.proveedor === p.name));
-      tarea = "telegrama_proveedor";
-      datos = { proveedores: p ? [{ nombre: p.name, tipo: p.tipo || "", telegrama: p.tel || "" }] : [{ nombre: para }], pedidos_pendientes: peds.map((x) => ({ pedido: x.code, materiales: (x.items || []).map((y: Any) => y.qty + " × " + y.material).join(", "), emitido: x.date })), materiales: (await estado(false)).materiales };
-    } else if (tipo === "encargo") {
-      const E = (await lista("encargo:")).filter((e) => !e.finished && !e.cancelled && (!para || norm(e.client).includes(norm(para))));
-      const e = E.sort((a, b) => (b.ts || 0) - (a.ts || 0))[0];
-      if (!e) { await fin(`No encuentro ningún encargo pendiente${para ? " de **" + para + "**" : ""}.`); return; }
-      tarea = "telegrama_encargo";
-      datos = { cliente: e.client, telegrama: e.telegram || "", productos: (e.items || []).map((y: Any) => y.qty + " × " + y.name).join(", "), total: dolar(e.totalCents || 0), anticipo: dolar(e.depositCents || 0), pendiente: dolar(e.pendingCents || 0), tipo: /recuerd/i.test(ind) ? "recordatorio" : e.fab === "FABRICADO" ? "aviso" : "confirmacion" };
-    } else if (tipo === "anuncio") {
-      tarea = "anuncio_evento";
-      datos = { evento: { titulo: para, detalles: ind }, eventos_activos: (await lista("evento:")).filter((e: Any) => e.status === "activo").map((e: Any) => ({ tipo: e.tipo || "sorteo", premio: e.arma || "", termina: e.end ? fecha(e.end) : "", nota: e.nota || "" })) };
-    } else {
-      const cl = ((await valor("clientes")) || []) as Any[], x = cl.find((v) => norm(v.name) === norm(para)) || cl.find((v) => para && norm(v.name).includes(norm(para)));
-      datos = { persona: x ? { nombre: x.name, telegrama: x.telegram || x.tel || "", tipo: x.type || "" } : { nombre: para || "el cliente" } };
-    }
-    const r = await ia(c, tarea, datos, extra || "", { jefe: yo.jefe, quien: yo.nombre, emp_id: yo.id });
-    if ("error" in r) { await fin(NO_IA); return; }
-    await fin("Aquí lo tiene, listo para copiar y mandar por telegrama:\n```\n" + r.texto.replace(/```/g, "'''").slice(0, 1800) + "\n```");
-  })());
-  return json({ type: 5, data: { flags: 64 } });
+  let tarea = "telegrama", datos: Record<string, unknown> = {};
+  if (tipo === "proveedor") {
+    const P = ((await valor("proveedores")) || []) as Any[], p = P.find((v) => norm(v.name).includes(norm(para))) || P.find((v) => norm(para).includes(norm(v.name).split(" ")[0]));
+    const peds = (await lista("pedido:")).filter((x) => !x.cancelled && !x.received && (!p || x.proveedor === p.name));
+    tarea = "telegrama_proveedor";
+    datos = { proveedores: p ? [{ nombre: p.name, tipo: p.tipo || "", telegrama: p.tel || "" }] : [{ nombre: para }], pedidos_pendientes: peds.map((x) => ({ pedido: x.code, materiales: (x.items || []).map((y: Any) => y.qty + " × " + y.material).join(", "), emitido: x.date })), materiales: (await estado(false)).materiales };
+  } else if (tipo === "encargo") {
+    const E = (await lista("encargo:")).filter((e) => !e.finished && !e.cancelled && (!para || norm(e.client).includes(norm(para))));
+    const e = E.sort((a, b) => (b.ts || 0) - (a.ts || 0))[0];
+    if (!e) { await fin(`No encuentro ningún encargo pendiente${para ? " de **" + para + "**" : ""}.`); return; }
+    tarea = "telegrama_encargo";
+    datos = { cliente: e.client, telegrama: e.telegram || "", productos: (e.items || []).map((y: Any) => y.qty + " × " + y.name).join(", "), total: dolar(e.totalCents || 0), anticipo: dolar(e.depositCents || 0), pendiente: dolar(e.pendingCents || 0), tipo: /recuerd/i.test(ind) ? "recordatorio" : e.fab === "FABRICADO" ? "aviso" : "confirmacion" };
+  } else if (tipo === "anuncio") {
+    tarea = "anuncio_evento";
+    datos = { evento: { titulo: para, detalles: ind }, eventos_activos: (await lista("evento:")).filter((e: Any) => e.status === "activo").map((e: Any) => ({ tipo: e.tipo || "sorteo", premio: e.arma || "", termina: e.end ? fecha(e.end) : "", nota: e.nota || "" })) };
+  } else {
+    const cl = ((await valor("clientes")) || []) as Any[], x = cl.find((v) => norm(v.name) === norm(para)) || cl.find((v) => para && norm(v.name).includes(norm(para)));
+    datos = { persona: x ? { nombre: x.name, telegrama: x.telegram || x.tel || "", tipo: x.type || "" } : { nombre: para || "el cliente" } };
+  }
+  const r = await ia(c, tarea, datos, ind || "", { jefe: yo.jefe, quien: yo.nombre, emp_id: yo.id });
+  if ("error" in r) { await fin(NO_IA); return; }
+  await fin("Aquí lo tiene, listo para copiar y mandar por telegrama:\n```\n" + r.texto.replace(/```/g, "'''").slice(0, 1800) + "\n```");
 }
 
 // ── menciones en los canales: cada minuto, desde la crónica ──
@@ -482,24 +509,12 @@ export async function botonesIA(x: CtxIA & { id: string; esDir: boolean }): Prom
   }
   if (id.startsWith("avs:ped:")) {
     if (!x.esDir) return efimero("Los pedidos a proveedores los prepara la Dirección.");
-    const mat = id.slice(8);
-    enSegundoPlano((async () => {
-      const r = await proponerPedido(c, mat, por);
-      const t = r.err ? r.err : `✅ Propuesta preparada: **${r.a!.titulo}**. Está aquí mismo, en el despacho, para aprobarla.`;
-      await fetch(`https://discord.com/api/v10/webhooks/${c.app_id}/${i.token}/messages/@original`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: t, allowed_mentions: { parse: [] } }) });
-      if (!r.err) await cronAprobaciones(c);
-    })());
+    await encargarCon(c, "avs_ped", i, { material: id.slice(8) });
     return json({ type: 5, data: { flags: 64 } });
   }
   if (id.startsWith("avs:fab:")) {
     if (!x.esPersonal) return efimero("Esto es para la plantilla de la casa.");
-    const prod = id.slice(8);
-    enSegundoPlano((async () => {
-      const d = await estado(!!yo?.jefe);
-      d.recetas = (await valor("recetas")) || {};
-      const r = await ia(c, "discord_pregunta", d, `¿Qué conviene fabricar hoy? ${prod} está bajo mínimo. Dime qué fabricar y cuántas unidades, comprobando en «recetas» y «materiales» que hay material suficiente.`, { jefe: !!yo?.jefe, quien: por, emp_id: yo?.id || "discord" });
-      await fetch(`https://discord.com/api/v10/webhooks/${c.app_id}/${i.token}/messages/@original`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ embeds: [{ title: "🛠 Qué fabricar hoy", color: ORO, description: ("error" in r ? NO_IA : r.texto).slice(0, 4000), footer: { text: "Fabríquelo en la web: botón FABRICACIÓN · Señor Harrington" } }], allowed_mentions: { parse: [] } }) });
-    })());
+    await encargarCon(c, "avs_fab", i, { producto: id.slice(8) });
     return json({ type: 5, data: { flags: 64 } });
   }
   if (id.startsWith("tlg:av:")) {
@@ -515,3 +530,4 @@ export async function botonesIA(x: CtxIA & { id: string; esDir: boolean }): Prom
   }
   return null;
 }
+

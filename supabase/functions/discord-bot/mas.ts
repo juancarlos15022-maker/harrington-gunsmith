@@ -5,7 +5,7 @@
 // Tareas de la crónica (cada minuto): pedidos pendientes con botón · nóminas por carta · plazo de los encargos ·
 //   registro IC al vendedor · ofertas y sorteo para las visitas · ascensos sugeridos · fin del periodo de prueba ·
 //   panel y ranking de la mesa de juego · notas de la bitácora escritas en la web.
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { catalogo, dolar, duracion, fecha, gotica, hora, hoyNum, limpio, madrid, medianoche, ORO, PIE } from "./comun.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -498,3 +498,4 @@ function cartel(b: Any) {
     footer: { text: `Por orden de la Dirección · ${fecha(b.ts)} · Casa Harrington, Saint Denis` } }],
     components: vivo ? [{ type: 1, components: [{ type: 2, style: 2, label: "Retirar cartel (Dirección)", custom_id: "sb:del:" + b.id }] }] : [] };
 }
+

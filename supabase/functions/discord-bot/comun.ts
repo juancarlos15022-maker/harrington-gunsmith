@@ -1,6 +1,6 @@
 // HARRINGTON GUNSMITH · V3 · Piezas comunes del Señor Harrington (fechas de Madrid, catálogo y precios, letras de la época)
 // Se despliega igual dentro de discord-puerta y de discord-interacciones.
-import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2.118.0";
 
 export const PIE = { text: "Señor Harrington · Harrington Gunsmith · Saint Denis, 1880" };
 export const ORO = 0xd7ae54;
@@ -56,3 +56,4 @@ export function listaPrecios(L: Prod[]) {
   return { embeds: [{ title: "🏷️ " + gotica("Lista de Precios"), color: ORO, footer: { text: "Se pone al día sola cuando cambia un precio en la web · Señor Harrington" },
     description: "Precios del mostrador, en dólares y por unidad.\nLo marcado *por encargo* se pacta con el cliente.\nSi un cliente tiene precio especial, lo verá usted en su ficha de la web.", fields }], components: [] };
 }
+

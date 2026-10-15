@@ -1,6 +1,6 @@
 // HARRINGTON GUNSMITH · V3 · Piezas comunes del Señor Harrington (fechas de Madrid, catálogo y precios, letras de la época)
 // Se despliega igual dentro de discord-puerta y de discord-interacciones.
-import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2.118.0";
 
 export const PIE = { text: "Señor Harrington · Harrington Gunsmith · Saint Denis, 1880" };
 export const ORO = 0xd7ae54;
@@ -12,7 +12,7 @@ export const gotica = (s: string) => [...s].map((ch) => {
 }).join("");
 const SC: Record<string, string> = Object.fromEntries([..."abcdefghijklmnopqrstuvwxyz"].map((c, i) => [c, [..."ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢ"][i]]));
 export const versalita = (s: string) => [...s.toLowerCase()].map((c) => SC[c] ?? c).join("");
-export const limpio = (s: unknown, n: number) => String(s ?? "").replace(/@(everyone|here)/gi, "@\u200b$1").replace(/<@[!&]?\d+>/g, "").trim().slice(0, n);
+export const limpio = (s: unknown, n: number) => String(s ?? "").replace(/@(everyone|here)/gi, "@​$1").replace(/<@[!&]?\d+>/g, "").trim().slice(0, n);
 export const dolar = (c: unknown) => "$" + (Number(c || 0) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // ── fechas en hora de Madrid (igual que la web) ──
@@ -56,3 +56,4 @@ export function listaPrecios(L: Prod[]) {
   return { embeds: [{ title: "🏷️ " + gotica("Lista de Precios"), color: ORO, footer: { text: "Se pone al día sola cuando cambia un precio en la web · Señor Harrington" },
     description: "Precios del mostrador, en dólares y por unidad.\nLo marcado *por encargo* se pacta con el cliente.\nSi un cliente tiene precio especial, lo verá usted en su ficha de la web.", fields }], components: [] };
 }
+

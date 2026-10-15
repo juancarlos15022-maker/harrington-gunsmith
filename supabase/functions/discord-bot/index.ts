@@ -4,11 +4,13 @@
 // Cada operación queda apuntada en bot_registro.
 // Además atiende (cabecera x-hg-modo, siempre con la contraseña interna):
 //   · «extra»: las órdenes y botones de la segunda tanda que le reenvía discord-interacciones (extra.ts);
-//   · «cronica»: la crónica de la casa, que la tarea programada harrington-cronica llama cada minuto (cronica.ts).
+//   · «cronica»: la crónica de la casa, que la tarea programada harrington-cronica llama cada minuto (cronica.ts);
+//   · «ia»: el trabajo de las órdenes con IA, que tarda más de los 3 segundos de Discord (ia.ts).
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { atender as extra } from "./extra.ts";
 import { atender as cronica } from "./cronica.ts";
+import { tareaIA } from "./ia.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 const json = (o: unknown, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { "Content-Type": "application/json" } });
@@ -26,6 +28,7 @@ Deno.serve(async (req: Request) => {
   const modo = req.headers.get("x-hg-modo");
   if (modo === "extra") return extra(req);
   if (modo === "cronica") return cronica(req);
+  if (modo === "ia") return tareaIA(req);
   let b: Record<string, unknown> = {};
   try { b = await req.json(); } catch { return json({ error: "JSON" }, 400); }
   try {
@@ -60,3 +63,4 @@ Deno.serve(async (req: Request) => {
     return json({ error: String((e as Error)?.message || e).slice(0, 200) }, 500);
   }
 });
+

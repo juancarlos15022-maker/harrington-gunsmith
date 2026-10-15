@@ -17,7 +17,7 @@
 //   9. La tercera tanda (/pedidos, /compra, /agenda, /se-busca, «Recibido entero», periodo de prueba, Veintiuno, bitácora)
 //      también va a discord-bot; y lo que aquí no se reconozca se le pasa igualmente, por si es de una tanda nueva.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { catalogo, diaNum, duracion, fecha, hora, hoyNum, madrid, medianoche, ORO } from "./comun.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -100,8 +100,8 @@ async function carta(c: Record<string, string>, uid: string, texto: string) {
 }
 // las fichas del canal de plantilla se ponen al día al momento (si no, la revisión de cada medio minuto lo hace)
 const refrescarPlantilla = (c: Record<string, string>) => fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/discord-puerta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ secreto: c.secreto, solo: "plantilla" }) }).catch(() => null);
-const norm = (s: string) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
-const EXTRA_ORDENES = ["harrington", "resumen", "redactar", "encargos", "cliente", "caja", "telegrama", "mis-horas", "reunion", "votacion", "duelo", "tiradores", "cumpleanos", "examen", "pedidos", "compra", "agenda", "se-busca"];
+const norm = (s: string) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+const EXTRA_ORDENES = ["encargos", "cliente", "caja", "telegrama", "mis-horas", "reunion", "votacion", "duelo", "tiradores", "cumpleanos", "examen", "pedidos", "compra", "agenda", "se-busca"];
 const AUS_CATS = ["Viaje", "Trabajo", "Estudios", "Salud", "Asuntos personales", "Otro"];
 type Aus = { id: string; empId: string; name: string; start: number; end: number; returned?: boolean; cancelled?: boolean };
 // empleado de la web enlazado con este usuario de Discord
@@ -133,18 +133,21 @@ function anuncio(ev: { id: string; titulo: string; cuando: string; lugar?: strin
     components: [{ type: 1, components: [{ type: 2, style: 3, label: "Me apunto", emoji: { name: "✋" }, custom_id: "ev:si:" + ev.id }, { type: 2, style: 2, label: "Me borro", custom_id: "ev:no:" + ev.id }] }],
   };
 }
-const limpio = (s: unknown, n: number) => String(s ?? "").replace(/@(everyone|here)/gi, "@\u200b$1").replace(/<@[!&]?\d+>/g, "").trim().slice(0, n);
+const limpio = (s: unknown, n: number) => String(s ?? "").replace(/@(everyone|here)/gi, "@​$1").replace(/<@[!&]?\d+>/g, "").trim().slice(0, n);
 
 // La web avisa de un cambio de plantilla (alta, ascenso, despido): se ajustan los roles según lo que diga la base de datos
 async function desdeLaWeb(req: Request, cuerpo: string, c: Record<string, string>) {
   const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Content-Type": "application/json" };
   const tk = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   const { data: u } = tk ? await sb.auth.getUser(tk) : { data: null };
+  const caller = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {global:{headers:{Authorization:"Bearer "+tk}},auth:{persistSession:false,autoRefreshToken:false}});
+  const {data: permitido} = await caller.rpc("hg_es_jefe");
+  if (!permitido) return new Response(JSON.stringify({error:"SOLO_PROPIETARIO"}),{status:403,headers:cors});
   const yo = u?.user?.app_metadata?.emp_id as string | undefined;
   const { data } = await sb.from("datos").select("valor").eq("clave", "empleados").maybeSingle();
   const lista = Array.isArray(data?.valor) ? data!.valor as Array<Record<string, string>> : [];
   const quien = lista.find((e) => e.id === yo);
-  if (!quien || !["Jefe", "Gerente"].includes(quien.puesto)) return new Response(JSON.stringify({ error: "SOLO_DIRECCION" }), { status: 403, headers: cors });
+  if (!quien || u?.user?.id !== "98922f71-13a4-4623-bba1-33288ccdefa3") return new Response(JSON.stringify({ error: "SOLO_DIRECCION" }), { status: 403, headers: cors });
   let b: Record<string, unknown> = {};
   try { b = JSON.parse(cuerpo); } catch { /* */ }
   const ids = (Array.isArray(b.discord) ? b.discord : [b.discord]).map((x) => String(x || "")).filter((x) => /^\d{15,22}$/.test(x)).slice(0, 10);
@@ -156,6 +159,8 @@ async function desdeLaWeb(req: Request, cuerpo: string, c: Record<string, string
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" } });
   if (req.method !== "POST") return json({ error: "solo POST" }, 405);
+  const firmado = req.headers.get("x-signature-timestamp");
+  if (req.headers.get("x-signature-ed25519") && (!firmado || Math.abs(Date.now()/1000-Number(firmado))>300)) return new Response("firma caducada",{status:401});
   const cuerpo = await req.text();
   const c = await cfg();
   if (!req.headers.get("x-signature-ed25519") && req.headers.get("authorization")) return desdeLaWeb(req, cuerpo, c);
@@ -167,9 +172,9 @@ Deno.serve(async (req: Request) => {
   const user = i.member?.user || i.user || {}, roles: string[] = i.member?.roles || [];
   const id = String(i.data?.custom_id || "");
   const ch = (k: string) => c[k] ? `<#${c[k]}>` : "el canal siguiente";
-  const esDireccion = () => [c.rol_jefe, c.rol_gerente].filter(Boolean).some((r) => roles.includes(r));
+  const esDireccion = () => String(user.id) === "1398183011232518164";
   // segunda tanda de órdenes y botones: las atiende discord-bot en modo «extra» (la firma de Discord ya está comprobada aquí)
-  if (((i.type === 2 || i.type === 4) && EXTRA_ORDENES.includes(String(i.data?.name || ""))) || ((i.type === 3 || i.type === 5) && /^(reu|vot|duel|exa|buz|vis|ped|prb|sb|bj|bit|apr|avs|tlg):/.test(id))) {
+  if (((i.type === 2 || i.type === 4) && EXTRA_ORDENES.includes(String(i.data?.name || ""))) || ((i.type === 3 || i.type === 5) && /^(reu|vot|duel|exa|buz|vis|ped|prb|sb|bj|bit):/.test(id))) {
     try {
       const r = await fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/discord-bot", { method: "POST", headers: { "Content-Type": "application/json", "x-hg-secreto": c.secreto, "x-hg-modo": "extra" }, body: cuerpo });
       if (r.ok) return new Response(await r.text(), { status: 200, headers: { "Content-Type": "application/json" } });
@@ -533,6 +538,7 @@ Deno.serve(async (req: Request) => {
     const quien = limpio(i.member?.nick || user.global_name || user.username, 60);
     const embed = (i.message?.embeds || [])[0] || { title: "✉️ " + gotica("Solicitud de Empleo") };
     if (accion === "ok") {
+      let altaId = "";
       const p = PUESTOS[puesto];
       if (!p || !c[p.k]) return efimero("Ese puesto no está dispuesto todavía.");
       // 1) aprendiz o armero: ficha de empleado en la web (la web publica después su contrato). El colaborador no tiene ficha.
@@ -544,6 +550,7 @@ Deno.serve(async (req: Request) => {
         if (!nombreIC) return efimero("A esta solicitud le falta el nombre del personaje: pídale que la presente de nuevo.");
         const alta = await sb.rpc("hg_alta_empleado", { p_nombre: nombreIC, p_puesto: p.web, p_tel: telIC, p_discord: uid, p_por: quien });
         if (alta.error) return efimero("No he podido abrir su ficha en la web: " + alta.error.message);
+        altaId = String(alta.data?.id || "");
       }
       const a = await api(c, "PUT", `/guilds/${c.guild_id}/members/${uid}/roles/${c[p.k]}`, undefined, `Solicitud aceptada por ${quien} como ${p.n}`);
       if (a.st === 404) return efimero("Esa persona ya no se halla en el servidor.");
@@ -554,8 +561,18 @@ Deno.serve(async (req: Request) => {
         await sb.from("bot_solicitudes").update({ estado: "aceptada", puesto: p.n, decidida: new Date().toISOString(), decidida_por: quien }).eq("user_id", uid);
         try {
           const dm = await api(c, "POST", "/users/@me/channels", { recipient_id: uid });
+          let enlaceAlta = "";
+          if (altaId) {
+            const {data: existente} = await sb.from("hg_security_credentials").select("emp_id").eq("emp_id",altaId).maybeSingle();
+            if (!existente) {
+              const codigo = crypto.randomUUID()+crypto.randomUUID();
+              const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(codigo)))).map(x=>x.toString(16).padStart(2,"0")).join("");
+              const {error: ie} = await sb.from("hg_security_invitations").upsert({emp_id:altaId,hash,expires_at:new Date(Date.now()+86400000).toISOString()});
+              if (!ie) enlaceAlta = "\n\n**Activar su tarjeta y crear su contraseña (enlace privado, 24 horas):**\nhttps://juancarlos15022-maker.github.io/harrington-gunsmith/#alta="+encodeURIComponent(codigo)+"&empleado="+encodeURIComponent(altaId);
+            }
+          }
           const web = p.web ? `\n\n**Para empezar:**\n**1.** Lea los avisos en ${ch("canal_bandos")}.\n**2.** Entre en la web desde ${ch("canal_enlaces_personal")}: toque su tarjeta y cree su contraseña.\n**3.** Su contrato aparecerá en el canal de contratos.` : `\n\nComo colaborador no necesita la web: le basta con los canales de Discord. Empiece por ${ch("canal_bandos")}.`;
-          if (dm.d?.id) await api(c, "POST", `/channels/${dm.d.id}/messages`, { content: `🎩 **Casa Harrington · Saint Denis**\n\nDistinguido aspirante:\n\nTengo el gusto de comunicarle que la Dirección ha tenido a bien admitirle como **${p.n}** de esta casa. Desde este momento tiene usted abiertas las dependencias del personal en nuestro Discord.${web}` + FIRMA });
+          if (dm.d?.id) await api(c, "POST", `/channels/${dm.d.id}/messages`, { content: `🎩 **Casa Harrington · Saint Denis**\n\nDistinguido aspirante:\n\nTengo el gusto de comunicarle que la Dirección ha tenido a bien admitirle como **${p.n}** de esta casa. Desde este momento tiene usted abiertas las dependencias del personal en nuestro Discord.${web}${enlaceAlta}` + FIRMA });
         } catch { /* mensajes privados cerrados */ }
         const como = p.web ? `que desde hoy sirve en la Casa Harrington como **${p.n}**` : "que desde hoy colabora con la Casa Harrington";
         if (c.canal_bienvenida) await api(c, "POST", `/channels/${c.canal_bienvenida}/messages`, { content: `🎩 Sírvanse dar la bienvenida a <@${uid}>, ${como}.`, allowed_mentions: { users: [uid] } });
@@ -582,3 +599,4 @@ Deno.serve(async (req: Request) => {
   }
   return efimero("Este botón ha caído en desuso.");
 });
+

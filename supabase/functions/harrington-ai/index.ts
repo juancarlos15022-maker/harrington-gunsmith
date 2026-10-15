@@ -12,8 +12,9 @@
 // los datos los prepara discord-bot desde la base de datos según quién pregunta (Dirección o empleado).
 // «tutorial_sync»: un jefe deja aquí el texto del Tutorial de la web (en ia_cfg) para que Harrington lo use en Discord.
 // «charla_leer» / «charla_apuntar»: la conversación de cada empleado con Harrington (tabla ia_charla), compartida con Discord.
+// v8: con Gemini pide «pensar poco» (más rápido) y deja para el final, 5 minutos, el modelo que acaba de fallar o colgarse.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 // Proveedor de IA: Gemini (Google) o Groq. Las claves están en los secretos de Supabase o en la tabla protegida ia_cfg
@@ -37,6 +38,13 @@ async function cfg() {
 }
 const CLAVE = () => CFG?.clave || "";
 const API = () => PROV[CFG?.prov || "gemini"].api;
+// Con Gemini se le pide que «piense poco»: contesta en segundos en vez de medio minuto.
+const PENSAR = (): Record<string, string> => CFG?.prov === "gemini" ? { reasoning_effort: "low" } : {};
+// Un modelo que acaba de fallar (lento o saturado) se deja para el final durante 5 minutos,
+// para no perder medio minuto esperándole en cada pregunta. No cambia la lista de ia_cfg.
+const MAL: Record<string, number> = {};
+const malo = (m: string) => { MAL[m] = Date.now(); };
+const modelosEnOrden = () => { const t = Date.now() - 300000, v = (m: string) => (MAL[m] || 0) > t ? 1 : 0; return [...CFG!.modelos].sort((a, b) => v(a) - v(b)); };
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -126,10 +134,13 @@ async function quien(req: Request) {
   const { data: u } = await sb.auth.getUser(tk);
   const id = u?.user?.app_metadata?.emp_id as string | undefined;
   if (!id) return null;
+  const caller = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {global:{headers:{Authorization:"Bearer "+tk}},auth:{persistSession:false,autoRefreshToken:false}});
+  const {data: permitido} = await caller.rpc("hg_permitido");
+  if (!permitido) return null;
   const { data } = await sb.from("datos").select("valor").eq("clave", "empleados").maybeSingle();
   const emp = Array.isArray(data?.valor) ? (data!.valor as Array<{ id?: string; name?: string; puesto?: string }>).find((e) => e && e.id === id) : null;
   if (!emp) return null;
-  return { id, nombre: emp.name || "", jefe: emp.puesto === "Jefe" };
+  return { id, nombre: emp.name || "", jefe: u?.user?.id === "98922f71-13a4-4623-bba1-33288ccdefa3" };
 }
 const ritmo = new Map<string, number[]>();
 function demasiadas(id: string) {
@@ -170,7 +181,7 @@ async function interpretar(texto: string, historial: Array<{ r: string; t: strin
   let ultimo = "";
   TRAZA.length = 0;
   const intentos: Array<[string, string]> = [];
-  for (const m of CFG!.modelos) intentos.push([m, "required"], [m, "auto"]);
+  for (const m of modelosEnOrden()) intentos.push([m, "required"], [m, "auto"]);
   for (let k = 0; k < intentos.length; k++) {
     const [model, tc] = intentos[k];
     const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 15000);
@@ -178,10 +189,10 @@ async function interpretar(texto: string, historial: Array<{ r: string; t: strin
       const r = await fetch(API() + "/chat/completions", {
         method: "POST", signal: ctl.signal,
         headers: { Authorization: "Bearer " + CLAVE(), "Content-Type": "application/json" },
-        body: JSON.stringify({ model, messages: msgs, tools: toolsAPI(), tool_choice: tc, temperature: 0.1, max_tokens: 400 }),
+        body: JSON.stringify({ model, messages: msgs, tools: toolsAPI(), tool_choice: tc, temperature: 0.1, max_tokens: 400, ...PENSAR() }),
       });
       TRAZA.push(model + ":" + tc + ":" + r.status);
-      if (r.status === 429 || r.status >= 500) { ultimo = r.status === 429 ? "LIMITE" : "IA_CAIDA"; if (tc === "required") k++; continue; }
+      if (r.status === 429 || r.status >= 500) { malo(model); ultimo = r.status === 429 ? "LIMITE" : "IA_CAIDA"; if (tc === "required") k++; continue; }
       if (r.status === 401 || r.status === 403) return { error: "CLAVE_MALA" };
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { ultimo = "IA:" + String((Array.isArray(j) ? j[0] : j)?.error?.message || r.status).slice(0, 160); continue; }
@@ -195,6 +206,7 @@ async function interpretar(texto: string, historial: Array<{ r: string; t: strin
       try { args = JSON.parse(call.arguments || "{}"); } catch { args = {}; }
       return { herramienta: String(call.name || ""), args, modelo: model };
     } catch (e) {
+      malo(model); if (tc === "required") k++; // si se cuelga, no se le vuelve a esperar
       ultimo = (e as Error)?.name === "AbortError" ? "IA_LENTA" : "IA_CAIDA";
     } finally { clearTimeout(to); }
   }
@@ -262,23 +274,28 @@ async function redactar(tarea: string, datos: unknown, extra: string, jefe: bool
   const discord = tarea.startsWith("discord_") || tarea === "informe_lunes" || tarea === "aprobacion", json_ = tarea === "examen_preguntas";
   let ultimo = "";
   TRAZA.length = 0;
-  for (const model of CFG!.modelos) {
-    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 30000);
+  // como mucho 75 s en total; cada modelo, hasta 25 s (el último, lo que quede)
+  const LISTA = modelosEnOrden(), fin = Date.now() + 75000;
+  for (let n = 0; n < LISTA.length; n++) {
+    const model = LISTA[n], queda = fin - Date.now();
+    if (queda < 3000) { ultimo = ultimo || "IA_LENTA"; break; }
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), n === LISTA.length - 1 ? queda : Math.min(25000, queda));
     try {
       const r = await fetch(API() + "/chat/completions", { method: "POST", signal: ctl.signal, headers: { Authorization: "Bearer " + CLAVE(), "Content-Type": "application/json" },
-        body: JSON.stringify({ model, messages: msgs, temperature: 0.4, max_tokens: 3000 }) });
+        body: JSON.stringify({ model, messages: msgs, temperature: 0.4, max_tokens: 3000, ...PENSAR() }) });
       TRAZA.push(model + ":" + r.status);
-      if (r.status === 429 || r.status >= 500) { ultimo = r.status === 429 ? "LIMITE" : "IA_CAIDA"; continue; }
+      if (r.status === 429 || r.status >= 500) { malo(model); ultimo = r.status === 429 ? "LIMITE" : "IA_CAIDA"; continue; }
       if (r.status === 401 || r.status === 403) return { error: "CLAVE_MALA" };
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { ultimo = "IA:" + String((Array.isArray(j) ? j[0] : j)?.error?.message || r.status).slice(0, 160); continue; }
       let t = String(j?.choices?.[0]?.message?.content || "").replace(/\r/g, "").replace(/^#+\s*/gm, "");
       if (!discord && !json_) t = t.replace(/\*\*/g, "");
-      if (discord) t = t.replace(/@(everyone|here)/gi, "@\u200b$1").replace(/<@[!&]?\d+>/g, "");
+      if (discord) t = t.replace(/@(everyone|here)/gi, "@​$1").replace(/<@[!&]?\d+>/g, "");
       t = t.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim().slice(0, json_ ? 6000 : 2400);
       if (!t) { ultimo = "VACIO"; continue; }
       return { texto: t, modelo: model };
     } catch (e) {
+      malo(model);
       ultimo = (e as Error)?.name === "AbortError" ? "IA_LENTA" : "IA_CAIDA";
     } finally { clearTimeout(to); }
   }
@@ -293,7 +310,7 @@ async function transcribir(b64: string, tipo: string) {
     const fmt = /mp4|m4a|aac/.test(tipo) ? "mp4" : /ogg/.test(tipo) ? "ogg" : /wav/.test(tipo) ? "wav" : "webm";
     const r = await fetch(API() + "/chat/completions", {
       method: "POST", headers: { Authorization: "Bearer " + CLAVE(), "Content-Type": "application/json" },
-      body: JSON.stringify({ model: CFG!.modelos[0], temperature: 0, max_tokens: 200, messages: [{ role: "user", content: [
+      body: JSON.stringify({ model: modelosEnOrden()[0], temperature: 0, max_tokens: 200, messages: [{ role: "user", content: [
         { type: "text", text: "Transcribe literalmente en español lo que se dice en este audio. Devuelve solo el texto, sin comillas ni comentarios." },
         { type: "input_audio", input_audio: { data: b64, format: fmt } },
       ] }] }),
@@ -326,6 +343,8 @@ Deno.serve(async (req: Request) => {
   try {
     await cfg();
     if (b.accion === "diagnostico") {
+      const autorizado = await quien(req);
+      if (!autorizado?.jefe) return json({error:"SOLO_PROPIETARIO"},403);
       // comprobación de la clave (no devuelve ningún dato privado)
       if (!CLAVE()) return json({ prov: CFG!.prov, clave: false });
       const r = await fetch(API() + "/models", { headers: { Authorization: "Bearer " + CLAVE() } });
@@ -442,3 +461,4 @@ Deno.serve(async (req: Request) => {
     return json({ error: String((e as Error)?.message || e).slice(0, 200) }, 500);
   }
 });
+

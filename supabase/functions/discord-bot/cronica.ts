@@ -4,7 +4,7 @@
 // Cada 10 minutos: medallas. Una vez al día (hora de Madrid): 9:00 el tiempo y un refrán; 10:00 aniversarios y cumpleaños;
 // 11:00 inactividad y armas sin registrar. Domingo 18:00 resumen del personal; domingo 21:00 la Gaceta de Saint Denis.
 // Día 1 a las 12:00: empleado del mes. Cada aviso diario se apunta en bot_hechos para no repetirse nunca.
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { catalogo, CATS, dolar, duracion, fecha, gotica, hora, hoyNum, limpio, madrid, medianoche, ORO, PIE, versalita } from "./comun.ts";
 import { cronicaMas } from "./mas.ts";
 import { bancoExamen, botonAvisado, cronAprobaciones, cronAvisos, ia, informeLunes, menciones, parteManana, textoEncargoListo } from "./ia.ts";
@@ -363,3 +363,4 @@ export async function atender(req: Request): Promise<Response> {
   try { mas = await cronicaMas(c, +madrid(Date.now()).minute % 10 === 0 || !!b.todo); } catch (e) { mas = { error: String((e as Error)?.message || e).slice(0, 120) }; }
   return json({ ok: true, hecho, mas, menc });
 }
+
