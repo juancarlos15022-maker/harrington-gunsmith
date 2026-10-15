@@ -30,7 +30,7 @@ return new Response(JSON.stringify(rows),{status:200,headers:{'Content-Type':'ap
 };
 gPwSrv=async function(s,e,pw){
 if(s.mode==='create'&&pw.length<12)return gPwErr('Mínimo 12 caracteres');
-const r=await authApi({accion:s.mode==='create'?'crear':'entrar',empId:e.id,pw});
+const r=await authApi({accion:s.mode==='create'?'crear':'entrar',empId:e.id,pw,...(document.getElementById('hgAltaCodigo')?{invitacion:document.getElementById('hgAltaCodigo').value.trim()}: {})});
 if(r.ok&&r.j.access_token){invitacion={};try{sessionStorage.removeItem('hg_alta')}catch{}G.fails[e.id]=0;authSave(authFromResp(r.j,e.id));setBoss(!!r.j.jefe);gateHello(e);try{rtToken()}catch{}return;}
 if(r.st===401)return 'mal';
 if(r.st===429)return gPwErr('Demasiados intentos. Espera 15 minutos.');
@@ -38,7 +38,8 @@ if(r.j.error==='INVITACION_NECESARIA')return gPwErr('Abre el enlace privado que 
 if(r.j.error==='CONFIGURA_CLAVE_PERSONAL_DESDE_TU_SESION')return gPwErr('Crea tu contraseña personal desde la sesión de Vincent que tienes abierta.');
 return gPwErr(r.st===0?'Sin conexión: no se puede verificar tu cuenta.':r.j.error||'No se pudo iniciar sesión.');
 };
-const gPick=gatePickSrv;gatePickSrv=async function(e){await gPick(e);if(!G.pw)return;if(invitacion.emp===e.id){const estadoAlta=await authApi({accion:'estado',empId:e.id});if(estadoAlta.ok&&!estadoAlta.j.tiene){gPwShow(e,'create');G.pw.srv=true;G.pw.srvTry=true;}else if(estadoAlta.ok){invitacion={};try{sessionStorage.removeItem('hg_alta')}catch{}}}};
+const mostrarClaveAnterior=gPwShow;gPwShow=function(e,mode,extra){mostrarClaveAnterior(e,mode,extra);const l=document.querySelector('#gPw label[for="gPw1"]');if(l&&!['wait','offline'].includes(mode))l.textContent=mode==='create'?'Crea tu contraseña personal':'Tu contraseña personal';const nota=document.querySelector('#gPw .gp-note');if(nota)nota.textContent='Mínimo 12 caracteres. Solo tú puedes usarla; únicamente el propietario puede resetearla.';};
+const gPick=gatePickSrv;gatePickSrv=async function(e){await gPick(e);if(!G.pw)return;if(invitacion.emp===e.id||e.id===OWNER){const estadoAlta=await authApi({accion:'estado',empId:e.id});if(estadoAlta.ok&&!estadoAlta.j.tiene){gPwShow(e,'create');G.pw.srv=true;G.pw.srvTry=true;if(invitacion.emp!==e.id){const l=document.createElement('label');l.textContent='Código de activación privado';const i=document.createElement('input');i.id='hgAltaCodigo';i.type='password';i.autocomplete='off';l.appendChild(i);document.getElementById('gPw').prepend(l);}}else if(estadoAlta.ok){invitacion={};try{sessionStorage.removeItem('hg_alta')}catch{}}}};
 const restringidas=new Set(['empleados','descuentos','precios','productos','discord','stockmin','proveedores','recetas','jefe','sebusca']);
 const pushOriginal=cloudPush,flushOriginal=cloudFlush;
 cloudPush=function(k){if(ME?.id!==OWNER&&restringidas.has(k)){delete cloud.dirty[k];saveDirty();return;}return pushOriginal(k);};
