@@ -7,3 +7,4 @@
 #hgDiscordPedir{width:100%;border:1px solid #c9ac69;background:#273e32;color:#fff1c7}
 #hgDiscordEstado{overflow-wrap:anywhere}
 .hg-access-name{margin:0 0 12px;font:700 20px Georgia,serif;color:#f3dfa6}
+.gate[data-ph="scene"] #gEnter,.gate[data-ph="scene"] #gUi>.g-hint{position:relative;left:var(--entrada-desplazamiento,0px);text-align:center}
