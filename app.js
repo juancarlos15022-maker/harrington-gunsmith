@@ -28,7 +28,7 @@ if(SANDBOX)(function(){
  /* 2) sin avisos instantáneos de la nube real */
  try{window.WebSocket=undefined}catch(e){}
  /* 3) la nube y Discord simulados */
- const realFetch=window.fetch.bind(window), DB={}, ST={};let CNT=0, seeded=null;
+ const realFetch=window.fetch.bind(window), DB={}, ST={};let CNT=0, seeded=null,stockVersion=0;
  const J=(o,st)=>Promise.resolve(new Response(o===null?null:JSON.stringify(o),{status:st||200,headers:{'Content-Type':'application/json'}}));
  const now=()=>new Date().toISOString();
  const SB='https://mrlpvjxuifvspeaqtscm.supabase.co', KEY='sb_publishable_OvDXH0UuWJMMBd6fYgOxtg_IsVBZKTz';
@@ -70,6 +70,25 @@ if(SANDBOX)(function(){
   if(path.startsWith('rpc/')){
    const fn=path.slice(4);
    if(fn==='siguiente_numero'){CNT++;return J(CNT)}
+   if(fn==='inventario_preparar'){
+    if(!isJefe(meEmp()))return J({message:'SOLO_JEFES'},403);
+    const b={};Object.keys(ST).forEach(k=>{b[k]={q:ST[k],v:String(stockVersion)}});return J(b);
+   }
+   if(fn==='inventario_guardar'){
+    const me=meEmp();if(!isJefe(me))return J({message:'SOLO_JEFES'},403);
+    const req='inventario:'+body.p_peticion,old=DB[req],items=body.p_items;
+    if(old){if(old.valor.huella!==JSON.stringify(items))return J({message:'PETICION_REUTILIZADA'},400);return J(Object.assign({},old.valor,{stock:Object.assign({},ST),replayed:true}))}
+    if(!Array.isArray(items)||!items.length)return J({message:'RECUENTO_VACIO'},400);
+    if(items.some(x=>!Number.isInteger(x.fis)||x.fis<0||x.fis>999999))return J({message:'CANTIDAD_INVALIDA'},400);
+    const changed=items.filter(x=>(ST[x.k]||0)!==x.teo||(ST[x.k]===undefined?null:String(stockVersion))!==x.version);
+    if(changed.length)return J({message:'STOCK_CAMBIADO',details:JSON.stringify(changed.map(x=>x.k))},400);
+    const rid='ij-'+body.p_peticion,ts=Date.now(),records=[],moves=[],all=items.map(x=>Object.assign({},x,{name:isMat(x.k)?x.k.slice(4):x.k,diff:x.fis-x.teo}));
+    all.filter(x=>x.diff).forEach((x,i)=>{ST[x.k]=x.fis;const uid=rid+'-'+i;records.push({clave:'mov:'+uid,valor:{uid:uid,ts:ts,who:me.name,name:isMatK(x.k)?x.name+' (material)':x.name,delta:x.diff,why:'Ajuste por inventario '+rid,antes:x.teo,despues:x.fis}});moves.push({producto:x.k,delta:x.diff});records.push({clave:'act:'+uid,valor:{id:uid,ts:ts,tipo:'revision',who:me.name,empId:me.id,data:{ref:rid+'|'+x.k,nota:'Ajustado mediante inventario físico'}}})});
+    if(moves.length)stockVersion++;
+    records.push({clave:'recu:'+rid,valor:{id:rid,ts:ts,by:me.name,tipo:'inventario físico de Dirección',ajustado:true,items:all}},{clave:'act:'+rid,valor:{id:rid,ts:ts,tipo:'recuento',who:me.name,empId:me.id,data:{id:rid,tipoR:'inventario físico ajustado',n:all.length,diffs:moves.length}}});
+    records.forEach(r=>{DB[r.clave]={valor:r.valor,actualizado:now()}});
+    const result={id:rid,empId:me.id,huella:JSON.stringify(items),items:all,changed:moves.length,warnings:[],records:records,moves:moves,stock:Object.assign({},ST),replayed:false};DB[req]={valor:result,actualizado:now()};return J(result);
+   }
    if(fn==='vender_fabricando'){
     const req='autoventa:'+body.p_peticion, old=DB[req];
     if(old)return J(Object.assign({},old.valor,{replayed:true,stock:Object.assign({},ST)}));
@@ -82,13 +101,13 @@ if(SANDBOX)(function(){
     Object.keys(p.made).forEach((n,i)=>{moves.push({producto:n,delta:p.made[n],why:'Fabricación'});const uid='av-'+body.p_peticion+'-'+i;records.push({clave:'fablote:'+uid,valor:{id:uid,ts:ts,empId:me.id,emp:me.name,prod:n,q:p.made[n],autoVenta:id}})});
     Object.keys(p.used).forEach(n=>moves.push({producto:n,delta:-p.used[n],why:'Fabricación'}));
     Object.keys(p.sold).forEach(n=>moves.push({producto:n,delta:-p.sold[n],why:'Venta '+id}));
-    moves.forEach((m,i)=>{const v=ST[m.producto]||0;ST[m.producto]=v+m.delta;const uid='av-'+body.p_peticion+'-m'+i;records.push({clave:'mov:'+uid,valor:{uid:uid,ts:ts,who:me.name,name:isMat(m.producto)?m.producto.slice(4)+' (material)':m.producto,delta:m.delta,why:m.why,venta:id,antes:v,despues:v+m.delta,date:sl.date,time:sl.time}})});
+    moves.forEach((m,i)=>{const v=ST[m.producto]||0;ST[m.producto]=v+m.delta;const uid='av-'+body.p_peticion+'-m'+i;records.push({clave:'mov:'+uid,valor:{uid:uid,ts:ts,who:me.name,name:isMat(m.producto)?m.producto.slice(4)+' (material)':m.producto,delta:m.delta,why:m.why,venta:id,antes:v,despues:v+m.delta,date:sl.date,time:sl.time}})});stockVersion++;
     records.push({clave:'venta:'+id,valor:Object.assign({},sl,{stock:p.sold,ts:new Date(ts+1).toISOString()})});
     if(Object.keys(p.made).length){const uid='av-'+body.p_peticion;records.push({clave:'act:'+uid,valor:{id:uid,ts:ts,tipo:'fabricacion',who:me.name,empId:me.id,data:{txt:'Fabricación automática para venta '+id,venta:id,productos:p.made,materiales:p.used}}})}
     records.forEach(r=>{DB[r.clave]={valor:r.valor,actualizado:now()}});
     const res={sale:sl,stock:Object.assign({},ST),records:records,made:p.made,used:p.used,moves:moves,replayed:false};DB[req]={valor:res,actualizado:now()};return J(res);
    }
-   if(fn==='mover_stock'){const n=Object.assign({},ST);for(const it of (body&&body.p_items)||[]){let v=n[it.producto];if(v==null){if(it.delta<0)return J({message:'STOCK_INSUFICIENTE',code:'P0001'},400);v=0}v+=it.delta;if(v<0)return J({message:'STOCK_INSUFICIENTE',code:'P0001'},400);n[it.producto]=v}Object.assign(ST,n);return J(Object.assign({},ST))}
+   if(fn==='mover_stock'){const n=Object.assign({},ST);for(const it of (body&&body.p_items)||[]){let v=n[it.producto];if(v==null){if(it.delta<0)return J({message:'STOCK_INSUFICIENTE',code:'P0001'},400);v=0}v+=it.delta;if(v<0)return J({message:'STOCK_INSUFICIENTE',code:'P0001'},400);n[it.producto]=v}Object.assign(ST,n);stockVersion++;return J(Object.assign({},ST))}
    return J({},200);
   }
   if(path==='datos'){
@@ -98,8 +117,8 @@ if(SANDBOX)(function(){
   }
   if(path==='stock'){
    if(m==='GET')return J(Object.keys(ST).map(k=>({producto:k,cantidad:ST[k]})));
-   if(m==='POST'){(body||[]).forEach(r=>{ST[r.producto]=r.cantidad});return J(null,201)}
-   if(m==='PATCH'){const f=decodeURIComponent(q.get('producto')||'');Object.keys(ST).forEach(k=>{if(f.startsWith('not.like.mat:')&&k.startsWith('mat:'))return;if(f.startsWith('like.mat:')&&!k.startsWith('mat:'))return;ST[k]=body.cantidad});return J(null,204)}
+   if(m==='POST'){(body||[]).forEach(r=>{ST[r.producto]=r.cantidad});stockVersion++;return J(null,201)}
+   if(m==='PATCH'){const f=decodeURIComponent(q.get('producto')||'');Object.keys(ST).forEach(k=>{if(f.startsWith('not.like.mat:')&&k.startsWith('mat:'))return;if(f.startsWith('like.mat:')&&!k.startsWith('mat:'))return;ST[k]=body.cantidad});stockVersion++;return J(null,204)}
   }
   if(path==='contador'){if(m==='GET')return J([{valor:CNT}]);if(m==='PATCH'){CNT=body.valor;return J(null,204)}}
   return J({},200);
