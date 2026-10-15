@@ -1,7 +1,7 @@
 /* HARRINGTON GUNSMITH · sw.js
    Guarda la web en el móvil para que se abra al instante y aunque no haya conexión.
    Va en la misma carpeta que index.html. No hace falta tocarlo nunca. */
-const CACHE = 'harrington-v2';
+const CACHE = 'harrington-seguridad-20261015';
 
 self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => {
@@ -67,7 +67,8 @@ self.addEventListener('push', e => {
 /* al tocar el aviso se abre la aplicación (o se trae al frente si ya estaba abierta) */
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const url = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope).href;
+  const destino = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope);
+  const url = destino.origin === self.location.origin && destino.pathname.startsWith(new URL(self.registration.scope).pathname) ? destino.href : self.registration.scope;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
     for (const c of list) { if (c.url.indexOf(self.registration.scope) === 0 && 'focus' in c) return c.focus(); }
     return self.clients.openWindow(url);

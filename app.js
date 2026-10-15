@@ -225,7 +225,7 @@ const EMPTY_ART={
 };
 const EMPTY_IMG={rev:'vacio-pedido.webp',scroll:'vacio-encargos.webp',crate:'vacio-pedidos.webp',anvil:'vacio-materiales.png'};
 /* Imagen propia si está subida; si no, el dibujo de líneas */
-function emptyArt(k){return '<span class="empty-art"><img src="'+EMPTY_IMG[k]+'" alt="" loading="lazy" decoding="async" onerror="this.parentNode.classList.add(\'nofile\')">'+(EMPTY_ART[k]||'')+'</span>'}
+function emptyArt(k){return '<span class="empty-art"><img src="'+EMPTY_IMG[k]+'" alt="" loading="lazy" decoding="async">'+(EMPTY_ART[k]||'')+'</span>'}
 function bump(el){el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump')}
 /* Evita el doble toque: mientras una operación con la nube está en marcha, el botón no responde otra vez */
 const busyOps={};
@@ -4560,7 +4560,7 @@ function iconErr(img){
 }
 document.querySelectorAll('.product').forEach(pr=>{
  const ic=pr.querySelector('.weapon-icon'), src=CAT_IMG[pr.dataset.cat];
- if(ic&&src)ic.innerHTML=`<img src="${src}" alt="" loading="lazy" decoding="async" onload="this.parentNode.classList.add('has-icon')" onerror="iconErr(this)">`;
+ if(ic&&src)ic.innerHTML=`<img src="${src}" alt="" loading="lazy" decoding="async">`;
 });
 const DESCRIPCIONES={
 'Cattleman Revolver':'Revólver de acción simple y seis disparos, robusto y fiable. El clásico de cualquier vaquero.',
@@ -5206,7 +5206,7 @@ async function sbFetch(path,opts){
  opts=opts||{};
  let tk=null;if(opts._tk!==undefined)tk=opts._tk;else try{tk=await authToken()}catch(e){}
  /* base de datos cerrada y sin cuenta segura: no se intenta escribir (se queda pendiente hasta entrar con la tarjeta) */
- if(!tk&&(opts.method||'GET')!=='GET'&&path.indexOf('/rest/v1/')===0&&accClosed())return new Response(JSON.stringify({message:'SIN_CUENTA'}),{status:401,headers:{'Content-Type':'application/json'}});
+ if(!tk&&(opts.method||'GET')!=='GET'&&path.indexOf('/rest/v1/')===0&&!SANDBOX)return new Response(JSON.stringify({message:'SIN_CUENTA'}),{status:401,headers:{'Content-Type':'application/json'}});
  const go=k=>{
   const ctl=typeof AbortController!=='undefined'?new AbortController():null, t=ctl?setTimeout(()=>ctl.abort(),9000):null;
   return fetch(SB_URL+path,Object.assign({},opts,{signal:ctl?ctl.signal:undefined,headers:Object.assign({apikey:SB_KEY,'Content-Type':'application/json'},k?{Authorization:'Bearer '+k}:{},opts.headers||{})})).finally(()=>{if(t)clearTimeout(t)});

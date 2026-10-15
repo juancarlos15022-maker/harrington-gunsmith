@@ -1,0 +1,801 @@
+{
+  "functions": [
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.fabricar_empleado(p_emp text, p_items jsonb, p_lote jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  res jsonb;\nbegin\n  if not hg_permitido() then raise exception 'SIN_CUENTA'; end if;\n  if coalesce(p_emp, '') = '' or p_lote->>'id' is null or p_lote->>'empId' is distinct from p_emp then\n    raise exception 'FAB_DATOS';\n  end if;\n  perform pg_advisory_xact_lock(hashtext('hg-fab-' || p_emp));\n  if hg_pendientes_empleado(p_emp) > 0 then\n    raise exception 'FAB_BLOQUEADA';\n  end if;\n  res := mover_stock(p_items);\n  insert into datos (clave, valor, actualizado) values ('fablote:' || (p_lote->>'id'), p_lote, now());\n  insert into datos (clave, valor, actualizado)\n    values ('rev', jsonb_build_object('n', (extract(epoch from now()) * 1000)::bigint::text || '-fab'), now())\n    on conflict (clave) do update set valor = excluded.valor, actualizado = excluded.actualizado;\n  return res;\nend $function$\n",
+      "oid": "17832",
+      "name": "fabricar_empleado",
+      "identity": "p_emp text, p_items jsonb, p_lote jsonb"
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hacer_copia(p_tipo text DEFAULT 'diaria'::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_id  text;\n  v_dat jsonb;\n  v_stk jsonb;\n  v_cnt integer;\n  v_n   integer;\n  v_dia date;\nbegin\n  if not hg_permitido() then raise exception 'SIN_CUENTA'; end if;\n  if p_tipo not in ('diaria', 'antes-restaurar') then raise exception 'COPIA_TIPO'; end if;\n  v_dia := (now() at time zone 'Europe/Madrid')::date;\n  v_id := case when p_tipo = 'diaria' then 'diaria-' || extract(isodow from v_dia)::int else 'antes-restaurar' end;\n  if p_tipo = 'diaria' and exists (select 1 from copias where id = v_id and (creada at time zone 'Europe/Madrid')::date = v_dia) then\n    return jsonb_build_object('id', v_id, 'hecha', false);\n  end if;\n  select coalesce(jsonb_object_agg(clave, jsonb_build_object('v', valor, 'a', actualizado)), '{}'::jsonb), count(*)\n    into v_dat, v_n from datos where not hg_fuera_de_copia(clave);\n  select coalesce(jsonb_object_agg(producto, to_jsonb(s) - 'producto'), '{}'::jsonb) into v_stk from stock s;\n  select valor into v_cnt from contador where id = 1;\n  insert into copias (id, tipo, creada, datos, stock, contador, filas, bytes)\n    values (v_id, p_tipo, now(), v_dat, v_stk, v_cnt, v_n, pg_column_size(v_dat) + pg_column_size(v_stk))\n    on conflict (id) do update set creada = excluded.creada, datos = excluded.datos, stock = excluded.stock,\n      contador = excluded.contador, filas = excluded.filas, bytes = excluded.bytes;\n  return jsonb_build_object('id', v_id, 'hecha', true, 'filas', v_n);\nend $function$\n",
+      "oid": "17974",
+      "name": "hacer_copia",
+      "identity": "p_tipo text"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_alta_empleado(p_nombre text, p_puesto text, p_tel text, p_discord text, p_por text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  arr jsonb; e jsonb; ex jsonb; v_id text; hoy date := (now() at time zone 'Europe/Madrid')::date; ms bigint := (extract(epoch from now())*1000)::bigint;\n  sueldo int := case p_puesto when 'Aprendiz de armero' then 2000 when 'Armero' then 2500 when 'Armero experto' then 3000 when 'Gerente' then 4000 else 2000 end;\nbegin\n  if coalesce(trim(p_nombre),'') = '' then raise exception 'NOMBRE'; end if;\n  select valor into arr from datos where clave = 'empleados' for update;\n  if arr is null or jsonb_typeof(arr) <> 'array' then arr := '[]'::jsonb; end if;\n  select x into ex from jsonb_array_elements(arr) x where lower(trim(x->>'name')) = lower(trim(p_nombre)) or (p_discord <> '' and x->>'discord' = p_discord) limit 1;\n  if ex is not null then\n    -- ya estaba en la web: solo se enlaza con su usuario de Discord\n    update datos set valor = (select jsonb_agg(case when x->>'id' = ex->>'id' then x || jsonb_build_object('discord', p_discord, 'telegrama', coalesce(nullif(x->>'telegrama',''), p_tel)) else x end) from jsonb_array_elements(arr) x), actualizado = now() where clave = 'empleados';\n    return jsonb_build_object('id', ex->>'id', 'existia', true, 'nombre', ex->>'name', 'puesto', ex->>'puesto');\n  end if;\n  v_id := 'e' || to_hex(ms) || substr(md5(random()::text), 1, 3);\n  e := jsonb_build_object('id', v_id, 'alta', ms, 'name', trim(p_nombre), 'puesto', p_puesto, 'sueldo', sueldo, 'horas', 10,\n         'inicio', to_char(hoy, 'YYYY-MM-DD'), 'prueba', to_char(hoy + 6, 'YYYY-MM-DD'), 'telegrama', p_tel, 'discord', p_discord, 'origen', 'discord', 'contratoPend', true);\n  update datos set valor = arr || jsonb_build_array(e), actualizado = now() where clave = 'empleados';\n  insert into datos (clave, valor, actualizado) values ('log:' || v_id || 'L',\n    jsonb_build_object('id', v_id || 'L', 'ts', ms, 'who', coalesce(nullif(p_por,''), 'Dirección'), 'cat', 'Personal', 'lines', jsonb_build_array('Alta desde Discord: ' || trim(p_nombre) || ' como ' || p_puesto || ' (telegrama ' || coalesce(p_tel,'—') || ')')), now());\n  return jsonb_build_object('id', v_id, 'existia', false, 'nombre', trim(p_nombre), 'puesto', p_puesto);\nend $function$\n",
+      "oid": "18070",
+      "name": "hg_alta_empleado",
+      "identity": "p_nombre text, p_puesto text, p_tel text, p_discord text, p_por text"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_ascenso_empleado(p_id text, p_por text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  arr jsonb; ex jsonb; nx text; ns int; ms bigint := (extract(epoch from now())*1000)::bigint;\n  hoy int := ((now() at time zone 'Europe/Madrid')::date - date '1970-01-01');\nbegin\n  select valor into arr from datos where clave = 'empleados' for update;\n  select x into ex from jsonb_array_elements(coalesce(arr,'[]')) x where x->>'id' = p_id limit 1;\n  if ex is null then raise exception 'NO_EXISTE'; end if;\n  nx := case ex->>'puesto' when 'Aprendiz de armero' then 'Armero' when 'Armero' then 'Armero experto' when 'Armero experto' then 'Gerente' end;\n  if nx is null then raise exception 'SIN_ASCENSO'; end if;\n  if coalesce((ex->>'sueldo')::numeric,0) <= 0 or coalesce(ex->>'inicio','') = '' then raise exception 'SIN_CONTRATO'; end if;\n  ns := case nx when 'Armero' then 2500 when 'Armero experto' then 3000 when 'Gerente' then 4000 end;\n  update datos set valor = (select jsonb_agg(case when x->>'id' = p_id then\n      x || jsonb_build_object('puesto', nx, 'sueldo', ns, 'prueba', '', 'sinPrueba', true, 'alta', ms, 'contratoPend', 'ascenso',\n        'ascensos', coalesce(x->'ascensos','[]'::jsonb) || jsonb_build_array(jsonb_build_object('ts', ms, 'desde', hoy + 1, 'de', ex->>'puesto', 'a', nx, 'antes', (ex->>'sueldo')::numeric, 'nuevo', ns)))\n      else x end) from jsonb_array_elements(arr) x), actualizado = now()\n    where clave = 'empleados';\n  insert into datos (clave, valor, actualizado) values ('log:a' || to_hex(ms) || p_id,\n    jsonb_build_object('id', 'a' || to_hex(ms) || p_id, 'ts', ms, 'who', coalesce(nullif(p_por,''), 'Dirección'), 'cat', 'Personal',\n      'lines', jsonb_build_array('Ascenso desde Discord: ' || (ex->>'name') || ' · ' || (ex->>'puesto') || ' → ' || nx)), now());\n  return jsonb_build_object('id', p_id, 'nombre', ex->>'name', 'de', ex->>'puesto', 'a', nx, 'antes', (ex->>'sueldo')::numeric, 'nuevo', ns, 'discord', ex->>'discord');\nend $function$\n",
+      "oid": "18094",
+      "name": "hg_ascenso_empleado",
+      "identity": "p_id text, p_por text"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_baja_empleado(p_discord text, p_por text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare arr jsonb; ex jsonb; ms bigint := (extract(epoch from now())*1000)::bigint;\nbegin\n  if coalesce(p_discord,'') = '' then raise exception 'DISCORD'; end if;\n  select valor into arr from datos where clave = 'empleados' for update;\n  select x into ex from jsonb_array_elements(coalesce(arr,'[]')) x where x->>'discord' = p_discord limit 1;\n  if ex is null then return jsonb_build_object('estaba', false); end if;\n  if ex->>'puesto' = 'Jefe' then raise exception 'JEFE'; end if;\n  update datos set valor = coalesce((select jsonb_agg(x) from jsonb_array_elements(arr) x where x->>'discord' is distinct from p_discord), '[]'::jsonb), actualizado = now() where clave = 'empleados';\n  insert into datos (clave, valor, actualizado) values ('log:' || 'b' || to_hex(ms) || (ex->>'id'),\n    jsonb_build_object('id', 'b' || to_hex(ms) || (ex->>'id'), 'ts', ms, 'who', coalesce(nullif(p_por,''), 'Dirección'), 'cat', 'Personal', 'lines', jsonb_build_array('Despido desde Discord: ' || (ex->>'name') || ' (' || (ex->>'puesto') || ')')), now());\n  return jsonb_build_object('estaba', true, 'id', ex->>'id', 'nombre', ex->>'name', 'puesto', ex->>'puesto');\nend $function$\n",
+      "oid": "18071",
+      "name": "hg_baja_empleado",
+      "identity": "p_discord text, p_por text"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_baja_por_id(p_id text, p_por text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare arr jsonb; ex jsonb; ms bigint := (extract(epoch from now())*1000)::bigint;\nbegin\n  select valor into arr from datos where clave = 'empleados' for update;\n  select x into ex from jsonb_array_elements(coalesce(arr,'[]')) x where x->>'id' = p_id limit 1;\n  if ex is null then return jsonb_build_object('estaba', false); end if;\n  if ex->>'puesto' = 'Jefe' then raise exception 'JEFE'; end if;\n  update datos set valor = coalesce((select jsonb_agg(x) from jsonb_array_elements(arr) x where x->>'id' <> p_id), '[]'::jsonb), actualizado = now() where clave = 'empleados';\n  insert into datos (clave, valor, actualizado) values ('log:b' || to_hex(ms) || p_id,\n    jsonb_build_object('id', 'b' || to_hex(ms) || p_id, 'ts', ms, 'who', coalesce(nullif(p_por,''), 'Dirección'), 'cat', 'Personal',\n      'lines', jsonb_build_array('Despido desde Discord: ' || (ex->>'name') || ' (' || (ex->>'puesto') || ')')), now());\n  return jsonb_build_object('estaba', true, 'id', p_id, 'nombre', ex->>'name', 'puesto', ex->>'puesto', 'discord', ex->>'discord');\nend $function$\n",
+      "oid": "18095",
+      "name": "hg_baja_por_id",
+      "identity": "p_id text, p_por text"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_bot(p_ops jsonb)\n RETURNS bigint\n LANGUAGE sql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select net.http_post(url:='https://mrlpvjxuifvspeaqtscm.supabase.co/functions/v1/discord-bot',\n    body:=jsonb_build_object('secreto',(select valor from bot_cfg where clave='secreto'),'ops',p_ops),\n    headers:='{\"Content-Type\":\"application/json\"}'::jsonb, timeout_milliseconds:=60000)\n$function$\n",
+      "oid": "18044",
+      "name": "hg_bot",
+      "identity": "p_ops jsonb"
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_cerrado()\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select coalesce((select (valor->>'cerrado')::boolean from datos where clave = 'acceso'), false)\n$function$\n",
+      "oid": "17988",
+      "name": "hg_cerrado",
+      "identity": ""
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_claims()\n RETURNS jsonb\n LANGUAGE sql\n STABLE\nAS $function$\n  select case when coalesce(current_setting('request.jwt.claims', true), '') = '' then null\n              else current_setting('request.jwt.claims', true)::jsonb end\n$function$\n",
+      "oid": "17987",
+      "name": "hg_claims",
+      "identity": ""
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_duelo_disparo(p_id text, p_user text, p_ahora bigint)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare d bot_duelos; begin\n  select * into d from bot_duelos where id=p_id for update;\n  if d is null then return jsonb_build_object('error','NO'); end if;\n  if p_user not in (d.retador, d.rival) then return jsonb_build_object('error','AJENO'); end if;\n  if d.estado <> 'armado' and d.estado <> 'fuego' then return jsonb_build_object('error','ESTADO','estado',d.estado,'ganador',d.ganador); end if;\n  if d.fuego is null or p_ahora < d.fuego then\n    update bot_duelos set estado='fin', ganador=case when p_user=d.retador then d.rival else d.retador end, ms=null where id=p_id;\n    return jsonb_build_object('pronto',true,'ganador',case when p_user=d.retador then d.rival else d.retador end);\n  end if;\n  update bot_duelos set estado='fin', ganador=p_user, ms=(p_ahora-d.fuego)::int where id=p_id;\n  return jsonb_build_object('ganador',p_user,'ms',p_ahora-d.fuego);\nend $function$\n",
+      "oid": "18254",
+      "name": "hg_duelo_disparo",
+      "identity": "p_id text, p_user text, p_ahora bigint"
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_empleado_ok(p_jefe boolean DEFAULT false)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select exists (\n    select 1\n    from datos d, jsonb_array_elements(case when jsonb_typeof(d.valor) = 'array' then d.valor else '[]'::jsonb end) e\n    where d.clave = 'empleados'\n      and e->>'id' = (hg_claims()->'app_metadata'->>'emp_id')\n      and (not p_jefe or e->>'puesto' = 'Jefe')\n  )\n$function$\n",
+      "oid": "17989",
+      "name": "hg_empleado_ok",
+      "identity": "p_jefe boolean"
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_es_jefe()\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select hg_claims() is null or not hg_cerrado() or hg_empleado_ok(true)\n$function$\n",
+      "oid": "17991",
+      "name": "hg_es_jefe",
+      "identity": ""
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_fuera_de_copia(c text)\n RETURNS boolean\n LANGUAGE sql\n IMMUTABLE\n SET search_path TO 'public'\nAS $function$\n  select c like 'presencia-%' or c in ('rev', 'reset', 'jefe', 'acceso') or c like 'clave-%'\n$function$\n",
+      "oid": "17973",
+      "name": "hg_fuera_de_copia",
+      "identity": "c text"
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_ms(t text)\n RETURNS bigint\n LANGUAGE plpgsql\n IMMUTABLE\nAS $function$\nbegin\n  if t is null or t = '' then return 0; end if;\n  if t ~ '^[0-9]+$' then return t::bigint; end if;\n  return (extract(epoch from t::timestamptz) * 1000)::bigint;\nexception when others then\n  return 0;\nend $function$\n",
+      "oid": "17828",
+      "name": "hg_ms",
+      "identity": "t text"
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_pendientes_empleado(p_emp text)\n RETURNS integer\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  prod   text;\n  lot    record;\n  s      record;\n  ids    text[];\n  emps   text[];\n  ts     bigint[];\n  q      integer[];\n  vend   integer[];\n  i      integer;\n  n      integer;\n  rest   integer;\n  f      integer;\n  total  integer := 0;\nbegin\n  for prod in\n    select distinct valor->>'prod' from datos\n    where clave like 'fablote:%' and valor->>'empId' = p_emp and valor->>'prod' is not null\n  loop\n    ids := '{}'; emps := '{}'; ts := '{}'; q := '{}'; vend := '{}';\n    for lot in\n      select l.clave, l.valor->>'empId' as emp, hg_ms(l.valor->>'ts') as t, coalesce((l.valor->>'q')::integer, 0) as cant\n      from datos l\n      where l.clave like 'fablote:%' and l.valor->>'prod' = prod\n        and not exists (select 1 from datos a where a.clave like 'fablote:%' and a.valor->>'anula' = substr(l.clave, 9))\n      order by hg_ms(l.valor->>'ts'), l.clave\n    loop\n      ids := ids || lot.clave; emps := emps || lot.emp; ts := ts || lot.t; q := q || lot.cant; vend := vend || 0;\n    end loop;\n    n := coalesce(array_length(ids, 1), 0);\n    for s in\n      select hg_ms(d.valor->>'ts') as t, coalesce((it->>'qty')::integer, 0) as cant\n      from datos d, jsonb_array_elements(coalesce(d.valor->'items', '[]'::jsonb)) it\n      where d.clave like 'venta:%'\n        and coalesce((d.valor->>'voided')::boolean, false) = false\n        and coalesce((d.valor->>'deleted')::boolean, false) = false\n        and coalesce(d.valor->>'op', '') <> 'encargo'\n        and it->>'name' = prod\n      order by 1\n    loop\n      rest := s.cant;\n      i := 1;\n      while rest > 0 and i <= n loop\n        exit when ts[i] > s.t;\n        f := least(rest, q[i] - vend[i]);\n        if f > 0 then vend[i] := vend[i] + f; rest := rest - f; end if;\n        i := i + 1;\n      end loop;\n    end loop;\n    for i in 1..n loop\n      if emps[i] = p_emp then total := total + greatest(0, q[i] - vend[i]); end if;\n    end loop;\n  end loop;\n  return total;\nend $function$\n",
+      "oid": "17831",
+      "name": "hg_pendientes_empleado",
+      "identity": "p_emp text"
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_permitido()\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select hg_claims() is null or hg_claims()->>'role' = 'service_role' or not hg_cerrado() or hg_empleado_ok(false)\n$function$\n",
+      "oid": "17990",
+      "name": "hg_permitido",
+      "identity": ""
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_reservadas(p_producto text, p_excluir text)\n RETURNS integer\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select coalesce(sum((it->>'qty')::integer), 0)::integer\n  from datos d, jsonb_array_elements(coalesce(d.valor->'items', '[]'::jsonb)) it\n  where d.clave like 'encargo:%'\n    and d.clave <> 'encargo:' || coalesce(p_excluir, '')\n    and coalesce((d.valor->>'deleted')::boolean, false) = false\n    and coalesce((d.valor->>'finished')::boolean, false) = false\n    and coalesce((d.valor->>'cancelled')::boolean, false) = false\n    and d.valor->>'fab' = 'FABRICADO'\n    and coalesce((d.valor->>'depositCents')::numeric, 0) > 0\n    and it->>'name' = p_producto\n$function$\n",
+      "oid": "17829",
+      "name": "hg_reservadas",
+      "identity": "p_producto text, p_excluir text"
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_solo_adicion()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nbegin\n  if tg_op = 'DELETE' then\n    return null;\n  end if;\n  return old;\nend $function$\n",
+      "oid": "17826",
+      "name": "hg_solo_adicion",
+      "identity": ""
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.hg_venta_material(n text, producto boolean DEFAULT false)\n RETURNS text\n LANGUAGE sql\n IMMUTABLE\n SET search_path TO 'public'\nAS $function$\n select case when producto or n = 'Pólvora' then n else 'mat:' || case\n translate(lower(trim(regexp_replace(n, '\\s+', ' ', 'g'))),'áéíóúñ','aeioun')\n when 'tornillo' then 'Tornillo' when 'tornillos' then 'Tornillo'\n when 'pieza de arma' then 'Pieza de arma' when 'pieza de armas' then 'Pieza de arma'\n when 'piezas de arma' then 'Pieza de arma' when 'piezas de armas' then 'Pieza de arma'\n when 'canon de revolver' then 'Cañón de revólver' when 'canones de revolver' then 'Cañón de revólver'\n when 'canones de revolveres' then 'Cañón de revólver' when 'canon de revolveres' then 'Cañón de revólver'\n when 'culata de revolver' then 'Culata de revólver' when 'culatas de revolver' then 'Culata de revólver'\n when 'culatas de revolveres' then 'Culata de revólver' when 'culata de revolveres' then 'Culata de revólver'\n when 'mena de hierro' then 'Hierro' when 'menas de hierro' then 'Hierro'\n when 'mena de carbon' then 'Carbón' when 'menas de carbon' then 'Carbón'\n when 'tablones' then 'Tabla de madera' when 'tablon' then 'Tabla de madera'\n when 'tablas de madera' then 'Tabla de madera'\n when 'trozo madera' then 'Trozo de madera' when 'trozos de madera' then 'Trozo de madera'\n else trim(regexp_replace(n, '\\s+', ' ', 'g')) end end\n$function$\n",
+      "oid": "18641",
+      "name": "hg_venta_material",
+      "identity": "n text, producto boolean"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.inventario_guardar(p_peticion text, p_items jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n emp text:=public.hg_claims()->'app_metadata'->>'emp_id'; jefe text; old jsonb; it jsonb; val jsonb;\n records jsonb:='[]'; items jsonb:='[]'; moves jsonb:='[]'; conflicts jsonb:='[]'; warnings jsonb:='[]'; result jsonb;\n k text; token text; rid text; uid text; n text; actual integer; teo integer; fis integer; dif integer; idx integer:=0; changed integer:=0;\n stamp timestamptz:=clock_timestamp();ms bigint; npc_data jsonb; npc_changed boolean:=false;npc_version text;npc_q int;\nbegin\n if not public.hg_permitido() then raise exception 'SOLO_JEFES'; end if;\n if p_peticion is null or p_peticion !~ '^[a-zA-Z0-9-]{20,80}$' then raise exception 'PETICION_INVALIDA'; end if;\n lock table public.datos,public.stock in share row exclusive mode;\n select e->>'name' into jefe from public.datos d,jsonb_array_elements(d.valor) e where d.clave='empleados' and e->>'id'=emp and e->>'puesto'='Jefe';\n if jefe is null then raise exception 'SOLO_JEFES'; end if;\n select valor into old from public.datos where clave='inventario:'||p_peticion;\n if old is not null then\n  if old->>'empId'<>emp or old->>'huella'<>md5(p_items::text) then raise exception 'PETICION_REUTILIZADA'; end if;\n  return old||jsonb_build_object('replayed',true,'stock',(select coalesce(jsonb_object_agg(producto,cantidad),'{}') from public.stock));\n end if;\n if jsonb_typeof(p_items) is distinct from 'array' or jsonb_array_length(p_items) not between 1 and 5000 then raise exception 'RECUENTO_VACIO'; end if;\n if (select count(*)<>count(distinct x->>'k') from jsonb_array_elements(p_items) x) then raise exception 'ARTICULO_DUPLICADO'; end if;\n select valor,xmin::text into npc_data,npc_version from public.datos where clave='npc:estado';\n for it in select * from jsonb_array_elements(p_items) loop\n  k:=it->>'k';\n  if coalesce(k,'')='' or length(k)>200 or coalesce(it->>'fis','')!~'^[0-9]{1,6}$' or coalesce(it->>'teo','')!~'^[0-9]{1,9}$' then raise exception 'CANTIDAD_INVALIDA'; end if;\n  teo:=(it->>'teo')::integer;fis:=(it->>'fis')::integer;\n  actual:=null;token:=null;select cantidad,xmin::text into actual,token from public.stock where producto=k;\n  npc_q:=coalesce((npc_data->'asig'->>k)::int,0);\n  if npc_q>0 and coalesce(it->>'ubicacion','')<>'almacen' then raise exception 'NPC_UBICACION_REQUERIDA: cuenta solo tu almacén y actualiza la página';end if;\n  if it->>'ubicacion'='almacen' then\n   if npc_version is distinct from (it->>'npcVersion') or npc_q<>coalesce((it->>'npcTeo')::int,0) then conflicts:=conflicts||jsonb_build_array(k);end if;\n   if fis<npc_q then raise exception 'CANTIDAD_INVALIDA';end if;\n  end if;\n  if coalesce(actual,0)<>teo or token is distinct from (it->>'version') then conflicts:=conflicts||jsonb_build_array(k); end if;\n end loop;\n if jsonb_array_length(conflicts)>0 then raise exception 'STOCK_CAMBIADO' using detail=conflicts::text; end if;\n ms:=(extract(epoch from stamp)*1000)::bigint;rid:='ij-'||p_peticion;\n select valor into npc_data from public.datos where clave='npc:estado';\n for it in select * from jsonb_array_elements(p_items) loop\n  k:=it->>'k';teo:=(it->>'teo')::integer;fis:=(it->>'fis')::integer;dif:=fis-teo;n:=case when k like 'mat:%' then substr(k,5) else k end;\n  items:=items||jsonb_build_array(jsonb_build_object('k',k,'name',n,'teo',teo,'fis',fis,'diff',dif));\n  if dif<>0 then\n   changed:=changed+1;\n   insert into public.stock(producto,cantidad) values(k,fis) on conflict(producto) do update set cantidad=excluded.cantidad;\n   uid:=rid||'-'||idx;idx:=idx+1;\n   val:=jsonb_build_object('uid',uid,'ts',ms,'who',jefe,'name',case when k like 'mat:%' or k='Pólvora' then n||' (material)' else n end,'delta',dif,'why','Ajuste por inventario '||rid,'antes',teo,'despues',fis,'date',to_char(stamp at time zone 'Europe/Madrid','DD/MM/YYYY'),'time',to_char(stamp at time zone 'Europe/Madrid','HH24:MI'));\n   records:=records||jsonb_build_array(jsonb_build_object('clave','mov:'||uid,'valor',val));\n   moves:=moves||jsonb_build_array(jsonb_build_object('producto',k,'delta',dif));\n   uid:=rid||'-rev-'||idx;\n   val:=jsonb_build_object('id',uid,'ts',ms,'tipo','revision','who',jefe,'empId',emp,'data',jsonb_build_object('ref',rid||'|'||k,'nota','Diferencia revisada y ajustada al guardar este inventario físico.'));\n   records:=records||jsonb_build_array(jsonb_build_object('clave','act:'||uid,'valor',val));\n   if coalesce((npc_data->'asig'->>k)::integer,0)>fis then npc_data:=jsonb_set(npc_data,array['asig',k],to_jsonb(fis));npc_changed:=true;end if;\n  end if;\n  if public.hg_reservadas(k,'')>fis then warnings:=warnings||jsonb_build_array(n||': hay más unidades reservadas que existencias físicas');end if;\n end loop;\n val:=jsonb_build_object('id',rid,'ts',ms,'by',jefe,'tipo','inventario físico de Dirección','ajustado',true,'empId',emp,'items',items,'avisos',warnings);\n records:=records||jsonb_build_array(jsonb_build_object('clave','recu:'||rid,'valor',val));\n val:=jsonb_build_object('id',rid,'ts',ms,'tipo','recuento','who',jefe,'empId',emp,'data',jsonb_build_object('id',rid,'tipoR','inventario físico ajustado','n',jsonb_array_length(items),'diffs',changed));\n records:=records||jsonb_build_array(jsonb_build_object('clave','act:'||rid,'valor',val));\n if npc_changed then\n  npc_data:=npc_data||jsonb_build_object('ts',ms);\n  update public.datos set valor=npc_data,actualizado=stamp where clave='npc:estado';\n  records:=records||jsonb_build_array(jsonb_build_object('clave','npc:estado','valor',npc_data));\n end if;\n for it in select * from jsonb_array_elements(records) loop\n  if it->>'clave'='npc:estado' then continue;end if;\n  insert into public.datos(clave,valor,actualizado) values(it->>'clave',it->'valor',stamp);\n end loop;\n result:=jsonb_build_object('id',rid,'empId',emp,'huella',md5(p_items::text),'items',items,'changed',changed,'warnings',warnings,'records',records,'moves',moves,'stock',(select coalesce(jsonb_object_agg(producto,cantidad),'{}') from public.stock),'replayed',false);\n insert into public.datos(clave,valor,actualizado) values('inventario:'||p_peticion,result,stamp);\n insert into public.datos(clave,valor,actualizado) values('rev',jsonb_build_object('n',rid),stamp) on conflict(clave) do update set valor=excluded.valor,actualizado=excluded.actualizado;\n return result;\nend $function$\n",
+      "oid": "18649",
+      "name": "inventario_guardar",
+      "identity": "p_peticion text, p_items jsonb"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.inventario_preparar()\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare emp text := public.hg_claims()->'app_metadata'->>'emp_id';\nbegin\n if not public.hg_permitido() or not exists(select 1 from public.datos d,jsonb_array_elements(d.valor) e where d.clave='empleados' and e->>'id'=emp and e->>'puesto'='Jefe') then raise exception 'SOLO_JEFES'; end if;\n return (select coalesce(jsonb_object_agg(producto,jsonb_build_object('q',cantidad,'v',s.xmin::text,'npc',coalesce((d.valor->'asig'->>producto)::int,0),'nv',d.xmin::text)),'{}') from public.stock s left join public.datos d on d.clave='npc:estado');\nend $function$\n",
+      "oid": "18648",
+      "name": "inventario_preparar",
+      "identity": ""
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.listar_copias()\n RETURNS TABLE(id text, tipo text, creada timestamp with time zone, filas integer, bytes integer)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select id, tipo, creada, filas, bytes from copias where hg_permitido() order by creada desc\n$function$\n",
+      "oid": "17975",
+      "name": "listar_copias",
+      "identity": ""
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.mover_stock(p_items jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare it jsonb; n text; d int; q int; a int; take_npc int; cfg jsonb; taken jsonb:='{}';uid text;emp text; actor text;\nbegin\n if not public.hg_permitido() then raise exception 'SIN_CUENTA';end if;\n lock table public.datos,public.stock in share row exclusive mode;\n select valor into cfg from public.datos where clave='npc:estado';\n cfg:=coalesce(cfg,'{\"asig\":{},\"precios\":{},\"rev\":{}}');\n for it in select * from jsonb_array_elements(p_items) loop\n  n:=it->>'producto';d:=(it->>'delta')::int;\n  select cantidad into q from public.stock where producto=n;\n  q:=coalesce(q,0);a:=coalesce((cfg->'asig'->>n)::int,0);\n  if a<0 or a>q then raise exception 'NPC_DESCUADRADO: %',n;end if;\n  if q+d<0 then raise exception 'STOCK_INSUFICIENTE';end if;\n  if d<0 then\n   take_npc:=least(a,greatest(0,-d-greatest(0,q-a)));\n   if take_npc>0 then\n    cfg:=jsonb_set(cfg,array['asig',n],to_jsonb(a-take_npc));\n    taken:=jsonb_set(taken,array[n],to_jsonb(coalesce((taken->>n)::int,0)+take_npc));\n   end if;\n  end if;\n  update public.stock set cantidad=cantidad+d where producto=n;\n  if not found then insert into public.stock(producto,cantidad) values(n,q+d);end if;\n end loop;\n if taken<>'{}'::jsonb then\n  cfg:=cfg||jsonb_build_object('ts',(extract(epoch from clock_timestamp())*1000)::bigint);\n  update public.datos set valor=cfg,actualizado=clock_timestamp() where clave='npc:estado';\n  emp:=public.hg_claims()->'app_metadata'->>'emp_id';\n  select e->>'name' into actor from public.datos d,jsonb_array_elements(d.valor) e where d.clave='empleados' and e->>'id'=emp;\n  uid:='npc-uso-'||md5(clock_timestamp()::text||random()::text);\n  insert into public.datos(clave,valor,actualizado) values('act:'||uid,jsonb_build_object('id',uid,'ts',(extract(epoch from clock_timestamp())*1000)::bigint,'tipo','npc','who',coalesce(actor,'Sistema'),'empId',coalesce(emp,''),'data',jsonb_build_object('txt','Unidades tomadas del NPC para una venta o consumo de stock','delNPC',taken)),clock_timestamp());\n end if;\n return (select coalesce(jsonb_object_agg(producto,cantidad),'{}') from public.stock);\nexception when check_violation then raise exception 'STOCK_INSUFICIENTE';\nend $function$\n",
+      "oid": "17662",
+      "name": "mover_stock",
+      "identity": "p_items jsonb"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.npc_operar(p_peticion text, p_modo text, p_items jsonb, p_base jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n emp text:=public.hg_claims()->'app_metadata'->>'emp_id';actor text;chief boolean;\n cfg jsonb;version text;old jsonb;it jsonb;rec jsonb;records jsonb:='[]';moves jsonb:='[]';rows jsonb:='[]';sales jsonb:='[]';prices jsonb;\n n text;uid text;rid text;sale_id text:='';stamp timestamptz:=clock_timestamp();ms bigint;idx int:=0;\n q int;a int;total int;delta int;sold int;cents int;amount bigint:=0;seq int;result jsonb;token text;changes int:=0;\nbegin\n if not public.hg_permitido() then raise exception 'SIN_CUENTA';end if;\n if p_peticion is null or p_peticion !~ '^[a-zA-Z0-9-]{20,80}$' then raise exception 'PETICION_INVALIDA';end if;\n lock table public.datos,public.stock in share row exclusive mode;\n select e->>'name',e->>'puesto'='Jefe' into actor,chief from public.datos d,jsonb_array_elements(d.valor) e where d.clave='empleados' and e->>'id'=emp;\n if actor is null then raise exception 'SIN_CUENTA';end if;\n if p_modo not in ('entregar','recuperar','consumir','revision','inventario','precios','avisar') or p_modo is null then raise exception 'MODO_INVALIDO';end if;\n if p_modo not in ('revision','avisar') and not chief then raise exception 'SOLO_JEFES';end if;\n select valor into old from public.datos where clave='npcop:'||p_peticion;\n if old is not null then\n  if old->>'empId'<>emp or old->>'huella'<>md5(jsonb_build_array(p_modo,p_items,p_base)::text) then raise exception 'PETICION_REUTILIZADA';end if;\n  return old||jsonb_build_object('replayed',true,'npc',coalesce((select valor from public.datos where clave='npc:estado'),'{}'),'stock',(select coalesce(jsonb_object_agg(producto,cantidad),'{}') from public.stock));\n end if;\n select valor,xmin::text into cfg,version from public.datos where clave='npc:estado';\n cfg:=coalesce(cfg,'{\"asig\":{},\"precios\":{},\"rev\":{}}');\n if p_modo<>'avisar' and version is distinct from (p_base->>'version') then raise exception 'NPC_CAMBIADO';end if;\n if jsonb_typeof(p_items) is distinct from 'array' or jsonb_array_length(p_items)>500 then raise exception 'CANTIDAD_INVALIDA';end if;\n if p_modo not in ('avisar','precios') and jsonb_array_length(p_items)=0 then raise exception 'RECUENTO_VACIO';end if;\n if (select count(*)<>count(distinct x->>'n') from jsonb_array_elements(p_items) x) then raise exception 'ARTICULO_DUPLICADO';end if;\n ms:=(extract(epoch from stamp)*1000)::bigint;rid:='npc-'||p_peticion;\n if p_modo='revision' then\n  -- Una revisión de ventas debe comprobar TODO lo que el NPC debería conservar.\n  if exists(select 1 from jsonb_each_text(coalesce(cfg->'asig','{}')) a where a.value::int>0 and not exists(select 1 from jsonb_array_elements(p_items) x where x->>'n'=a.key)) then raise exception 'RECUENTO_INCOMPLETO';end if;\n end if;\n for it in select * from jsonb_array_elements(p_items) loop\n  n:=it->>'n';\n  if coalesce(n,'')='' or n like 'mat:%' or coalesce(it->>'q','')!~'^[0-9]{1,6}$' then raise exception 'CANTIDAD_INVALIDA';end if;\n  q:=(it->>'q')::int;a:=coalesce((cfg->'asig'->>n)::int,0);delta:=0;sold:=0;\n  select cantidad,xmin::text into total,token from public.stock where producto=n;\n  total:=coalesce(total,0);\n  if a<0 or a>total then raise exception 'NPC_DESCUADRADO: %',n;end if;\n  if p_modo not in ('precios','avisar') and (token is distinct from (p_base->'stock'->n->>'v') or total<>coalesce((p_base->'stock'->n->>'q')::int,0)) then raise exception 'STOCK_CAMBIADO: %',n;end if;\n  if p_modo='entregar' then\n   if q<=0 or a+q>total then raise exception 'ALMACEN_INSUFICIENTE: %',n;end if;\n   cfg:=jsonb_set(cfg,array['asig',n],to_jsonb(a+q));\n  elsif p_modo in ('recuperar','consumir') then\n   if q<=0 or q>a then raise exception 'NPC_INSUFICIENTE: %',n;end if;\n   cfg:=jsonb_set(cfg,array['asig',n],to_jsonb(a-q));\n   if p_modo='consumir' then delta:=-q;end if;\n  elsif p_modo='inventario' then\n   delta:=q-a;cfg:=jsonb_set(cfg,array['asig',n],to_jsonb(q));\n  elsif p_modo='revision' then\n   if q>a then raise exception 'NPC_SOBRANTE: % (usa inventario o registra una entrega)',n;end if;\n   sold:=a-q;delta:=-sold;cfg:=jsonb_set(cfg,array['asig',n],to_jsonb(q));\n   if sold>0 then\n    cents:=coalesce((cfg->'precios'->>n)::int,(it->>'cents')::int);\n    if cents is null or cents<=0 then raise exception 'PRECIO_NPC_INVALIDO: %',n;end if;\n    sales:=sales||jsonb_build_array(jsonb_build_object('name',n,'qty',sold,'cents',cents,'oq',0));amount:=amount+sold::bigint*cents;\n   end if;\n  elsif p_modo='precios' then\n   if q<=0 then raise exception 'PRECIO_NPC_INVALIDO';end if;\n   cfg:=jsonb_set(cfg,array['precios',n],to_jsonb(q));\n  end if;\n  rows:=rows||jsonb_build_array(jsonb_build_object('n',n,'esperado',a,'encontrado',coalesce((cfg->'asig'->>n)::int,0),'vendido',sold,'deltaTotal',delta));\n  if delta<>0 then\n   changes:=changes+1;\n   insert into public.stock(producto,cantidad) values(n,total+delta) on conflict(producto) do update set cantidad=excluded.cantidad;\n   uid:=rid||'-'||idx;idx:=idx+1;\n   moves:=moves||jsonb_build_array(jsonb_build_object('producto',n,'delta',delta));\n   rec:=jsonb_build_object('uid',uid,'ts',ms,'who',actor,'name',n,'delta',delta,'antes',total,'despues',total+delta,'why',case p_modo when 'revision' then 'Venta NPC' when 'inventario' then 'Ajuste de inventario del NPC' else 'Consumo del NPC' end,'date',to_char(stamp at time zone 'Europe/Madrid','DD/MM/YYYY'),'time',to_char(stamp at time zone 'Europe/Madrid','HH24:MI'));\n   records:=records||jsonb_build_array(jsonb_build_object('clave','mov:'||uid,'valor',rec));\n  end if;\n end loop;\n if p_modo='revision' then\n  seq:=coalesce((cfg->'rev'->>'seq')::int,0)+1;\n  if jsonb_array_length(sales)>0 then\n   sale_id:='NPC-'||to_char(stamp at time zone 'Europe/Madrid','DDMMYY')||'-'||lpad(seq::text,greatest(3,length(seq::text)),'0');\n   rec:=jsonb_build_object('id',sale_id,'items',sales,'stock','{}'::jsonb,'date',to_char(stamp at time zone 'Europe/Madrid','DD/MM/YYYY'),'time',to_char(stamp at time zone 'Europe/Madrid','HH24:MI'),'op','venta','client','NPC (tienda cerrada)','employee','','by',actor,'products',jsonb_array_length(sales),'units',(select sum((x->>'qty')::int) from jsonb_array_elements(sales) x),'dueCents',amount,'totalCents',amount,'npc',true,'ts',stamp,'note','Ventas del NPC, después de ventas manuales y traslados registrados');\n   records:=records||jsonb_build_array(jsonb_build_object('clave','venta:'||sale_id,'valor',rec));\n  end if;\n  cfg:=jsonb_set(cfg,'{rev}',jsonb_build_object('pending',false,'since',0,'seq',seq,'last',jsonb_build_object('ts',ms,'by',actor)));\n  records:=records||jsonb_build_array(jsonb_build_object('clave','npcrev:'||rid,'valor',jsonb_build_object('id',rid,'ts',ms,'by',actor,'filas',rows,'venta',sale_id)));\n elsif p_modo='inventario' then\n  cfg:=jsonb_set(cfg,'{rev}',coalesce(cfg->'rev','{}')||jsonb_build_object('pending',false,'since',0,'last',jsonb_build_object('ts',ms,'by',actor,'inventario',true)));\n elsif p_modo='avisar' then\n  cfg:=jsonb_set(cfg,'{rev}',coalesce(cfg->'rev','{}')||jsonb_build_object('pending',true,'since',ms));\n end if;\n cfg:=cfg||jsonb_build_object('ts',ms);\n insert into public.datos(clave,valor,actualizado) values('npc:estado',cfg,stamp) on conflict(clave) do update set valor=excluded.valor,actualizado=excluded.actualizado;\n rec:=jsonb_build_object('id',rid,'ts',ms,'tipo','npc','who',actor,'empId',emp,'data',jsonb_build_object('txt',case p_modo when 'revision' then 'Revisión de ventas del NPC' when 'inventario' then 'Inventario del NPC: ajuste sin ingresos' when 'entregar' then 'Traslado del almacén al NPC' when 'recuperar' then 'Traslado del NPC al almacén' when 'consumir' then 'Retirada del NPC para consumo' when 'precios' then 'Precios del NPC actualizados' else 'Revisión del NPC pendiente' end,'modo',p_modo,'filas',rows,'venta',sale_id));\n records:=records||jsonb_build_array(jsonb_build_object('clave','act:'||rid,'valor',rec));\n for it in select * from jsonb_array_elements(records) loop insert into public.datos(clave,valor,actualizado) values(it->>'clave',it->'valor',stamp);end loop;\n result:=jsonb_build_object('id',rid,'empId',emp,'huella',md5(jsonb_build_array(p_modo,p_items,p_base)::text),'modo',p_modo,'npc',cfg,'filas',rows,'records',records,'moves',moves,'venta',sale_id,'importe',amount,'stock',(select coalesce(jsonb_object_agg(producto,cantidad),'{}') from public.stock),'replayed',false);\n insert into public.datos(clave,valor,actualizado) values('npcop:'||p_peticion,result,stamp);\n insert into public.datos(clave,valor,actualizado) values('rev',jsonb_build_object('n',rid),stamp) on conflict(clave) do update set valor=excluded.valor,actualizado=excluded.actualizado;\n return result;\nend $function$\n",
+      "oid": "18665",
+      "name": "npc_operar",
+      "identity": "p_peticion text, p_modo text, p_items jsonb, p_base jsonb"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.npc_snapshot()\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare cfg jsonb;v text;emp text:=public.hg_claims()->'app_metadata'->>'emp_id';\nbegin\n if not public.hg_permitido() or not exists(select 1 from public.datos d,jsonb_array_elements(d.valor) e where d.clave='empleados' and e->>'id'=emp) then raise exception 'SIN_CUENTA';end if;\n select valor,xmin::text into cfg,v from public.datos where clave='npc:estado';\n return jsonb_build_object('npc',coalesce(cfg,'{\"asig\":{},\"precios\":{},\"rev\":{}}'),'version',v,'stock',(select coalesce(jsonb_object_agg(producto,jsonb_build_object('q',cantidad,'v',xmin::text)),'{}') from public.stock));\nend $function$\n",
+      "oid": "18664",
+      "name": "npc_snapshot",
+      "identity": ""
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.restaurar_copia(p_id text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  c     copias%rowtype;\n  stamp timestamptz := now();\nbegin\n  if not hg_es_jefe() then raise exception 'SIN_CUENTA'; end if;\n  select * into c from copias where id = p_id;\n  if not found then raise exception 'COPIA_NO_EXISTE'; end if;\n  perform hacer_copia('antes-restaurar');\n  update datos d set valor = jsonb_build_object('deleted', true, 'ts', (extract(epoch from stamp) * 1000)::bigint), actualizado = stamp\n   where not hg_fuera_de_copia(d.clave)\n     and not (c.datos ? d.clave)\n     and not coalesce((d.valor->>'deleted')::boolean, false);\n  insert into datos (clave, valor, actualizado)\n    select k, e.value->'v', stamp from jsonb_each(c.datos) e(k, value)\n    on conflict (clave) do update set valor = excluded.valor, actualizado = excluded.actualizado;\n  update stock s set cantidad = 0 where not (c.stock ? s.producto);\n  insert into stock\n    select * from jsonb_populate_recordset(null::stock,\n      (select coalesce(jsonb_agg(e.value || jsonb_build_object('producto', e.key)), '[]'::jsonb) from jsonb_each(c.stock) e))\n    on conflict (producto) do update set cantidad = excluded.cantidad;\n  update contador set valor = greatest(valor, coalesce(c.contador, 0)) where id = 1;\n  insert into datos (clave, valor, actualizado)\n    values ('reset', jsonb_build_object('what', jsonb_build_array('ventas','pedidos','encargos','gastos','cierres','fichajes','movimientos','stock','materiales'),\n                                        'n', (extract(epoch from stamp) * 1000)::bigint, 'restaurada', p_id), stamp)\n    on conflict (clave) do update set valor = excluded.valor, actualizado = excluded.actualizado;\n  insert into datos (clave, valor, actualizado)\n    values ('rev', jsonb_build_object('n', (extract(epoch from stamp) * 1000)::bigint::text || '-restaurada'), stamp)\n    on conflict (clave) do update set valor = excluded.valor, actualizado = excluded.actualizado;\n  return jsonb_build_object('restaurada', p_id, 'filas', c.filas);\nend $function$\n",
+      "oid": "17977",
+      "name": "restaurar_copia",
+      "identity": "p_id text"
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.siguiente_numero()\n RETURNS bigint\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare n bigint;\nbegin\n  if not hg_permitido() then raise exception 'SIN_CUENTA'; end if;\n  update public.contador set valor = valor + 1 where id = 1 returning valor into n;\n  return n;\nend $function$\n",
+      "oid": "17661",
+      "name": "siguiente_numero",
+      "identity": ""
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.vender_fabricando(p_peticion text, p_venta jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n old jsonb; recipes jsonb; it jsonb; r jsonb; rec jsonb; ent record;\n sold jsonb := '{}'; made jsonb := '{}'; used jsonb := '{}'; before_stock jsonb; running jsonb;\n moves jsonb := '[]'; records jsonb := '[]'; result jsonb; s jsonb; ledger jsonb; val jsonb;\n n text; k text; id text; uid text; emp text; employee text; why text;\n q integer; v integer; deficit integer; d integer; ix integer := 0; num bigint;\n stamp timestamptz := clock_timestamp(); ms bigint; local_time timestamptz;\nbegin\n if not public.hg_permitido() then raise exception 'SIN_CUENTA'; end if;\n if p_peticion !~ '^[a-zA-Z0-9-]{20,80}$' or p_peticion is null then raise exception 'PETICION_INVALIDA'; end if;\n if p_venta->>'op' is distinct from 'venta' or coalesce(p_venta->>'fromEncargo','') <> '' then raise exception 'VENTA_INVALIDA'; end if;\n -- Serializa también las reservas y protege claves de stock aún inexistentes.\n lock table public.datos, public.stock in share row exclusive mode;\n select valor into old from public.datos where clave='autoventa:'||p_peticion;\n if old is not null then\n  if old->'sale'->>'sig' is distinct from p_venta->>'sig' then raise exception 'PETICION_REUTILIZADA'; end if;\n  return old || jsonb_build_object('replayed',true,'stock',(select coalesce(jsonb_object_agg(producto,cantidad),'{}') from public.stock));\n end if;\n if jsonb_typeof(p_venta->'items') is distinct from 'array' or jsonb_array_length(p_venta->'items') not between 1 and 100 then raise exception 'VENTA_VACIA'; end if;\n emp := p_venta->>'empId';\n select e->>'name' into employee from public.datos, jsonb_array_elements(valor) e where clave='empleados' and e->>'id'=emp;\n if employee is null then raise exception 'EMPLEADO_INVALIDO'; end if;\n if public.hg_claims()->'app_metadata'->>'emp_id' is not null and public.hg_claims()->'app_metadata'->>'emp_id' <> emp then raise exception 'EMPLEADO_INVALIDO'; end if;\n select valor into recipes from public.datos where clave='recetas';\n select coalesce(jsonb_object_agg(producto,cantidad),'{}') into before_stock from public.stock;\n running := before_stock;\n for it in select * from jsonb_array_elements(p_venta->'items') loop\n  n:=it->>'name'; q:=(it->>'qty')::integer;\n  if n is null or q is null or q not between 1 and 9999 or (it->>'qty')::numeric<>q or (it->>'cents')::numeric<0 then raise exception 'CANTIDAD_INVALIDA'; end if;\n  sold:=jsonb_set(sold,array[n],to_jsonb(coalesce((sold->>n)::integer,0)+q));\n end loop;\n for ent in select key,value from jsonb_each(sold) order by key loop\n  n:=ent.key; q:=ent.value::integer;\n  v:=greatest(0,coalesce((before_stock->>n)::integer,0)-public.hg_reservadas(n,'')); deficit:=greatest(0,q-v);\n  if deficit=0 then continue; end if;\n  rec:=recipes->n;\n  if jsonb_typeof(rec) is distinct from 'array' or jsonb_array_length(rec)=0 then raise exception 'FALTAN_MATERIALES: % (faltan % unidades; sin receta)',n,deficit; end if;\n  made:=jsonb_set(made,array[n],to_jsonb(deficit));\n  for r in select * from jsonb_array_elements(rec) loop\n   q:=(r->>'q')::integer;\n   if q is null or q<=0 or (r->>'q')::numeric<>q or coalesce(r->>'m','')='' then raise exception 'RECETA_INVALIDA: %',n; end if;\n   k:=public.hg_venta_material(r->>'m',coalesce((r->>'p')::boolean,false));\n   used:=jsonb_set(used,array[k],to_jsonb(coalesce((used->>k)::integer,0)+deficit*q));\n  end loop;\n end loop;\n for ent in select key,value from jsonb_each(used) order by key loop\n  k:=ent.key; q:=ent.value::integer+coalesce((sold->>k)::integer,0);\n  v:=greatest(0,coalesce((before_stock->>k)::integer,0)-public.hg_reservadas(k,''));\n  if q>v then raise exception 'FALTAN_MATERIALES: % (faltan %)',k,q-v; end if;\n end loop;\n -- Todos los registros se escriben en esta misma transacción, incluido el número de venta.\n num:=public.siguiente_numero(); ms:=(extract(epoch from stamp)*1000)::bigint;\n id:='HG-'||to_char(stamp at time zone 'Europe/Madrid','DDMMYY')||'-'||lpad(num::text,greatest(3,length(num::text)),'0');\n s:=p_venta-'empId';\n s:=s||jsonb_build_object('id',id,'employee',employee,'date',to_char(stamp at time zone 'Europe/Madrid','DD/MM/YYYY'),'time',to_char(stamp at time zone 'Europe/Madrid','HH24:MI'),'stockApplied',sold,'autoFabricacion',made,'ts',stamp);\n for ent in select key,value from jsonb_each(made) order by key loop\n  n:=ent.key; q:=ent.value::integer;\n  moves:=moves||jsonb_build_array(jsonb_build_object('producto',n,'delta',q,'why','Fabricación','venta',id));\n  uid:='av-'||p_peticion||'-'||ix; ix:=ix+1;\n  val:=jsonb_build_object('id',uid,'ts',ms,'empId',emp,'emp',employee,'prod',n,'q',q,'autoVenta',id);\n  records:=records||jsonb_build_array(jsonb_build_object('clave','fablote:'||uid,'valor',val));\n end loop;\n for ent in select key,value from jsonb_each(used) order by key loop\n  moves:=moves||jsonb_build_array(jsonb_build_object('producto',ent.key,'delta',-ent.value::integer,'why','Fabricación','venta',id));\n end loop;\n for ent in select key,value from jsonb_each(sold) order by key loop\n  moves:=moves||jsonb_build_array(jsonb_build_object('producto',ent.key,'delta',-ent.value::integer,'why','Venta '||id));\n end loop;\n perform public.mover_stock(moves);\n for it in select * from jsonb_array_elements(moves) loop\n  n:=it->>'producto'; d:=(it->>'delta')::integer; v:=coalesce((running->>n)::integer,0);\n  uid:='av-'||p_peticion||'-'||ix; ix:=ix+1;\n  val:=jsonb_build_object('uid',uid,'ts',ms,'who',employee,'venta',id,'name',case when n like 'mat:%' then substr(n,5)||' (material)' else n end,'delta',d,'why',it->>'why','antes',v,'despues',v+d,'date',s->>'date','time',s->>'time');\n  records:=records||jsonb_build_array(jsonb_build_object('clave','mov:'||uid,'valor',val));\n  running:=jsonb_set(running,array[n],to_jsonb(v+d));\n end loop;\n if made<>'{}'::jsonb then\n  uid:='av-'||p_peticion;\n  val:=jsonb_build_object('id',uid,'ts',ms,'tipo','fabricacion','who',employee,'empId',emp,'data',jsonb_build_object('txt','Fabricación automática para venta '||id,'venta',id,'productos',made,'materiales',used));\n  records:=records||jsonb_build_array(jsonb_build_object('clave','act:'||uid,'valor',val));\n end if;\n ledger:=s-'sig'-'stockApplied';\n ledger:=ledger||jsonb_build_object('stock',sold,'dueCents',coalesce((s->>'dueCents')::numeric,(s->>'totalCents')::numeric),'ts',stamp+interval '1 millisecond');\n records:=records||jsonb_build_array(jsonb_build_object('clave','venta:'||id,'valor',ledger));\n for it in select * from jsonb_array_elements(records) loop\n  insert into public.datos(clave,valor,actualizado) values(it->>'clave',it->'valor',stamp);\n end loop;\n result:=jsonb_build_object('sale',s,'stock',running,'records',records,'made',made,'used',used,'moves',moves,'replayed',false);\n insert into public.datos(clave,valor,actualizado) values('autoventa:'||p_peticion,result,stamp);\n insert into public.datos(clave,valor,actualizado) values('rev',jsonb_build_object('n',p_peticion),stamp) on conflict(clave) do update set valor=excluded.valor,actualizado=excluded.actualizado;\n return result;\nend $function$\n",
+      "oid": "18642",
+      "name": "vender_fabricando",
+      "identity": "p_peticion text, p_venta jsonb"
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.vender_stock(p_items jsonb, p_ctx jsonb DEFAULT '{}'::jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare it jsonb;p text;d int;v int;r int;exc text:=coalesce(p_ctx->>'encargo','');\nbegin\n if not public.hg_permitido() then raise exception 'SIN_CUENTA';end if;\n lock table public.datos,public.stock in share row exclusive mode;\n for it in select * from jsonb_array_elements(coalesce(p_items,'[]')) loop\n  p:=it->>'producto';d:=coalesce((it->>'delta')::int,0);\n  if d<0 then\n   select cantidad into v from public.stock where producto=p for update;\n   r:=public.hg_reservadas(p,exc);\n   if r>0 and coalesce(v,0)+d>=0 and coalesce(v,0)+d<r then raise exception 'RESERVADA: % (% reservadas)',p,r;end if;\n  end if;\n end loop;\n return public.mover_stock(p_items);\nend $function$\n",
+      "oid": "17830",
+      "name": "vender_stock",
+      "identity": "p_items jsonb, p_ctx jsonb"
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "def": "CREATE OR REPLACE FUNCTION public.ver_copia(p_id text)\n RETURNS jsonb\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select jsonb_build_object('id', id, 'tipo', tipo, 'creada', creada, 'datos', datos, 'stock', stock, 'contador', contador)\n  from copias where id = p_id and hg_permitido()\n$function$\n",
+      "oid": "17976",
+      "name": "ver_copia",
+      "identity": "p_id text"
+    }
+  ],
+  "policies": [
+    {
+      "cmd": "ALL",
+      "qual": "( SELECT hg_permitido() AS hg_permitido)",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "tablename": "stock",
+      "permissive": "PERMISSIVE",
+      "policyname": "acceso_total",
+      "schemaname": "public",
+      "with_check": "( SELECT hg_permitido() AS hg_permitido)"
+    },
+    {
+      "cmd": "ALL",
+      "qual": "( SELECT hg_permitido() AS hg_permitido)",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "tablename": "ventas",
+      "permissive": "PERMISSIVE",
+      "policyname": "acceso_total",
+      "schemaname": "public",
+      "with_check": "( SELECT hg_permitido() AS hg_permitido)"
+    },
+    {
+      "cmd": "ALL",
+      "qual": "( SELECT hg_permitido() AS hg_permitido)",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "tablename": "encargos",
+      "permissive": "PERMISSIVE",
+      "policyname": "acceso_total",
+      "schemaname": "public",
+      "with_check": "( SELECT hg_permitido() AS hg_permitido)"
+    },
+    {
+      "cmd": "ALL",
+      "qual": "( SELECT hg_permitido() AS hg_permitido)",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "tablename": "fichajes_activos",
+      "permissive": "PERMISSIVE",
+      "policyname": "acceso_total",
+      "schemaname": "public",
+      "with_check": "( SELECT hg_permitido() AS hg_permitido)"
+    },
+    {
+      "cmd": "ALL",
+      "qual": "( SELECT hg_permitido() AS hg_permitido)",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "tablename": "registros",
+      "permissive": "PERMISSIVE",
+      "policyname": "acceso_total",
+      "schemaname": "public",
+      "with_check": "( SELECT hg_permitido() AS hg_permitido)"
+    },
+    {
+      "cmd": "ALL",
+      "qual": "( SELECT hg_permitido() AS hg_permitido)",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "tablename": "contador",
+      "permissive": "PERMISSIVE",
+      "policyname": "acceso_total",
+      "schemaname": "public",
+      "with_check": "( SELECT hg_permitido() AS hg_permitido)"
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "((clave = ANY (ARRAY['empleados'::text, 'acceso'::text])) OR (clave ~~ 'foto-%'::text))",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "tablename": "datos",
+      "permissive": "PERMISSIVE",
+      "policyname": "puerta_lectura",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "ALL",
+      "qual": "( SELECT hg_permitido() AS hg_permitido)",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "tablename": "datos",
+      "permissive": "PERMISSIVE",
+      "policyname": "acceso_total",
+      "schemaname": "public",
+      "with_check": "(( SELECT hg_permitido() AS hg_permitido) AND ((clave <> ALL (ARRAY['acceso'::text, 'jefe'::text])) OR ( SELECT hg_es_jefe() AS hg_es_jefe)))"
+    }
+  ],
+  "tables": [
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "anon=arwdDxtm/postgres",
+        "authenticated=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "push_cfg"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "anon=arwdDxtm/postgres",
+        "authenticated=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "push_subs"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "anon=arwdDxtm/postgres",
+        "authenticated=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "copias"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "anon=arwdDxtm/postgres",
+        "authenticated=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "cuentas"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_hechos"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_eventos"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_sanciones"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "ia_charla"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "anon=arwdDxtm/postgres",
+        "authenticated=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "ia_registro"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "ia_cfg"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_cfg"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_medallas"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_cumples"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_telegramas_mensajes"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_registro"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_formacion"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_examenes"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_reuniones"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_votaciones"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_duelos"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_tiradores"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_visitas"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_telegramas_control"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "anon=arwdDxtm/postgres",
+        "authenticated=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "stock"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "anon=arwdDxtm/postgres",
+        "authenticated=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "ventas"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "anon=arwdDxtm/postgres",
+        "authenticated=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "encargos"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "anon=arwdDxtm/postgres",
+        "authenticated=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "fichajes_activos"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "anon=arwdDxtm/postgres",
+        "authenticated=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "registros"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "anon=arwdDxtm/postgres",
+        "authenticated=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "contador"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "anon=arwdDxtm/postgres",
+        "authenticated=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "datos"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_solicitudes"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_miembros"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_pedmsg"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_fichas"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_juego"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_manos"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "rls": true,
+      "name": "bot_catalogo"
+    }
+  ],
+  "triggers": [
+    {
+      "def": "CREATE TRIGGER hg_solo_adicion BEFORE DELETE OR UPDATE ON public.datos FOR EACH ROW WHEN (((old.clave ~~ 'act:%'::text) OR (old.clave ~~ 'recu:%'::text) OR (old.clave ~~ 'npcrev:%'::text) OR (old.clave ~~ 'fablote:%'::text))) EXECUTE FUNCTION hg_solo_adicion()",
+      "name": "hg_solo_adicion",
+      "enabled": "O"
+    }
+  ]
+}
