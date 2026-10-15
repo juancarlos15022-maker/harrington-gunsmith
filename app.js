@@ -70,6 +70,24 @@ if(SANDBOX)(function(){
   if(path.startsWith('rpc/')){
    const fn=path.slice(4);
    if(fn==='siguiente_numero'){CNT++;return J(CNT)}
+   if(fn==='vender_fabricando'){
+    const req='autoventa:'+body.p_peticion, old=DB[req];
+    if(old)return J(Object.assign({},old.valor,{replayed:true,stock:Object.assign({},ST)}));
+    const s=body.p_venta, reserved={};
+    Object.keys(DB).filter(k=>k.startsWith('encargo:')).forEach(k=>{const e=DB[k].valor;if(!e.finished&&!e.cancelled&&e.fab==='FABRICADO'&&e.depositCents>0)(e.items||[]).forEach(i=>reserved[i.name]=(reserved[i.name]||0)+i.qty)});
+    const p=HGAutoFabricacion.plan(s.items,ST,(DB.recetas||{}).valor||{},r=>r.p&&!isMatProd(r.m)?r.m:ingKey(r.m),reserved);
+    if(!p.ok)return J({message:'FALTAN_MATERIALES: '+p.missing.join(' · '),code:'P0001'},400);
+    const ts=Date.now(),mp=madridParts(ts),id='HG-'+mp.day+mp.month+mp.year.slice(-2)+'-'+String(++CNT).padStart(3,'0'),moves=[],records=[];
+    const me=meEmp();const sl=Object.assign({},s,{id:id,stockApplied:p.sold,autoFabricacion:p.made,employee:me.name});delete sl.empId;
+    Object.keys(p.made).forEach((n,i)=>{moves.push({producto:n,delta:p.made[n],why:'Fabricación'});const uid='av-'+body.p_peticion+'-'+i;records.push({clave:'fablote:'+uid,valor:{id:uid,ts:ts,empId:me.id,emp:me.name,prod:n,q:p.made[n],autoVenta:id}})});
+    Object.keys(p.used).forEach(n=>moves.push({producto:n,delta:-p.used[n],why:'Fabricación'}));
+    Object.keys(p.sold).forEach(n=>moves.push({producto:n,delta:-p.sold[n],why:'Venta '+id}));
+    moves.forEach((m,i)=>{const v=ST[m.producto]||0;ST[m.producto]=v+m.delta;const uid='av-'+body.p_peticion+'-m'+i;records.push({clave:'mov:'+uid,valor:{uid:uid,ts:ts,who:me.name,name:isMat(m.producto)?m.producto.slice(4)+' (material)':m.producto,delta:m.delta,why:m.why,venta:id,antes:v,despues:v+m.delta,date:sl.date,time:sl.time}})});
+    records.push({clave:'venta:'+id,valor:Object.assign({},sl,{stock:p.sold,ts:new Date(ts+1).toISOString()})});
+    if(Object.keys(p.made).length){const uid='av-'+body.p_peticion;records.push({clave:'act:'+uid,valor:{id:uid,ts:ts,tipo:'fabricacion',who:me.name,empId:me.id,data:{txt:'Fabricación automática para venta '+id,venta:id,productos:p.made,materiales:p.used}}})}
+    records.forEach(r=>{DB[r.clave]={valor:r.valor,actualizado:now()}});
+    const res={sale:sl,stock:Object.assign({},ST),records:records,made:p.made,used:p.used,moves:moves,replayed:false};DB[req]={valor:res,actualizado:now()};return J(res);
+   }
    if(fn==='mover_stock'){const n=Object.assign({},ST);for(const it of (body&&body.p_items)||[]){let v=n[it.producto];if(v==null){if(it.delta<0)return J({message:'STOCK_INSUFICIENTE',code:'P0001'},400);v=0}v+=it.delta;if(v<0)return J({message:'STOCK_INSUFICIENTE',code:'P0001'},400);n[it.producto]=v}Object.assign(ST,n);return J(Object.assign({},ST))}
    return J({},200);
   }
@@ -667,7 +685,17 @@ function refreshEmpSelect(){
 /* Stock: sin registrar = sin límite. El empleado nunca ve cantidades; solo se le impide superar las existencias. */
 function limitFor(name){
  if(appMode!=='venta'||(customer.op==='encargo'&&!loadedEnc))return Infinity;
+ if(autoVentaOn()){
+  let lo=0,hi=MAX_QTY;
+  while(lo<hi){const q=Math.ceil((lo+hi)/2);if(autoVentaPlan([{name:name,qty:q}]).ok)lo=q;else hi=q-1}
+  return lo;
+ }
  return (stockMap[name]||0)+((sale&&sale.stockApplied&&sale.stockApplied[name])||0)+origQty(name);
+}
+function autoVentaOn(){return appMode==='venta'&&customer.op!=='encargo'&&!loadedEnc&&!sale&&!!window.HGAutoFabricacion}
+function autoVentaPlan(items){
+ const R={},all=reservas('');Object.keys(all).forEach(n=>{R[n]=all[n].reduce((sum,x)=>sum+x.qty,0)});
+ return HGAutoFabricacion.plan(items,stockMap,recetas,r=>r.p&&!isMatProd(r.m)?r.m:ingKey(r.m),R);
 }
 function applyStockLimits(animate){
  let clamped=null;
@@ -718,6 +746,7 @@ function benefitFor(d,total){
 /* Segunda comprobación de stock al finalizar: nunca se permite stock negativo */
 function stockOk(items){
  if(cloud.skipStockOk||(customer.op==='encargo'&&!loadedEnc))return true;
+ if(autoVentaOn()){const p=autoVentaPlan(items);if(!p.ok)say('Faltan materiales · '+p.missing.join(' · '),'err');return p.ok}
  for(const x of items){
   const avail=(stockMap[x.name]||0)+((sale&&sale.stockApplied&&sale.stockApplied[x.name])||0), need=x.qty-encOq(x,loadedEnc&&loadedEnc.id);
   if(need>avail){say('No hay stock suficiente de '+x.name);return false}
@@ -900,7 +929,11 @@ function groupItems(s){
 function cartRow(x){return `<div class="cartrow"><span>${esc(x.name)}</span><span>${x.qty}</span><span>${money(x.cents)}</span><span>${money(x.qty*x.cents)}</span></div>`}
 function cartHTML(items){
  const head='<div class="cartrow carthead"><span>Producto</span><span>Cant.</span><span>P. unit.</span><span>Subtotal</span></div>';
- if(!loadedEnc)return head+items.map(cartRow).join('');
+ if(!loadedEnc){
+  let hint='';
+  if(autoVentaOn()){const p=autoVentaPlan(items),L=Object.keys(p.made).map(n=>p.made[n]+' × '+n);if(L.length)hint='<p class="bk-note">Se fabricará al confirmar la venta: <b>'+esc(L.join(', '))+'</b>.</p>';if(!p.ok)hint+='<p class="pay-err">'+esc(p.missing.join(' · '))+'</p>'}
+  return head+items.map(cartRow).join('')+hint;
+ }
  return head+groupItems({fromEncargo:true,items:items}).map(g=>`<div class="cart-sub">${g.title}</div>`+g.items.map(cartRow).join('')).join('');
 }
 /* Guarda (o actualiza) automáticamente el encargo al completarlo. Conserva sus estados si ya existía. */
@@ -5453,6 +5486,7 @@ async function stockPrepare(){
 }
 async function ensureSaleCloud(){
  if(offlineBlock(customer.op==='encargo'&&!loadedEnc?'guardar un encargo':'vender'))return null;
+ if(autoVentaOn()||store.get('harrington_autoventa_pendiente_v1'))return autoVentaConfirmar();
  const items=selected();
  if(!items.length){say('Añade algún producto primero');return null}
  if(!customerOk())return null;
@@ -5465,6 +5499,44 @@ async function ensureSaleCloud(){
  }
  cloud.skipStockOk=true;
  try{return ensureSale()}finally{cloud.skipStockOk=false}
+}
+let autoVentaBusy=false;
+async function autoVentaConfirmar(){
+ if(autoVentaBusy)return null;autoVentaBusy=true;
+ const key='harrington_autoventa_pendiente_v1';
+ try{
+  let pending=JSON.parse(store.get(key)||'null');
+  if(!pending){
+   if(!customerOk())return null;
+   const items=selected();if(!items.length){say('Añade algún producto primero');return null}
+   try{await Promise.all([cloudPullRecords(),refreshStock()])}catch(e){say('Sin conexión: no se puede comprobar el almacén','err');return null}
+   if(!stockOk(items))return null;
+   const me=meEmp();if(!me){say('Selecciona tu empleado','err');return null}
+   pending={p_peticion:crypto.randomUUID(),p_venta:Object.assign(snapshot(items,new Date()),{empId:me.id,dueCents:computeFin().due})};
+   // Se conserva antes de enviar: una respuesta perdida se recupera con el mismo identificador.
+   store.set(key,JSON.stringify(pending));
+   if(store.get(key)!==JSON.stringify(pending))throw Error('No se puede conservar la petición en este dispositivo');
+  }
+  let res;
+  try{res=await sbRpc('vender_fabricando',pending)}catch(e){
+   const t=String(e.message||'');
+   if(/FALTAN_MATERIALES|RECETA_INVALIDA|CANTIDAD_INVALIDA|EMPLEADO_INVALIDO|SIN_CUENTA|VENTA_INVALIDA|VENTA_VACIA|PETICION_INVALIDA/.test(t)){
+    store.remove(key);try{await refreshStock()}catch(x){}
+    const m=t.match(/FALTAN_MATERIALES: ([^"\\]+)/);say(m?'Faltan materiales · '+m[1].replace(/^mat:/,''):'No se puede completar la venta: '+t,'err');
+   }else say('No se pudo confirmar la respuesta. Pulsa FINALIZAR otra vez para recuperar la misma venta sin duplicarla.','err');
+   return null;
+  }
+  if(!res||!res.sale||!res.sale.id)throw Error('Respuesta de venta incompleta');
+  sale=res.sale;
+  store.set(KEY_SALE,JSON.stringify(sale));applyStockMap(res.stock);
+  (res.records||[]).forEach(r=>applyRecord(r.clave,r.valor));
+  rememberClient(sale);store.remove(key);
+  try{invChanged(res.moves||[],'Venta '+sale.id)}catch(e){}
+  const notified='harrington_autoventa_aviso_'+pending.p_peticion;
+  if(Object.keys(res.made||{}).length&&!store.get(notified)){try{fbAuto(Object.keys(res.made).map(n=>({producto:n,delta:res.made[n]})));store.set(notified,'1')}catch(e){}}
+  return sale;
+ }catch(e){say('No se pudo completar la venta. La petición se conserva para recuperarla sin duplicados.','err');return null}
+ finally{autoVentaBusy=false}
 }
 const KEY_AUDIT='harrington_audit_v1', KEY_ACT='harrington_act_v1', KEY_RECU='harrington_recuentos_v1', KEY_FABLOTE='harrington_fablotes_v1', KEY_COMPRAS='harrington_compras_v1';
 const REC_LISTS={
@@ -8268,3 +8340,4 @@ function fitSign(){try{const sg=document.querySelector('.g-sign'), t=document.ge
 window.addEventListener('resize',()=>{clearTimeout(fitSign.t);fitSign.t=setTimeout(fitSign,120)});
 try{document.fonts.ready.then(fitSign);document.fonts.addEventListener&&document.fonts.addEventListener('loadingdone',fitSign)}catch(e){}
 setTimeout(fitSign,50);setTimeout(fitSign,1200);
+
