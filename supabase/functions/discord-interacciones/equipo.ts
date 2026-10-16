@@ -41,6 +41,7 @@ export function handleEquipo(i:Any,c:Config):Response|null {
  if(id==='manual:search'||id==='agreements:search')return modal(id==='manual:search'?'manual:query':'agreements:query',id==='manual:search'?'Consultar el manual':'Buscar en conversaciones',[textField('query','¿Qué busca?',100)]);
  if(id==='note:new')return modal('note:form','Nota privada para el dueño',[{...textField('text','Asunto pendiente',1000),style:2},{...textField('when','Cuándo (opcional): mañana 10:00',80),required:false}]);
  if(id==='voice:new')return modal('voice:form','Aviso al entrar en voz',[{...textField('target','ID o mención del compañero',30),placeholder:'Use /avisame para elegirlo de una lista'}]);
+ if(id==='rumor:new')return modal('rumor:form','Nuevo rumor · /rumor se añade solo',[{...textField('text','Rumor (máximo 153 caracteres)',153),style:2,min_length:1}]);
  if(/^idea:(review|accept|reject):/.test(id)){if(uid!==OWNER)return json({type:4,data:{...answer('Solo el dueño decide las propuestas.'),flags:64}});return modal('decision:'+id.split(':')[2]+':'+id.split(':')[1],'Decisión sobre la propuesta',[{...textField('reason','Explique su decisión al equipo',700),style:2,min_length:3}]);}
  // Acknowledge before database/Discord calls. Long searches never occupy the 3-second response window.
  background((async()=>{try{if(i.id){const {error}=await sb.from(TABLE).insert({id:'interaction:'+i.id,kind:'interaction',owner:uid,guild_id:c.guild_id,data:{},status:'processing'});if(error?.code==='23505')return;if(error)throw error;}const payload=await execute(i,c);await reply(i,payload);if(i.id)await sb.from(TABLE).update({status:'done'}).eq('id','interaction:'+i.id);}catch(e){await reply(i,answer('⚠️ '+safe((e as Error).message,1400))).catch(()=>{});}})());
@@ -81,13 +82,16 @@ async function addNote(c:Config,uid:string,text:string,when:string){if(!text.tri
 export async function execute(i:Any,c:Config):Promise<Any>{
  const uid=String(i.member?.user?.id||i.user?.id),name=safe(i.member?.nick||i.member?.user?.global_name||i.member?.user?.username,60),id=String(i.data?.custom_id||'').slice(3),cmd=i.data?.name,v=fieldValues(i),o=options(i),s=sub(i);
  if(!isStaff(c,i.member))throw Error('Solo el personal puede utilizar estas funciones.');
+ if(id==='rumor:form'){
+ const raw=String(v.text||'').trim();if(!raw||raw.length>153)throw Error('El texto admite como máximo 153 caracteres; /rumor y el espacio ocupan los otros 7.');
+ if(!c.canal_rumores)throw Error('El canal de rumores no está configurado.');
+ const {error}=await sb.from(TABLE).insert({id:'rumor:'+i.id,kind:'rumor',owner:uid,guild_id:c.guild_id,status:'pending',channel_id:c.canal_rumores,data:{original:raw,source:i.id,author:name,form:true,attempts:0}});if(error&&error.code!=='23505')throw error;
+ return answer('Rumor recibido. Harrington lo publicará pasado a limpio, empezando por /rumor y con un máximo total de 160 caracteres.');
+ }
  if(id.startsWith('rumor:copy:')){
  const r=await get(id.slice('rumor:copy:'.length));if(!r||r.kind!=='rumor'||r.status!=='done'||r.guild_id!==c.guild_id||r.channel_id!==c.canal_rumores)throw Error('Rumor no encontrado.');
  const m=await member(c,uid);if(!isStaff(c,m))throw Error('Solo el personal puede copiar rumores.');
- const token=crypto.randomUUID()+crypto.randomUUID(),copyId=crypto.randomUUID(),hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token)))).map(x=>x.toString(16).padStart(2,'0')).join('');
- const {error}=await sb.from(TABLE).insert({id:'copy:'+copyId,kind:'rumor_copy',owner:uid,guild_id:c.guild_id,status:'active',due_at:new Date(Date.now()+300000).toISOString(),data:{hash,text:r.data.clean}});if(error)throw error;
- const url='https://juancarlos15022-maker.github.io/harrington-gunsmith/copiar-rumor.html#'+new URLSearchParams({id:copyId,token});
- return answer('📋 Texto listo para copiar. Discord no permite escribir directamente en su portapapeles: abra el enlace y pulse **Copiar al portapapeles**. El enlace caduca en cinco minutos.',{components:[row({type:2,style:5,label:'Abrir y copiar rumor',url})]});
+ return answer('```text\n'+String(r.data.clean).replace(/`/g,'')+'\n```');
  }
  if(id.startsWith('game:'))return gameAction(i,c,id,uid,name);
  if(cmd==='saloon'||id==='saloon:dados'||id==='saloon:domino'){
