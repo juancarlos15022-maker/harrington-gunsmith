@@ -2501,7 +2501,7 @@ async function discordCard(kind,text,ref,editOnly){
  try{
   if(ref&&ref.id&&ref.w===whKey(url)){
    const u=new URL(url);u.pathname=u.pathname.replace(/\/$/,'')+'/messages/'+ref.id;
-   const r=await fetch(u.toString(),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:'',embeds:pl.embeds})});
+   const r=await fetch(u.toString(),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:'',embeds:pl.embeds,_hg:pl._hg})});
    if(r.ok){dcOk(kind);return ref}
    if(r.status!==404)throw new Error(r.status);
   }
