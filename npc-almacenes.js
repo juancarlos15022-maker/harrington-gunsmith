@@ -65,7 +65,7 @@
     }else{render();say('Respuesta pendiente. Usa RECUPERAR OPERACIÓN para evitar duplicados.','err')}return;
    }
    if(!result||!result.id||!result.npc||!result.stock)throw Error('Respuesta incompleta');
-   (result.records||[]).forEach(r=>applyRecord(r.clave,r.valor));applyNpc(result.npc);applyStockMap(result.stock);localStorage.removeItem(key());mode=pending.p_modo;last=result;
+   applyRecords(result.records||[]);applyNpc(result.npc);applyStockMap(result.stock);localStorage.removeItem(key());mode=pending.p_modo;last=result;
    try{invChanged(result.moves||[],titles[mode]);calc(false)}catch(e){}
    if(!result.replayed)try{const txt=[titles[mode],meEmp().name,result.filas.map(x=>x.n+': '+x.esperado+' → '+x.encontrado).join('\n'),result.venta?'Venta '+result.venta+' · '+money(result.importe):'Sin ventas ni ingresos'].join('\n');discordSend(result.venta?'ventas':'stock',txt)}catch(e){}
    render();say('Operación del NPC guardada');

@@ -64,7 +64,7 @@
     return;
    }
    if(!result||!result.id||!Array.isArray(result.items))throw Error('Respuesta incompleta');
-   applyStockMap(result.stock);(result.records||[]).forEach(r=>applyRecord(r.clave,r.valor));
+   applyStockMap(result.stock);applyRecords(result.records||[]);
    saved=result;localStorage.removeItem(draftKey());
    try{calc(false);invChanged(result.moves||[],'Inventario físico '+result.id)}catch(e){}
    if(!result.replayed)try{discordSend('stock',['INVENTARIO FÍSICO · '+result.id,'Jefe: '+meEmp().name,result.items.length+' artículos contados · '+result.changed+' ajustes'].concat(result.items.filter(x=>x.diff).map(x=>x.name+': '+x.teo+' → '+x.fis)).join('\n'))}catch(e){}

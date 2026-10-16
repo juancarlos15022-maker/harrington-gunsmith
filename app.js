@@ -261,7 +261,7 @@ function selected(){
 function saveOrder(items){
  if(!items.length) return store.remove(KEY_ORDER);
  const o={};items.forEach(x=>o[x.name]=x.qty);
- store.set(KEY_ORDER,JSON.stringify(o));
+ const value=JSON.stringify(o);if(store.get(KEY_ORDER)!==value)store.set(KEY_ORDER,value);
 }
 function restoreOrder(){
  try{
@@ -504,8 +504,10 @@ document.getElementById('clear').onclick=async()=>{
  clearQuantities();if(appMode==='venta'){resetSale();releaseEncargo()}calc(false);say('Pedido vaciado');
 };
 document.getElementById('new').onclick=doNew;
-document.querySelector('.panel.order').addEventListener('input',()=>setTimeout(updateFinish,0));
-document.querySelector('.panel.order').addEventListener('change',()=>setTimeout(updateFinish,0));
+let finishQueued=false;
+function queueFinish(){if(finishQueued)return;finishQueued=true;setTimeout(()=>{finishQueued=false;updateFinish()},0)}
+document.querySelector('.panel.order').addEventListener('input',queueFinish);
+document.querySelector('.panel.order').addEventListener('change',queueFinish);
 /* Finalizar la venta o el encargo (botón FINALIZAR y Harrington AI usan exactamente lo mismo) */
 /* Se busca: carteles que cuelga la Dirección desde Discord (/se-busca) */
 var sebusca=(()=>{try{const a=JSON.parse(localStorage.getItem('harrington_sebusca_v1')||'[]');return Array.isArray(a)?a:[]}catch(e){return []}})();
@@ -703,24 +705,28 @@ function refreshEmpSelect(){
  empSel.value=customer.employee||'';empSel.disabled=!!me;
 }
 /* Stock: sin registrar = sin límite. El empleado nunca ve cantidades; solo se le impide superar las existencias. */
-function limitFor(name){
+function limitFor(name,reserved){
  if(appMode!=='venta'||(customer.op==='encargo'&&!loadedEnc))return Infinity;
  if(autoVentaOn()){
   let lo=0,hi=MAX_QTY;
-  while(lo<hi){const q=Math.ceil((lo+hi)/2);if(autoVentaPlan([{name:name,qty:q}]).ok)lo=q;else hi=q-1}
+  while(lo<hi){const q=Math.ceil((lo+hi)/2);if(autoVentaPlan([{name:name,qty:q}],reserved).ok)lo=q;else hi=q-1}
   return lo;
  }
  return (stockMap[name]||0)+((sale&&sale.stockApplied&&sale.stockApplied[name])||0)+origQty(name);
 }
 function autoVentaOn(){return appMode==='venta'&&customer.op!=='encargo'&&!loadedEnc&&!sale&&!!window.HGAutoFabricacion}
-function autoVentaPlan(items){
- const R={},all=reservas('');Object.keys(all).forEach(n=>{R[n]=all[n].reduce((sum,x)=>sum+x.qty,0)});
- return HGAutoFabricacion.plan(items,stockMap,recetas,r=>r.p&&!isMatProd(r.m)?r.m:ingKey(r.m),R);
+function saleReservations(){
+ const R={},all=reservas('');Object.keys(all).forEach(n=>{R[n]=all[n].reduce((sum,x)=>sum+x.qty,0)});return R;
+}
+function autoVentaPlan(items,reserved){
+ return HGAutoFabricacion.plan(items,stockMap,recetas,r=>r.p&&!isMatProd(r.m)?r.m:ingKey(r.m),reserved===undefined?saleReservations():reserved);
 }
 function applyStockLimits(animate){
+ // Una instantánea por pasada síncrona; la siguiente interacción vuelve a leer las reservas.
+ const reserved=autoVentaOn()?saleReservations():undefined;
  let clamped=null;
  inputs.forEach(i=>{
-  const lim=limitFor(i.dataset.name), row=i.closest('.product'), none=lim<=0;
+  const lim=limitFor(i.dataset.name,reserved), row=i.closest('.product'), none=lim<=0;
   if(readQty(i)>lim){i.value=Math.max(0,lim);clamped=i.dataset.name}
   row.classList.toggle('no-stock',none);
   const q=readQty(i);
