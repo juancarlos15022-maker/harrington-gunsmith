@@ -1,0 +1,218 @@
+[
+  {
+    "name": "saloon",
+    "description": "Dados y dominó entre compañeros y clasificación de victorias",
+    "type": 1,
+    "options": [
+      {
+        "type": 3,
+        "name": "juego",
+        "description": "Elija mesa o clasificación",
+        "required": false,
+        "choices": [
+          {
+            "name": "Ver juegos",
+            "value": "menu"
+          },
+          {
+            "name": "Dados",
+            "value": "dados"
+          },
+          {
+            "name": "Dominó",
+            "value": "domino"
+          },
+          {
+            "name": "Clasificación",
+            "value": "ranking"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "idea",
+    "description": "Proponga una mejora al equipo con votos y decisión del dueño",
+    "type": 1
+  },
+  {
+    "name": "manual",
+    "description": "Instrucciones aprobadas por el dueño, con enlace a la fuente",
+    "type": 1,
+    "options": [
+      {
+        "type": 1,
+        "name": "buscar",
+        "description": "Buscar una instrucción",
+        "options": [
+          {
+            "type": 3,
+            "name": "consulta",
+            "description": "Qué necesita saber",
+            "required": true,
+            "max_length": 100
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "name": "indice",
+        "description": "Ver las instrucciones publicadas",
+        "options": []
+      },
+      {
+        "type": 1,
+        "name": "publicar",
+        "description": "Dueño: publicar una instrucción",
+        "options": [
+          {
+            "type": 3,
+            "name": "titulo",
+            "description": "Título",
+            "required": true,
+            "max_length": 80
+          },
+          {
+            "type": 3,
+            "name": "texto",
+            "description": "Instrucción aprobada",
+            "required": true,
+            "max_length": 1800
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "name": "retirar",
+        "description": "Dueño: retirar una instrucción",
+        "options": [
+          {
+            "type": 3,
+            "name": "id",
+            "description": "ID completo de la instrucción",
+            "required": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "libreta",
+    "description": "Libreta privada del dueño: notas y recordatorios en hora de Madrid",
+    "type": 1,
+    "options": [
+      {
+        "type": 1,
+        "name": "anotar",
+        "description": "Apuntar un asunto privado",
+        "options": [
+          {
+            "type": 3,
+            "name": "texto",
+            "description": "Qué quiere recordar",
+            "required": true,
+            "max_length": 1000
+          },
+          {
+            "type": 3,
+            "name": "cuando",
+            "description": "Ej.: mañana 10:00, en 30 minutos o 20/10/2026 18:00",
+            "required": false,
+            "max_length": 80
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "name": "listar",
+        "description": "Ver asuntos pendientes",
+        "options": []
+      },
+      {
+        "type": 1,
+        "name": "resolver",
+        "description": "Cerrar un asunto",
+        "options": [
+          {
+            "type": 3,
+            "name": "id",
+            "description": "ID completo de la nota",
+            "required": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "avisame",
+    "description": "Aviso privado cuando un compañero entre en un canal de voz visible",
+    "type": 1,
+    "options": [
+      {
+        "type": 1,
+        "name": "crear",
+        "description": "Esperar a un compañero",
+        "options": [
+          {
+            "type": 6,
+            "name": "companero",
+            "description": "Empleado que quiere encontrar",
+            "required": true
+          },
+          {
+            "type": 4,
+            "name": "horas",
+            "description": "Caducidad del aviso (por defecto 24 horas)",
+            "min_value": 1,
+            "max_value": 168
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "name": "listar",
+        "description": "Ver sus avisos pendientes",
+        "options": []
+      },
+      {
+        "type": 1,
+        "name": "cancelar",
+        "description": "Cancelar un aviso",
+        "options": [
+          {
+            "type": 3,
+            "name": "id",
+            "description": "ID completo del aviso",
+            "required": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "acuerdos",
+    "description": "Buscar acuerdos guardados y coincidencias en conversaciones internas",
+    "type": 1,
+    "options": [
+      {
+        "type": 3,
+        "name": "consulta",
+        "description": "Palabras que recuerda",
+        "required": true,
+        "max_length": 100
+      },
+      {
+        "type": 7,
+        "name": "canal",
+        "description": "Limitar a un canal interno de conversación",
+        "channel_types": [
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Guardar como acuerdo",
+    "type": 3
+  }
+]
