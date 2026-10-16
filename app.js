@@ -5168,10 +5168,10 @@ const SB_URL='https://mrlpvjxuifvspeaqtscm.supabase.co', SB_KEY='sb_publishable_
    y abre una sesión de Supabase a nombre de ese empleado. La web la guarda en este dispositivo y la manda en cada petición.
    Caduca cada hora y se renueva sola. Se borra al cerrar sesión. Si algo falla, la web sigue funcionando igual que antes. */
 const AUTH_KEY='harrington_auth_v1', AUTH_URL=SB_URL+'/functions/v1/cuentas';
-var AUTH=null;try{AUTH=JSON.parse(localStorage.getItem(AUTH_KEY)||'null')}catch(e){}
+var AUTH=null;try{const me=JSON.parse(sessionStorage.getItem('harrington_me_v1')||'null'),own=JSON.parse(sessionStorage.getItem(AUTH_KEY)||'null');if(own&&me?.id===own.emp)AUTH=own;else if(me?.id){const saved=JSON.parse(localStorage.getItem('harrington_auth_usuario_'+me.id)||localStorage.getItem(AUTH_KEY)||'null');if(saved?.emp===me.id)AUTH=saved;}}catch(e){}
 if(SANDBOX)AUTH=null;
-function authSave(a){AUTH=a;try{if(a)localStorage.setItem(AUTH_KEY,JSON.stringify(a));else localStorage.removeItem(AUTH_KEY)}catch(e){}}
-function authClear(){if(AUTH)authSave(null);else try{localStorage.removeItem(AUTH_KEY)}catch(e){}try{if(typeof accEnforce==='function')setTimeout(accEnforce,0)}catch(e){}}
+function authSave(a){const old=AUTH;AUTH=a;try{if(a){sessionStorage.setItem(AUTH_KEY,JSON.stringify(a));localStorage.setItem('harrington_auth_usuario_'+a.emp,JSON.stringify(a));}else{sessionStorage.removeItem(AUTH_KEY);if(old?.emp)localStorage.removeItem('harrington_auth_usuario_'+old.emp);}const legacy=JSON.parse(localStorage.getItem(AUTH_KEY)||'null');if(legacy&&legacy.emp===(a?.emp||old?.emp))localStorage.removeItem(AUTH_KEY);}catch(e){}}
+function authClear(){if(AUTH)authSave(null);else try{sessionStorage.removeItem(AUTH_KEY)}catch(e){}try{if(typeof accEnforce==='function')setTimeout(accEnforce,0)}catch(e){}}
 function authFresh(){return !!(AUTH&&AUTH.at&&ME&&ME.id===AUTH.emp&&AUTH.exp-Date.now()>60000)}
 async function authOpen(empId,pw){
  if(SANDBOX||!empId||empId==='prueba'||!pw||(location.protocol==='file:'&&!window.__hgTest))return false;
@@ -5184,19 +5184,19 @@ async function authOpen(empId,pw){
   return true;
  }catch(e){return false}
 }
-let authRefP=null;
+let authRefP=null;let authRefEmp='';
 function authRefresh(){
- if(authRefP)return authRefP;
+ if(authRefP&&authRefEmp===AUTH?.emp)return authRefP;
  const a=AUTH;if(!a||!a.rt)return Promise.resolve(null);
  /* otra pestaña de este dispositivo puede haberla renovado ya */
- try{const o=JSON.parse(localStorage.getItem(AUTH_KEY)||'null');if(o&&o.emp===a.emp&&o.at!==a.at&&o.exp-Date.now()>60000){AUTH=o;try{rtToken()}catch(e){}return Promise.resolve(o)}}catch(e){}
+ try{const o=JSON.parse(localStorage.getItem('harrington_auth_usuario_'+a.emp)||localStorage.getItem(AUTH_KEY)||'null');if(o&&o.emp===a.emp&&o.at!==a.at&&o.exp-Date.now()>60000){authSave(o);try{rtToken()}catch(e){}return Promise.resolve(o)}}catch(e){}
  const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),12000);
- authRefP=fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({refresh_token:a.rt})})
+ authRefEmp=a.emp;const p=fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({refresh_token:a.rt})})
   .then(r=>r.ok?r.json():Promise.reject(r.status))
   .then(j=>{if(!j||!j.access_token)return Promise.reject(400);if(AUTH!==a)return AUTH;authSave({at:j.access_token,rt:j.refresh_token||a.rt,exp:j.expires_at?j.expires_at*1000:Date.now()+(j.expires_in||3600)*1000,emp:a.emp});try{rtToken()}catch(e){}return AUTH})
   .catch(st=>{if((st===400||st===401||st===403)&&AUTH===a)authClear();return null})
-  .finally(()=>{clearTimeout(timer);authRefP=null});
- return authRefP;
+  .finally(()=>{clearTimeout(timer);if(authRefP===p){authRefP=null;authRefEmp='';}});
+ authRefP=p;return p;
 }
 async function authToken(){
  if(!AUTH||SANDBOX||!ME)return null;
@@ -5205,8 +5205,9 @@ async function authToken(){
  const a=await authRefresh();return a&&a.at||null;
 }
 async function sbFetch(path,opts){
- opts=opts||{};
+ opts=opts||{};const startedEmp=ME?.id||'';
  let tk=null;if(opts._tk!==undefined)tk=opts._tk;else try{tk=await authToken()}catch(e){}
+ if(opts._tk===undefined&&(ME?.id||'')!==startedEmp)return new Response(JSON.stringify({message:'SESION_CAMBIADA'}),{status:401,headers:{'Content-Type':'application/json'}});
  /* base de datos cerrada y sin cuenta segura: no se intenta escribir (se queda pendiente hasta entrar con la tarjeta) */
  if(!tk&&(opts.method||'GET')!=='GET'&&path.indexOf('/rest/v1/')===0&&!SANDBOX)return new Response(JSON.stringify({message:'SIN_CUENTA'}),{status:401,headers:{'Content-Type':'application/json'}});
  const go=k=>{
@@ -5330,9 +5331,10 @@ async function cloudFlushOutbox(){
  cloud.flushing=false;
  if(cloud.outbox.length&&cloud.ok)setTimeout(cloudFlushOutbox,200);
 }
+async function cloudResponseError(r){const e=Error('HTTP '+r.status);e.status=r.status;try{e.code=(await r.clone().json()).code||''}catch{}return e;}
 async function sbRpc(name,body){
  const r=await sbFetch('/rest/v1/rpc/'+name,{method:'POST',body:JSON.stringify(body||{})}), t=await r.text();
- if(!r.ok){const e=new Error(t);e.status=r.status;throw e}
+ if(!r.ok){const e=new Error(t);e.status=r.status;try{e.code=JSON.parse(t).code||''}catch{}throw e}
  try{return JSON.parse(t)}catch(e){return t}
 }
 function cloudRev(){return sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify([{clave:'rev',valor:{n:Date.now()+'-'+Math.random().toString(36).slice(2,6)},actualizado:new Date().toISOString()}])}).catch(()=>{})}
@@ -5489,7 +5491,7 @@ async function invPublish(kind){
  if(ref&&(!old||old.id!==ref.id||old.w!==ref.w)){webhook.refs=Object.assign({},webhook.refs||{},{[kind]:ref});store.set(KEY_WEBHOOK,JSON.stringify(webhook))}
 }
 async function refreshStock(){
- const r=await sbFetch('/rest/v1/stock?select=producto,cantidad');if(!r.ok)throw new Error(r.status);
+ const r=await sbFetch('/rest/v1/stock?select=producto,cantidad');if(!r.ok)throw await cloudResponseError(r);
  const rows=await r.json();
  if(!Array.isArray(rows))throw new Error('Respuesta de almacén inválida');
  const m={};rows.forEach(x=>{m[x.producto]=x.cantidad});applyStockMap(m)
@@ -5640,7 +5642,7 @@ function recordPagePath(pf,gt,lte,cursor){
 async function pullRange(pf,gt,lte){
  let cursor=null,got=0,top='';
  for(let page=0;page<200;page++){
-  const r=await sbFetch(recordPagePath(pf,gt,lte,cursor));if(!r.ok)throw new Error(r.status);
+  const r=await sbFetch(recordPagePath(pf,gt,lte,cursor));if(!r.ok)throw await cloudResponseError(r);
   const rows=await r.json();if(!Array.isArray(rows))throw new Error('Respuesta de historial inválida');
   applyRecords(rows);got+=rows.length;
   if(rows.length){cursor=rows[rows.length-1];top=cursor.actualizado;}
@@ -5691,7 +5693,7 @@ async function cloudPullRecordsOnce(){
  const since=cloud.since?new Date(Date.parse(cloud.since)-120000).toISOString():'';let got=0,cursor=null,top=cloud.since||'',complete=false;
  for(let page=0;page<200;page++){
   const r=await sbFetch(recordPagePath('*:',since,'',cursor));
-  if(!r.ok)throw new Error(r.status);
+  if(!r.ok)throw await cloudResponseError(r);
   const rows=await r.json();
   /* los registros que ya teníamos tal cual (misma fecha de guardado) no se vuelven a aplicar ni a pintar */
   const seen=cloud.seenA||(cloud.seenA={});
@@ -5732,7 +5734,7 @@ function wipeLocal(what){
  if(!dirModal.hidden)renderDir();
 }
 async function applyResetRow(){
- const r=await sbFetch('/rest/v1/datos?select=valor,actualizado&clave=eq.reset');if(!r.ok)throw new Error(r.status);
+ const r=await sbFetch('/rest/v1/datos?select=valor,actualizado&clave=eq.reset');if(!r.ok)throw await cloudResponseError(r);
  const rows=await r.json();if(!rows[0])return;
  const t=Date.parse(rows[0].actualizado);if(t<=cloud.resetSeen)return;
  const what=(rows[0].valor&&rows[0].valor.what)||[];
@@ -5751,22 +5753,22 @@ async function cloudPollOnce(force){
  try{
   const cfg=Object.keys(CLOUD_REV).concat(['rev','reset','acceso']).join(',');
   const r=await sbFetch('/rest/v1/datos?select=clave,actualizado&clave=in.('+cfg+')');
-  if(!r.ok)throw new Error(r.status);
+  if(!r.ok)throw await cloudResponseError(r);
   const rows=await r.json();setCloudState(true);
   /* Un dispositivo que se une por primera vez a una nube con datos de operación olvida los suyos antiguos */
   if(!cloud.joined&&rows.some(x=>x.clave==='rev')){wipeOps();cloud.joined=true;try{localStorage.setItem('harrington_cloud_joined','1')}catch(e){}}
   const need=[];
-  rows.forEach(x=>{if(!CLOUD_REV[x.clave]||cloud.dirty[x.clave])return;const t=Date.parse(x.actualizado);if(force||cloud.stamps[x.clave]!==t)need.push(x.clave)});
+  rows.forEach(x=>{if(!CLOUD_REV[x.clave]||cloud.dirty[x.clave])return;const t=x.actualizado;if(force||cloud.stamps[x.clave]!==t)need.push(x.clave)});
   Object.keys(cloud.dirty).forEach(cl=>cloudFlush(cl));
   if(need.length){
    const r2=await sbFetch('/rest/v1/datos?select=clave,valor,actualizado&clave=in.('+need.join(',')+')');
-   if(!r2.ok)throw new Error(r2.status);
-   (await r2.json()).forEach(x=>applyRemote(x.clave,x.valor,Date.parse(x.actualizado)));
+   if(!r2.ok)throw await cloudResponseError(r2);
+   (await r2.json()).forEach(x=>applyRemote(x.clave,x.valor,x.actualizado));
   }
   const ac=rows.find(x=>x.clave==='acceso');if(ac&&Date.parse(ac.actualizado)!==ACC.t)accLoad();else{if(!ac&&ACC.cerrado){ACC={cerrado:false,t:0};try{localStorage.setItem('harrington_acceso',JSON.stringify(ACC))}catch(e){}}accEnforce()}
   const rs=rows.find(x=>x.clave==='reset');
   if(rs&&Date.parse(rs.actualizado)>cloud.resetSeen)await applyResetRow();
-  const rv=rows.find(x=>x.clave==='rev'), rt=rv?Date.parse(rv.actualizado):0;
+  const rv=rows.find(x=>x.clave==='rev'), rt=rv?rv.actualizado:'';
   const recordsNeeded=force||!cloud.revSeen||rt!==cloud.revSeen;
   if(recordsNeeded||cloud.stockEpoch!==cloud.stockSeen||Date.now()-(cloud.stockReadAt||0)>=60000){
    if(recordsNeeded)await cloudPullRecords();
@@ -5774,32 +5776,35 @@ async function cloudPollOnce(force){
    cloud.revSeen=rt||1;calc(false);
   }
   if(cloud.outbox.length)cloudFlushOutbox();
-  cloud.last=Date.now();cloud.failures=0;cloud.retryAt=0;
-  autoWeekly();autoMonthly();recetasBase();try{icLegacy()}catch(e){}try{autoFijos()}catch(e){}try{contratosPend()}catch(e){}try{evTick()}catch(e){}renderEmpWeek();renderPayPlate();renderGoal();
- }catch(e){setCloudState(false);cloud.failures=(cloud.failures||0)+1;cloud.last=Date.now();cloud.retryAt=cloud.last+Math.min(60000,3000*Math.pow(2,Math.min(5,cloud.failures-1)));}
+  cloud.last=Date.now();cloud.failures=0;cloud.retryAt=0;if(typeof hgSyncReportSuccess==='function')hgSyncReportSuccess('lectura');
+  const localError=e=>{if(typeof hgSyncReportError==='function'){if(!e.status){e.status=422;e.code='CALCULO_LOCAL';}hgSyncReportError(e,'interfaz');}};
+  for(const f of [()=>autoWeekly(),()=>autoMonthly(),()=>recetasBase(),()=>icLegacy(),()=>autoFijos(),()=>contratosPend(),()=>evTick(),()=>renderEmpWeek(),()=>renderPayPlate(),()=>renderGoal()])try{const p=f();if(p&&typeof p.catch==='function')p.catch(localError);}catch(e){localError(e);}
+ }catch(e){if(typeof hgSyncReportError==='function')hgSyncReportError(e,'lectura');else setCloudState(false);cloud.failures=(cloud.failures||0)+1;cloud.last=Date.now();cloud.retryAt=cloud.last+Math.min(60000,3000*Math.pow(2,Math.min(5,cloud.failures-1)));}
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){cloudPoll(true);rtConnect()}});
 setTimeout(()=>{try{updateFinish();renderEmpWeek();updateAusBtn();renderPayPlate();renderGoal()}catch(e){}},400);
 /* Aviso instantáneo: Supabase avisa en el momento en que cambia algo y este móvil se actualiza al instante.
    Si ese canal no funciona, se sigue preguntando a la nube cada 6 segundos como siempre. */
-const rt={ws:null,ref:0,hb:null,ok:false,got:0,retry:0,timer:null};
-/* la sesión del empleado también viaja por el aviso instantáneo; al renovarse se le pasa la nueva */
-function rtToken(){if(rt.ws&&rt.ok&&rt.send&&authFresh())rt.send('realtime:harrington','access_token',{access_token:AUTH.at})}
+const rt={ws:null,ref:0,hb:null,ok:false,got:0,retry:0,timer:null,reconnect:null,lastAck:0,joinRef:'',hbRef:''};
+function rtToken(){if(rt.ws&&rt.ok&&rt.send&&authFresh())rt.send('realtime:harrington','access_token',{access_token:AUTH.at});else rtConnect();}
 function rtConnect(){
  try{
-  if(rt.ws||typeof WebSocket==='undefined'||document.visibilityState!=='visible')return;
+  if(rt.ws||typeof WebSocket==='undefined'||document.visibilityState!=='visible'||!AUTH?.at||!ME||AUTH.emp!==ME.id)return;
+  if(!authFresh()){authToken().then(t=>{if(t&&authFresh())rtConnect()}).catch(()=>{});return;}
+  clearTimeout(rt.reconnect);rt.reconnect=null;const emp=ME.id;
   const ws=new WebSocket(SB_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+encodeURIComponent(SB_KEY)+'&vsn=1.0.0');rt.ws=ws;
-  const send=(topic,event,payload)=>{try{if(ws.readyState===1)ws.send(JSON.stringify({topic:topic,event:event,payload:payload,ref:String(++rt.ref)}))}catch(e){}};
-  rt.send=send;
-  ws.onopen=()=>{const jp={config:{broadcast:{self:false},presence:{key:''},postgres_changes:[{event:'*',schema:'public',table:'datos'},{event:'*',schema:'public',table:'stock'}]}};if(authFresh())jp.access_token=AUTH.at;send('realtime:harrington','phx_join',jp);clearInterval(rt.hb);rt.hb=setInterval(()=>send('phoenix','heartbeat',{}),25000)};
-  ws.onmessage=ev=>{
-   let m;try{m=JSON.parse(ev.data)}catch(e){return}
-   if(m.topic==='realtime:harrington'&&m.event==='phx_reply'){rt.ok=!!(m.payload&&m.payload.status==='ok');if(rt.ok)rt.retry=0}
-   else if(m.event==='postgres_changes'){if(m.payload?.data?.table==='stock')cloud.stockEpoch=(cloud.stockEpoch||0)+1;rt.got=Date.now();clearTimeout(rt.timer);rt.timer=setTimeout(()=>cloudPoll(),250)}
+  const send=(topic,event,payload)=>{const ref=String(++rt.ref);try{if(ws.readyState===1)ws.send(JSON.stringify({topic,event,payload,ref}))}catch{}return ref;};rt.send=send;
+  ws.onopen=()=>{if(ME?.id!==emp||AUTH?.emp!==emp){ws.close();return;}rt.lastAck=Date.now();const jp={config:{broadcast:{self:false},presence:{key:''},postgres_changes:[{event:'*',schema:'public',table:'datos'},{event:'*',schema:'public',table:'stock'}]},access_token:AUTH.at};rt.joinRef=send('realtime:harrington','phx_join',jp);clearInterval(rt.hb);rt.hb=setInterval(()=>{if(ME?.id!==emp||AUTH?.emp!==emp||Date.now()-rt.lastAck>55000){ws.close();return;}rt.hbRef=send('phoenix','heartbeat',{});},25000);};
+  ws.onmessage=ev=>{let m;try{m=JSON.parse(ev.data)}catch{return;}if(ME?.id!==emp||AUTH?.emp!==emp){ws.close();return;}
+   if(m.topic==='phoenix'&&m.event==='phx_reply'&&m.ref===rt.hbRef){rt.lastAck=Date.now();return;}
+   if(m.topic!=='realtime:harrington')return;
+   if(m.event==='phx_reply'&&m.ref===rt.joinRef){rt.ok=m.payload?.status==='ok';if(rt.ok){rt.retry=0;rt.lastAck=Date.now();}else ws.close();}
+   else if(m.event==='phx_error'||m.event==='phx_close'||m.event==='system'&&m.payload?.status==='error'){rt.ok=false;ws.close();}
+   else if(m.event==='postgres_changes'){if(m.payload?.data?.table==='stock')cloud.stockEpoch=(cloud.stockEpoch||0)+1;rt.got=Date.now();clearTimeout(rt.timer);rt.timer=setTimeout(()=>cloudPoll(),250);}
   };
-  ws.onclose=()=>{clearInterval(rt.hb);rt.ws=null;rt.ok=false;setTimeout(rtConnect,Math.min(60000,3000*Math.pow(2,rt.retry++)))};
-  ws.onerror=()=>{try{ws.close()}catch(e){}};
- }catch(e){rt.ws=null}
+  ws.onclose=()=>{if(rt.ws!==ws)return;clearInterval(rt.hb);clearTimeout(rt.timer);rt.ws=null;rt.ok=false;const delay=Math.min(60000,3000*2**Math.min(5,rt.retry++))*(.85+Math.random()*.3);clearTimeout(rt.reconnect);rt.reconnect=setTimeout(rtConnect,delay);};
+  ws.onerror=()=>{try{ws.close()}catch{}};
+ }catch{rt.ws=null;rt.ok=false;}
 }
 /* Sondeo de respaldo: cada 6 s; si el aviso instantáneo ya ha demostrado que funciona, cada 20 s */
 var LAST_TOUCH=Date.now();['pointerdown','keydown','scroll','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{LAST_TOUCH=Date.now()},{passive:true,capture:true}));
