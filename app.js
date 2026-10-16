@@ -931,7 +931,7 @@ document.querySelectorAll('.product[data-cat="municion"] .qty').forEach(q=>{
 
 /* ===== Encargos almacenados ===== */
 function saveEncs(){store.set(KEY_ENC,JSON.stringify(encargos));encargos.forEach(e=>{const sg=JSON.stringify(e),k='encargo:'+e.id;if(cloud.sig[k]!==sg){cloud.sig[k]=sg;cloudPut(k,e)}})}
-function pendingEncs(){return encargos.filter(e=>!e.finished)}
+function pendingEncs(){return encargos.filter(e=>!e.finished&&!e.deleted&&!e.cancelled)}
 const ICO_ENC='<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h10a2 2 0 0 1 2 2v12a2 2 0 0 0 2 2H8a2 2 0 0 1-2-2z"/><path d="M6 4a2 2 0 0 0-2 2v1h2M9 9h6M9 12h6M9 15h4"/></svg>', ICO_PED='<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l9-4 9 4v9l-9 4-9-4z"/><path d="M3 8l9 4 9-4M12 12v9M7.5 6l9 4"/></svg>';
 function updateEncBtn(){const n=pendingEncs().length;encBtn.innerHTML=ICO_ENC+(n?`ENCARGOS (${n})`:'ENCARGOS')}
 function releaseEncargo(){if(!loadedEnc)return;loadedEnc=null;store.remove(KEY_LOADED);renderCustomer()}
@@ -2094,8 +2094,8 @@ function clientSales(c){
   .sort((a,b)=>(saleDay(b)-saleDay(a))||String(b.time||'').localeCompare(String(a.time||''))||String(b.id).localeCompare(String(a.id)));
 }
 let clHistAll=false;
-function clientHistHTML(c){
- const L=clientSales(c), ok=L.filter(x=>!x.voided), tot=ok.reduce((a,x)=>a+collected(x),0);
+function clientHistHTML(c,L=clientSales(c)){
+ const ok=L.filter(x=>!x.voided), tot=ok.reduce((a,x)=>a+collected(x),0);
  const head=`<div class="dir-sec-title">HISTORIAL DE COMPRAS (${ok.length})</div>`+hzNote(-Infinity);
  if(!L.length)return head+'<div class="enc-empty">Todavía no hay compras a su nombre.<br>Se apuntan solas al cobrar una venta con su nombre de cliente.</div>';
  const last=ok[0], ago=last?todayNum()-saleDay(last):null;
@@ -2114,13 +2114,13 @@ function renderClientFicha(c){
  if(trWork&&trWork.cid===c.id&&(c.series||[])[trWork.k])return trHTML(c);
  const S=(c.series||[]).filter(r=>r.s), line=(k,v,copy,f)=>`<div class="cf-line"><div><small>${k}</small><b>${v?esc(v):'—'}</b></div>${v&&copy?cpBtn(v):!v&&f?addBtn('cl',c.id,f):''}</div>`, X=(c.extra||[]).filter(r=>r.k&&r.v);
  return `<div class="cf-wrap"><div class="cf-paper cf-folder"><div class="cf-head"><small>HARRINGTON GUNSMITH · REGISTRO DE CLIENTES</small><div class="cf-name">${esc(c.name)}</div><div class="cf-type">${c.type==='empresa'?'Empresa':'Particular'}</div></div>
-  ${(()=>{const pend=S.some(r=>r.ic===false), nc=clientSales(c).filter(x=>!x.voided).length, np=Object.keys(c.precios||{}).length, key='cl'+c.id, cur=FTAB[key]||(pend?'armas':'datos');FTAB.__cl=cur;
+  ${(()=>{const hist=clientSales(c), pend=S.some(r=>r.ic===false), nc=hist.filter(x=>!x.voided).length, np=Object.keys(c.precios||{}).length, key='cl'+c.id, cur=FTAB[key]||(pend?'armas':'datos');FTAB.__cl=cur;
    return '<div class="ftab-box">'+ftabsHTML(key,[['datos','Datos'],['armas','Armas',S.length,pend?'bad':''],['compras','Compras',nc],['precios','Precios',np]],cur)+fpane('datos',cur,`<div class="dir-sec-title" style="margin-top:0">FICHA DEL CLIENTE</div>
   ${line('N.º DE IDENTIFICACIÓN',c.ident,1,'clIdent')}${line('TELEGRAMA',c.telegram,1,'clTel')}
   ${X.map(r=>line(esc(r.k).toUpperCase(),r.v,1)).join('')}
   <div class="enc-actions" style="margin:4px 0 2px"><button type="button" data-dir="cl-fill:${esc(c.id)}~exSeccl">✚ AÑADIR OTRO DATO</button></div>
   ${evClientHTML(c)}`)+fpane('armas',cur,`<div class="dir-sec-title" style="margin-top:0">ARMAS VENDIDAS (${S.length})</div>
-  ${S.length?S.map((r,i)=>{const k=(c.series||[]).indexOf(r);return `<div class="cf-arma${r.ic===false?' ic-no':''}"><div class="cf-n">${i+1}</div><div class="cf-col">${line('N.º DE SERIE',r.s,1)}${line('ARMA',r.a,1)}<div class="cf-line ic-line"><div><small>REGISTRO IC</small><b>${r.ic===true?'✓ Registrada':r.ic===false?'⚠ SIN REGISTRAR':'Sin marcar'}</b></div>${r.ic===true?'':`<button type="button" class="cp-btn add-btn" data-dir="cl-ic:${esc(c.id)}~${k}">✓ YA REGISTRADA</button>`}</div>${Array.isArray(r.tr)&&r.tr.length?`<div class="cf-line"><div><small>TRASPASOS</small><b>${r.tr.map(t=>esc(t.de)+' → '+esc(t.a)+' ('+esc(fmtDate(t.ts))+')').join('<br>')}</b></div></div>`:''}<div class="enc-actions" style="margin:4px 0 0"><button type="button" data-dir="tr-open:${esc(c.id)}~${k}">⇄ TRASPASAR A OTRO DUEÑO</button></div></div></div>`}).join(''):'<div class="enc-empty">Sin armas registradas.</div>'}`)+fpane('compras',cur,clientHistHTML(c))+fpane('precios',cur,np?`<div class="dir-sec-title" style="margin-top:0">PRECIOS ESPECIALES</div>`+Object.keys(c.precios).map(n=>`<div class="reg-line"><span>${esc(n)}</span><b>${money(Math.round(c.precios[n]*100))}</b></div>`).join(''):'<div class="enc-empty">Sin precios especiales: paga los precios normales.<br>Se ponen con ✎ EDITAR.</div>')+'</div>'})()}
+  ${S.length?S.map((r,i)=>{const k=(c.series||[]).indexOf(r);return `<div class="cf-arma${r.ic===false?' ic-no':''}"><div class="cf-n">${i+1}</div><div class="cf-col">${line('N.º DE SERIE',r.s,1)}${line('ARMA',r.a,1)}<div class="cf-line ic-line"><div><small>REGISTRO IC</small><b>${r.ic===true?'✓ Registrada':r.ic===false?'⚠ SIN REGISTRAR':'Sin marcar'}</b></div>${r.ic===true?'':`<button type="button" class="cp-btn add-btn" data-dir="cl-ic:${esc(c.id)}~${k}">✓ YA REGISTRADA</button>`}</div>${Array.isArray(r.tr)&&r.tr.length?`<div class="cf-line"><div><small>TRASPASOS</small><b>${r.tr.map(t=>esc(t.de)+' → '+esc(t.a)+' ('+esc(fmtDate(t.ts))+')').join('<br>')}</b></div></div>`:''}<div class="enc-actions" style="margin:4px 0 0"><button type="button" data-dir="tr-open:${esc(c.id)}~${k}">⇄ TRASPASAR A OTRO DUEÑO</button></div></div></div>`}).join(''):'<div class="enc-empty">Sin armas registradas.</div>'}`)+fpane('compras',cur,clientHistHTML(c,hist))+fpane('precios',cur,np?`<div class="dir-sec-title" style="margin-top:0">PRECIOS ESPECIALES</div>`+Object.keys(c.precios).map(n=>`<div class="reg-line"><span>${esc(n)}</span><b>${money(Math.round(c.precios[n]*100))}</b></div>`).join(''):'<div class="enc-empty">Sin precios especiales: paga los precios normales.<br>Se ponen con ✎ EDITAR.</div>')+'</div>'})()}
   <div class="enc-actions two" style="margin-top:10px"><button type="button" data-dir="cl-close">◂ Volver</button><button type="button" class="primary" data-dir="cl-edit:${esc(c.id)}">✎ EDITAR</button></div></div></div>`;
 }
 /* Clientes frecuentes: quién más compra y los buenos clientes que llevan tiempo sin venir */
@@ -4367,7 +4367,7 @@ async function deleteDisc(id){
  descuentos=descuentos.filter(x=>x.id!==id);saveDisc();
  renderDir();tickDiscounts();say('Eliminado');
 }
-dirModal.addEventListener('input',e=>{if(e.target.id==='dsQ'){dsQ=e.target.value;const r=document.getElementById('dsRes');if(r)r.innerHTML=dsQ.trim().length>=2?dirSearchResults(dsQ):''}});
+dirModal.addEventListener('input',e=>{if(e.target.id==='dsQ')scheduleDirSearch(e.target.value)});
 dirBtn.onclick=()=>{dirMod=null;dirForm=null;renderDir();openModal(dirModal);dirModal.scrollTop=0};
 document.getElementById('payPlate').onclick=()=>{if(bossActive){dirMod='sueldos';dirForm=null;sueOff=0;renderDir();openModal(dirModal);dirModal.scrollTop=0}else say('Los sueldos los paga la dirección los domingos')};
 document.getElementById('dirClose').onclick=()=>closeModal(dirModal);
@@ -5189,11 +5189,12 @@ function authRefresh(){
  const a=AUTH;if(!a||!a.rt)return Promise.resolve(null);
  /* otra pestaña de este dispositivo puede haberla renovado ya */
  try{const o=JSON.parse(localStorage.getItem(AUTH_KEY)||'null');if(o&&o.emp===a.emp&&o.at!==a.at&&o.exp-Date.now()>60000){AUTH=o;try{rtToken()}catch(e){}return Promise.resolve(o)}}catch(e){}
- authRefP=fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({refresh_token:a.rt})})
+ const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),12000);
+ authRefP=fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({refresh_token:a.rt})})
   .then(r=>r.ok?r.json():Promise.reject(r.status))
   .then(j=>{if(!j||!j.access_token)return Promise.reject(400);if(AUTH!==a)return AUTH;authSave({at:j.access_token,rt:j.refresh_token||a.rt,exp:j.expires_at?j.expires_at*1000:Date.now()+(j.expires_in||3600)*1000,emp:a.emp});try{rtToken()}catch(e){}return AUTH})
   .catch(st=>{if((st===400||st===401||st===403)&&AUTH===a)authClear();return null})
-  .finally(()=>{authRefP=null});
+  .finally(()=>{clearTimeout(timer);authRefP=null});
  return authRefP;
 }
 async function authToken(){
@@ -5209,10 +5210,14 @@ async function sbFetch(path,opts){
  if(!tk&&(opts.method||'GET')!=='GET'&&path.indexOf('/rest/v1/')===0&&!SANDBOX)return new Response(JSON.stringify({message:'SIN_CUENTA'}),{status:401,headers:{'Content-Type':'application/json'}});
  const go=k=>{
   const ctl=typeof AbortController!=='undefined'?new AbortController():null, t=ctl?setTimeout(()=>ctl.abort(),9000):null;
-  return fetch(SB_URL+path,Object.assign({},opts,{signal:ctl?ctl.signal:undefined,headers:Object.assign({apikey:SB_KEY,'Content-Type':'application/json'},k?{Authorization:'Bearer '+k}:{},opts.headers||{})})).finally(()=>{if(t)clearTimeout(t)});
+  const signal=opts.signal,abort=()=>ctl&&ctl.abort(signal.reason);if(ctl&&signal){if(signal.aborted)abort();else signal.addEventListener('abort',abort,{once:true});}
+  return fetch(SB_URL+path,Object.assign({},opts,{signal:ctl?ctl.signal:signal,headers:Object.assign({apikey:SB_KEY,'Content-Type':'application/json'},k?{Authorization:'Bearer '+k}:{},opts.headers||{})})).finally(()=>{if(t)clearTimeout(t);if(signal)signal.removeEventListener('abort',abort)});
  };
- const r=await go(tk);
- if(r.status===401&&tk){const a=await authRefresh();return go(a&&a.at&&a.at!==tk?a.at:null)}
+ const requestEmp=tk&&AUTH?AUTH.emp:null;
+ const valid=()=>!requestEmp||AUTH&&AUTH.emp===requestEmp&&ME&&ME.id===requestEmp;
+ const obsolete=()=>new Response(JSON.stringify({message:'SESION_CAMBIADA'}),{status:401,headers:{'Content-Type':'application/json'}});
+ const r=await go(tk);if(!valid())return obsolete();
+ if(r.status===401&&tk){const a=await authRefresh();if(!valid())return obsolete();const retried=await go(a&&a.at&&a.at!==tk?a.at:null);return valid()?retried:obsolete()}
  return r;
 }
 /* Llamada a la función «cuentas» (comprueba la contraseña en el servidor y abre la cuenta segura) */
@@ -5485,7 +5490,8 @@ async function invPublish(kind){
 async function refreshStock(){
  const r=await sbFetch('/rest/v1/stock?select=producto,cantidad');if(!r.ok)throw new Error(r.status);
  const rows=await r.json();
- if(rows.length){const m={};rows.forEach(x=>{m[x.producto]=x.cantidad});applyStockMap(m)}
+ if(!Array.isArray(rows))throw new Error('Respuesta de almacén inválida');
+ const m={};rows.forEach(x=>{m[x.producto]=x.cantidad});applyStockMap(m)
 }
 /* Reserva el stock en la nube de forma atómica: si otro empleado se lo llevó antes, no se vende */
 async function stockPrepare(){
@@ -5571,10 +5577,18 @@ const REC_LISTS={
  cierre:[()=>KEY_CIERRES,x=>x.id,(a,b)=>String(a.id).localeCompare(String(b.id))],
  mov:[()=>KEY_STOCKLOG,x=>x.uid,(a,b)=>(a.ts||0)-(b.ts||0)]
 };
+let recordBatch=null;
+function applyRecords(rows){
+ if(recordBatch){rows.forEach(x=>applyRecord(x.clave,x.valor));return;}
+ const batch=new Map();recordBatch=batch;
+ try{rows.forEach(x=>applyRecord(x.clave,x.valor));}
+ finally{recordBatch=null;for(const [key,b] of batch){const a=b.a.filter(x=>x!==null);a.sort(b.sort);try{localStorage.setItem(key,JSON.stringify(a.slice(-5000)))}catch(e){}}}
+}
 function upsertList(type,id,val,del){
- const L=REC_LISTS[type], key=L[0](), a=loadLog(key), k=a.findIndex(x=>L[1](x)===id);
- if(del){if(k>=0)a.splice(k,1)}else if(k>=0)a[k]=val;else a.push(val);
- a.sort(L[2]);try{localStorage.setItem(key,JSON.stringify(a.slice(-5000)))}catch(e){}
+ const L=REC_LISTS[type], key=L[0]();let b=recordBatch&&recordBatch.get(key);if(recordBatch&&!b){b={a:loadLog(key),sort:L[2]};b.idx=new Map(b.a.map((x,i)=>[L[1](x),i]));recordBatch.set(key,b)}
+ const a=b?b.a:loadLog(key), k=b?(b.idx.get(id)??-1):a.findIndex(x=>L[1](x)===id);
+ if(del){if(k>=0){if(b){a[k]=null;b.idx.delete(id)}else a.splice(k,1)}}else if(k>=0)a[k]=val;else{if(b)b.idx.set(id,a.length);a.push(val);}
+ if(!b){a.sort(L[2]);try{localStorage.setItem(key,JSON.stringify(a.slice(-5000)))}catch(e){}}
  LOTC=null;
 }
 function applyRecord(clave,valor){
@@ -5621,18 +5635,25 @@ function applyRecord(clave,valor){
 /* Registros que se acumulan para siempre: un dispositivo nuevo solo baja los últimos 4 meses */
 const HZ_TYPES=['venta:','turno:','gasto:','cierre:','mov:','log:'], HZ_DAYS=120;
 cloud.oldest='';try{cloud.oldest=localStorage.getItem('harrington_cloud_oldest')||''}catch(e){}
-async function pullRange(pf,gt,lte){
- let last=gt||'', got=0, top='';
- for(let page=0;page<200;page++){
-  const r=await sbFetch('/rest/v1/datos?select=clave,valor,actualizado&clave=like.'+pf+'*'+(last?'&actualizado=gt.'+encodeURIComponent(last):'')+(lte?'&actualizado=lte.'+encodeURIComponent(lte):'')+'&order=actualizado.asc&limit=500');
-  if(!r.ok)throw new Error(r.status);
-  const rows=await r.json();
-  rows.forEach(x=>applyRecord(x.clave,x.valor));got+=rows.length;
-  if(rows.length){last=rows[rows.length-1].actualizado;top=last}
-  if(rows.length<500)break;
- }
- return {got:got,top:top};
+function recordPagePath(pf,gt,lte,cursor){
+ let path='/rest/v1/datos?select=clave,valor,actualizado&clave=like.'+encodeURIComponent(pf+'*');
+ if(gt)path+='&actualizado=gt.'+encodeURIComponent(gt);
+ if(lte)path+='&actualizado=lte.'+encodeURIComponent(lte);
+ if(cursor){const t=JSON.stringify(cursor.actualizado),k=JSON.stringify(cursor.clave);path+='&or='+encodeURIComponent('(actualizado.gt.'+t+',and(actualizado.eq.'+t+',clave.gt.'+k+'))');}
+ return path+'&order=actualizado.asc,clave.asc&limit=500';
 }
+async function pullRange(pf,gt,lte){
+ let cursor=null,got=0,top='';
+ for(let page=0;page<200;page++){
+  const r=await sbFetch(recordPagePath(pf,gt,lte,cursor));if(!r.ok)throw new Error(r.status);
+  const rows=await r.json();if(!Array.isArray(rows))throw new Error('Respuesta de historial inválida');
+  applyRecords(rows);got+=rows.length;
+  if(rows.length){cursor=rows[rows.length-1];top=cursor.actualizado;}
+  if(rows.length<500)return {got,top};
+ }
+ throw new Error('Historial demasiado extenso: la sincronización debe continuarse');
+}
+
 function hzDay(){if(!cloud.oldest)return -Infinity;const m=madridParts(Date.parse(cloud.oldest));return dayNum(+m.year,+m.month,+m.day)}
 let hzLoading=false;
 async function cloudLoadOld(){
@@ -5649,7 +5670,12 @@ function hzNote(fromDay){
  if(!cloud.oldest||fromDay>=hzDay())return '';
  return `<div class="hz-note"><span>Este dispositivo solo tiene a mano los registros de los últimos 4 meses (desde el ${esc(fmtDate(Date.parse(cloud.oldest)))}).</span><button type="button" data-dir="hz-load"${hzLoading?' disabled':''}>${hzLoading?'⏳ CARGANDO…':'CARGAR TODO EL HISTORIAL'}</button></div>`;
 }
-async function cloudPullRecords(){
+function cloudPullRecords(){
+ if(cloud.recordsFlight)return cloud.recordsFlight;
+ const p=cloudPullRecordsOnce();cloud.recordsFlight=p;
+ const clear=()=>{if(cloud.recordsFlight===p)cloud.recordsFlight=null};p.then(clear,clear);return p;
+}
+async function cloudPullRecordsOnce(){
  if(!cloud.since){
   /* primera vez en este dispositivo: lo pendiente y la configuración, entero; los registros, solo lo reciente */
   const hz=new Date(Date.now()-HZ_DAYS*86400000).toISOString();
@@ -5667,19 +5693,19 @@ async function cloudPullRecords(){
    return got;
   }
  }
- let since=cloud.since?new Date(Date.parse(cloud.since)-120000).toISOString():'', got=0;
- for(let page=0;page<40;page++){
-  const flt=since?'&actualizado=gt.'+encodeURIComponent(since):'';
-  const r=await sbFetch('/rest/v1/datos?select=clave,valor,actualizado&clave=like.*:*'+flt+'&order=actualizado.asc&limit=500');
+ const since=cloud.since?new Date(Date.parse(cloud.since)-120000).toISOString():'';let got=0,cursor=null,top=cloud.since||'',complete=false;
+ for(let page=0;page<200;page++){
+  const r=await sbFetch(recordPagePath('*:',since,'',cursor));
   if(!r.ok)throw new Error(r.status);
   const rows=await r.json();
   /* los registros que ya teníamos tal cual (misma fecha de guardado) no se vuelven a aplicar ni a pintar */
   const seen=cloud.seenA||(cloud.seenA={});
-  rows.forEach(x=>{if(seen[x.clave]===x.actualizado)return;seen[x.clave]=x.actualizado;applyRecord(x.clave,x.valor);got++});
-  if(rows.length){const last=rows[rows.length-1].actualizado;if(!cloud.since||Date.parse(last)>Date.parse(cloud.since))cloud.since=last;since=last}
-  if(rows.length<500)break;
+  const changed=rows.filter(x=>seen[x.clave]!==x.actualizado);applyRecords(changed);changed.forEach(x=>{seen[x.clave]=x.actualizado});got+=changed.length;
+  if(rows.length){cursor=rows[rows.length-1];if(!top||Date.parse(cursor.actualizado)>Date.parse(top))top=cursor.actualizado;}
+  if(rows.length<500){complete=true;break;}
  }
- try{localStorage.setItem('harrington_cloud_since',cloud.since)}catch(e){}
+ if(!complete)throw new Error('Historial demasiado extenso: sincronización incompleta');
+ cloud.since=top;try{localStorage.setItem('harrington_cloud_since',cloud.since)}catch(e){}
  if(got&&document.getElementById('encModal')&&!encModal.hidden&&!encView)renderEnc();
  if(got&&!pedModal.hidden&&!pedView)renderPed();
  if(got&&!dirModal.hidden&&!document.activeElement.matches('input,select,textarea'))renderDir();
@@ -5721,7 +5747,12 @@ async function applyResetRow(){
  cloud.since='';cloud.seenA={};try{localStorage.removeItem('harrington_cloud_since')}catch(e){}
  say('El jefe ha reseteado datos: '+what.join(', '));
 }
-async function cloudPoll(force){
+function cloudPoll(force){
+ if(cloud.pollFlight){if(force)cloud.pollForce=true;return cloud.pollFlight;}
+ const run=async()=>{let next=!!force;do{cloud.pollForce=false;await cloudPollOnce(next);next=cloud.pollForce;}while(next);};
+ const p=run();cloud.pollFlight=p;const clear=()=>{if(cloud.pollFlight===p)cloud.pollFlight=null};p.then(clear,clear);return p;
+}
+async function cloudPollOnce(force){
  try{
   const cfg=Object.keys(CLOUD_REV).concat(['rev','reset','acceso']).join(',');
   const r=await sbFetch('/rest/v1/datos?select=clave,actualizado&clave=in.('+cfg+')');
@@ -5747,11 +5778,11 @@ async function cloudPoll(force){
    cloud.revSeen=rt||1;calc(false);
   }
   if(cloud.outbox.length)cloudFlushOutbox();
-  cloud.last=Date.now();
+  cloud.last=Date.now();cloud.failures=0;cloud.retryAt=0;
   autoWeekly();autoMonthly();recetasBase();try{icLegacy()}catch(e){}try{autoFijos()}catch(e){}try{contratosPend()}catch(e){}try{evTick()}catch(e){}renderEmpWeek();renderPayPlate();renderGoal();
- }catch(e){setCloudState(false)}
+ }catch(e){setCloudState(false);cloud.failures=(cloud.failures||0)+1;cloud.last=Date.now();cloud.retryAt=cloud.last+Math.min(60000,3000*Math.pow(2,Math.min(5,cloud.failures-1)));}
 }
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){cloudPoll();rtConnect()}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){cloudPoll(true);rtConnect()}});
 setTimeout(()=>{try{updateFinish();renderEmpWeek();updateAusBtn();renderPayPlate();renderGoal()}catch(e){}},400);
 /* Aviso instantáneo: Supabase avisa en el momento en que cambia algo y este móvil se actualiza al instante.
    Si ese canal no funciona, se sigue preguntando a la nube cada 6 segundos como siempre. */
@@ -5777,7 +5808,7 @@ function rtConnect(){
 /* Sondeo de respaldo: cada 6 s; si el aviso instantáneo ya ha demostrado que funciona, cada 20 s */
 var LAST_TOUCH=Date.now();['pointerdown','keydown','scroll','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{LAST_TOUCH=Date.now()},{passive:true,capture:true}));
 /* sin tocar la web en 3 minutos se pregunta a la nube con menos frecuencia (el aviso instantáneo sigue funcionando) */
-setInterval(()=>{if(document.visibilityState!=='visible')return;const idle=Date.now()-LAST_TOUCH>180000, every=idle?45000:(rt.ok&&rt.got)?20000:6000;if(Date.now()-(cloud.last||0)>=every-500)cloudPoll()},3000);
+setInterval(()=>{if(document.visibilityState!=='visible')return;const idle=Date.now()-LAST_TOUCH>180000, every=idle?45000:(rt.ok&&rt.got)?20000:6000;if(Date.now()>= (cloud.retryAt||0)&&Date.now()-(cloud.last||0)>=every-500)cloudPoll()},3000);
 setTimeout(rtConnect,1500);
 setTimeout(()=>cloudPoll(),300);
 
@@ -6367,7 +6398,12 @@ function stockForecast(){
  return out.sort((a,b)=>a.days-b.days);
 }
 /* ===== Buscador de Dirección ===== */
-var dsQ='';
+var dsQ='',dsSearchTimer=0;
+function scheduleDirSearch(value){
+ dsQ=value;clearTimeout(dsSearchTimer);const r=document.getElementById('dsRes');if(!r)return;
+ if(dsQ.trim().length<2){r.textContent='';return;}r.textContent='Buscando…';
+ const q=dsQ;dsSearchTimer=setTimeout(()=>{if(r.isConnected&&q===dsQ)r.innerHTML=dirSearchResults(q)},120);
+}
 function dirSearchHTML(){return `<div class="dir-search"><input id="dsQ" type="search" placeholder="Buscar cliente, nº de serie, ticket, pedido, encargo o empleado…" value="${esc(dsQ)}" autocomplete="off"></div><div class="ds-res" id="dsRes">${dsQ.trim().length>=2?dirSearchResults(dsQ):''}</div>`}
 function dirSearchResults(q){
  const n=norm(q.trim()), R=[], has=v=>norm(String(v||'')).indexOf(n)>=0;
@@ -7448,6 +7484,7 @@ const APP_VER=(()=>{const sc=document.querySelector('script[src*="app.js?v="]');
 let updPending=false, updLastTouch=Date.now();
 ['pointerdown','keydown','touchstart','input'].forEach(ev=>document.addEventListener(ev,()=>{updLastTouch=Date.now()},{passive:true,capture:true}));
 function updSafe(){
+ try{const id=ME?.id||'';if(store.get('harrington_autoventa_pendiente_v1')||['hg_operacion_segura_','hg_fabricacion_polvora_','harrington_entrega_pendiente_','harrington_npc_operacion_'].some(k=>store.get(k+id)))return false;const inv=JSON.parse(store.get('harrington_inventario_jefe_'+id)||'null');if(inv?.pending)return false;}catch(e){return false;}
  if(document.querySelector('.modal-overlay:not([hidden])'))return false;
  const a=document.activeElement;if(a&&a.matches&&a.matches('input,textarea,select,[contenteditable]'))return false;
  try{if(cloud.flushing||(cloud.outbox&&cloud.outbox.length))return false}catch(e){}
