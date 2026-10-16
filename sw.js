@@ -1,6 +1,6 @@
 /* Caché acotada al sitio. Datos autenticados y servicios externos siempre por red. */
 const PREFIX='harrington-static:'+new URL(self.registration.scope).pathname+':';
-const CACHE=PREFIX+'20261016-parche1';
+const CACHE=PREFIX+'20261016-parche2';
 const LEGACY=new Set(['harrington-acceso-discord-20261015-2']);
 self.addEventListener('install',e=>{e.waitUntil(self.skipWaiting())});
 self.addEventListener('activate',e=>{e.waitUntil((async()=>{
@@ -45,5 +45,5 @@ self.addEventListener('push',e=>{let d={};try{d=e.data?e.data.json():{}}catch{d=
 self.addEventListener('notificationclick',e=>{
  e.notification.close();let destino;try{destino=new URL(e.notification.data?.url||'./',self.registration.scope)}catch{destino=new URL(self.registration.scope)}
  const scope=new URL(self.registration.scope),url=destino.origin===scope.origin&&destino.pathname.startsWith(scope.pathname)?destino.href:scope.href;
- e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(list=>{const c=list.find(x=>x.url.startsWith(scope.href)&&'focus' in x);return c?c.focus():self.clients.openWindow(url)}));
+ e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(list=>{const own=list.filter(x=>x.url.startsWith(scope.href)&&'focus' in x),exact=own.find(x=>x.url===url);if(exact)return exact.focus();const c=own.find(x=>'navigate' in x);return c?c.navigate(url).then(v=>(v||c).focus()).catch(()=>self.clients.openWindow(url)):self.clients.openWindow(url)}));
 });

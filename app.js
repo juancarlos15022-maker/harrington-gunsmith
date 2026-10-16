@@ -198,7 +198,8 @@ const store={
  set(k,v){try{localStorage.setItem(k,v)}catch(e){}if(CLOUD_MAP[k]&&!cloud.applying)cloudPush(CLOUD_MAP[k])},
  remove(k){try{localStorage.removeItem(k)}catch(e){}}
 };
-function money(cents){return '$'+(cents/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+const moneyFmt=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+function money(cents){return '$'+moneyFmt.format(cents/100)}
 function numIn(v){let s=String(v||'').trim();if(s.indexOf(',')>=0&&s.indexOf('.')>=0){s=s.lastIndexOf(',')>s.lastIndexOf('.')?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,'')}else s=s.replace(',','.');return s}
 function pad(n,l=2){return String(n).padStart(l,'0')}
 /* Hora de España (Europe/Madrid), sea cual sea el país del usuario */
@@ -272,9 +273,9 @@ function calc(animate=true){
  applyStockLimits(animate);
  let totalCents=0,units=0,products=0;
  inputs.forEach(i=>{
-  const q=readQty(i), sub=q*priceCents(i), row=i.closest('.product'), subEl=row.querySelector('.subtotal'), txt=money(sub);
+  const q=readQty(i), ec=priceCents(i), sub=q*ec, row=i.closest('.product'), subEl=row.querySelector('.subtotal'), txt=money(sub);
   if(subEl.textContent!==txt){subEl.textContent=txt;if(animate)bump(subEl)}
-  const pe=row.querySelector('.price'), bc=baseCents(i), ec=priceCents(i), ptxt=ec!==bc?`<small class="was">${money(bc)}</small>${money(ec)}`:money(ec);
+  const pe=row.querySelector('.price'), bc=baseCents(i), ptxt=ec!==bc?`<small class="was">${money(bc)}</small>${money(ec)}`:money(ec);
   if(pe.dataset.v!==ptxt){pe.innerHTML=ptxt;pe.dataset.v=ptxt}
   row.classList.toggle('has-qty',q>0);
   totalCents+=sub;units+=q;if(q>0)products++;
@@ -285,8 +286,8 @@ function calc(animate=true){
  updateOrderBar(units,products,fin.due);
  summaryEl.textContent=summaryText(products,units);
  const items=selected();
- if(!items.length) cart.innerHTML='<div class="empty">'+emptyArt('rev')+'Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div>';
- else cart.innerHTML=cartHTML(items);
+ const cartView=!items.length?'<div class="empty">'+emptyArt('rev')+'Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div>':cartHTML(items);
+ if(cart.innerHTML!==cartView)cart.innerHTML=cartView;
  if(appMode==='venta')saveOrder(items);
  return totalCents;
 }
@@ -5291,10 +5292,10 @@ function cloudReloadSoon(){
 function applyRemote(clave,val,t){
  const key=CLOUD_REV[clave];
  let prev=null;try{prev=JSON.stringify(JSON.parse(localStorage.getItem(key)||'null'))}catch(e){}
+ const encoded=JSON.stringify(val),same=prev===encoded;
  cloud.applying=true;
- try{localStorage.setItem(key,JSON.stringify(val))}catch(e){}
+ try{if(!same)localStorage.setItem(key,encoded)}catch(e){}
  cloud.applying=false;cloud.stamps[clave]=t;
- const same=prev===JSON.stringify(val);
  if(same)return;
  if(clave==='empleados'){empleados=Array.isArray(val)?val:[];renderCustomer();setTimeout(()=>{try{contratosPend()}catch(e){}},1500);try{applyMe();if(G.open&&gate.dataset.ph==='cards')gateCards();else gateCheck()}catch(e){}}
  else if(clave==='clientes'){clientes=Array.isArray(val)?val:[];refreshClientList()}
@@ -5580,9 +5581,9 @@ const REC_LISTS={
 let recordBatch=null;
 function applyRecords(rows){
  if(recordBatch){rows.forEach(x=>applyRecord(x.clave,x.valor));return;}
- const batch=new Map();recordBatch=batch;
+ const batch=new Map();batch.outbox=new Set((cloud.outbox||[]).map(x=>x.clave));recordBatch=batch;
  try{rows.forEach(x=>applyRecord(x.clave,x.valor));}
- finally{recordBatch=null;for(const [key,b] of batch){const a=b.a.filter(x=>x!==null);a.sort(b.sort);try{localStorage.setItem(key,JSON.stringify(a.slice(-5000)))}catch(e){}}}
+ finally{recordBatch=null;for(const [key,b] of batch){if(b.state){let n=0;for(let i=0;i<b.a.length;i++)if(b.a[i]!==null)b.a[n++]=b.a[i];b.a.length=n;b.a.sort(b.sort);try{localStorage.setItem(key,JSON.stringify(b.a))}catch(e){}if(b.after)b.after();}else{const a=b.a.filter(x=>x!==null);a.sort(b.sort);try{localStorage.setItem(key,JSON.stringify(a.slice(-5000)))}catch(e){}}}}
 }
 function upsertList(type,id,val,del){
  const L=REC_LISTS[type], key=L[0]();let b=recordBatch&&recordBatch.get(key);if(recordBatch&&!b){b={a:loadLog(key),sort:L[2]};b.idx=new Map(b.a.map((x,i)=>[L[1](x),i]));recordBatch.set(key,b)}
@@ -5591,9 +5592,16 @@ function upsertList(type,id,val,del){
  if(!b){a.sort(L[2]);try{localStorage.setItem(key,JSON.stringify(a.slice(-5000)))}catch(e){}}
  LOTC=null;
 }
+function upsertState(key,a,id,val,del,sort,after){
+ let b=recordBatch&&recordBatch.get(key);
+ if(recordBatch&&!b){b={a,sort,after,state:true,idx:new Map(a.map((x,i)=>[x.id,i]))};recordBatch.set(key,b);}
+ const k=b?(b.idx.get(id)??-1):a.findIndex(x=>x.id===id);
+ if(del){if(k>=0){if(b){a[k]=null;b.idx.delete(id)}else a.splice(k,1)}}else if(k>=0)a[k]=val;else{if(b)b.idx.set(id,a.length);a.push(val);}
+ if(!b){a.sort(sort);try{localStorage.setItem(key,JSON.stringify(a))}catch(e){}if(after)after();}
+}
 function applyRecord(clave,valor){
  /* si este dispositivo tiene un cambio de ese registro sin subir todavía, el suyo es el más nuevo */
- if(cloud.outbox&&cloud.outbox.some(o=>o.clave===clave))return;
+ if(recordBatch?recordBatch.outbox.has(clave):cloud.outbox&&cloud.outbox.some(o=>o.clave===clave))return;
  const i=clave.indexOf(':'), type=clave.slice(0,i), id=clave.slice(i+1), del=!!(valor&&valor.deleted);
  if(type==='nota'){applyNota(id,valor,del);return}
  if(type==='evento'){applyEvento(id,valor,del);return}
@@ -5601,27 +5609,14 @@ function applyRecord(clave,valor){
  if(type==='npc'){if(id==='estado')try{applyNpc(valor)}catch(e){}return}
  if(REC_LISTS[type])upsertList(type,id,valor,del);
  else if(type==='gasto'){
-  const k=gastos.findIndex(x=>x.id===id);
-  if(del){if(k>=0)gastos.splice(k,1)}else if(k>=0)gastos[k]=valor;else gastos.push(valor);
-  gastos.sort((a,b)=>String(a.id).localeCompare(String(b.id)));try{localStorage.setItem(KEY_GASTOS,JSON.stringify(gastos))}catch(e){}
+  upsertState(KEY_GASTOS,gastos,id,valor,del,(a,b)=>String(a.id).localeCompare(String(b.id)));
  }else if(type==='encargo'){
-  const k=encargos.findIndex(x=>x.id===id);
-  if(k>=0){encargos[k]=valor;if(loadedEnc&&loadedEnc.id===id)loadedEnc=valor}else encargos.push(valor);
-  encargos.sort((a,b)=>(a.ts||0)-(b.ts||0));cloud.sig[clave]=JSON.stringify(valor);
-  try{localStorage.setItem(KEY_ENC,JSON.stringify(encargos))}catch(e){}
-  updateEncBtn();
+  upsertState(KEY_ENC,encargos,id,valor,false,(a,b)=>(a.ts||0)-(b.ts||0),updateEncBtn);
+  if(loadedEnc&&loadedEnc.id===id)loadedEnc=valor;cloud.sig[clave]=JSON.stringify(valor);
  }else if(type==='ausencia'){
-  const k=ausencias.findIndex(x=>x.id===id);
-  if(del){if(k>=0)ausencias.splice(k,1)}else if(k>=0)ausencias[k]=valor;else ausencias.push(valor);
-  ausencias.sort((a,b)=>(a.start||0)-(b.start||0));
-  try{localStorage.setItem(KEY_AUS,JSON.stringify(ausencias))}catch(e){}
-  updateAusBtn();if(!ausModal.hidden&&ausView==='list')renderAus();
+  upsertState(KEY_AUS,ausencias,id,valor,del,(a,b)=>(a.start||0)-(b.start||0),()=>{updateAusBtn();if(!ausModal.hidden&&ausView==='list')renderAus();});
  }else if(type==='pedido'){
-  const k=pedidos.findIndex(x=>x.id===id);
-  if(del){if(k>=0)pedidos.splice(k,1)}else if(k>=0)pedidos[k]=valor;else pedidos.push(valor);
-  pedidos.sort((a,b)=>(a.ts||0)-(b.ts||0));
-  try{localStorage.setItem(KEY_PEDIDOS,JSON.stringify(pedidos))}catch(e){}
-  updatePedBtn();
+  upsertState(KEY_PEDIDOS,pedidos,id,valor,del,(a,b)=>(a.ts||0)-(b.ts||0),updatePedBtn);
  }else if(type==='cfg'&&id==='objetivo'){
   OBJ=del?{}:(valor||{});try{localStorage.setItem('harrington_objetivo_v1',JSON.stringify(OBJ))}catch(e){}renderGoal();
  }else if(type==='expulsion'){
@@ -5772,9 +5767,10 @@ async function cloudPollOnce(force){
   const rs=rows.find(x=>x.clave==='reset');
   if(rs&&Date.parse(rs.actualizado)>cloud.resetSeen)await applyResetRow();
   const rv=rows.find(x=>x.clave==='rev'), rt=rv?Date.parse(rv.actualizado):0;
-  if(force||!cloud.revSeen||rt!==cloud.revSeen){
-   await cloudPullRecords();
-   try{await refreshStock()}catch(e){}
+  const recordsNeeded=force||!cloud.revSeen||rt!==cloud.revSeen;
+  if(recordsNeeded||cloud.stockEpoch!==cloud.stockSeen||Date.now()-(cloud.stockReadAt||0)>=60000){
+   if(recordsNeeded)await cloudPullRecords();
+   const epoch=cloud.stockEpoch;await refreshStock();cloud.stockSeen=epoch;cloud.stockReadAt=Date.now();
    cloud.revSeen=rt||1;calc(false);
   }
   if(cloud.outbox.length)cloudFlushOutbox();
@@ -5799,7 +5795,7 @@ function rtConnect(){
   ws.onmessage=ev=>{
    let m;try{m=JSON.parse(ev.data)}catch(e){return}
    if(m.topic==='realtime:harrington'&&m.event==='phx_reply'){rt.ok=!!(m.payload&&m.payload.status==='ok');if(rt.ok)rt.retry=0}
-   else if(m.event==='postgres_changes'){rt.got=Date.now();clearTimeout(rt.timer);rt.timer=setTimeout(()=>cloudPoll(),250)}
+   else if(m.event==='postgres_changes'){if(m.payload?.data?.table==='stock')cloud.stockEpoch=(cloud.stockEpoch||0)+1;rt.got=Date.now();clearTimeout(rt.timer);rt.timer=setTimeout(()=>cloudPoll(),250)}
   };
   ws.onclose=()=>{clearInterval(rt.hb);rt.ws=null;rt.ok=false;setTimeout(rtConnect,Math.min(60000,3000*Math.pow(2,rt.retry++)))};
   ws.onerror=()=>{try{ws.close()}catch(e){}};
