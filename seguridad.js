@@ -15,7 +15,13 @@ const opts=init||{},b={webhook:m[1],mensaje:m[2]||'',metodo:opts.method||'POST',
 let body,headers={apikey:SB_KEY,Authorization:'Bearer '+tk};
 if(opts.body instanceof FormData){const fd=new FormData();try{b.payload=JSON.parse(opts.body.get('payload_json')||'{}');}catch{return new Response(null,{status:400})}fd.set('peticion',JSON.stringify(b));for(const [k,v]of opts.body.entries())if(k.startsWith('files['))fd.append(k,v);body=fd;}
 else{try{b.payload=JSON.parse(opts.body||'{}')}catch{b.payload={}}body=JSON.stringify(b);headers['Content-Type']='application/json';}
-return fetchReal(SB_URL+'/functions/v1/discord-envios',{method:'POST',headers,body});
+// Espera acotada, sin reenviar un POST ambiguo automáticamente.
+const ctl=new AbortController(),external=opts.signal,abort=()=>ctl.abort();
+if(external){if(external.aborted)ctl.abort();else external.addEventListener('abort',abort,{once:true});}
+const timer=setTimeout(abort,20000);
+try{const response=await fetchReal(SB_URL+'/functions/v1/discord-envios',{method:'POST',headers,body,signal:ctl.signal});
+ const text=await response.text();return new Response([204,205,304].includes(response.status)?null:text,{status:response.status,statusText:response.statusText,headers:response.headers});
+}finally{clearTimeout(timer);if(external)external.removeEventListener('abort',abort);}
 };
 const authOriginal=authApi;
 authApi=async function(body){

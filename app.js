@@ -2487,9 +2487,13 @@ function dcProblems(){const o={};Object.keys(DCH_REMOTE).forEach(k=>o[k]=DCH_REM
 let dcRetrying=false;
 async function dcRetry(kind,silent){
  if(dcRetrying)return;dcRetrying=true;
- const L=DCQ.filter(q=>!kind||q.kind===kind);let ok=0,bad=0;
- for(const q of L){DCQ=DCQ.filter(x=>x!==q);saveDCQ();if(await discordSend(q.kind,q.text+'\n\n(enviado con retraso: original del '+fmtDate(q.ts)+' '+fmtTime(q.ts)+')',null,null,false,undefined,true))ok++;else{bad++;DCQ.push(q);saveDCQ()}}
- dcRetrying=false;
+ const L=DCQ.filter(q=>!kind||q.kind===kind),blocked=new Set();let ok=0,bad=0;
+ try{for(const q of L){
+  if(blocked.has(q.kind)){bad++;continue;}
+  let sent=false;try{sent=await discordSend(q.kind,q.text+'\n\n(enviado con retraso: original del '+fmtDate(q.ts)+' '+fmtTime(q.ts)+')',null,null,false,undefined,true)}catch{}
+  // Conservar el mensaje mientras viaja: cerrar la app no debe vaciar la cola.
+  if(sent){DCQ=DCQ.filter(x=>x!==q);saveDCQ();ok++;}else{bad++;blocked.add(q.kind);}
+ }}finally{dcRetrying=false;}
  if(!silent)say(ok&&!bad?'Reenviados '+ok+' mensajes a Discord':bad?'Siguen sin poder enviarse '+bad+' mensajes':'No había mensajes pendientes');
  if(!dirModal.hidden&&(dirMod==='discord'||!dirMod))renderDir();
 }
@@ -4280,7 +4284,12 @@ async function undoFab(){
 }
 const DIR_SECCIONES=[['HOY',['revision']],['DINERO',['ventas','cierre','gastos','balance','estadisticas','objetivo','semanales']],['PERSONAL',['empleados','sueldos','horarios','ausencias','auditoria']],['TIENDA',['productos','convenios','clientes','agenda','eventos','npc','publico']],['ALMACÉN',['fabricar','stock','fabricacion','balfab','regstock']],['COMPRAS',['proveedores','nuevopedido','particular','regpedidos']],['AJUSTES',['parches','discord','nube','copia','historial','reset']]];
 /* Lo que tiene pendiente cada apartado (se ve en su tarjeta): [número, texto, 'bad' rojo | 'pend' ámbar | 'info'] */
+let dirBadges=null;
 function modBadge(id){
+ if(dirBadges&&dirBadges.has(id))return dirBadges.get(id);
+ const value=modBadgeValue(id);if(dirBadges)dirBadges.set(id,value);return value;
+}
+function modBadgeValue(id){
  try{
   if(id==='clientes'){const n=icPending().length;if(n)return [n,n===1?'arma sin registrar IC':'armas sin registrar IC','bad']}
   if(id==='eventos'){const E=(eventos||[]);const f=E.filter(e=>e.status==='finalizado'&&e.winner&&!e.entregado).length, r=E.filter(e=>e.status==='finalizado'&&e.entregado&&!e.reembolso).length, a=E.filter(e=>e.status==='activo').length;
@@ -4311,7 +4320,8 @@ function pgApply(){
 }
 dirModal.addEventListener('click',e=>{const b=e.target.closest('[data-pgm]');if(!b)return;e.stopImmediatePropagation();const k=b.dataset.pgm, y=dirModal.scrollTop;PGL[k]=(PGL[k]||50)+50;renderDir();dirModal.scrollTop=y});
 function renderDir(){
- try{return renderDir0()}finally{try{aiDirBox()}catch(e){}try{pzAfterRender()}catch(e){}try{pgApply()}catch(e){}}
+ const previous=dirBadges;dirBadges=new Map();
+ try{return renderDir0()}finally{dirBadges=previous;try{aiDirBox()}catch(e){}try{pzAfterRender()}catch(e){}try{pgApply()}catch(e){}}
 }
 function renderDir0(){
  const body=document.getElementById('dirBody'), title=document.getElementById('dirTitle');
@@ -5247,7 +5257,7 @@ async function accLoad(){
   accEnforce()}catch(e){}
 }
 function accEnforce(){
- if(!accClosed()||!ME||ME.id==='prueba'||navigator.onLine===false||cloud.ok===false)return;
+ if(!accClosed()||!ME||ME.id==='prueba'||(typeof navigator!=='undefined'&&navigator.onLine===false)||cloud.ok===false)return;
  if(AUTH&&AUTH.emp===ME.id)return;
  if(accEnforce.busy)return;accEnforce.busy=true;
  setTimeout(()=>{accEnforce.busy=false;if(!accClosed()||!ME||(AUTH&&AUTH.emp===ME.id))return;
@@ -5750,9 +5760,9 @@ async function applyResetRow(){
  cloud.since='';cloud.seenA={};try{localStorage.removeItem('harrington_cloud_since')}catch(e){}
  say('El jefe ha reseteado datos: '+what.join(', '));
 }
-function cloudPoll(force){
- if(cloud.pollFlight){if(force)cloud.pollForce=true;return cloud.pollFlight;}
- const run=async()=>{let next=!!force;do{cloud.pollForce=false;await cloudPollOnce(next);next=cloud.pollForce;}while(next);};
+function cloudPoll(force,followup=false){
+ if(cloud.pollFlight){if(force)cloud.pollForce=true;if(followup)cloud.pollAgain=true;return cloud.pollFlight;}
+ const run=async()=>{let next=!!force,again;do{cloud.pollForce=false;cloud.pollAgain=false;await cloudPollOnce(next);next=cloud.pollForce;again=cloud.pollAgain;}while(next||again);};
  const p=run();cloud.pollFlight=p;const clear=()=>{if(cloud.pollFlight===p)cloud.pollFlight=null};p.then(clear,clear);return p;
 }
 async function cloudPollOnce(force){
@@ -5791,24 +5801,25 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 setTimeout(()=>{try{updateFinish();renderEmpWeek();updateAusBtn();renderPayPlate();renderGoal()}catch(e){}},400);
 /* Aviso instantáneo: Supabase avisa en el momento en que cambia algo y este móvil se actualiza al instante.
    Si ese canal no funciona, se sigue preguntando a la nube cada 6 segundos como siempre. */
-const rt={ws:null,ref:0,hb:null,ok:false,got:0,retry:0,timer:null,reconnect:null,lastAck:0,joinRef:'',hbRef:''};
+const rt={ws:null,ref:0,hb:null,ok:false,got:0,retry:0,timer:null,reconnect:null,lastAck:0,joinRef:'',hbRef:'',watchdog:null};
 function rtToken(){if(rt.ws&&rt.ok&&rt.send&&authFresh())rt.send('realtime:harrington','access_token',{access_token:AUTH.at});else rtConnect();}
 function rtConnect(){
  try{
-  if(rt.ws||typeof WebSocket==='undefined'||document.visibilityState!=='visible'||!AUTH?.at||!ME||AUTH.emp!==ME.id)return;
+  if(rt.ws||(typeof navigator!=='undefined'&&navigator.onLine===false)||typeof WebSocket==='undefined'||document.visibilityState!=='visible'||!AUTH?.at||!ME||AUTH.emp!==ME.id)return;
   if(!authFresh()){authToken().then(t=>{if(t&&authFresh())rtConnect()}).catch(()=>{});return;}
   clearTimeout(rt.reconnect);rt.reconnect=null;const emp=ME.id;
   const ws=new WebSocket(SB_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+encodeURIComponent(SB_KEY)+'&vsn=1.0.0');rt.ws=ws;
+  rt.watchdog=setTimeout(()=>{if(rt.ws===ws&&!rt.ok)try{ws.close()}catch{}},15000);
   const send=(topic,event,payload)=>{const ref=String(++rt.ref);try{if(ws.readyState===1)ws.send(JSON.stringify({topic,event,payload,ref}))}catch{}return ref;};rt.send=send;
-  ws.onopen=()=>{if(ME?.id!==emp||AUTH?.emp!==emp){ws.close();return;}rt.lastAck=Date.now();const jp={config:{broadcast:{self:false},presence:{key:''},postgres_changes:[{event:'*',schema:'public',table:'datos'},{event:'*',schema:'public',table:'stock'}]},access_token:AUTH.at};rt.joinRef=send('realtime:harrington','phx_join',jp);clearInterval(rt.hb);rt.hb=setInterval(()=>{if(ME?.id!==emp||AUTH?.emp!==emp||Date.now()-rt.lastAck>55000){ws.close();return;}rt.hbRef=send('phoenix','heartbeat',{});},25000);};
-  ws.onmessage=ev=>{let m;try{m=JSON.parse(ev.data)}catch{return;}if(ME?.id!==emp||AUTH?.emp!==emp){ws.close();return;}
+  ws.onopen=()=>{if(rt.ws!==ws){ws.close();return;}if(ME?.id!==emp||AUTH?.emp!==emp){ws.close();return;}rt.lastAck=Date.now();const jp={config:{broadcast:{self:false},presence:{key:''},postgres_changes:[{event:'*',schema:'public',table:'datos'},{event:'*',schema:'public',table:'stock'}]},access_token:AUTH.at};rt.joinRef=send('realtime:harrington','phx_join',jp);clearInterval(rt.hb);rt.hb=setInterval(()=>{if(ME?.id!==emp||AUTH?.emp!==emp||Date.now()-rt.lastAck>55000){ws.close();return;}rt.hbRef=send('phoenix','heartbeat',{});},25000);};
+  ws.onmessage=ev=>{if(rt.ws!==ws)return;let m;try{m=JSON.parse(ev.data)}catch{return;}if(ME?.id!==emp||AUTH?.emp!==emp){ws.close();return;}
    if(m.topic==='phoenix'&&m.event==='phx_reply'&&m.ref===rt.hbRef){rt.lastAck=Date.now();return;}
    if(m.topic!=='realtime:harrington')return;
-   if(m.event==='phx_reply'&&m.ref===rt.joinRef){rt.ok=m.payload?.status==='ok';if(rt.ok){rt.retry=0;rt.lastAck=Date.now();}else ws.close();}
+   if(m.event==='phx_reply'&&m.ref===rt.joinRef){rt.ok=m.payload?.status==='ok';if(rt.ok){clearTimeout(rt.watchdog);rt.retry=0;rt.lastAck=Date.now();}else ws.close();}
    else if(m.event==='phx_error'||m.event==='phx_close'||m.event==='system'&&m.payload?.status==='error'){rt.ok=false;ws.close();}
-   else if(m.event==='postgres_changes'){if(m.payload?.data?.table==='stock')cloud.stockEpoch=(cloud.stockEpoch||0)+1;rt.got=Date.now();clearTimeout(rt.timer);rt.timer=setTimeout(()=>cloudPoll(),250);}
+   else if(m.event==='postgres_changes'){if(m.payload?.data?.table==='stock')cloud.stockEpoch=(cloud.stockEpoch||0)+1;rt.got=Date.now();if(!rt.timer)rt.timer=setTimeout(()=>{rt.timer=null;cloudPoll(false,true)},250);}
   };
-  ws.onclose=()=>{if(rt.ws!==ws)return;clearInterval(rt.hb);clearTimeout(rt.timer);rt.ws=null;rt.ok=false;const delay=Math.min(60000,3000*2**Math.min(5,rt.retry++))*(.85+Math.random()*.3);clearTimeout(rt.reconnect);rt.reconnect=setTimeout(rtConnect,delay);};
+  ws.onclose=()=>{if(rt.ws!==ws)return;clearInterval(rt.hb);clearTimeout(rt.watchdog);clearTimeout(rt.timer);rt.timer=null;rt.ws=null;rt.ok=false;if((typeof navigator!=='undefined'&&navigator.onLine===false))return;const delay=Math.min(60000,3000*2**Math.min(5,rt.retry++))*(.85+Math.random()*.3);clearTimeout(rt.reconnect);rt.reconnect=setTimeout(rtConnect,delay);};
   ws.onerror=()=>{try{ws.close()}catch{}};
  }catch{rt.ws=null;rt.ok=false;}
 }
@@ -5816,6 +5827,13 @@ function rtConnect(){
 var LAST_TOUCH=Date.now();['pointerdown','keydown','scroll','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{LAST_TOUCH=Date.now()},{passive:true,capture:true}));
 /* sin tocar la web en 3 minutos se pregunta a la nube con menos frecuencia (el aviso instantáneo sigue funcionando) */
 setInterval(()=>{if(document.visibilityState!=='visible')return;const idle=Date.now()-LAST_TOUCH>180000, every=idle?45000:(rt.ok&&rt.got)?20000:6000;if(Date.now()>= (cloud.retryAt||0)&&Date.now()-(cloud.last||0)>=every-500)cloudPoll()},3000);
+function resumeConnection(read=true){
+ if((typeof navigator!=='undefined'&&navigator.onLine===false)||document.visibilityState!=='visible')return;
+ cloud.retryAt=0;clearTimeout(rt.reconnect);rt.reconnect=null;rtConnect();if(read)cloudPoll(true);
+}
+window.addEventListener('online',()=>resumeConnection(false));
+window.addEventListener('pageshow',e=>{if(e.persisted)resumeConnection()});
+window.addEventListener('offline',()=>{clearTimeout(rt.reconnect);rt.reconnect=null;if(rt.ws)try{rt.ws.close()}catch{}});
 setTimeout(rtConnect,1500);
 setTimeout(()=>cloudPoll(),300);
 
@@ -6374,8 +6392,8 @@ function renderGoal(){
  if(!(OBJ.cents>0)){el.hidden=true;return}
  const v=goalWeekCash(), p=Math.min(100,v/OBJ.cents*100), done=v>=OBJ.cents, ws=weekStart(0);
  el.className='goal-bar'+(done?' done':'');
- el.innerHTML=`<div class="gl-t"><small>OBJETIVO DE LA SEMANA · ${esc(dayStr(ws).slice(0,5))} – ${esc(dayStr(ws+6).slice(0,5))}</small><div class="gl-track"><div class="gl-fill" style="width:${p.toFixed(1)}%"></div></div></div><b>${money(v)} / ${money(OBJ.cents)}${done?' ✓':''}</b>`;
- el.hidden=false;
+ const html=`<div class="gl-t"><small>OBJETIVO DE LA SEMANA · ${esc(dayStr(ws).slice(0,5))} – ${esc(dayStr(ws+6).slice(0,5))}</small><div class="gl-track"><div class="gl-fill" style="width:${p.toFixed(1)}%"></div></div></div><b>${money(v)} / ${money(OBJ.cents)}${done?' ✓':''}</b>`;
+ if(el.innerHTML!==html)el.innerHTML=html;el.hidden=false;
  if(done){let f='';try{f=localStorage.getItem('harrington_goal_done')||''}catch(e){}if(f!==String(ws)){try{localStorage.setItem('harrington_goal_done',String(ws))}catch(e){}if(v>0&&f!=='')recordFx('¡OBJETIVO CONSEGUIDO!','Esta semana: '+money(v)+' de '+money(OBJ.cents));else if(f==='')try{localStorage.setItem('harrington_goal_done',String(ws))}catch(e){}}}
 }
 document.getElementById('goalBar').onclick=()=>{if(bossActive){dirMod='objetivo';dirForm=null;renderDir();openModal(dirModal);dirModal.scrollTop=0}};
@@ -7506,7 +7524,7 @@ function updTry(force){
  Promise.resolve(navigator.serviceWorker&&navigator.serviceWorker.getRegistration&&navigator.serviceWorker.getRegistration()).then(r=>r&&r.update()).catch(()=>{}).finally(()=>location.reload());
 }
 async function verCheck(){
- if(!APP_VER||location.protocol==='file:'||navigator.onLine===false)return;
+ if(!APP_VER||location.protocol==='file:'||(typeof navigator!=='undefined'&&navigator.onLine===false))return;
  if(!updPending){try{const r=await fetch('index.html?_='+Date.now(),{cache:'no-store'});if(!r.ok)return;const m=/app\.js\?v=([0-9A-Za-z._-]+)/.exec(await r.text());if(m&&m[1]!==APP_VER)updPending=true}catch(e){return}}
  updTry(false);
 }
@@ -7598,7 +7616,7 @@ setTimeout(()=>{try{if(SANDBOX||location.protocol==='file:'&&!window.__hgTest)re
  sbRpc('hacer_copia',{p_tipo:'diaria'}).then(()=>{try{localStorage.setItem('harrington_copia_dia',d)}catch(e){}}).catch(()=>{})}catch(e){}},15000);
 
 /* ===== V2 · Sin conexión: modo consulta (se ve todo; vender, fichar, fabricar y mover stock esperan a internet) ===== */
-function offline(){return navigator.onLine===false||cloud.ok===false}
+function offline(){return (typeof navigator!=='undefined'&&navigator.onLine===false)||cloud.ok===false}
 function offlineBlock(what){if(!offline())return false;say('Sin conexión: para '+what+' hace falta internet. Mientras tanto puedes consultar el catálogo, el stock, los encargos y los pedidos.','err');return true}
 window.addEventListener('offline',()=>{try{setCloudState(false)}catch(e){}});
 window.addEventListener('online',()=>{try{cloudPoll(true)}catch(e){}try{updateFinish()}catch(e){}});

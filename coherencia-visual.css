@@ -1,0 +1,33 @@
+/* Ajustes de composición · conservan tipografías, materiales y fichaje. */
+.management-nav>.clock-link{justify-content:center;text-align:center;overflow-wrap:anywhere}
+.management-nav>.clock-link::before{align-self:center}
+.management-nav>#mostBtn{display:flex;align-items:center;justify-content:center;flex-wrap:wrap}
+.category-visual img,.hero-banner img{object-position:center center}
+.category-visual .visual-title{max-width:calc(100% - 32px);overflow-wrap:anywhere;line-height:1.25}
+.enc-head>span,.dir-top>.enc-back,.mod-card>div,.rec-btn>span{min-width:0;overflow-wrap:anywhere}
+.enc-head>span{flex:1}
+.enc-head>.danger{flex:0 0 auto}
+.mod-card{width:100%;text-align:left;align-items:center}
+.mod-ico{align-self:center;flex-shrink:0}
+.dir-top{flex-wrap:wrap}
+.dir-top>.enc-back{flex:1 1 200px;text-align:left}
+.dir-top>.help-q{flex:0 0 auto;min-height:44px}
+.dir-rec-row{flex-wrap:wrap}
+.rec-btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.enc-actions button,.actions button,.receipt-actions button{display:flex;align-items:center;justify-content:center;gap:6px;line-height:1.35;white-space:normal;overflow-wrap:anywhere}
+.enc-actions.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cartrow{grid-template-columns:minmax(0,1fr) 36px 68px 76px}
+.cartrow>span:first-child{min-width:0;overflow-wrap:anywhere}
+.modal-overlay{overscroll-behavior:contain;scrollbar-gutter:stable}
+.modal-overlay>.enc-panel{min-width:0;margin-block:auto}
+@media(max-width:650px){
+ .category-visual .visual-title{left:12px;max-width:calc(100% - 24px);font-size:clamp(18px,5vw,23px)}
+ .enc-head{gap:10px;letter-spacing:.04em}
+ .dir-rec-row>.rec-btn{flex:1 1 140px}
+ .enc-actions.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:380px){.enc-actions.two{grid-template-columns:1fr}.cartrow{grid-template-columns:minmax(0,1fr) 28px 60px 64px;gap:4px}}
+@media(prefers-reduced-motion:reduce){
+ .product,.category-visual img,.goal-bar .gl-fill{transition:none!important}
+ .bump,.coin,.stamp-fx,.g-stage,.g-sign span i,.g-sign::after{animation:none!important}
+}

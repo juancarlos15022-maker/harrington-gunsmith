@@ -1,6 +1,6 @@
 /* Caché acotada al sitio. Datos autenticados y servicios externos siempre por red. */
 const PREFIX='harrington-static:'+new URL(self.registration.scope).pathname+':';
-const CACHE=PREFIX+'20261016-respuesta4';
+const CACHE=PREFIX+'20261016-visual5';
 const LEGACY=new Set(['harrington-acceso-discord-20261015-2']);
 self.addEventListener('install',e=>{e.waitUntil(self.skipWaiting())});
 self.addEventListener('activate',e=>{e.waitUntil((async()=>{
