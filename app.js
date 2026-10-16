@@ -6205,7 +6205,7 @@ async function gatePickSrv(e){
  const r=await authApi({accion:'estado',empId:e.id});
  if(!G.big||!G.pw||G.pw.e.id!==e.id)return;
  let mode;
- if(r.ok)mode=isJefe(e)||r.j.jefe?'boss':(r.j.tiene?'login':'create');
+ if(r.ok)mode=r.j.tiene?(isJefe(e)||r.j.jefe?'boss':'login'):'create';
  else if(r.st===404)return gPwShow(e,'offline');
  else{ /* sin conexión: solo con lo que este dispositivo ya conoce (modo consulta) */
   if(isJefe(e)){if(!bossCreds())return gPwShow(e,'offline');mode='boss'}
