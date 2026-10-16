@@ -46,7 +46,7 @@ const MAL: Record<string, number> = {};
 const malo = (m: string) => { MAL[m] = Date.now(); };
 const modelosEnOrden = () => { const t = Date.now() - 300000, v = (m: string) => (MAL[m] || 0) > t ? 1 : 0; return [...CFG!.modelos].sort((a, b) => v(a) - v(b)); };
 const CORS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://juancarlos15022-maker.github.io",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
@@ -216,6 +216,7 @@ async function interpretar(texto: string, historial: Array<{ r: string; t: strin
 // ---------- Redactar y analizar con los datos reales de la web ----------
 // Cada tarea: lo que debe escribir, cuánto, y si es solo de Dirección. La web prepara los DATOS con su propia lógica.
 const TAREAS: Record<string, { g: string; jefe?: boolean }> = {
+  discord_rumor: { g: "Pasa a limpio el rumor de DATOS.rumor para el rol de RedM, Saint Denis en 1880. Corrige ortografía, puntuación y orden; dale una voz natural de rumor de la época, sin exagerar. Conserva TODOS los nombres, cifras y el sentido original. No inventes hechos, detalles, acusaciones, consecuencias ni rumores nuevos. Mantén las dudas o condicionales: un rumor no es un hecho confirmado. Devuelve SOLO el texto final listo para pegar, sin introducción, título, comillas envolventes ni firma. Máximo 180 palabras y 1800 caracteres." },
   parte_dia: { g: "Parte del día para quien abre la web. De 4 a 7 viñetas con lo más importante de hoy: encargos por fabricar o por avisar, pedidos por recibir, productos o materiales bajo mínimo, ausencias, quién está fichado y el objetivo de la semana. Lo urgente primero. Termina con una frase de ánimo corta." },
   informe_semana: { g: "Informe de la semana para la Dirección: cómo va frente a la semana anterior, lo más vendido, el margen, los gastos y el personal que destaca. Termina con 3 recomendaciones concretas y accionables. Máximo 230 palabras.", jefe: true },
   plan_fabricacion: { g: "Plan de fabricación por orden de prioridad: primero lo que piden los encargos pendientes, luego lo que está bajo mínimo o agotado, luego lo que más se vende. Para cada producto: cuántas unidades fabricar y por qué, comprobando con «max_fabricable» que hay materiales. Si faltan materiales para algo importante, dilo y cuáles. Viñetas. Máximo 170 palabras. Termina SIEMPRE con una última línea aparte que empiece por «LISTA:» y lleve producto=unidades separados por «; », con los nombres exactos de DATOS y sin pasar de «max_fabricable» (ejemplo: «LISTA: Munición Revolver=30; Pólvora=50»). Si no conviene fabricar nada, «LISTA: ninguna»." },
@@ -335,6 +336,10 @@ async function transcribir(b64: string, tipo: string) {
   return { texto: txt(j.text, 400) };
 }
 
+async function cuotaPersistente(id:string){
+ const a=await sb.rpc('hg_consumir_limite',{p_key:'ia:persona:'+id,p_max:30,p_segundos:900});if(a.error||a.data!==true)return false;
+ const b=await sb.rpc('hg_consumir_limite',{p_key:'ia:global',p_max:1000,p_segundos:86400});return !b.error&&b.data===true;
+}
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "solo POST" }, 405);
@@ -356,6 +361,7 @@ Deno.serve(async (req: Request) => {
       // prueba técnica de la interpretación (sin ejecutar nada): solo con la contraseña de prueba guardada en ia_cfg
       const { data } = await sb.from("ia_cfg").select("valor").eq("clave", "prueba").maybeSingle();
       if (!data?.valor || data.valor.length < 20 || b.secreto !== data.valor) return json({ error: "NO" }, 403);
+      if(!(await cuotaPersistente('pruebas-tecnicas')))return json({error:'LIMITE'},429);
       const r = await interpretar(txt(b.texto, 400), Array.isArray(b.historial) ? b.historial as Array<{ r: string; t: string }> : [], (b.ctx || {}) as Record<string, unknown>, !!b.jefe);
       if ("error" in r) return json({ ...r, traza: TRAZA.slice() }, 502);
       const v = validar(r.herramienta, r.args as Record<string, unknown>);
@@ -366,6 +372,7 @@ Deno.serve(async (req: Request) => {
       if (!data?.valor || data.valor.length < 20 || b.secreto !== data.valor) return json({ error: "NO" }, 403);
       const tarea = txt(b.tarea, 30);
       if (!TAREAS[tarea]) return json({ error: "TAREA" }, 400);
+      if(!(await cuotaPersistente('pruebas-tecnicas')))return json({error:'LIMITE'},429);
       const r = await redactar(tarea, b.datos, txt(b.extra, 400), !!b.jefe, "Prueba");
       return json({ ...r, traza: TRAZA.slice() }, "error" in r ? 502 : 200);
     }
@@ -381,6 +388,7 @@ Deno.serve(async (req: Request) => {
       if (TAREAS[tarea].jefe && !jefe) return json({ error: "SOLO_DIRECCION" }, 403);
       const extra = txt(b.extra, 600), empId = txt(b.emp_id, 40) || "discord", nom = txt(b.quien, 60) || "Señor Harrington";
       if (empId !== "discord" && demasiadas("dc:" + empId)) return json({ error: "DEMASIADAS" }, 429);
+      if(!(await cuotaPersistente('dc:'+empId)))return json({error:'LIMITE'},429);
       const r = await redactar(tarea, b.datos, extra, jefe, nom, Array.isArray(b.historial) ? b.historial as Array<{ r: string; t: string }> : []);
       const id = crypto.randomUUID();
       await sb.from("ia_registro").insert({ id, emp_id: empId, emp: nom, texto: (extra || "(sin indicación)").slice(0, 400), herramienta: "discord:" + tarea, args: {}, modelo: "modelo" in r ? r.modelo : null, estado: "error" in r ? "fallida" : "respondida", resultado: "error" in r ? { error: r.error } : { resumen: r.texto.slice(0, 400) } });
@@ -403,6 +411,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, charla: (data ?? []).reverse() });
     }
     if (b.accion === "charla_apuntar") {
+      const lim=await sb.rpc('hg_consumir_limite',{p_key:'ia:charla:'+yo.id,p_max:100,p_segundos:900});if(lim.error||lim.data!==true)return json({error:'LIMITE'},429);
       const u = txt(b.pregunta, 600), a = String(b.respuesta ?? "").replace(/[\u0000-\u0008\u000b-\u001f]/g, " ").trim().slice(0, 1500);
       if (!u || !a) return json({ error: "TEXTO" }, 400);
       await sb.from("ia_charla").insert([{ emp_id: yo.id, emp: yo.nombre, origen: "web", rol: "u", texto: u }, { emp_id: yo.id, emp: yo.nombre, origen: "web", rol: "a", texto: a }]);
@@ -411,7 +420,7 @@ Deno.serve(async (req: Request) => {
     const acc = String(b.accion || "interpretar");
     if (acc === "estado") return json({ ok: true, clave: !!CLAVE(), jefe: yo.jefe });
     if (!CLAVE()) return json({ error: "SIN_CLAVE" }, 503);
-    if (demasiadas(yo.id)) return json({ error: "DEMASIADAS" }, 429);
+    if (!(await cuotaPersistente(yo.id))) return json({ error: "DEMASIADAS" }, 429);
 
     if (acc === "transcribir") {
       const a = typeof b.audio === "string" ? b.audio : "";
@@ -461,4 +470,5 @@ Deno.serve(async (req: Request) => {
     return json({ error: String((e as Error)?.message || e).slice(0, 200) }, 500);
   }
 });
+
 

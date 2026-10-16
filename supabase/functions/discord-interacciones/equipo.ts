@@ -81,6 +81,14 @@ async function addNote(c:Config,uid:string,text:string,when:string){if(!text.tri
 export async function execute(i:Any,c:Config):Promise<Any>{
  const uid=String(i.member?.user?.id||i.user?.id),name=safe(i.member?.nick||i.member?.user?.global_name||i.member?.user?.username,60),id=String(i.data?.custom_id||'').slice(3),cmd=i.data?.name,v=fieldValues(i),o=options(i),s=sub(i);
  if(!isStaff(c,i.member))throw Error('Solo el personal puede utilizar estas funciones.');
+ if(id.startsWith('rumor:copy:')){
+ const r=await get(id.slice('rumor:copy:'.length));if(!r||r.kind!=='rumor'||r.status!=='done'||r.guild_id!==c.guild_id||r.channel_id!==c.canal_rumores)throw Error('Rumor no encontrado.');
+ const m=await member(c,uid);if(!isStaff(c,m))throw Error('Solo el personal puede copiar rumores.');
+ const token=crypto.randomUUID()+crypto.randomUUID(),copyId=crypto.randomUUID(),hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token)))).map(x=>x.toString(16).padStart(2,'0')).join('');
+ const {error}=await sb.from(TABLE).insert({id:'copy:'+copyId,kind:'rumor_copy',owner:uid,guild_id:c.guild_id,status:'active',due_at:new Date(Date.now()+300000).toISOString(),data:{hash,text:r.data.clean}});if(error)throw error;
+ const url='https://juancarlos15022-maker.github.io/harrington-gunsmith/copiar-rumor.html#'+new URLSearchParams({id:copyId,token});
+ return answer('📋 Texto listo para copiar. Discord no permite escribir directamente en su portapapeles: abra el enlace y pulse **Copiar al portapapeles**. El enlace caduca en cinco minutos.',{components:[row({type:2,style:5,label:'Abrir y copiar rumor',url})]});
+ }
  if(id.startsWith('game:'))return gameAction(i,c,id,uid,name);
  if(cmd==='saloon'||id==='saloon:dados'||id==='saloon:domino'){
  const game=id? id.split(':')[1]:o.juego||'menu';if(game==='ranking'){const {data}=await sb.from(TABLE).select('data,updated_at').eq('kind','game').eq('status','done').gte('updated_at',new Date(Date.now()-30*86400000).toISOString()).limit(1000);const score:Record<string,{name:string,wins:number}>={};for(const r of data||[]){const g=r.data as Game;if(g.winner===undefined)continue;const u=g.players[g.winner];score[u]??={name:g.names[g.winner],wins:0};score[u].wins++;}return answer('🏆 **Victorias de los últimos 30 días**\n'+(Object.values(score).sort((a,b)=>b.wins-a.wins).slice(0,10).map((p,k)=>`${k+1}. ${p.name}: ${p.wins}`).join('\n')||'Todavía no hay partidas terminadas.'));}
