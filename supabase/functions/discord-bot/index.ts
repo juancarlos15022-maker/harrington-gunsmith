@@ -11,6 +11,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { atender as extra } from "./extra.ts";
 import { atender as cronica } from "./cronica.ts";
 import { tareaIA } from "./ia.ts";
+import { destinoFabricacion } from "./webhook-fabricacion.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 const json = (o: unknown, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { "Content-Type": "application/json" } });
@@ -44,9 +45,11 @@ Deno.serve(async (req: Request) => {
       if (!/^\/[A-Za-z0-9_\-\/.?=&%@:]+$/.test(ruta) || !["GET", "POST", "PUT", "PATCH", "DELETE"].includes(metodo)) { out.push({ ruta, error: "RUTA" }); continue; }
       const h: Record<string, string> = { Authorization: "Bot " + c.token, "User-Agent": "HarringtonGunsmith (https://juancarlos15022-maker.github.io/harrington-gunsmith/, 3.0)" };
       if (op.motivo) h["X-Audit-Log-Reason"] = encodeURIComponent(String(op.motivo).slice(0, 400));
+      const target=await destinoFabricacion(sb,op,metodo,ruta);if(target)delete h.Authorization;
+      const enviar=()=>fetch(target||"https://discord.com/api/v10"+ruta,{method:metodo,headers:h,body}).catch(()=>{throw Error("DISCORD_NO_DISPONIBLE")});
       let body: string | undefined;
       if (op.cuerpo !== undefined && metodo !== "GET") { h["Content-Type"] = "application/json"; body = JSON.stringify(op.cuerpo); }
-      let r = await fetch("https://discord.com/api/v10" + ruta, { method: metodo, headers: h, body });
+      let r = await enviar();
       if (r.status === 429) { // límite de Discord: se espera lo que pide y se repite una vez
         const j = await r.json().catch(() => ({}));
         await new Promise((res) => setTimeout(res, Math.min(5000, Math.ceil((Number(j?.retry_after) || 1) * 1000))));
@@ -63,4 +66,5 @@ Deno.serve(async (req: Request) => {
     return json({ error: String((e as Error)?.message || e).slice(0, 200) }, 500);
   }
 });
+
 

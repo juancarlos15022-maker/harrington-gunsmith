@@ -1,3 +1,4 @@
+import {balanceRegistro} from './balance-registro.ts';
 export async function validarMensaje(admin:any,kind:string,ref:string,emp:string,nom:string,owner=false){
 const row=async(k:string)=>{const {data,error}=await admin.from('datos').select('valor').eq('clave',k).maybeSingle();if(error)throw Error('DATOS');return data?.valor;};
 const cash=(n:any)=>'$'+(Number(n||0)/100).toFixed(2),items=(a:any[])=>a.map(x=>x.qty+' × '+x.name+' · '+cash(x.cents)).join('\n');let title='',desc='',record=ref;
@@ -16,9 +17,14 @@ if(kind==='ventas'||kind==='encargos'){
 }else if(kind==='ausencias'){
  const f=await row('ausencia:'+ref);if(!f||f.empId!==emp)throw Error('AUSENCIA_NO_CONFIRMADA');title='AUSENCIA · '+f.name;desc='Desde: '+new Date(Number(f.start)).toLocaleDateString('es-ES',{timeZone:'Europe/Madrid'})+'\nHasta: '+(f.end?new Date(Number(f.end)).toLocaleDateString('es-ES',{timeZone:'Europe/Madrid'}):'Sin fecha')+'\nMotivo: '+(f.cat||'')+'\nExplicación: '+(f.motivo||'')+'\nEstado: '+(f.cancelled?'Cancelada':f.returned?'Finalizada':'Avisada');record='ausencia:'+ref;
 }else if(kind==='fabricacion'){
- const f=await row('fablote:'+ref);if(!f||f.empId!==emp)throw Error('FABRICACION_NO_CONFIRMADA');title='BALANCE DE FABRICACIÓN';desc='Empleado: '+nom;const {data:lotes}=await admin.from('datos').select('valor').like('clave','fablote:%').eq('valor->>empId',emp).eq('valor->>ts',String(f.ts));const grupo=(lotes||[]).map((x:any)=>x.valor).filter((x:any)=>!x.anula&&x.prod);for(const x of grupo.length?grupo:[f]){const {data:c}=await admin.rpc('hg_coste_entrega',{n:x.prod});desc+='\n'+x.q+' × '+x.prod+(c!=null?' · Coste de referencia: '+cash(c*x.q):' · Coste pendiente');}record='fabricacion:'+emp+':'+f.ts;
+ let f:any;
+ if(ref.startsWith('hist:')){if(!owner||!/^hist:(todo|[0-9]+:[0-9]+)$/.test(ref))throw Error('FABRICACION_NO_CONFIRMADA');const parts=ref.split(':');const hist=parts[1]==='todo'?'todo':{s:Number(parts[1]),e:Number(parts[2])};if(hist!=='todo'&&(hist.s>hist.e||hist.e-hist.s>36600))throw Error('PERIODO_INVALIDO');f={hist,ts:Date.now(),emp:nom,empId:emp};record='fabricacion:'+ref;}
+ else if(ref.startsWith('mov:')){const m=await row(ref);if(!m||!['Fabricación','Fabricación deshecha'].includes(m.why)||!owner&&m.who!==nom)throw Error('FABRICACION_NO_CONFIRMADA');const employees=await row('empleados'),actor=(employees||[]).find((e:any)=>e.name===m.who);if(!actor)throw Error('FABRICACION_NO_CONFIRMADA');f={ts:m.ts,emp:m.who,empId:actor.id,autoVenta:m.venta,enc:m.encargo,undo:m.why==='Fabricación deshecha'};record='fabricacion:'+(f.undo?'undo:':'')+actor.id+':'+m.ts;}
+ else{f=await row('fablote:'+ref);if(!f||!owner&&f.empId!==emp)throw Error('FABRICACION_NO_CONFIRMADA');record='fabricacion:'+f.empId+':'+f.ts;}
+ const b=await balanceRegistro(admin,f);title=b.title;desc=b.description;
 }else if(kind==='resumen'){
  const now=new Date().toLocaleDateString('es-ES',{timeZone:'Europe/Madrid'});const {data,error}=await admin.from('datos').select('valor').like('clave','venta:%');if(error)throw Error('DATOS');const a=(data||[]).map((x:any)=>x.valor).filter((x:any)=>{const p=String(x.date||'').split('/').map(Number),d=now.split('/').map(Number);return !x.voided&&p[0]===d[0]&&p[1]===d[1]&&p[2]===d[2]});title='RESUMEN DEL DÍA · '+now;desc='Operaciones: '+a.length+'\nIngresos: '+cash(a.reduce((s:number,x:any)=>s+(x.op==='encargo'?x.totalCents-x.dueCents:x.dueCents),0));record='resumen:'+now;
 }else throw Error('CANAL_SOLO_PROPIETARIO');
 return {title:String(title).slice(0,250),description:String(desc).slice(0,3900)||'Registro confirmado',record};
 }
+
