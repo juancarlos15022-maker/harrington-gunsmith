@@ -2,7 +2,7 @@
   "name": "harrington-gunsmith-checks",
   "private": true,
   "scripts": {
-    "test": "node build-styles.cjs --check && node --test test-auto-fabricacion.cjs test-venta-ui.cjs test-inventario.cjs test-npc.cjs test-estabilidad.cjs test-discord-alta.cjs test-equipo.mjs test-equipo-integration.mjs test-rumores.mjs test-sesion.cjs test-discord-fichajes.mjs test-balance-exacto.cjs test-balance-registro.mjs test-webhook-fabricacion.mjs test-almacen-estable.cjs test-aceite-lotes.cjs",
+    "test": "node build-styles.cjs --check && node --test test-auto-fabricacion.cjs test-venta-ui.cjs test-inventario.cjs test-npc.cjs test-estabilidad.cjs test-discord-alta.cjs test-equipo.mjs test-equipo-integration.mjs test-rumores.mjs test-sesion.cjs test-discord-fichajes.mjs test-balance-exacto.cjs test-balance-registro.mjs test-webhook-fabricacion.mjs test-almacen-estable.cjs test-aceite-lotes.cjs test-discord-entregas.mjs",
     "build:styles": "node build-styles.cjs"
   },
   "devDependencies": {
