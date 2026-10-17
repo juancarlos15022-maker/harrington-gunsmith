@@ -1,32 +1,32 @@
-/* Texturas aportadas por la Dirección. Solo superficies: sin cambiar geometría ni ilustraciones. */
+/* Texturas aportadas por la Dirección: superficies coherentes e iconos de catálogo uniformes. */
 body:not(.hc) {
- --hg-leather:linear-gradient(120deg,#16302355,#050e0aa6),url('texturas/cuero.webp') center/512px;
+ --hg-leather:linear-gradient(120deg,#16302322,#050e0a55),url('texturas/cuero.webp') center/512px;
 }
 body:not(.hc) :is(.panel,.enc-panel,.confirm-box,.clock-bar,.search,.client-box) {
  background:var(--hg-leather);
 }
 body:not(.hc) #dirModal .enc-panel { background:var(--hg-leather); }
 body:not(.hc) .management-nav > .clock-link {
- background-image:linear-gradient(135deg,#1733268c,#07180eb3),url('texturas/pavonado.webp');
+ background-image:linear-gradient(135deg,#17332633,#07180e55),url('texturas/pavonado.webp');
  background-size:auto,384px;
  background-position:center;
  border-image:url('texturas/laton.webp') 24 round;
 }
 body:not(.hc) .management-nav > #dirBtn {
- background-image:linear-gradient(135deg,#74582c77,#20190fc4),url('texturas/pavonado.webp');
+ background-image:linear-gradient(135deg,#74582c55,#20190f66),url('texturas/pavonado.webp');
 }
 body:not(.hc) .management-nav > #pedBtn {
- background-image:linear-gradient(135deg,#3c4b3077,#102219bb),url('texturas/pavonado.webp');
+ background-image:linear-gradient(135deg,#3c4b3033,#10221955),url('texturas/pavonado.webp');
 }
 body:not(.hc) .management-nav > #bellBtn.bad { border-image:none; }
 body:not(.hc) #dirModal .mod-card,
 body:not(.hc) .enc-card {
- background-image:linear-gradient(135deg,#193a2b99,#071b13cf),url('texturas/cuero.webp');
+ background-image:linear-gradient(135deg,#193a2b33,#071b1355),url('texturas/cuero.webp');
  background-size:auto,512px;
 }
 body:not(.hc) :is(.enc-actions,.receipt-actions) > .primary,
 body:not(.hc) .actions > .finish {
- background-image:linear-gradient(#315b38a6,#10351fc9),url('texturas/pavonado.webp');
+ background-image:linear-gradient(#315b3866,#10351f77),url('texturas/pavonado.webp');
  background-size:auto,384px;
 }
 body:not(.hc) :is(.order-title,.enc-head,.total) {
@@ -38,13 +38,54 @@ body:not(.hc) .ledger {
  background-image:linear-gradient(#fff9e83d,#b9975421),url('texturas/papel.webp');
  background-size:auto,512px;
 }
-body:not(.hc) :is(#products,#prodModal) .weapon-icon.has-icon {
+body:not(.hc) #prodModal .weapon-icon.has-icon {
  background-color:#071b11;
  background-image:linear-gradient(#061b1266,#03100866),url('texturas/terciopelo.webp');
  background-size:auto,384px;
  background-position:center;
 }
+/* Una misma piel para todas las filas, sin alternancia de pares e impares. */
+body:not(.hc) #products .product,
+body:not(.hc) #products .product:nth-child(even):not(.has-qty) {
+ background:linear-gradient(100deg,#193b2922,#07180e44),url('texturas/cuero.webp') center/512px;
+}
+body:not(.hc) #products .product.has-qty {
+ background:linear-gradient(100deg,#3e613855,#173a244d),url('texturas/cuero.webp') center/512px!important;
+}
+/* La falta de stock no debe hacer desaparecer la textura ni el nombre. */
+body:not(.hc) #products .product.no-stock { opacity:1; }
+body:not(.hc) #products .product .price {
+ background-image:linear-gradient(#fff0c966,#deb96b33),url('texturas/laton.webp');
+ background-size:auto,192px;
+}
+/* La geometría es idéntica con imagen cargada, pendiente o ausente. */
+#products .product .weapon-icon {
+ position:relative;display:grid;place-items:center;
+ width:68px;height:46px;margin:0;padding:0;
+ border:1px solid #a68a54;border-radius:6px;overflow:hidden;
+ background:linear-gradient(#061b1222,#03100833),url('texturas/terciopelo.webp') center/256px;
+ box-shadow:inset 0 0 0 2px #06150c66,0 2px 5px #0006;
+}
+#products .product .weapon-icon img,
+#products .product:hover .weapon-icon img {
+ width:100%;height:100%;padding:4px;border-radius:3px;
+ object-fit:contain;object-position:center;transform:none;
+}
+#products .product .weapon-icon::after { border-radius:5px;background:linear-gradient(#ffffff06,transparent); }
+@media(min-width:1400px) {
+ #products .product .weapon-icon { width:62px;height:42px; }
+}
+@media(min-width:651px) and (max-width:900px) {
+ #products .product .weapon-icon { width:56px;height:38px; }
+}
+@media(max-width:650px) {
+ #products .product .weapon-icon { width:52px;height:36px; }
+}
+body.hc #products .product .weapon-icon { background:#07140e;border-color:#f5d28a; }
 @media(hover:hover) {
+ body:not(.hc) #products .product:not(.has-qty):hover {
+  background:linear-gradient(100deg,#43614333,#14392344),url('texturas/cuero.webp') center/512px;
+ }
  body:not(.hc) .management-nav > .clock-link:not(:disabled):hover {
   border-image:url('texturas/laton.webp') 24 round;
   box-shadow:inset 0 1px #fff0c46b,inset 0 0 0 3px #c7a15a26,0 4px 9px #0005;
