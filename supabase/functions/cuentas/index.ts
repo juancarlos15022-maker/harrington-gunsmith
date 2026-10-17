@@ -15,12 +15,13 @@ async function guardarClave(id:string,pw:string){const salt=crypto.randomUUID()+
 async function abrirSesion(emp:any,owner:any){
  const jefe=emp.id===owner.owner_emp;const meta={emp_id:emp.id,jefe,modo:'personal'};const password=crypto.randomUUID()+crypto.randomUUID();
  const {data:c}=await admin.from('cuentas').select('uid').eq('emp_id',emp.id).maybeSingle();let uid=c?.uid;
- if(uid){const {error}=await admin.auth.admin.updateUserById(uid,{password,app_metadata:meta,user_metadata:{nombre:emp.name||''}});if(error)throw Error('CUENTA_NO_DISPONIBLE');}
+ if(uid){const {error}=await admin.auth.admin.updateUserById(uid,{app_metadata:meta,user_metadata:{nombre:emp.name||''}});if(error)throw Error('CUENTA_NO_DISPONIBLE');}
  else{const {data,error}=await admin.auth.admin.createUser({email:emailDe(emp.id),password,email_confirm:true,app_metadata:meta,user_metadata:{nombre:emp.name||''}});if(error)throw Error('CUENTA_NO_DISPONIBLE');uid=data.user!.id;}
  if(jefe&&uid!==owner.owner_uid)throw Error('IDENTIDAD_PROPIETARIO');
  const {error}=await admin.from('cuentas').upsert({emp_id:emp.id,uid,ultima:new Date().toISOString()});if(error)throw Error('CUENTA_NO_GUARDADA');
  const pub=createClient(URL_,Deno.env.get('SUPABASE_ANON_KEY')!,{auth:{persistSession:false,autoRefreshToken:false}});
- const {data:s,error:e}=await pub.auth.signInWithPassword({email:emailDe(emp.id),password});if(e||!s.session)throw Error('SESION');
+ const {data:link,error:le}=await admin.auth.admin.generateLink({type:'magiclink',email:emailDe(emp.id)});if(le||!link?.properties?.hashed_token||link.user?.id!==uid)throw Error('SESION');
+ const {data:s,error:e}=await pub.auth.verifyOtp({token_hash:link.properties.hashed_token,type:'email'});if(e||!s.session||s.user?.id!==uid)throw Error('SESION');
  return {access_token:s.session.access_token,refresh_token:s.session.refresh_token,expires_at:s.session.expires_at,uid,jefe};
 }
 Deno.serve(async(req:Request)=>{
@@ -48,6 +49,13 @@ Deno.serve(async(req:Request)=>{
  if(acc==='personalizar'){
   if(!actual||!propietario)return json({error:'SOLO_PROPIETARIO'},403);
   const pw=String(b.pw||'');if(pw.length<12||pw.length>80)return json({error:'MINIMO_12_CARACTERES'},400);
+  const {data:prev,error:prevError}=await admin.from('hg_security_credentials').select('hash,salt,iterations').eq('emp_id',actual.id).maybeSingle();
+  if(prevError)throw Error('CLAVE_NO_DISPONIBLE');
+  if(prev){
+   const {data:lim,error:le}=await admin.rpc('hg_consumir_limite',{p_key:'cambio-clave:'+u!.user!.id,p_max:5,p_segundos:900});
+   if(le||lim!==true)return json({error:'BLOQUEADA'},429);
+   const oldPw=String(b.actual||'');if(oldPw.length>80||!igual(await derivar(oldPw,prev.salt,prev.iterations),prev.hash))return json({error:'CONTRASENA_ACTUAL_INCORRECTA'},401);
+  }
   await guardarClave(actual.id,pw);
   const payload=JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
   if(payload.session_id)await admin.rpc('hg_cerrar_otras_sesiones',{p_uid:u!.user!.id,p_session:payload.session_id});
@@ -85,7 +93,7 @@ Deno.serve(async(req:Request)=>{
  if(acc==='discord_iniciar'){
   const purpose=String(b.purpose||'');if(!['entrar','crear','recuperar'].includes(purpose)||purpose==='recuperar'&&id!==owner.owner_emp)return json({error:'ACCION'},400);
   const did=String(id===owner.owner_emp?owner.owner_discord:emp.discord||'');if(!/^\d{15,22}$/.test(did))return json({error:'DISCORD_NO_VINCULADO_CONTACTA_CON_DIRECCION'},403);
-  const {count,error:ce}=await admin.from('hg_discord_checks').select('id',{count:'exact',head:true}).eq('emp_id',id).gte('created_at',new Date(Date.now()-600000).toISOString());if(ce)throw Error('COMPROBACION');if((count||0)>=3)return json({error:'Espera diez minutos antes de pedir otra confirmación.'},429);
+  const {data:dcLimit,error:dcLimitError}=await admin.rpc('hg_consumir_limite',{p_key:'discord-identidad:'+id,p_max:3,p_segundos:600});if(dcLimitError||dcLimit!==true)return json({error:'Espera diez minutos antes de pedir otra confirmación.'},429);
   const dc={id:crypto.randomUUID(),secret:crypto.randomUUID()+crypto.randomUUID()};
   const {data:cfg,error:cf}=await admin.from('bot_cfg').select('clave,valor').eq('clave','token');if(cf||!cfg?.[0]?.valor)throw Error('BOT_NO_CONFIGURADO');
   const api=async(path:string,body:any)=>{const r=await fetch('https://discord.com/api/v10'+path,{method:'POST',headers:{Authorization:'Bot '+cfg[0].valor,'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error('DISCORD_PRIVADOS_BLOQUEADOS');return d;};
