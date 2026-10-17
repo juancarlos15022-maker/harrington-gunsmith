@@ -1,0 +1,53 @@
+/* Los controles conservan su espacio; ninguna decoración puede recortarlos. */
+button[hidden],input[hidden],select[hidden],textarea[hidden] { display:none!important; }
+#products .product { min-width:0; }
+#products .pname { min-width:0;overflow-wrap:anywhere; }
+#products .qty {
+ display:grid;
+ grid-template-columns:40px minmax(44px,1fr) 40px;
+ align-items:center;
+ justify-content:stretch;
+ gap:0;
+ min-width:124px;
+ width:100%;
+ filter:none;
+}
+#products .qty > .minus,#products .qty > .plus {
+ display:block;
+ width:40px;
+ min-width:40px;
+ height:44px;
+ min-height:44px;
+ padding:0;
+ line-height:1;
+ flex:none;
+}
+#products .qty > input { width:100%;min-width:0;height:44px;padding:0 2px; }
+#products .qty > .minus { grid-column:1;grid-row:1; }
+#products .qty > input { grid-column:2;grid-row:1; }
+#products .qty > .plus { grid-column:3;grid-row:1; }
+#products .qty > .quick { grid-column:1/-1;grid-row:2;display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;min-width:0; }
+#products .qty .quick button { flex:1 1 36px;min-width:36px;height:38px;padding:0 2px;font-size:12px; }
+/* Un nombre largo o el panel de pedido nunca empujan el botón + fuera del catálogo. */
+@media(min-width:651px) {
+ .table-head,#products .product { grid-template-columns:64px minmax(0,1fr) 88px 132px 84px;column-gap:8px; }
+}
+/* En la zona intermedia caben mejor los controles en una segunda línea. */
+@media(min-width:901px) and (max-width:1199px),(min-width:1400px) {
+ .panel .table-head { display:none; }
+ #products .product { grid-template-columns:64px minmax(0,1fr) 88px;gap:8px 10px; }
+ #products .product > .weapon-icon { grid-column:1;grid-row:1;max-width:100%; }
+ #products .product > .pname { grid-column:2;grid-row:1; }
+ #products .product > .price { grid-column:3;grid-row:1; }
+ #products .product > .qty { grid-column:1/3;grid-row:2;width:140px;max-width:100%;justify-self:end; }
+ #products .product > .subtotal { grid-column:3;grid-row:2; }
+}
+@media(max-width:650px) {
+ #products .product { grid-template-columns:52px minmax(0,1fr) 76px;gap:8px; }
+ #products .product > .weapon-icon { grid-column:1;grid-row:1;max-width:100%; }
+ #products .product > .pname { grid-column:2;grid-row:1; }
+ #products .product > .price { grid-column:3;grid-row:1; }
+ #products .product > .qty { grid-column:1/3;grid-row:2;width:140px;max-width:100%;justify-self:end; }
+ #products .product > .subtotal { grid-column:3;grid-row:2; }
+}
+.actions > button,.enc-actions > button,.receipt-actions > button { min-width:0;overflow-wrap:anywhere; }

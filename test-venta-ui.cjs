@@ -55,3 +55,13 @@ test('DOM: cambios de precio durante la sincronización requieren revisar antes 
  assert.equal(await w.autoVentaConfirmar(),null);assert.equal(calls,0);assert.equal(w.localStorage.getItem('harrington_autoventa_pendiente_v1'),null);
  }finally{dom.window.close()}
 });
+
+test('todos los productos conservan controles + y − operativos y accesos rápidos de munición',()=>{
+ const {dom,w}=mount();try{
+ w.__testMode('presupuesto');w.calc(false);
+ const rows=[...w.document.querySelectorAll('#products .product')];assert.equal(rows.length,43);
+ for(const row of rows){const name=row.querySelector('.qty input').dataset.name,plus=row.querySelector('.qty > .plus'),minus=row.querySelector('.qty > .minus'),i=row.querySelector('.qty input');assert.ok(plus,name);assert.ok(minus,name);if(!plus.disabled){i.value='0';plus.click();assert.equal(i.value,Number(i.dataset.price)>0?'1':'0',name+' suma respeta precio');minus.click();assert.equal(i.value,'0',name+' resta');}}
+ for(const row of rows.filter(x=>x.dataset.cat==='municion'))assert.equal(row.querySelectorAll('.quick button').length,3);
+ assert.equal(w.document.querySelector('#finishEnc').hidden,true);
+ }finally{dom.window.close();}
+});
