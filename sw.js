@@ -1,6 +1,6 @@
 /* Caché acotada al sitio. Datos autenticados y servicios externos siempre por red. */
 const PREFIX='harrington-static:'+new URL(self.registration.scope).pathname+':';
-const CACHE=PREFIX+'20261016-alta-discord-jefes';
+const CACHE=PREFIX+'20261017-estabilidad1';
 const LEGACY=new Set(['harrington-acceso-discord-20261015-2']);
 self.addEventListener('install',e=>{e.waitUntil(self.skipWaiting())});
 self.addEventListener('activate',e=>{e.waitUntil((async()=>{
@@ -39,7 +39,9 @@ self.addEventListener('fetch',e=>{
  if(url.searchParams.has('v')||fonts){
   const task=cached(req).then(r=>r||fromNet(req).then(async res=>{if(!fonts)await prune(url);return res}));e.respondWith(task);e.waitUntil(task.then(()=>{},()=>{}));return;
  }
- const net=fromNet(req);e.waitUntil(net.catch(()=>{}));e.respondWith(cached(req).then(r=>r||net.catch(()=>Response.error())));
+ // Imágenes y sonidos inmutables: no descargarlos otra vez en cada visita.
+ if(/\.(png|jpe?g|webp|svg|ico|woff2?|ttf|mp3|wav|ogg)$/i.test(url.pathname)){e.respondWith(cached(req).then(r=>r||fromNet(req).catch(()=>Response.error())));return;}
+ const net=fromNet(req);e.waitUntil(net.catch(()=>{}));e.respondWith(net.catch(()=>cached(req).then(r=>r||Response.error())));
 });
 self.addEventListener('push',e=>{let d={};try{d=e.data?e.data.json():{}}catch{d={body:e.data?e.data.text():''}}e.waitUntil(self.registration.showNotification(d.title||'Harrington Gunsmith',{body:d.body||'',icon:'icono-app-192.png',badge:'icono-app-192.png',tag:d.tag||'harrington',renotify:true,data:{url:d.url||'./'}}))});
 self.addEventListener('notificationclick',e=>{

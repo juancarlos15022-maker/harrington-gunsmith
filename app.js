@@ -1294,7 +1294,7 @@ fxApply();
 /* ===== Registros (historial de fichajes y ventas para Dirección) ===== */
 const KEY_SHIFTLOG='harrington_shiftlog_v1', KEY_SALELOG='harrington_salelog_v1';
 function loadLog(k){try{const a=JSON.parse(store.get(k)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
-function logShift(r){const a=loadLog(KEY_SHIFTLOG), rec={uid:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:r.name,start:r.start,end:r.end};a.push(rec);store.set(KEY_SHIFTLOG,JSON.stringify(a.slice(-5000)));cloudPut('turno:'+rec.uid,rec)}
+function logShift(r){const a=loadLog(KEY_SHIFTLOG), rec={uid:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:r.name,start:r.start,end:r.end};r.uid=rec.uid;a.push(rec);store.set(KEY_SHIFTLOG,JSON.stringify(a.slice(-5000)));cloudPut('turno:'+rec.uid,rec)}
 function logSale(sl){
  const a=loadLog(KEY_SALELOG), e={items:sl.items.map(x=>({name:x.name,qty:x.qty,cents:x.cents,oq:x.oq||0})),stock:sl.stockApplied||{},note:sl.note||'',id:sl.id,date:sl.date,time:sl.time,op:sl.op,client:sl.client,employee:sl.employee||'',products:sl.products,units:sl.units,dueCents:dueCents(sl),totalCents:sl.totalCents,convenio:sl.convenio||'',fromEncargo:sl.fromEncargo||'',telegram:sl.telegram||''};
  if(sl.sorteos&&Object.keys(sl.sorteos).length)e.sorteos=sl.sorteos;
@@ -2470,7 +2470,7 @@ var DCQ=loadObj('harrington_dc_queue_v1',[]);if(!Array.isArray(DCQ))DCQ=[];
 function saveDCH(){try{localStorage.setItem('harrington_dc_health_v1',JSON.stringify(DCH))}catch(e){}}
 function saveDCQ(){try{localStorage.setItem('harrington_dc_queue_v1',JSON.stringify(DCQ))}catch(e){}}
 function dcStatus(err){const m=String(err&&err.message||err||'').match(/\d{3}/);return m?+m[0]:0}
-function dcWhy(st){return st===401||st===403||st===404?'el webhook ya no existe o no es válido (¿se borró el canal o el webhook?). Crea uno nuevo y pégalo en DISCORD':st===429?'Discord está frenando los envíos por ir demasiado deprisa; se reintentará':st?'Discord respondió con un error ('+st+')':'no hay conexión con Discord'}
+function dcWhy(st){return st===401?'la sesión o la autorización del envío ha caducado; vuelve a entrar':st===403?'el envío fue rechazado por permisos o porque su registro todavía no está confirmado; revisa la sincronización':st===404?'el webhook o el mensaje de destino no existe; revisa la configuración de Discord':st===429?'Discord está frenando los envíos por ir demasiado deprisa; se reintentará':st?'Discord respondió con un error ('+st+')':'no hay conexión con Discord'}
 function dcFail(kind,err,text){
  const st=dcStatus(err), h=DCH[kind]||{since:Date.now(),n:0};
  h.st=st;h.ts=Date.now();h.n=(h.n||0)+1;DCH[kind]=h;saveDCH();
@@ -3099,7 +3099,7 @@ function mnSync(){
  const out=document.getElementById('clockOutBtn'), cb=mnav.querySelector('[data-mn="clock"]'), on=mnVisible(out);
  cb.classList.toggle('on',on);cb.querySelector('.mn-l').textContent=on?'SALIDA':'FICHAR';
  if(mnav.hidden)mnav.hidden=false;
- document.body.classList.toggle('has-mnav',!mnav.hidden);
+ if(document.body.classList.contains('has-mnav')===mnav.hidden)document.body.classList.toggle('has-mnav',!mnav.hidden);
 }
 if(mnav){
  mnav.addEventListener('click',e=>{
@@ -5354,7 +5354,7 @@ async function sbRpc(name,body){
  try{return JSON.parse(t)}catch(e){return t}
 }
 function cloudRev(){return sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify([{clave:'rev',valor:{n:Date.now()+'-'+Math.random().toString(36).slice(2,6)},actualizado:new Date().toISOString()}])}).catch(()=>{})}
-function applyStockMap(m){LOTC=null;stockMap=m&&typeof m==='object'&&!Array.isArray(m)?m:{};saveStock();try{matPaint()}catch(e){}const mm=document.getElementById('matModal');if(mm&&!mm.hidden&&typeof renderMat==='function')renderMat()}
+function applyStockMap(m){m=m&&typeof m==='object'&&!Array.isArray(m)?m:{};const keys=Object.keys(m);if(keys.length===Object.keys(stockMap).length&&keys.every(k=>Object.hasOwn(stockMap,k)&&stockMap[k]===m[k]))return;LOTC=null;stockMap=m;saveStock();try{matPaint()}catch(e){}const mm=document.getElementById('matModal');if(mm&&!mm.hidden&&typeof renderMat==='function')renderMat()}
 async function moverStock(items,why){const m=await sbRpc('mover_stock',{p_items:items});applyStockMap(m);cloudRev();invChanged(items,why);return m}
 /* --- Almacén de materiales: viven en la misma tabla de stock con el prefijo «mat:» --- */
 /* Productos que la casa fabrica y guarda como MATERIAL aunque también se vendan en la tienda (la pólvora):
@@ -7067,7 +7067,8 @@ const PARCHES=[
  {f:'13/10/2026',t:'El Señor Harrington: segunda tanda',v:'3.0',i:['Libro de mandatos: canal con todas las órdenes y qué hace cada una','Personal: /mis-horas, /encargos, /cliente, /telegrama, /cumpleanos y /examen; Dirección: /caja, /reunion (aviso una hora antes) y /votacion; todos: /duelo y /tiradores','Libro del aprendiz con examen, buzón de sugerencias anónimo y libro de visitas con aprobación de la Dirección','Objetivo de la semana con barra y ranking, escaparate ilustrado y cuadro de honor con medallas (también en la ficha de la plantilla)','Avisos automáticos: campanilla al abrir y cerrar, encargos listos, el tiempo y un refrán, aniversarios y cumpleaños, inactividad y armas sin registrar, resumen del domingo, la Gaceta de Saint Denis y el empleado del mes']},
  {f:'13/10/2026',t:'El Señor Harrington: tercera tanda',v:'3.0',i:['Pedidos en Discord con el botón «Recibido entero» (el material entra solo en la web) y la orden /pedidos','Dirección: /compra (compra a un particular desde Discord, como lote con su precio), /agenda y /se-busca con su tablón para las visitas','Al cobrar a alguien con cartel de Se busca, la web avisa antes; si se cobra igual, queda como incidencia','Nómina por carta al pagar los sueldos; plazo de 10 días de los encargos avisados (recordatorio a los 8 y aviso a la Dirección a los 10)','Carta al vendedor si un arma lleva 2 horas sin registrar IC (la web guarda quién la vendió)','Panel de ofertas, convenios y sorteos para las visitas, con cuenta atrás','Propuestas de ascenso cuando se cumplen los requisitos y ficha de fin del periodo de prueba con «Se queda» / «Despedir»','Mesa de juego: el Veintiuno con fichas de mentira y ranking semanal','Bitácora del taller: nota opcional al fichar la salida (en la web y en Discord), publicada por el Señor Harrington']},
  {f:'13/10/2026',t:'Harrington en toda la web',v:'3.0',i:['Harrington deja de estar en pausa: el botón de la conversación sale a quien ha entrado con su tarjeta','Recuadro «✦ Harrington» en cada pantalla, con ayudas propias y una pregunta libre sobre lo que se ve (en los 36 apartados de Dirección, salvo los que tienen claves)','Parte del día automático al fichar la entrada (una vez al día)','Plan de fabricación con botón para rellenar la lista de FABRICACIÓN sin pasar de lo que se puede fabricar','Propuestas de pedidos a proveedores, informe de la semana, lectura de las cuentas, valoración del personal, revisión de precios y explicación de las incidencias','Resumen del cliente en la venta, telegramas a tu manera en los encargos y para proveedores y contactos, anuncio de los sorteos','Escribe la nota del libro de turno y la bitácora del taller al fichar la salida; responde dudas en el Tutorial','La conversación también aconseja, explica la web y escribe telegramas; reconoce al proveedor por su tipo («la mina»)','Harrington solo escribe y propone: nada se hace sin que el empleado lo pase a la web']},
- {f:'13/10/2026',t:'Harrington en el mostrador',v:'3.0',i:['En la pantalla de venta, debajo del pedido, Harrington cambia según lo que hagas: el día con el pedido vacío; «¿Qué más le ofrezco?» y «Revisa la venta antes de cobrar» con productos; el telegrama de confirmación en un encargo','La casilla del mostrador es una orden: «vende 2 Cattleman a Arthur», «¿cuánto hierro queda?»… se hace en la conversación con la lógica de siempre','Presupuesto escrito para el cliente, listo para copiar','En el ticket, mensaje de agradecimiento al cliente (o telegrama de confirmación del encargo)','Te redacta el motivo al avisar una ausencia y el telegrama al proveedor desde la ficha del pedido']}
+ {f:'13/10/2026',t:'Harrington en el mostrador',v:'3.0',i:['En la pantalla de venta, debajo del pedido, Harrington cambia según lo que hagas: el día con el pedido vacío; «¿Qué más le ofrezco?» y «Revisa la venta antes de cobrar» con productos; el telegrama de confirmación en un encargo','La casilla del mostrador es una orden: «vende 2 Cattleman a Arthur», «¿cuánto hierro queda?»… se hace en la conversación con la lógica de siempre','Presupuesto escrito para el cliente, listo para copiar','En el ticket, mensaje de agradecimiento al cliente (o telegrama de confirmación del encargo)','Te redacta el motivo al avisar una ausencia y el telegrama al proveedor desde la ficha del pedido']},
+ {f:'17/10/2026',t:'Corrección de errores, fluidez y estabilidad',v:'3.0',i:['Cierre de turno enlazado con su registro correcto para publicarse en Discord','Barra móvil sin actualizaciones continuas cuando nada cambia','El almacén solo se repinta cuando cambian las cantidades','Las imágenes y sonidos ya guardados se reutilizan sin descargarlos en cada visita','Una actualización espera a que se sincronicen los cambios pendientes','Las comprobaciones de versión simultáneas comparten una petición y tienen tiempo de espera limitado','Los avisos de Discord distinguen sesión, permisos y destino inexistente']}
 ];
 let phQ='';
 /* Versiones: cada parche lleva su versión (v); los que no la llevan son de la 1.0 */
@@ -7512,7 +7513,7 @@ function updSafe(){
  try{const id=ME?.id||'';if(store.get('harrington_autoventa_pendiente_v1')||['hg_operacion_segura_','hg_fabricacion_polvora_','harrington_entrega_pendiente_','harrington_npc_operacion_'].some(k=>store.get(k+id)))return false;const inv=JSON.parse(store.get('harrington_inventario_jefe_'+id)||'null');if(inv?.pending)return false;}catch(e){return false;}
  if(document.querySelector('.modal-overlay:not([hidden])'))return false;
  const a=document.activeElement;if(a&&a.matches&&a.matches('input,textarea,select,[contenteditable]'))return false;
- try{if(cloud.flushing||(cloud.outbox&&cloud.outbox.length))return false}catch(e){}
+ try{if(cloud.flushing||Object.keys(cloud.dirty||{}).length||(cloud.outbox&&cloud.outbox.length))return false}catch(e){}
  try{if(typeof G!=='undefined'&&G&&G.open&&G.pending)return false}catch(e){}
  return true;
 }
@@ -7523,9 +7524,11 @@ function updTry(force){
  try{sessionStorage.setItem('harrington_upd','1')}catch(e){}
  Promise.resolve(navigator.serviceWorker&&navigator.serviceWorker.getRegistration&&navigator.serviceWorker.getRegistration()).then(r=>r&&r.update()).catch(()=>{}).finally(()=>location.reload());
 }
-async function verCheck(){
+let verFlight=null;
+function verCheck(){if(verFlight)return verFlight;const p=verCheckOnce();verFlight=p;const clear=()=>{if(verFlight===p)verFlight=null};p.then(clear,clear);return p;}
+async function verCheckOnce(){
  if(!APP_VER||location.protocol==='file:'||(typeof navigator!=='undefined'&&navigator.onLine===false))return;
- if(!updPending){try{const r=await fetch('index.html?_='+Date.now(),{cache:'no-store'});if(!r.ok)return;const m=/app\.js\?v=([0-9A-Za-z._-]+)/.exec(await r.text());if(m&&m[1]!==APP_VER)updPending=true}catch(e){return}}
+ if(!updPending){try{const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),9000);let html;try{const r=await fetch('index.html?_='+Date.now(),{cache:'no-store',signal:ctl.signal});if(!r.ok)return;html=await r.text()}finally{clearTimeout(timer)}const m=/app\.js\?v=([0-9A-Za-z._-]+)/.exec(html);if(m&&m[1]!==APP_VER)updPending=true}catch(e){return}}
  updTry(false);
 }
 try{if(sessionStorage.getItem('harrington_upd')){sessionStorage.removeItem('harrington_upd');setTimeout(()=>{try{say('Actualizada a la versión nueva')}catch(e){}},1500)}}catch(e){}

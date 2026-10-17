@@ -1,6 +1,11 @@
 {
   "name": "harrington-gunsmith-checks",
   "private": true,
-  "scripts": {"test": "node --test test-auto-fabricacion.cjs test-venta-ui.cjs test-inventario.cjs test-npc.cjs"},
-  "devDependencies": {"@electric-sql/pglite": "0.3.14", "jsdom": "26.1.0"}
+  "scripts": {
+    "test": "node --test test-auto-fabricacion.cjs test-venta-ui.cjs test-inventario.cjs test-npc.cjs test-estabilidad.cjs test-discord-alta.cjs test-equipo.mjs test-equipo-integration.mjs test-rumores.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
+    "jsdom": "26.1.0"
+  }
 }

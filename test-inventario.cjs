@@ -50,9 +50,9 @@ test('inventario SQL: RLS, SECURITY INVOKER y denegación a anónimos',async()=>
 function mount(chief,sandbox=false){
  const dom=new JSDOM(fs.readFileSync(__dirname+'/index.html','utf8'),{url:'https://prueba.invalid/',runScripts:'outside-only',pretendToBeVisual:true}),w=dom.window;
  w.matchMedia=()=>({matches:true,addEventListener(){}});w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};w.setTimeout=()=>0;w.setInterval=()=>0;w.requestAnimationFrame=()=>0;w.fetch=async()=>{throw Error('RED BLOQUEADA')};w.WebSocket=undefined;w.TextEncoder=TextEncoder;
- w.localStorage.setItem('harrington_empleados_v1',JSON.stringify([{id:'j',name:'Prueba',puesto:chief?'Jefe':'Armero'}]));w.sessionStorage.setItem('harrington_me_v1',JSON.stringify({id:'j'}));
- if(sandbox){w.sessionStorage.setItem('harrington_sandbox','1');w.Response=Response;w.fetch=async u=>new Response(JSON.stringify(String(u).includes('/stock?')?[{producto:'mat:Tornillo',cantidad:10}]:String(u).includes('/contador?')?[{valor:0}]:[{clave:'empleados',valor:[{id:'j',name:'Prueba',puesto:'Jefe'}]}]),{status:200,headers:{'Content-Type':'application/json'}})}
- w.eval(fs.readFileSync(__dirname+'/auto-fabricacion.js','utf8'));w.eval(fs.readFileSync(__dirname+'/app.js','utf8')+'\n'+fs.readFileSync(__dirname+'/inventario-jefes.js','utf8'));return {dom,w};
+ w.localStorage.setItem('harrington_empleados_v1',JSON.stringify([{id:'emuzvkc99z8q',name:'Prueba',puesto:chief?'Jefe':'Armero'}]));w.sessionStorage.setItem('harrington_me_v1',JSON.stringify({id:'emuzvkc99z8q'}));
+ if(sandbox){w.sessionStorage.setItem('harrington_sandbox','1');w.Response=Response;w.fetch=async u=>new Response(JSON.stringify(String(u).includes('/stock?')?[{producto:'mat:Tornillo',cantidad:10}]:String(u).includes('/contador?')?[{valor:0}]:[{clave:'empleados',valor:[{id:'emuzvkc99z8q',name:'Prueba',puesto:'Jefe'}]}]),{status:200,headers:{'Content-Type':'application/json'}})}
+ w.eval(fs.readFileSync(__dirname+'/auto-fabricacion.js','utf8'));w.eval(fs.readFileSync(__dirname+'/app.js','utf8')+'\n'+fs.readFileSync(__dirname+'/inventario-jefes.js','utf8'));w.setBoss(chief);return {dom,w};
 }
 test('inventario DOM: botón solo visible para jefe',()=>{for(const chief of [false,true]){const {dom,w}=mount(chief);try{assert.equal(w.document.getElementById('hacerInventarioBtn').hidden,!chief)}finally{dom.window.close()}}});
 test('inventario DOM: lista material y producto, omite vacíos y revisa antes de guardar',async()=>{
