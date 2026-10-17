@@ -1,0 +1,111 @@
+/* Pulido del diseño existente. No sustituye imágenes, contenido ni estructura. */
+.clock-bar {
+ border-color:#5a3b22;
+ box-shadow:0 6px 16px #0006,inset 0 0 0 1px #c5a56b77,inset 0 0 0 4px #08180f;
+}
+.clock-info b { color:#efd399;text-shadow:0 1px 2px #000; }
+.clock-status { color:#c5bea9; }
+.clock-actions > .management-nav {
+ background:linear-gradient(#07180f88,#06130ca8),url('textura-cuero.webp') center/460px;
+ border:1px solid #aa8a52;
+ border-radius:5px;
+ padding:11px;
+ gap:10px;
+ box-shadow:inset 0 0 0 3px #09170f,0 2px 4px #0005;
+}
+.management-nav > .clock-link {
+ --plate-top:#254a35;
+ --plate-bottom:#0b2015;
+ --plate-surface:
+  radial-gradient(circle at 6px 6px,#d2b67a 0 1px,#544020 1.5px,transparent 2.5px),
+  radial-gradient(circle at calc(100% - 6px) 6px,#cbb078 0 1px,#544020 1.5px,transparent 2.5px),
+  radial-gradient(circle at 6px calc(100% - 6px),#b69960 0 1px,#49351d 1.5px,transparent 2.5px),
+  radial-gradient(circle at calc(100% - 6px) calc(100% - 6px),#b69960 0 1px,#49351d 1.5px,transparent 2.5px),
+  linear-gradient(135deg,#2d51393d,#07190e80),url('textura-cuero.webp');
+ background-image:var(--plate-surface);
+ background-size:auto,auto,auto,auto,auto,460px;
+ background-position:center;
+ border:1px solid #b79b60;
+ border-radius:4px;
+ outline:1px solid #c5a56b44;
+ outline-offset:-4px;
+ min-height:66px;
+ padding:14px 16px;
+ color:#f0dfb6;
+ box-shadow:inset 0 1px #f4ddb93b,inset 0 -2px #0005,0 2px 0 #071209,0 4px 6px #0004;
+ letter-spacing:.065em;
+}
+.management-nav > #dirBtn,.management-nav > #pedBtn {
+ border-color:#c0a266;
+ color:#f0dfb6;
+}
+.management-nav > .clock-link:not(#mostBtn)::before {
+ background-color:#d7b979;
+ filter:drop-shadow(0 1px 1px #000);
+}
+.management-nav > #bellBtn::after { color:#f0dfb6; }
+.management-nav > #bellBtn.bad { border-color:#d58e72; }
+.management-nav > .clock-link:focus-visible { outline:2px solid #ffe4a8;outline-offset:3px; }
+.cat-nav {
+ border:1px solid #947445;
+ border-radius:6px;
+ box-shadow:inset 0 0 0 2px #20160f,0 5px 12px #0005;
+}
+.cat-nav > .cat-btn {
+ border-color:#7e663e;
+ border-radius:4px;
+ box-shadow:0 2px 5px #0006,inset 0 0 0 1px #d4b77a22;
+}
+.cat-nav > .cat-btn.active {
+ border-color:#ebc778;
+ box-shadow:0 0 0 1px #d9b876,inset 0 0 0 1px #ead29977,0 3px 8px #0006;
+}
+.category-visual { border-radius:6px;box-shadow:0 6px 16px #0005,inset 0 0 0 1px #c4a16666; }
+.panel,.enc-panel,.confirm-box {
+ box-shadow:0 8px 22px #0006,inset 0 0 0 1px #c5a56b88,inset 0 0 0 4px #07170f;
+}
+.search { border-bottom:1px solid #a38a5055; }
+.search input { border-color:#8b825f;box-shadow:inset 0 2px 4px #0006,0 1px #dbc38e1a; }
+.table-head { color:#e1c995;letter-spacing:.12em; }
+.product { border-bottom-color:#b89b6038; }
+.product.has-qty { border-left-color:#e9c579; }
+.pname { color:#eee2c4; }
+.price { color:#ddcfae; }
+.subtotal { color:#efd59c; }
+.order-title,.enc-head { color:#f0d7a1;border-bottom:1px solid #b79b6077; }
+.carthead { color:#c8b68d; }
+.total { border-width:1px;color:#f0d7a1; }
+.total #grand { color:#ffe5ac; }
+#dirModal .mod-card,.enc-card {
+ border-radius:5px;
+ border-color:#a68b515c;
+ box-shadow:inset 0 1px #f0d7a117,0 2px 6px #0004;
+}
+#dirModal .mod-card .t { color:#ecd8ac; }
+#dirModal .mod-card .it { color:#c0c4b4; }
+.enc-head > button,.enc-back,.rec-btn { line-height:1.35; }
+@media(hover:hover) {
+ .management-nav > .clock-link:not(:disabled):hover {
+  background-image:var(--plate-surface);
+  background-size:auto,auto,auto,auto,auto,460px;
+  background-position:center;
+  border-color:#f0d095;
+  box-shadow:inset 0 1px #f4ddb94b,inset 0 0 0 3px #d0b37718,0 3px 7px #0005;
+  transform:translateY(-1px);
+ }
+}
+@media(max-width:650px) {
+ .clock-actions > .management-nav { padding:8px;gap:8px; }
+ .management-nav > .clock-link { min-height:62px;padding:12px 9px;gap:8px;font-size:11px;letter-spacing:.035em; }
+ .management-nav > #bellBtn { font-size:0; }
+ .management-nav > #bellBtn::after { font-size:11px;letter-spacing:.035em; }
+ .cat-nav { padding:8px; }
+ .table-head { letter-spacing:.06em; }
+}
+@media(prefers-reduced-motion:reduce) {
+ .management-nav > .clock-link:not(:disabled):hover { transform:none; }
+}
+body.hc .management-nav > .clock-link,body.hc .management-nav > .clock-link:hover,
+body.hc .management-nav > #dirBtn,body.hc .management-nav > #pedBtn {
+ background:#07140e;color:#fff;border-color:#f5d28a;
+}
