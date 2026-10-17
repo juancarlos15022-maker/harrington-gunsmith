@@ -72,3 +72,39 @@
  // La protección existente también cubre la activación por teclado durante un guardado.
  document.addEventListener('click',e=>{const b=e.target.closest('button[aria-busy="true"]');if(b){e.preventDefault();e.stopImmediatePropagation();}},true);
 })();
+
+/* Reutilizar lecturas inmutables y cálculos: no cambia la frecuencia de sincronización. */
+(function(){'use strict';
+ // workedMs solo lee los turnos. Las lecturas públicas siguen devolviendo copias nuevas.
+ const load=loadLog,worked=workedMs;let reading=0,shiftRaw=null,shiftRows=[];
+ loadLog=function(key){
+  if(!reading||key!==KEY_SHIFTLOG)return load.apply(this,arguments);
+  const raw=store.get(key)||'[]';
+  if(raw!==shiftRaw){let rows=[];try{const parsed=JSON.parse(raw);if(Array.isArray(parsed))rows=parsed;}catch{}shiftRows=rows;shiftRaw=raw;}
+  return shiftRows;
+ };
+ workedMs=function(){reading++;try{return worked.apply(this,arguments);}finally{reading--;}};
+ // El objetivo usa importes guardados en las ventas, no precios actuales del catálogo.
+ const cash=goalWeekCash;let salesRaw=null,salesWeek=null,salesCash=0;
+ goalWeekCash=function(){
+  const raw=store.get(KEY_SALELOG)||'[]',week=weekStart(0);
+  if(raw===salesRaw&&week===salesWeek)return salesCash;
+  const value=cash.apply(this,arguments);salesRaw=raw;salesWeek=week;salesCash=value;return value;
+ };
+ const board=renderEmpWeek;let previous=null;
+ renderEmpWeek=function(){
+  const el=document.getElementById('empWeek');if(!el)return board.apply(this,arguments);
+  const state=[store.get(KEY_SALELOG),weekStart(-1),JSON.stringify(empleados),JSON.stringify(PHOTOS),!!IMG_OK['cartel-se-busca.webp']];
+  if(previous&&previous.el===el&&state.every((x,i)=>x===previous.state[i])&&el.innerHTML===previous.html&&el.hidden===previous.hidden&&el.className===previous.classes)return;
+  const result=board.apply(this,arguments);previous={el,state,html:el.innerHTML,hidden:el.hidden,classes:el.className};return result;
+ };
+ // Una apertura y un refresco simultáneos comparten la consulta de presencia.
+ const presence=loadPresence;let flight=null;
+ loadPresence=function(){
+  const owner=String(ME?.id||'')+'|'+String(AUTH?.emp||'');if(flight?.owner===owner)return flight.promise;
+  if(!arguments[0]&&Date.now()-PRES.at<15000)return Promise.resolve(paintPresence());
+  const args=arguments,entry={owner,promise:null};
+  entry.promise=Promise.resolve().then(()=>presence.apply(this,args));flight=entry;
+  const clear=()=>{if(flight===entry)flight=null;};entry.promise.then(clear,clear);return entry.promise;
+ };
+})();
