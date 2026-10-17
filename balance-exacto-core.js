@@ -9,7 +9,7 @@ function replay({moves,recipeOf,canon=x=>x,materialProduct=x=>x==='Pólvora',pri
  function close(){if(!group)return;const g=group;group=null;const made=g.prods,consumed={},alloc={},state={},lineBy={},newUsed={},inputs=g.inputs;
   // Solo las recetas que usan un ingrediente reciben su cantidad y su coste.
   for(const [m,total] of Object.entries(inputs)){
-   const needs={};for(const [n,q] of Object.entries(made))for(const r of recipeOf(n)||[]){const k=r.p||materialProduct(r.m)?r.m:canon(r.m);if(k===m)needs[n]=(needs[n]||0)+Number(r.q)*q;}
+   const needs={};for(const [n,q] of Object.entries(made))for(const r of recipeOf(n)||[]){const k=r.p||materialProduct(r.m)?r.m:canon(r.m);if(k===m){const ten=n==='Aceite de Arma'&&q%10===0&&inputs['Botella vacía']===q/10&&inputs['Grasa animal']===q*3/10;needs[n]=(needs[n]||0)+Number(r.q)*q/(ten?10:1);}}
    const expected=Object.values(needs).reduce((a,b)=>a+b,0);alloc[m]={};
    if(expected>0)for(const [n,q]of Object.entries(needs))alloc[m][n]=total*q/expected;
    else{g.unassigned.push({m,q:total});}
