@@ -1,0 +1,126 @@
+/* Materiales compartidos: nogal, cuero verde y papel de cuentas. */
+:root {
+ --hg-leather:linear-gradient(120deg,#17302338,#050f0a88),url('textura-cuero.webp') center/460px;
+ --hg-wood:linear-gradient(110deg,#2b190e22,#100d0988),url('textura-madera.webp') center/480px;
+ --hg-line:#b49a635e;
+ --hg-light:#efddb7;
+}
+/* Las superficies amplias llevan textura; las cifras conservan un fondo tranquilo. */
+.panel,.enc-panel,.confirm-box,.clock-bar {
+ background:var(--hg-leather);
+ box-shadow:0 9px 24px #0006,inset 0 1px #efddb72b,inset 0 0 0 2px #07140d;
+}
+#dirModal .enc-panel {
+ background:var(--hg-leather);
+ -webkit-backdrop-filter:none;
+ backdrop-filter:none;
+}
+.hero-banner,.cat-nav { background:var(--hg-wood);box-shadow:inset 0 1px #f6d8a440,0 7px 20px #0006; }
+.cat-nav { border-color:#a1834c; }
+.category-visual { box-shadow:0 8px 22px #0005,inset 0 0 0 1px #d4b77a; }
+.category-visual .visual-title { text-shadow:0 2px 6px #000,0 0 18px #000; }
+.order-title,.enc-head,.table-head {
+ background:var(--hg-wood);
+ color:#f5dfaf;
+ border-bottom-color:#b49a63;
+ box-shadow:inset 0 1px #ffe8b833,inset 0 -1px #0008;
+ text-shadow:0 1px 3px #000;
+}
+.enc-head { line-height:1.45; }
+.mode-tabs { padding:6px;gap:6px;background:var(--hg-wood);border-color:#a1834c;border-radius:8px; }
+.mode-tab {
+ min-height:48px;
+ border:1px solid #a68a535c;
+ border-radius:4px;
+ color:#e5d8bb;
+ background:linear-gradient(#18312366,#09170f99),url('textura-cuero.webp') center/400px;
+ box-shadow:inset 0 1px #f8e5bd22,0 2px 3px #0004;
+}
+.mode-tab.on {
+ color:#ffedbf;
+ background:linear-gradient(#8a693a88,#302719aa),url('textura-cuero.webp') center/400px;
+ border-color:#d7b876;
+ box-shadow:inset 0 0 0 2px #e8cb8826,inset 0 -3px #d4b36a,0 2px 5px #0005;
+}
+.search,.client-box { background:var(--hg-leather);border-color:var(--hg-line); }
+.search { padding:12px; }
+.search input,.client-box input,.client-box select,.dir-form input,.dir-form select,
+.dir-form textarea,.enc-sec input,.enc-sec select,.enc-sec textarea,.dir-search,.name-input {
+ color:#f0e5cb;
+ background-color:#08150f;
+ border-color:#a58d5c88;
+ border-radius:5px;
+ box-shadow:inset 0 2px 5px #0006,0 1px #ead6a412;
+}
+input::placeholder,textarea::placeholder { color:#b4ad98;opacity:1; }
+select option { background:#102019;color:#f0e5cb; }
+.search input:focus-visible,.client-box input:focus-visible,.client-box select:focus-visible,
+.dir-form :is(input,select,textarea):focus-visible,.enc-sec :is(input,select,textarea):focus-visible {
+ outline:2px solid #efd39a;outline-offset:2px;border-color:#d8b873;
+}
+.product {
+ background:linear-gradient(90deg,#13281fc9,#08150fef),url('textura-cuero.webp') center/460px;
+ border-bottom:1px solid #a58d5c30;
+}
+.product:nth-child(even):not(.has-qty) {
+ background:linear-gradient(90deg,#23402ec4,#0c1c14ed),url('textura-cuero.webp') center/460px;
+}
+.product.has-qty {
+ background:linear-gradient(90deg,#41522ac9,#152b1aeb),url('textura-cuero.webp') center/460px;
+ border-left-color:#e8c57b;
+ box-shadow:inset 0 1px #e8c57b22,inset 0 -1px #e8c57b22;
+}
+.pname { color:#f0e5cb;line-height:1.4; }
+.pname small { color:#c2b89e;border-color:#b49a6355;background:#07120ecc;line-height:1.5; }
+.price { color:#ead8b1; }
+.subtotal { color:#f4d78e; }
+.qty button {
+ background:linear-gradient(#4c4229,#241f16);
+ color:#ffe6a4;
+ border-color:#b49a63;
+ box-shadow:inset 0 1px #f5e2b933,inset 0 -2px #0005;
+}
+.qty input { background:#07130d;color:#fff0d2;border-color:#a58d5c; }
+.cart { background:linear-gradient(#0b1d12bb,#07140fe0),url('textura-cuero.webp') center/460px; }
+.cartrow { border-bottom-color:#ac92583d;line-height:1.45; }
+.carthead { color:#ddc48e; }
+.empty,.no-results { color:#c0b49b; }
+.total {
+ background:linear-gradient(125deg,#29483499,#10271dbb),url('textura-cuero.webp') center/420px;
+ border-color:#cfaf6d;
+ box-shadow:inset 0 0 0 2px #07140f,inset 0 0 0 3px #c6a46277,0 4px 9px #0005;
+}
+.total #grand { color:#ffe3a0;text-shadow:0 1px 2px #000; }
+.enc-sec,.dir-form.enc-sec { border-color:var(--hg-line); }
+.enc-note,.bk-note,.summary { color:#cabea1;line-height:1.55; }
+.receipt-paper,.ledger {
+ background-color:#e8d7ac;
+ background-image:linear-gradient(#fff8e21f,#9a73300f),url('textura-papel.webp');
+ background-size:auto,560px;
+ color:#302211;
+ box-shadow:0 12px 30px #0005,inset 0 0 28px #7b501c24;
+}
+.receipt-frame { border-color:#84632f; }
+.receipt-title { letter-spacing:.14em; }
+.receipt-table td,.receipt-table th { border-color:#8c6d3b66; }
+@media (hover:hover) {
+ .product:hover:not(.has-qty) { background:linear-gradient(90deg,#2c4635be,#10251be8),url('textura-cuero.webp') center/460px; }
+ .mode-tab:not(.on):hover { border-color:#e0c28a;color:#fff0ce;background:linear-gradient(#39533b77,#12271a99),url('textura-cuero.webp') center/400px; }
+}
+@media(max-width:650px) {
+ .panel,.enc-panel,.confirm-box,.clock-bar,.category-visual { border-width:6px;border-image-width:6px; }
+ #dirModal .enc-panel { border-width:8px;border-image-width:8px;outline-offset:-6px; }
+ .search { padding:9px; }
+ .mode-tabs { padding:4px;gap:4px; }
+ .mode-tab { min-height:46px;letter-spacing:.04em; }
+ .enc-head { padding:12px; }
+ .product { padding-block:12px; }
+}
+/* La opción de alto contraste elimina el ruido de las superficies de lectura. */
+body.hc :is(.panel,.enc-panel,.confirm-box,.clock-bar,.search,.client-box,.cart,.product,.product:nth-child(even),.mode-tab,.mode-tab.on,.total) {
+ background:#07140e;color:#fff;border-color:#e2c386;
+}
+body.hc :is(input,select,textarea) { background:#030a06;color:#fff;border-color:#e2c386; }
+@media print {
+ .receipt-paper,.ledger { background:#fff;color:#211a10;box-shadow:none; }
+}
