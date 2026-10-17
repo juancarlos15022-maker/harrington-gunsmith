@@ -5,6 +5,7 @@ const {JSDOM}=require('jsdom');
 function mount(extra=""){
  const dom=new JSDOM(fs.readFileSync(__dirname+'/index.html','utf8'),{url:'https://prueba.invalid/',runScripts:'outside-only',pretendToBeVisual:true});
  const w=dom.window,requests=[];
+ const observers=[],Observer=w.MutationObserver,close=w.close.bind(w);w.MutationObserver=class extends Observer{constructor(callback){super(callback);observers.push(this)}};w.close=()=>{observers.forEach(o=>o.disconnect());close();};
  w.matchMedia=()=>({matches:true,addEventListener(){},removeEventListener(){}});
  w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};
  w.fetch=async(u,init)=>{requests.push({u,init});throw Error('RED BLOQUEADA EN PRUEBA')};
