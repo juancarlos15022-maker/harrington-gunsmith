@@ -1,3 +1,4 @@
+import './nominas-limite.js';
 // HARRINGTON GUNSMITH · V3 · Señor Harrington: órdenes y botones de la segunda tanda
 // discord-interacciones comprueba la firma de Discord y reenvía aquí (discord-bot, modo «extra») lo que es de esta tanda.
 //   /encargos /cliente /mis-horas /telegrama /cumpleanos (personal) · /caja /reunion /votacion (Dirección)
@@ -185,11 +186,13 @@ export async function atender(req: Request): Promise<Response> {
     const dAus = Math.min(7, Math.round(aus.reduce((s, x) => { const fin = x.returned ? (x.returnedAt || x.start) : (x.end || Infinity); const o = Math.min(fin, b) - Math.max(x.start, a); return s + (o > 0 ? o : 0); }, 0) / 86400000));
     const c0 = Number(e.horas || 10), req = dAus > 4 ? 0 : dAus >= 3 ? c0 / 2 : c0, need = req * 3600000, base = Number(e.sueldo || 0);
     const miss = Math.max(0, need - ms), extra = need ? Math.max(0, ms - need) : 0;
-    const desc = Math.min(base, Math.round(base * miss / (c0 * 3600000))), ext = Math.round(base * extra / (c0 * 3600000));
+    const desc = Math.min(base, Math.round(base * miss / (c0 * 3600000)));
+    const limited=(globalThis as any).HGNominas.limitar({base,c:c0,desc,extra}),ext=limited.ext;
     const f2 = (d: number) => new Date(d * 86400000).toISOString().slice(5, 10).split("-").reverse().join("/");
     return efimero("", { embeds: [{ title: "🕰 Sus horas de esta semana", color: ORO, description: `Semana de sueldo del lunes ${f2(ws)} al domingo ${f2(ws + 6)}.${ab ? `\nAhora mismo está usted **dentro** desde las ${hora(ab.start)}.` : ""}`, fields: [
       { name: "Trabajadas", value: duracion(0, ms), inline: true }, { name: "Le tocan", value: `${req} h${dAus ? ` (ausente ${dAus} ${dAus === 1 ? "día" : "días"})` : ""}`, inline: true },
       { name: miss ? "Le faltan" : "Horas de más", value: miss ? duracion(0, miss) : duracion(0, extra), inline: true },
+      { name: "Horas extra remuneradas · máximo 5 h", value: duracion(0, limited.extra)+(limited.extraNoPagada ? ` · ${duracion(0, limited.extraNoPagada)} adicionales sin remunerar` : ""), inline: false },
       { name: "Sueldo si la semana acabara ahora", value: `**${dolar(base - desc + ext)}**${desc ? ` (${dolar(base)} − ${dolar(desc)} por las horas que faltan)` : ext ? ` (${dolar(base)} + ${dolar(ext)} por horas de más)` : ""}` },
     ], footer: { text: "Cálculo orientativo: el pago lo hace la Dirección el domingo en la web · Señor Harrington" } }] });
   }
@@ -399,4 +402,5 @@ export async function atender(req: Request): Promise<Response> {
   if (mas) return mas;
   return efimero("Este botón ha caído en desuso.");
 }
+
 

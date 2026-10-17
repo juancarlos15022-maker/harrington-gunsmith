@@ -3,6 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const {JSDOM}=require('jsdom');
+test('nómina integrada: placa y pago usan el límite de cinco extras y explican el exceso',()=>{const {dom,w}=mount(true);try{w.suePaid=()=>null;w.workedMs=()=>47.6*3600000;w.weekRequired=()=>({h:10,d:0});w.sueBase=()=>5000;w.sueSegs=()=>[{s:5000,n:7}];const k=w.sueCalc({id:'prueba',name:'Prueba',horas:10},20738);assert.equal(k.pay,7500);assert.equal(k.extra,5*3600000);assert.equal(k.worked,47.6*3600000);assert.match(w.renderModSueldos(),/máximo 5 horas extra/);}finally{dom.window.close();}});
 function mount(full=false){
  const dom=new JSDOM(fs.readFileSync(__dirname+'/index.html','utf8'),{url:'https://prueba.invalid/',runScripts:'outside-only',pretendToBeVisual:true}),w=dom.window;
  w.matchMedia=()=>({matches:true,addEventListener(){}});w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};
