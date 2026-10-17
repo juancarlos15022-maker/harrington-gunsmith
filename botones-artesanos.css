@@ -1,0 +1,104 @@
+/* Placas de cuero y latón: sin imágenes adicionales ni cambios de comportamiento. */
+.clock-actions > .management-nav {
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid #967543;
+  border-radius: 9px;
+  background: linear-gradient(110deg,#20160fe8,#100e0bdc),url('textura-madera.webp') center/380px;
+  box-shadow: inset 0 1px #e4c78a35,inset 0 0 0 4px #080d0a80,0 5px 14px #0004;
+}
+.management-nav > .clock-link {
+  --plate-top: #294334;
+  --plate-bottom: #102219;
+  min-height: 70px;
+  padding: 16px 18px;
+  gap: 13px;
+  justify-content: center;
+  border: 1px solid #aa8b50;
+  border-radius: 6px;
+  color: #f3e6c9;
+  background:
+    radial-gradient(circle at 6px 6px,#d2b878 0 1px,#49351d 1.5px,transparent 2px),
+    radial-gradient(circle at calc(100% - 6px) calc(100% - 6px),#bba068 0 1px,#49351d 1.5px,transparent 2px),
+    linear-gradient(145deg,color-mix(in srgb,var(--plate-top) 90%,transparent),color-mix(in srgb,var(--plate-bottom) 94%,transparent)),
+    url('textura-cuero.webp') center/240px;
+  box-shadow: inset 0 1px #f5dda54d,inset 0 0 0 3px #07140f88,inset 0 -3px #0005,0 3px 0 #070e09,0 5px 8px #0004;
+  font-size: 13px;
+  letter-spacing: .07em;
+  text-shadow: 0 1px 2px #000;
+  transition: border-color .16s,box-shadow .16s,transform .16s;
+}
+.management-nav > #dirBtn {
+  --plate-top: #6b512b;
+  --plate-bottom: #322719;
+  border-color: #d1af6b;
+  color: #fff0ce;
+}
+.management-nav > #pedBtn { --plate-top:#3d4030;--plate-bottom:#20291d; }
+.management-nav > .clock-link:not(#mostBtn)::before {
+  flex-basis: 25px;
+  width: 25px;
+  height: 25px;
+  background-color: #dfc48c;
+  filter: drop-shadow(0 1px 1px #0008);
+}
+.management-nav > #bellBtn::after { color:#f3e6c9;font-size:13px;letter-spacing:.07em; }
+.management-nav > #bellBtn { font-size:0; }
+.management-nav > #bellBtn.bad { border-color:#d18769; }
+.management-nav > #bellBtn b { top:5px;right:5px;box-shadow:0 1px 3px #0008; }
+#dirModal .mod-card {
+  padding: 16px;
+  gap: 16px;
+  border: 1px solid #9e83515e;
+  border-left: 3px solid #bd9d62;
+  border-radius: 7px;
+  background: linear-gradient(120deg,#243b2fed,#102019f5),url('textura-cuero.webp') center/280px;
+  box-shadow: inset 0 1px #ecd8a922,inset 0 0 0 3px #07140f55,0 3px 7px #0003;
+  transition: border-color .16s,transform .16s,box-shadow .16s;
+}
+#dirModal .mod-card .t { color:#f0ddb3;line-height:1.35; }
+#dirModal .mod-card .it { color:#c5ccbe;line-height:1.45;margin-top:4px; }
+#dirModal .mod-ico { width:38px;height:38px;stroke:#d8bb80; }
+#dirModal .mod-card.bad { border-left-color:#d18a72; }
+#dirModal .mod-card.pend { border-left-color:#dbbd72; }
+#dirModal .mod-sec > summary { min-height:54px;box-shadow:inset 0 1px #e3c7841c; }
+.enc-actions > button,.receipt-actions > button,.actions > button {
+  border-radius: 6px;
+  min-height: 46px;
+  box-shadow: inset 0 1px #fff1c933,inset 0 -2px #0003,0 3px 5px #0003;
+}
+.management-nav > .clock-link:focus-visible,#dirModal .mod-card:focus-visible,
+.enc-actions > button:focus-visible,.receipt-actions > button:focus-visible,.actions > button:focus-visible {
+  outline: 2px solid #ffe1a3;
+  outline-offset: 3px;
+}
+.management-nav > .clock-link:disabled,#dirModal .mod-card:disabled {
+  opacity:.5;cursor:not-allowed;transform:none;box-shadow:inset 0 1px #ffffff18;
+}
+@media (hover:hover) {
+  .management-nav > .clock-link:not(:disabled):hover,#dirModal .mod-card:not(:disabled):hover {
+    border-color:#efd39a;
+    transform:translateY(-2px);
+    box-shadow:inset 0 1px #f5dda55c,inset 0 0 0 3px #d5b77614,0 5px 10px #0005;
+  }
+}
+.management-nav > .clock-link:not(:disabled):active,#dirModal .mod-card:not(:disabled):active {
+  transform:translateY(1px);
+  box-shadow:inset 0 2px 5px #0006;
+}
+@media (max-width:650px) {
+  .clock-actions > .management-nav { padding:10px;gap:9px; }
+  .management-nav > .clock-link { min-height:64px;padding:13px 10px;gap:9px;font-size:11px;letter-spacing:.045em; }
+  .management-nav > #bellBtn::after { font-size:11px;letter-spacing:.045em; }
+  .management-nav > #bellBtn { font-size:0; }
+  .management-nav > .clock-link:not(#mostBtn)::before { flex-basis:22px;width:22px;height:22px; }
+  #dirModal .mod-card { padding:13px;gap:12px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .management-nav > .clock-link,#dirModal .mod-card { transition:none; }
+  .management-nav > .clock-link:not(:disabled):hover,#dirModal .mod-card:not(:disabled):hover,
+  .management-nav > .clock-link:not(:disabled):active,#dirModal .mod-card:not(:disabled):active { transform:none; }
+}
+body.hc .management-nav > .clock-link,body.hc #dirModal .mod-card {
+  background:#07140e;color:#fff;border-color:#f5d28a;text-shadow:none;
+}
