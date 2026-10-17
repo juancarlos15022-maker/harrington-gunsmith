@@ -2,7 +2,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {JSDOM}=require('jsdom');
-function mount(){
+function mount(extra=""){
  const dom=new JSDOM(fs.readFileSync(__dirname+'/index.html','utf8'),{url:'https://prueba.invalid/',runScripts:'outside-only',pretendToBeVisual:true});
  const w=dom.window,requests=[];
  w.matchMedia=()=>({matches:true,addEventListener(){},removeEventListener(){}});
@@ -15,7 +15,7 @@ function mount(){
  w.localStorage.setItem('harrington_stock_v1',JSON.stringify({'Cattleman Revolver':0,'Doble Action Revolver':0,'mat:Tornillo':10,'mat:Pieza de arma':2}));
  w.localStorage.setItem('harrington_recetas_v1',JSON.stringify({'Cattleman Revolver':[{m:'Tornillo',q:5},{m:'Pieza de arma',q:1}],'Doble Action Revolver':[{m:'Tornillo',q:8},{m:'Pieza de arma',q:1}]}));
  w.eval(fs.readFileSync(__dirname+'/auto-fabricacion.js','utf8'));
- w.eval(fs.readFileSync(__dirname+'/app.js','utf8')+'\nwindow.__testMode=(m,op)=>{appMode=m;if(op)customer.op=op};');
+ w.eval(fs.readFileSync(__dirname+'/app.js','utf8')+'\nwindow.__testMode=(m,op)=>{appMode=m;if(op)customer.op=op};\n'+extra);
  return {dom,w,requests};
 }
 test('DOM: aplicación inicia; permite seleccionar producto fabricable y muestra aviso',()=>{
@@ -63,5 +63,14 @@ test('todos los productos conservan controles + y − operativos y accesos rápi
  for(const row of rows){const name=row.querySelector('.qty input').dataset.name,plus=row.querySelector('.qty > .plus'),minus=row.querySelector('.qty > .minus'),i=row.querySelector('.qty input');assert.ok(plus,name);assert.ok(minus,name);if(!plus.disabled){i.value='0';plus.click();assert.equal(i.value,Number(i.dataset.price)>0?'1':'0',name+' suma respeta precio');minus.click();assert.equal(i.value,'0',name+' resta');}}
  for(const row of rows.filter(x=>x.dataset.cat==='municion'))assert.equal(row.querySelectorAll('.quick button').length,3);
  assert.equal(w.document.querySelector('#finishEnc').hidden,true);
+ }finally{dom.window.close();}
+});
+
+test('trapos y aceite: accesos +5 +10 +20 acumulan cantidades y respetan existencias',()=>{
+ const {dom,w}=mount(fs.readFileSync(__dirname+'/suministros-rapidos.js','utf8'));try{
+ w.__testMode('presupuesto');w.calc(false);
+ for(const name of ['Trapo','Aceite de Arma']){const i=w.document.querySelector('.qty input[data-name="'+name+'"]'),buttons=[...i.closest('.qty').querySelectorAll('.quick button')];assert.deepEqual(buttons.map(b=>b.textContent),['+5','+10','+20']);for(const b of buttons)b.click();assert.equal(i.value,'35');i.value='0';}
+ w.HGAutoFabricacion=undefined;w.applyStockMap({Trapo:7,'Aceite de Arma':12});w.__testMode('venta','venta');w.calc(false);
+ for(const [name,limit] of [['Trapo',7],['Aceite de Arma',12]]){const i=w.document.querySelector('.qty input[data-name="'+name+'"]'),button=i.closest('.qty').querySelectorAll('.quick button')[2];button.click();assert.equal(Number(i.value),limit);assert.ok(button.disabled);}
  }finally{dom.window.close();}
 });
