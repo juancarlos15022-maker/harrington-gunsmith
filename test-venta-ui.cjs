@@ -66,11 +66,11 @@ test('todos los productos conservan controles + y − operativos y accesos rápi
  }finally{dom.window.close();}
 });
 
-test('trapos y aceite: accesos +5 +10 +20 acumulan cantidades y respetan existencias',()=>{
+test('trapos, aceite y pólvora: accesos +5 +10 +20 acumulan cantidades y respetan existencias',()=>{
  const {dom,w}=mount(fs.readFileSync(__dirname+'/suministros-rapidos.js','utf8'));try{
  w.__testMode('presupuesto');w.calc(false);
- for(const name of ['Trapo','Aceite de Arma']){const i=w.document.querySelector('.qty input[data-name="'+name+'"]'),buttons=[...i.closest('.qty').querySelectorAll('.quick button')];assert.deepEqual(buttons.map(b=>b.textContent),['+5','+10','+20']);for(const b of buttons)b.click();assert.equal(i.value,'35');i.value='0';}
- w.HGAutoFabricacion=undefined;w.applyStockMap({Trapo:7,'Aceite de Arma':12});w.__testMode('venta','venta');w.calc(false);
- for(const [name,limit] of [['Trapo',7],['Aceite de Arma',12]]){const i=w.document.querySelector('.qty input[data-name="'+name+'"]'),button=i.closest('.qty').querySelectorAll('.quick button')[2];button.click();assert.equal(Number(i.value),limit);assert.ok(button.disabled);}
+ for(const name of ['Trapo','Aceite de Arma','Pólvora']){const i=w.document.querySelector('.qty input[data-name="'+name+'"]'),buttons=[...i.closest('.qty').querySelectorAll('.quick button')];assert.deepEqual(buttons.map(b=>b.textContent),['+5','+10','+20']);for(const b of buttons)b.click();assert.equal(i.value,'35');i.value='0';}
+ w.HGAutoFabricacion=undefined;w.applyStockMap({Trapo:7,'Aceite de Arma':12,'Pólvora':9});w.__testMode('venta','venta');w.calc(false);
+ for(const [name,limit] of [['Trapo',7],['Aceite de Arma',12],['Pólvora',9]]){const i=w.document.querySelector('.qty input[data-name="'+name+'"]'),button=i.closest('.qty').querySelectorAll('.quick button')[2];button.click();assert.equal(Number(i.value),limit);assert.ok(button.disabled);}
  }finally{dom.window.close();}
 });

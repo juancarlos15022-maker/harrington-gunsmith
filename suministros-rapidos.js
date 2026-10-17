@@ -1,6 +1,6 @@
 /* Accesos rápidos de suministros: comparten los límites de la venta normal. */
 (function(){'use strict';
- const names=new Set(['Trapo','Aceite de Arma']);
+ const names=new Set(['Trapo','Aceite de Arma','Pólvora']);
  for(const input of inputs){
   if(!names.has(input.dataset.name))continue;
   const qty=input.closest('.qty');if(!qty||qty.querySelector('.quick'))continue;
