@@ -1,3 +1,4 @@
+import {tipoSemanal} from './discord-semanales.ts';
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {createClient} from "npm:@supabase/supabase-js@2.118.0";
 import {validarMensaje} from "./discord-validar.ts";
@@ -21,7 +22,9 @@ else b=await req.json();
 if(files.length>2||files.reduce((a,x)=>a+x.size,0)>7500000)return out({error:'TAMANO'},413);
 const solicitado=String(b.metodo||'POST');let metodo=solicitado;if(metodo==='POST'&&b.mensaje)return out({error:'METODO_MENSAJE'},400);if(!['POST','PATCH','DELETE'].includes(metodo))return out({error:'METODO'},400);if(metodo==='DELETE'&&!owner)return out({error:'SOLO_PROPIETARIO'},403);
 const {data:limite}=await admin.rpc('hg_consumir_limite',{p_key:'discord:'+u.user.id,p_max:30,p_segundos:60});if(!limite)return out({error:'LIMITE'},429);
-const {data:cfg}=await admin.from('datos').select('valor').eq('clave','discord').single();const urls=[cfg?.valor?.url,...Object.values(cfg?.valor?.urls||{})].filter(x=>typeof x==='string');
+const {data:cfg}=await admin.from('datos').select('valor').eq('clave','discord').single();const weekly=tipoSemanal(String(b.payload?._hg?.kind||''),b.payload,files.map(f=>f.name));
+if(weekly){if(!owner)return out({error:'SOLO_PROPIETARIO'},403);const destination=cfg?.valor?.urls?.[weekly];if(!destination)return out({error:'CANAL_SEMANAL_NO_CONFIGURADO'},409);b.webhook=new URL(destination).pathname.split('/')[3];b.payload._hg={kind:weekly,ref:''};}
+const urls=[cfg?.valor?.url,...Object.values(cfg?.valor?.urls||{})].filter(x=>typeof x==='string');
 const hook=urls.find((x:any)=>new URL(x).pathname.split('/')[3]===String(b.webhook));if(!hook)return out({error:'CANAL_NO_CONFIGURADO'},403);
 const url=new URL(String(hook));if(url.hostname!=='discord.com'&&url.hostname!=='discordapp.com')return out({error:'DESTINO'},400);
 if(!/^\/api\/webhooks\/\d+\/[\w-]+\/?$/.test(url.pathname))return out({error:'DESTINO'},400);
@@ -60,4 +63,5 @@ if(leaseKey)await admin.from('hg_discord_leases').delete().eq('clave',leaseKey);
 return new Response(metodo==='PATCH'&&r.ok&&b.wait?JSON.stringify({id:String(b.mensaje)}):text||null,{status:r.status,headers:{...CORS,'Content-Type':'application/json'}});
 }catch{if(leaseKey)await admin.from('hg_discord_leases').delete().eq('clave',leaseKey);return out({error:'ENVIO_NO_DISPONIBLE'},500);}
 });
+
 

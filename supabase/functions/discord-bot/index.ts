@@ -1,3 +1,4 @@
+import {reubicarSemanal} from './reubicar-semanal.ts';
 // HARRINGTON GUNSMITH · V3 · Bot de Discord «Señor Harrington»
 // Puerta segura para manejar el servidor de Discord (crear o borrar canales, roles, webhooks, mensajes…).
 // Solo responde con la contraseña interna guardada en la tabla protegida bot_cfg; el token del bot nunca sale de aquí.
@@ -40,6 +41,7 @@ Deno.serve(async (req: Request) => {
     const ops = (Array.isArray(b.ops) ? b.ops : [b]).slice(0, 25) as Array<Record<string, unknown>>;
     const out = [];
     for (const op of ops) {
+      if(op.reubicarSemanal){out.push({st:200,datos:await reubicarSemanal(sb,c,op.reubicarSemanal)});continue;}
       const metodo = String(op.metodo || "GET").toUpperCase();
       const ruta = String(op.ruta || "");
       if (!/^\/[A-Za-z0-9_\-\/.?=&%@:]+$/.test(ruta) || !["GET", "POST", "PUT", "PATCH", "DELETE"].includes(metodo)) { out.push({ ruta, error: "RUTA" }); continue; }
