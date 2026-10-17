@@ -74,3 +74,16 @@ test('trapos, aceite y pólvora: accesos +5 +10 +20 acumulan cantidades y respet
  for(const [name,limit] of [['Trapo',7],['Aceite de Arma',12],['Pólvora',9]]){const i=w.document.querySelector('.qty input[data-name="'+name+'"]'),button=i.closest('.qty').querySelectorAll('.quick button')[2];button.click();assert.equal(Number(i.value),limit);assert.ok(button.disabled);}
  }finally{dom.window.close();}
 });
+
+test('ficha de producto: imagen abre ficha y los controles usan la cantidad y límites del catálogo',()=>{
+ const {dom,w}=mount(fs.readFileSync(__dirname+'/fichas-progreso.js','utf8'));try{
+ const row=w.document.querySelector('#products .product'),icon=row.querySelector('.weapon-icon'),input=row.querySelector('.qty input');assert.equal(icon.getAttribute('role'),'button');icon.click();const panel=w.document.querySelector('.hg-prod-qty');assert.ok(panel);const buttons=panel.querySelectorAll('button');buttons[1].click();assert.equal(input.value,'1');buttons[0].click();assert.equal(input.value,'0');const q=panel.querySelector('input');q.value='10';q.dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(input.value,'2');assert.equal(q.value,'2');assert.ok(buttons[1].disabled);assert.equal(w.document.querySelector('#prodAdd').textContent,'VOLVER AL CATÁLOGO');
+ }finally{dom.window.close();}
+});
+test('progreso: encargo conserva estados y pedido permite pago anterior a recepción parcial',()=>{
+ const {dom,w}=mount(fs.readFileSync(__dirname+'/fichas-progreso.js','utf8'));try{
+ const box=w.document.createElement('div');box.innerHTML=w.stepsHTML({fab:'FABRICADO',avisado:false,finished:false});assert.deepEqual([...box.querySelectorAll('li')].map(e=>e.dataset.state),['done','done','pending','pending']);
+ w.pendingPed=()=>[{id:'p',proveedor:'Proveedor',items:[{material:'Tela',qty:10,rq:5,price:1}],code:'P-1',totalCents:10,paid:true,received:false,ts:Date.now()}];w.renderPed();const li=[...w.document.querySelectorAll('#pedBody .hg-flow li')];assert.equal(li.length,4);assert.equal(li[1].dataset.state,'partial');assert.match(li[1].textContent,/5\/10/);assert.equal(li[2].dataset.state,'done');assert.equal(li[3].dataset.state,'pending');
+ }finally{dom.window.close();}
+});
+test('preferencia local permite quitar transiciones sin modificar datos de negocio',()=>{const {dom,w}=mount(fs.readFileSync(__dirname+'/fichas-progreso.js','utf8'));try{const b=w.document.querySelector('#hgMotionBtn');assert.ok(b);b.click();assert.equal(b.getAttribute('aria-pressed'),'true');assert.ok(w.document.documentElement.classList.contains('hg-no-transitions'));assert.equal(w.localStorage.getItem('harrington_transiciones'),'off');b.click();assert.equal(b.getAttribute('aria-pressed'),'false');}finally{dom.window.close();}});

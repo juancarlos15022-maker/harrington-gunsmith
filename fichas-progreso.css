@@ -1,0 +1,49 @@
+/* La imagen original se muestra completa y los controles siguen junto al producto. */
+#prodModal .enc-panel { max-width:760px; }
+#prodModal .prod-sheet { display:grid;grid-template-columns:minmax(0,1fr);gap:12px; }
+#prodModal .prod-sheet .weapon-icon { width:100%;height:clamp(160px,30vh,290px);margin:0;max-width:100%;font-size:56px; }
+#prodModal .prod-sheet .weapon-icon img { width:100%;height:100%;object-fit:contain;transform:none;filter:none; }
+#prodModal .prod-sheet .weapon-icon::after { background:linear-gradient(180deg,#ffffff08,transparent 30%,#00000018); }
+#prodModal .prod-desc { line-height:1.65;font-size:17px; }
+#prodModal .prod-meta { flex-wrap:wrap;align-items:center;gap:12px;padding:13px; }
+#prodModal .prod-meta b { font-size:20px; }
+#products .weapon-icon[role=button] { cursor:zoom-in; }
+#products .weapon-icon[role=button]:focus-visible { outline:2px solid #f4d99d;outline-offset:4px; }
+.hg-prod-qty { display:grid;grid-template-columns:48px minmax(60px,110px) 48px;justify-content:center;gap:0;margin:18px 0;padding:16px;border:1px solid #ac92585c;border-radius:6px;background:#07180fac; }
+.hg-prod-label { grid-column:1/-1;text-align:center;margin-bottom:10px;color:#d8c296;font:12px var(--f-sc);letter-spacing:.1em; }
+.hg-prod-qty button { height:48px;padding:0;border:1px solid #b69a60;background:linear-gradient(#314733,#15281a);color:#f5dfad;font-size:24px;cursor:pointer; }
+.hg-prod-qty input { min-width:0;width:100%;height:48px;text-align:center;border:1px solid #9a8758;border-inline:0;border-radius:0;background:#07140e;color:#fff0c6;font-size:20px; }
+.hg-prod-qty button:disabled,.hg-prod-qty input:disabled { opacity:.5;cursor:not-allowed; }
+.hg-flow { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;list-style:none;margin:14px 0 18px;padding:14px 8px;border:1px solid #ac92584d;border-radius:6px;background:#08180fba; }
+.hg-flow li { min-width:0;text-align:center;position:relative;line-height:1.4;color:#c1b79e; }
+.hg-flow li:not(:last-child)::after { content:'';position:absolute;top:15px;left:calc(50% + 19px);width:calc(100% - 30px);height:1px;background:#b69a6055; }
+.hg-flow i { display:grid;place-items:center;position:relative;z-index:1;width:30px;height:30px;margin:0 auto 7px;border:1px solid #968259;border-radius:50%;background:#112217;color:#bdaf90;font-size:16px;font-style:normal; }
+.hg-flow span { display:block;overflow-wrap:anywhere;font:13px/1.4 var(--f-sc); }
+.hg-flow small { display:block;margin-top:3px;font-size:11px;opacity:.85; }
+.hg-flow [data-state=done] i { background:#254831;border-color:#8db58d;color:#d6f0d5; }
+.hg-flow [data-state=done] span { color:#dbedcb; }
+.hg-flow [data-state=partial] i { background:#49381d;border-color:#d7b373;color:#f4d69a; }
+.hg-flow-mini { margin:12px 0 0;padding:10px 5px;border-inline:0;border-bottom:0;border-radius:0;background:transparent;gap:5px; }
+.hg-flow-mini small { display:none; }
+.hg-flow-mini i { width:24px;height:24px;font-size:13px; }
+.hg-flow-mini span { font-size:11px;letter-spacing:0; }
+.hg-flow-mini li:not(:last-child)::after { top:12px;left:calc(50% + 15px);width:calc(100% - 24px); }
+#pedBody>.hg-flow { flex:1 1 100%; }
+/* Misma cabecera y lectura de formularios en todas las pantallas de gestión. */
+:is(#dirModal,#invModal,#pedModal,#encModal,#libroModal,#matModal,#ausModal,#prodModal) .enc-head { min-height:64px;line-height:1.4;gap:12px; }
+:is(#dirModal,#invModal,#pedModal,#encModal,#libroModal,#matModal,#ausModal,#prodModal) .dir-sec-title { line-height:1.45;letter-spacing:.07em; }
+@keyframes hgPanelIn { from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none} }
+.modal-overlay:not(#tutModal):not([hidden])>.enc-panel { animation:hgPanelIn .16s ease-out both;transform-origin:center; }
+html.lite .modal-overlay:not(#tutModal):not([hidden])>.enc-panel,html.hg-no-transitions .modal-overlay:not(#tutModal):not([hidden])>.enc-panel { animation:none; }
+@media(prefers-reduced-motion:reduce) { .modal-overlay:not(#tutModal):not([hidden])>.enc-panel { animation:none; } }
+@media(max-width:650px) {
+ #prodModal .prod-sheet .weapon-icon { height:210px; }
+ #prodModal .prod-desc { font-size:16px; }
+ .hg-flow { gap:5px;padding:12px 5px; }
+ .hg-flow span { font-size:11px;letter-spacing:0; }
+ .hg-flow small { font-size:10px; }
+ .hg-flow-mini { padding-top:10px;padding-bottom:0; }
+}
+body.hc .hg-flow { background:#07140e;border-color:#e6ce95; }
+body.hc .hg-flow li,body.hc .hg-flow span { color:#fff; }
+body.hc .hg-flow i { border-color:#f5d28a; }
