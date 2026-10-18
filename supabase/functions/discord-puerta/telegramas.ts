@@ -13,16 +13,31 @@ export function parsear(texto: string) {
     if (!m) return null;
     nombre = m[1].trim(); tel = m[2]; obs = m[3] || "";
   }
-  nombre = nombre.replace(/^(?:nombre|persona|empresa)\s*:\s*/i, "").replace(/\n+/g, " · ");
+  // Separar etiquetas explícitas, estén antes o después del telegrama.
+  let quien = "";
+  const separar = (texto: string) => {
+    let campo = "libre";
+    const campos: Record<string,string[]> = { libre: [], quien: [], obs: [] };
+    for (const parte of texto.split(/((?:quien|quién)\s+es\s*[:=]|observaciones\s*[:=])/i)) {
+      if (/^(?:quien|quién)\s+es\s*[:=]$/i.test(parte)) campo = "quien";
+      else if (/^observaciones\s*[:=]$/i.test(parte)) campo = "obs";
+      else if (parte.trim()) campos[campo].push(parte.trim());
+    }
+    return campos;
+  };
+  const antes = separar(nombre), despues = separar(obs);
+  nombre = antes.libre.join("\n").replace(/^(?:nombre|persona|empresa)\s*:\s*/i, "").replace(/\n+/g, " · ");
+  quien = [...antes.quien, ...despues.quien].join("\n");
+  obs = [...antes.obs, ...despues.libre, ...despues.obs].join("\n");
   if (!nombre || nombre.length > 150 || !/[\p{L}]/u.test(nombre) || !/^[A-Za-z0-9-]{1,10}$/.test(tel)) return null;
-  return { nombre, tel: tel.toUpperCase(), obs: obs || "—" };
+  return { nombre, tel: tel.toUpperCase(), quien: quien || "—", obs: obs || "—" };
 }
 const seguro = (s: string) => s.replace(/([\\*_~`|>])/g, "\\$1").replace(/@/g, "@\u200b");
-export function tarjeta(p: {nombre:string;tel:string;obs:string}, autor:string, fecha:string) {
+export function tarjeta(p: {nombre:string;tel:string;obs:string;quien?:string}, autor:string, fecha:string) {
   const dia = new Intl.DateTimeFormat("es-ES", {timeZone:"Europe/Madrid",day:"2-digit",month:"2-digit",year:"numeric"}).format(new Date(fecha));
   return {allowed_mentions:{parse:[]}, embeds:[{
     title:"FICHA DE CONTACTO · AGENDA DE LA CASA",
-    description:`**Nombre:** ${seguro(p.nombre)}\n**Telegrama:** ${seguro(p.tel)}\n**Quién es:** —\n**Observaciones:** ${seguro(p.obs)}\n**Apuntado por:** ${seguro(autor)} · ${dia}`,
+    description:`**Nombre:** ${seguro(p.nombre)}\n**Telegrama:** ${seguro(p.tel)}\n**Quién es:** ${seguro(p.quien || "—")}\n**Observaciones:** ${seguro(p.obs)}\n**Apuntado por:** ${seguro(autor)} · ${dia}`,
     color:5982860, timestamp:fecha,
     footer:{text:"Harrington Gunsmith · Saint Denis · 1880",icon_url:"https://juancarlos15022-maker.github.io/harrington-gunsmith/emblema-harrington.png"}
   }]};
@@ -41,6 +56,32 @@ export async function revisarTelegramas(sb:any, c:Record<string,string>, H:Recor
     return {st:r.status,d};
   };
   try {
+
+    // Corregir fichas antiguas con «Quién es» enviado por error a observaciones.
+    const {data:antiguas,error:ae}=await sb.from("bot_telegramas_mensajes").select("origen_id,publicado_id,original,ficha").eq("canal_id",canal).order("origen_id",{ascending:false}).limit(100);
+    if(ae) throw new Error("TELEGRAMAS_REPARAR_LECTURA");
+    for(const fila of antiguas || []) {
+      if(!fila.publicado_id || fila.ficha?.quien !== undefined) continue;
+      const p=parsear(fila.original);
+      if(!p || p.quien==="—") continue;
+      const actual=await api("GET",`/channels/${canal}/messages/${fila.publicado_id}`);
+      if(actual.st===404) continue;
+      if(actual.st!==200 || !actual.d?.author?.bot || actual.d?.webhook_id) throw new Error("TELEGRAMAS_REPARAR_MENSAJE");
+      const emb=actual.d.embeds?.[0];
+      if(!emb?.timestamp) throw new Error("TELEGRAMAS_REPARAR_FECHA");
+      const nuevo=tarjeta(p,"Vincent Harrington",emb.timestamp).embeds[0].description;
+      const anterior=tarjeta(fila.ficha,"Vincent Harrington",emb.timestamp).embeds[0].description;
+      // No sobrescribir una edición manual; reintentar si Discord cambió pero falló guardar.
+      if(emb.description!==nuevo) {
+        if(emb.description!==anterior) throw new Error("TELEGRAMAS_REPARAR_EDITADO");
+        const r=await api("PATCH",`/channels/${canal}/messages/${fila.publicado_id}`,{allowed_mentions:{parse:[]},embeds:[{...tarjeta(p,"Vincent Harrington",emb.timestamp).embeds[0]}]});
+        if(r.st!==200 || r.d?.embeds?.[0]?.description!==nuevo) throw new Error("TELEGRAMAS_REPARAR_PATCH");
+      }
+      const ver=await api("GET",`/channels/${canal}/messages/${fila.publicado_id}`);
+      if(ver.st!==200 || ver.d?.embeds?.[0]?.description!==nuevo) throw new Error("TELEGRAMAS_REPARAR_VERIFICAR");
+      const {error}=await sb.from("bot_telegramas_mensajes").update({ficha:p}).eq("origen_id",fila.origen_id);
+      if(error) throw new Error("TELEGRAMAS_REPARAR_GUARDAR");
+    }
     for(let pagina=0;pagina<5;pagina++) {
       const lote=await api("GET",`/channels/${canal}/messages?limit=100&after=${cursor}`);
       if(lote.st!==200 || !Array.isArray(lote.d)) throw new Error("TELEGRAMAS_LECTURA_"+lote.st);
