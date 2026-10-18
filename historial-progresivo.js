@@ -1,0 +1,16 @@
+/* Historial de ventas: crea filas por páginas y busca en los mismos 600 registros. */
+(function(){'use strict';let current=null,scheduled=false;
+const rowHTML=r=>`<div class="dir-log${r.voided?' voided':''}" data-q="${esc(norm([r.id,r.client,r.employee,r.date].join(' ')))}"><b>${esc(r.id)}</b> · ${esc(r.date)} ${esc(r.time)}${r.op==='encargo'?' · ENCARGO':''}${r.voided?'<span class="void-tag">ANULADA</span>':''}<br>Cliente: ${esc(r.client||'—')}<br>Empleado: ${esc(r.employee||'—')}<br>${summaryText(r.products,r.units)}${r.convenio?' · '+esc(r.convenio):''}${r.note?'<br>Nota: '+esc(r.note):''}<br>Total: ${money(r.totalCents)}${r.dueCents!==r.totalCents?' · A cobrar: '+money(r.dueCents):''}${r.voided?'':`<div class="emp-btns"><button type="button" class="warn" data-dir="void:${esc(r.id)}">ANULAR</button></div>`}</div>`;
+function more(s){const n=s.matches.length-s.limit;return n>0?`<div class="enc-actions hg-vmore"><button type="button" data-hg-vmore="1">VER ${Math.min(50,n)} MÁS · quedan ${n}</button></div>`:'';}
+function valid(){return current&&dirMod==='ventas'&&!dirModal.hidden&&document.querySelector('#dirBody [data-hg-history="ventas"]');}
+function filter(field){const box=valid();if(!box||!field.isConnected)return;const s=current,q=norm(field.value.trim());s.matches=s.items.filter(x=>x.q.includes(q));s.limit=50;PGL.ventas=50;box.innerHTML=s.matches.slice(0,50).map(x=>x.html).join('')+more(s);}
+renderModVentas=function(){
+ const records=loadLog(KEY_SALELOG).slice().reverse().slice(0,600),items=records.map(r=>({q:norm([r.id,r.client,r.employee,r.date].join(' ')),html:rowHTML(r)})),limit=PGL.ventas||50;
+ current={items,matches:items,limit};
+ return `<div class="dir-sec-title" style="margin-top:0">VENTAS REGISTRADAS (${records.length})</div>${searchBox('⌕  Buscar por cliente, empleado o número…')}<div class="ledger" data-hg-history="ventas">`+(items.length?items.slice(0,limit).map(x=>x.html).join('')+more(current):'<div class="enc-empty">Todavía no hay ventas registradas.<br>Se guardan a partir de ahora al finalizar cada venta.</div>')+'</div>';
+};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-hg-vmore]'),box=valid();if(!b||!box||!box.contains(b))return;e.preventDefault();e.stopImmediatePropagation();const s=current,y=dirModal.scrollTop,focused=document.activeElement===b,old=s.limit;s.limit+=50;PGL.ventas=s.limit;b.parentElement.remove();box.insertAdjacentHTML('beforeend',s.matches.slice(old,s.limit).map(x=>x.html).join('')+more(s));if(focused){const next=box.querySelector('[data-hg-vmore]');if(next)next.focus({preventScroll:true});else box.querySelector('.dir-log:last-child button')?.focus({preventScroll:true});}dirModal.scrollTop=y;},true);
+document.addEventListener('input',e=>{if(!valid()||!e.target.matches('#dirBody [data-filter]'))return;e.stopImmediatePropagation();if(e.isComposing||scheduled)return;scheduled=true;const s=current,field=e.target;Promise.resolve().then(()=>{scheduled=false;if(current===s)filter(field);});},true);
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&valid()&&e.target.matches('#dirBody [data-filter]')){e.stopImmediatePropagation();filter(e.target);}},true);
+document.addEventListener('compositionend',e=>{if(valid()&&e.target.matches('#dirBody [data-filter]')){e.stopImmediatePropagation();filter(e.target);}},true);
+})();
