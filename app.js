@@ -5913,9 +5913,9 @@ function presTxt(id){const o=PRES.map[id];if(!o)return ['','Sin conexión regist
 function paintPresence(){document.querySelectorAll('[data-pres]').forEach(el=>{const t=presTxt(el.dataset.pres);el.className='pres '+t[0];el.textContent=t[1]})}
 setInterval(()=>{if(!document.hidden&&!dirModal.hidden&&dirMod==='empleados')loadPresence()},30000);
 function empExtra(e){
- const me=meEmp(), self=me&&me.id===e.id, jf=isJefe(e), ph=PHOTOS[e.id];
- return `<div class="it">${ph?`<img class="emp-ph" src="${ph}" alt="">`:''}<span class="pres" data-pres="${esc(e.id)}">…</span>${jf?'<span class="clv ok">🔑 Entra con la contraseña de jefe</span>':`<span class="clv" data-clave="${esc(e.id)}">🔑 …</span>`}</div>
-  <div class="enc-actions two">${jf?'<span></span>':`<button type="button" data-dir="emp-reset:${esc(e.id)}">🔑 RESET CONTRASEÑA</button>`}<button type="button" data-dir="emp-foto:${esc(e.id)}">📷 ${ph?'CAMBIAR FOTO':'FOTO'}</button></div>${ph?`<div class="enc-actions"><button type="button" class="warn" data-dir="emp-nofoto:${esc(e.id)}">QUITAR FOTO</button></div>`:''}`+(self?'':`<div class="enc-actions"><button type="button" class="warn" data-dir="emp-kick:${esc(e.id)}">⏏ EXPULSAR</button></div>`);
+ const me=meEmp(), self=me&&me.id===e.id, jf=isJefe(e), ph=PHOTOS[e.id], canReset=ME?.id==='emuzvkc99z8q'&&AUTH?.emp===ME.id&&e.id!==ME.id;
+ return `<div class="it">${ph?`<img class="emp-ph" src="${ph}" alt="">`:''}<span class="pres" data-pres="${esc(e.id)}">…</span>${jf?'<span class="clv ok">🔑 Contraseña personal</span>':`<span class="clv" data-clave="${esc(e.id)}">🔑 …</span>`}</div>
+  <div class="enc-actions two">${canReset?`<button type="button" data-dir="emp-reset:${esc(e.id)}">🔑 RESETEAR CONTRASEÑA</button>`:'<span></span>'}<button type="button" data-dir="emp-foto:${esc(e.id)}">📷 ${ph?'CAMBIAR FOTO':'FOTO'}</button></div>${ph?`<div class="enc-actions"><button type="button" class="warn" data-dir="emp-nofoto:${esc(e.id)}">QUITAR FOTO</button></div>`:''}`+(self?'':`<div class="enc-actions"><button type="button" class="warn" data-dir="emp-kick:${esc(e.id)}">⏏ EXPULSAR</button></div>`);
 }
 
 /* ===== Entrada: fachada, puerta, «¿Quién entra hoy?» y saludo ===== */
