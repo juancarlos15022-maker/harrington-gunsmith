@@ -1,3 +1,4 @@
+import {tickModules} from './module-runtime.ts';
 // HARRINGTON GUNSMITH · V3 · Señor Harrington: la crónica de la casa (tarea programada cada minuto, dentro de discord-bot)
 // Cada minuto: campanilla al abrir y cerrar, objetivo de la semana con barra y ranking, escaparate y lista de órdenes al día,
 // paneles del buzón, del libro del aprendiz, del libro de visitas y cuadro de honor, encargos listos, aviso de reuniones.
@@ -340,6 +341,7 @@ export async function atender(req: Request): Promise<Response> {
   if(b.solo === "mejoras") {try{return json({ok:true,materiales:await cronMateriales(sb,c)});}catch{return json({error:"MATERIALES_NO_DISPONIBLES"},502);}}
   const hecho: Record<string, string> = {};
   const paso = async (n: string, f: () => Promise<unknown>) => { try { await f(); hecho[n] = "ok"; } catch (e) { hecho[n] = String((e as Error)?.message || e).slice(0, 120); } };
+  await paso('modulos',async()=>{hecho.modulos_r=JSON.stringify(await tickModules(sb,c));});
   await paso('entregas_discord', async()=>{hecho.entregas_r=JSON.stringify(await entregarDiscord(sb));});
   // mantener despiertas las funciones de los botones para que Discord no espere
   const base = Deno.env.get("SUPABASE_URL") + "/functions/v1/";
@@ -368,6 +370,7 @@ export async function atender(req: Request): Promise<Response> {
   try { mas = await cronicaMas(c, +madrid(Date.now()).minute % 10 === 0 || !!b.todo); } catch (e) { mas = { error: String((e as Error)?.message || e).slice(0, 120) }; }
   return json({ ok: true, hecho, mas, menc });
 }
+
 
 
 

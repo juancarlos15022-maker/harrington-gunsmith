@@ -34,6 +34,13 @@ export const duracion = (a: number, b: number) => { const m = Math.max(0, Math.r
 export type Prod = { nombre: string; categoria: string; precio: number; orden: number };
 export const CATS: Array<[string, string, string]> = [["Revolveres", "🔫", "Revólveres"], ["Pistolas", "🔫", "Pistolas"], ["Repetidoras", "🎯", "Rifles de repetición"],
   ["Rifles", "🎯", "Rifles"], ["Escopetas", "💥", "Escopetas"], ["Blancas", "🗡️", "Armas blancas y arcos"], ["Municion", "🧨", "Munición y flechas"], ["Suministros", "🧰", "Suministros"]];
+// Dirección en Discord (19/10/2026): el director de la web o cualquier empleado con puesto «Jefe» enlazado a ese Discord.
+export const DIRECTOR_DISCORD = "1398183011232518164";
+export async function esJefeDiscord(sb: SupabaseClient, uid: string) {
+  if (uid === DIRECTOR_DISCORD) return true;
+  const { data } = await sb.from("datos").select("valor").eq("clave", "empleados").maybeSingle();
+  return (Array.isArray(data?.valor) ? data!.valor as Array<Record<string, unknown>> : []).some((e) => e && String(e.discord || "") === uid && e.puesto === "Jefe");
+}
 export async function catalogo(sb: SupabaseClient): Promise<Prod[]> {
   const [{ data: base }, { data: filas }] = await Promise.all([
     sb.from("bot_catalogo").select("nombre,categoria,precio,orden").order("orden"),
@@ -56,4 +63,3 @@ export function listaPrecios(L: Prod[]) {
   return { embeds: [{ title: "🏷️ " + gotica("Lista de Precios"), color: ORO, footer: { text: "Se pone al día sola cuando cambia un precio en la web · Señor Harrington" },
     description: "Precios del mostrador, en dólares y por unidad.\nLo marcado *por encargo* se pacta con el cliente.\nSi un cliente tiene precio especial, lo verá usted en su ficha de la web.", fields }], components: [] };
 }
-

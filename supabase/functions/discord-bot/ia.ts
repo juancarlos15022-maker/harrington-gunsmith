@@ -9,7 +9,7 @@
 //   · crónica: parte de la mañana redactado por la IA y banco de preguntas nuevas para el examen (sacadas del Tutorial)
 // Cada conversación queda en ia_charla (la misma que la web): lo que le pregunta aquí lo ve luego en la web, y al revés.
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
-import { catalogo, dolar, fecha, hora, hoyNum, limpio, madrid, medianoche, ORO, PIE } from "./comun.ts";
+import { catalogo, DIRECTOR_DISCORD, dolar, fecha, hora, hoyNum, limpio, madrid, medianoche, ORO, PIE } from "./comun.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 const json = (o: unknown, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { "Content-Type": "application/json" } });
@@ -130,7 +130,7 @@ export async function estado(jefe: boolean, pregunta = "") {
 // ── quién es (empleado de la web enlazado con su Discord) ──
 async function quienEs(uid: string) {
   const e = (await empleados()).find((x) => x && x.discord === uid);
-  return e ? { id: String(e.id), nombre: String(e.name || ""), jefe: uid === "1398183011232518164" } : null;
+  return e ? { id: String(e.id), nombre: String(e.name || ""), jefe: uid === DIRECTOR_DISCORD || e.puesto === "Jefe" } : null;
 }
 // responde a una pregunta y la apunta en la conversación compartida
 async function contestar(c: C, yo: { id: string; nombre: string; jefe: boolean }, texto: string, origen: string) {
