@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {pendingFor,materialRows,weekStart,isClip,handleMejoras,contacts,clips,cronMateriales,health} from './supabase/functions/discord-bot/mejoras.ts';
+const c={guild_id:'g',rol_jefe:'j',rol_gerente:'ger',rol_armero:'a',canal_clips:'clip',canal_despacho:'despacho'};
+const peds=[{code:'P1',proveedor:'Mina',items:[{material:'Mena de hierro',qty:20,rq:8}]},{received:true,items:[{material:'Hierro',qty:99}]},{cancelled:true,items:[{material:'Hierro',qty:99}]},{items:[{material:'Hierro',qty:2,rq:2}]}];
+assert.equal(pendingFor('mat:Hierro',peds)[0].qty,12);assert.equal(pendingFor('mat:Hierro',peds).length,1);
+assert.equal(materialRows([{producto:'mat:Hierro',cantidad:5,minimo:0}],{'mat:Hierro':10},peds)[0].pending[0].qty,12);
+assert.equal(materialRows([{producto:'mat:Tela',cantidad:0,minimo:0}],{},[]).length,1);
+assert.equal(materialRows([{producto:'mat:Tela',cantidad:5,minimo:0}],{},[]).length,0);
+assert.equal(new Date(weekStart(Date.parse('2026-10-19T02:00:00Z'))).toISOString(),'2026-10-18T22:00:00.000Z');
+assert.equal(new Date(weekStart(Date.parse('2026-10-25T20:00:00Z'))).toISOString(),'2026-10-18T22:00:00.000Z');
+assert.ok(isClip({author:{},attachments:[{content_type:'video/mp4'}]}));assert.ok(!isClip({author:{bot:true},attachments:[{content_type:'video/mp4'}]}));
+const denied=await handleMejoras({type:2,guild_id:'g',member:{user:{id:'u'},roles:['a']},data:{name:'conexiones'}},c,{}).json();assert.equal(denied.type,4);assert.equal(denied.data.flags,64);
+const wrong=await handleMejoras({type:2,guild_id:'other',member:{user:{id:'u'},roles:['j']},data:{name:'contactos'}},c,{}).json();assert.equal(wrong.type,4);
+const modal=await handleMejoras({type:3,guild_id:'g',member:{user:{id:'u'},roles:['a']},data:{custom_id:'mej:contactos'}},c,{}).json();assert.equal(modal.type,9);
+function mockDB(tables){return {rpc:async()=>({data:true}),from(table){let filters=[],single=false,write=null;const q={select(){return q},eq(k,v){filters.push(x=>x[k]===v);return q},in(k,vs){filters.push(x=>vs.includes(x[k]));return q},like(k,v){filters.push(x=>String(x[k]).startsWith(v.replace('%','')));return q},order(){return q},limit(){return q},maybeSingle(){single=true;return q},upsert(x){write=x;return q},delete(){return q},then(resolve,reject){if(write)tables[table]=[write];const rows=(tables[table]||[]).filter(x=>filters.every(f=>f(x)));return Promise.resolve({data:single?rows[0]||null:rows}).then(resolve,reject)}};return q}};}
+const tables={datos:[{clave:'clientes',valor:[{name:'Derry',telegram:'BW1367'}]},{clave:'proveedores',valor:[{name:'Foster',tel:'VL2508'}]},{clave:'agenda',valor:[{name:'Privado',tel:'SECRET'}]}],bot_telegramas_mensajes:[{publicado_id:'1',ficha:{nombre:'Harlan',tel:'SD9493',quien:'director Monroe'}}]};
+assert.ok((await contacts(mockDB(tables),'VL2508',false)).embeds[0].description.includes('Foster'));
+assert.ok(!(await contacts(mockDB(tables),'SECRET',false)).embeds[0].description.includes('Privado'));
+assert.ok((await contacts(mockDB(tables),'Monroe',true)).embeds[0].description.includes('Harlan'));
+const originalFetch=globalThis.fetch;const calls=[];
+globalThis.fetch=async(url,init={})=>{calls.push({url,method:init.method,body:init.body});const u=String(url);if(u.includes('/reactions/'))return Response.json(u.includes('type=1')?[{id:'v1'},{id:'v2'},{id:'bot',bot:true}]:[{id:'v1'},{id:'bot',bot:true}]);return Response.json([{id:'m',timestamp:new Date().toISOString(),author:{username:'Autor'},attachments:[{content_type:'video/mp4'}],reactions:[{emoji:{name:'⭐'},count_details:{normal:2,burst:3}}]}]);};
+const rank=await clips(c);assert.ok(rank.embeds[0].description.includes('**2 ⭐**'));assert.ok(!rank.embeds[0].description.includes('**5 ⭐**'));
+const st={datos:[{clave:'stockmin',valor:{'mat:Hierro':10}},{clave:'pedido:1',valor:peds[0]}],stock:[{producto:'mat:Hierro',cantidad:5,minimo:0}]};
+globalThis.fetch=async(url,init={})=>{calls.push({url,method:init.method});return Response.json({id:'panel'});};
+await cronMateriales(mockDB(st),c);await cronMateriales(mockDB(st),c);assert.equal(calls.filter(x=>x.method==='POST').length,1);
+st.stock[0].cantidad=2;await cronMateriales(mockDB(st),c);assert.equal(calls.filter(x=>x.method==='PATCH').length,1);
+globalThis.fetch=originalFetch;
+console.log('OK: pedidos parciales y alias, mínimos, agotados, semana Madrid y DST, privacidad, búsqueda, votos únicos sin bots, panel sin duplicados y actualización.');

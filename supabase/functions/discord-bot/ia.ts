@@ -449,14 +449,9 @@ export async function cronAvisos(c: C, marcar: (k: string) => Promise<boolean>) 
   for (const s of (st ?? []) as Array<{ producto: string; cantidad: number; minimo: number | null }>) {
     const min = Number(s.minimo || 0);
     if (!(min > 0 && s.cantidad < min)) continue;
-    if (s.producto.startsWith("mat:")) {
-      const m = s.producto.slice(4);
-      if (pidiendo.has(norm(m)) || !c.canal_despacho) continue;
-      if (!(await marcar(`avs-mat-${norm(m)}-${hoy}`))) continue;
-      await api(c, "POST", `/channels/${c.canal_despacho}/messages`, { allowed_mentions: { parse: [] }, embeds: [{ title: "⚠️ Material bajo mínimo · " + limpio(m, 60), color: 0x8b2e25, description: `Quedan **${s.cantidad}** y el mínimo es **${min}**. No hay ningún pedido en camino.\n\nPulse **Preparar pedido** y le preparo la propuesta con el proveedor más barato, para aprobarla.`, footer: PIE }],
-        components: [{ type: 1, components: [{ type: 2, style: 1, label: "Preparar pedido", emoji: { name: "🚂" }, custom_id: "avs:ped:" + m.slice(0, 80) }] }] });
-      out.push(m);
-    } else if (c.canal_turnos) {
+    // Los materiales se mantienen en el panel de Dirección, con pedidos parciales.
+    if (s.producto.startsWith("mat:") || s.producto === "Pólvora") continue;
+    if (c.canal_turnos) {
       if (!(await marcar(`avs-prod-${norm(s.producto)}-${hoy}`))) continue;
       await api(c, "POST", `/channels/${c.canal_turnos}/messages`, { allowed_mentions: { parse: [] }, embeds: [{ title: (s.cantidad <= 0 ? "⛔ Agotado · " : "⚠️ Bajo mínimo · ") + limpio(s.producto, 60), color: 0x8b2e25, description: `Quedan **${s.cantidad}** y el mínimo es **${min}**.\n\nPulse **¿Qué fabrico?** y le digo qué conviene fabricar hoy con lo que hay en el almacén.`, footer: PIE }],
         components: [{ type: 1, components: [{ type: 2, style: 2, label: "¿Qué fabrico?", emoji: { name: "🛠" }, custom_id: "avs:fab:" + s.producto.slice(0, 80) }] }] });
@@ -530,4 +525,5 @@ export async function botonesIA(x: CtxIA & { id: string; esDir: boolean }): Prom
   }
   return null;
 }
+
 

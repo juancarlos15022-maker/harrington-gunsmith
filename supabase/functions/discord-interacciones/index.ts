@@ -17,6 +17,7 @@
 //   9. La tercera tanda (/pedidos, /compra, /agenda, /se-busca, «Recibido entero», periodo de prueba, Veintiuno, bitácora)
 //      también va a discord-bot; y lo que aquí no se reconozca se le pasa igualmente, por si es de una tanda nueva.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { handleMejoras } from "./mejoras.ts";
 import { handleEquipo } from "./equipo.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { catalogo, diaNum, duracion, fecha, hora, hoyNum, madrid, medianoche, ORO } from "./comun.ts";
@@ -169,6 +170,8 @@ Deno.serve(async (req: Request) => {
   let i: Record<string, any> = {};
   try { i = JSON.parse(cuerpo); } catch { return json({ error: "JSON" }, 400); }
   if (i.type === 1) return json({ type: 1 }); // PING de Discord
+  const mejoras = handleMejoras(i, c, sb);
+  if (mejoras) return mejoras;
   const equipo = handleEquipo(i, c);
   if (equipo) return equipo;
   if (i.guild_id && c.guild_id && i.guild_id !== c.guild_id) return efimero("Esta no es la Casa Harrington: aquí no puedo servirle.");
@@ -611,4 +614,5 @@ Deno.serve(async (req: Request) => {
   }
   return efimero("Este botón ha caído en desuso.");
 });
+
 

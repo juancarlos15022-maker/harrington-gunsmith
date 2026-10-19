@@ -7,6 +7,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { catalogo, CATS, dolar, duracion, fecha, gotica, hora, hoyNum, limpio, madrid, medianoche, ORO, PIE, versalita } from "./comun.ts";
 import { cronicaMas } from "./mas.ts";
+import { cronMateriales } from "./mejoras.ts";
 import { entregarDiscord } from "./entregas-discord.ts";
 import { bancoExamen, botonAvisado, cronAprobaciones, cronAvisos, ia, informeLunes, menciones, parteManana, textoEncargoListo } from "./ia.ts";
 
@@ -336,12 +337,14 @@ export async function atender(req: Request): Promise<Response> {
   const { data: filas } = await sb.from("bot_cfg").select("clave,valor");
   c = Object.fromEntries((filas ?? []).map((r: { clave: string; valor: string }) => [r.clave, r.valor]));
   if (!c.secreto || c.secreto.length < 20 || b.secreto !== c.secreto) return json({ error: "NO" }, 403);
+  if(b.solo === "mejoras") {try{return json({ok:true,materiales:await cronMateriales(sb,c)});}catch{return json({error:"MATERIALES_NO_DISPONIBLES"},502);}}
   const hecho: Record<string, string> = {};
   const paso = async (n: string, f: () => Promise<unknown>) => { try { await f(); hecho[n] = "ok"; } catch (e) { hecho[n] = String((e as Error)?.message || e).slice(0, 120); } };
   await paso('entregas_discord', async()=>{hecho.entregas_r=JSON.stringify(await entregarDiscord(sb));});
   // mantener despiertas las funciones de los botones para que Discord no espere
   const base = Deno.env.get("SUPABASE_URL") + "/functions/v1/";
   await Promise.all([fetch(base + "discord-bot", { method: "POST", headers: { "Content-Type": "application/json", "x-hg-secreto": c.secreto, "x-hg-modo": "extra" }, body: '{"calentar":true}' }).catch(() => null), fetch(base + "discord-interacciones", { method: "POST", headers: { "Content-Type": "application/json", "x-signature-ed25519": "00", "x-signature-timestamp": "0" }, body: "{}" }).catch(() => null)]);
+  await paso("materiales_pedidos", async()=>{hecho.materiales_r=JSON.stringify(await cronMateriales(sb,c));});
   await paso("campanilla", campanilla);
   await paso("objetivo", objetivo);
   await paso("escaparate", escaparate);
@@ -365,5 +368,6 @@ export async function atender(req: Request): Promise<Response> {
   try { mas = await cronicaMas(c, +madrid(Date.now()).minute % 10 === 0 || !!b.todo); } catch (e) { mas = { error: String((e as Error)?.message || e).slice(0, 120) }; }
   return json({ ok: true, hecho, mas, menc });
 }
+
 
 
