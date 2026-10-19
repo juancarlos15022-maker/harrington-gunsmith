@@ -299,7 +299,7 @@ function nextSaleNumber(){
  store.set(KEY_COUNTER,String(n));
  return n;
 }
-function signature(items){return items.map(x=>x.name+':'+x.qty+':'+x.cents).join('|')+'#'+customerName()+'#'+(currentDiscount()?currentDiscount().id+currentDiscount().pct:'')+'#'+empName()+'#'+customer.op+'#'+customer.telegram.trim()+'#'+computeFin().paid+'#'+(loadedEnc?loadedEnc.id:'')+'#'+customer.note+'#'+customer.promise}
+function signature(items){return items.map(x=>x.name+':'+x.qty+':'+x.cents).join('|')+'#'+customerName()+'#'+(currentDiscount()?currentDiscount().id+currentDiscount().pct:'')+'#'+empName()+'#'+customer.op+'#'+customer.telegram.trim()+'#'+computeFin().paid+'#'+(loadedEnc?loadedEnc.id:'')+'#'+customer.note+'#'+customer.promise+'#'+computeFin().manual}
 function snapshot(items,now){
  const total=items.reduce((a,x)=>a+x.qty*x.cents,0), units=items.reduce((a,x)=>a+x.qty,0);
  return {
@@ -356,16 +356,18 @@ function computeFin(){
  inputs.forEach(i=>{const q=readQty(i);if(q){base+=q*baseCents(i);afterPrices+=q*priceCents(i)}});
  /* Convenio u oferta: beneficio calculado sobre la mercancía (ver benefitFor) */
  const dsc=currentDiscount(), bd=dsc?benefitFor(dsc,afterPrices):{cents:0,label:''};
- const final=afterPrices-bd.cents, discounts=[];
+ const beforeManual=Math.max(0,afterPrices-bd.cents),manual=manualDiscountValue(),final=Math.max(0,beforeManual-manual),discounts=[];
+ const manualMax=Math.max(0,beforeManual-(loadedEnc?loadedEnc.depositCents||0:0)),manualText=manualDiscountAllowed()&&customer.manualDiscountBy===meEmp().id?String(customer.manualDiscount||'').trim():'',manualInvalid=!!manualText&&(!/^\d{1,8}(?:[.,]\d{0,2})?$/.test(manualText)||manual>manualMax);
  if(base-afterPrices>0)discounts.push({label:'Precio especial',cents:base-afterPrices});
  if(bd.cents>0)discounts.push({label:bd.label,cents:bd.cents});
+ if(manual>0)discounts.push({label:'Descuento manual',cents:manual});
  const enc=customer.op==='encargo'&&!loadedEnc&&appMode==='venta';
  const raw=loadedEnc?loadedEnc.depositCents:(enc?parseMoney(customer.deposit):0);
  const kind=loadedEnc?'fianza':(enc?'senal':'');
  const paid=Math.min(raw,final);
- return {base:base,final:final,discount:Math.max(0,base-final),discounts:discounts,discInfo:dsc,raw:raw,over:raw>final,kind:kind,paid:paid,pending:final-paid,due:kind?final-paid:final};
+ return {base:base,final:final,manual:manual,manualMax:manualMax,manualInvalid:manualInvalid,discount:Math.max(0,base-final),discounts:discounts,discInfo:dsc,raw:raw,over:raw>final,kind:kind,paid:paid,pending:final-paid,due:kind?final-paid:final};
 }
-function finToSale(f){return {baseCents:f.base,discountCents:f.discount,discounts:f.discounts,discInfo:f.discInfo,kind:f.kind,totalCents:f.final,paidCents:f.paid,pendingCents:f.pending}}
+function finToSale(f){return {baseCents:f.base,discountCents:f.discount,discounts:f.discounts,manualDiscountCents:f.manual,manualDiscountBy:f.manual?meEmp().id:'',discInfo:f.discInfo,kind:f.kind,totalCents:f.final,paidCents:f.paid,pendingCents:f.pending}}
 function finRows(s){
  const r=[], ds=s.discounts||(s.discountCents>0?[{label:s.discountLabel||'Convenio',cents:s.discountCents}]:[]), disc=ds.length>0;
  if(disc){r.push(['Subtotal',money(s.baseCents)]);ds.forEach(d=>r.push([d.label,'−'+money(d.cents),'disc']))}
@@ -502,7 +504,7 @@ inputs.forEach(i=>{
 document.getElementById('clear').onclick=async()=>{
  if(!selected().length)return say('El pedido ya está vacío');
  if(!await askConfirm('Vaciar pedido','¿Seguro que quieres borrar todos los productos del pedido actual?','Vaciar'))return;
- clearQuantities();if(appMode==='venta'){resetSale();releaseEncargo()}calc(false);say('Pedido vaciado');
+ clearQuantities();if(appMode==='venta'){clearManualDiscount();resetSale();releaseEncargo()}calc(false);say('Pedido vaciado');
 };
 document.getElementById('new').onclick=doNew;
 let finishQueued=false;
@@ -831,13 +833,14 @@ const PRECIOS_CLIENTE=[
 const KEY_CUSTOMER='harrington_customer_v1';
 const typeSel=document.getElementById('clientType'), nameInput=document.getElementById('clientName'), convSel=document.getElementById('convenio');
 const nameWrap=document.getElementById('clientNameWrap'), nameLabel=document.getElementById('clientNameLabel'), noteEl=document.getElementById('clientNote');
-function defaultCustomer(){return {type:'particular',name:'',convenio:'ninguno',oferta:'ninguno',employee:'',note:'',promise:'',op:'venta',telegram:'',deposit:''}}
+function defaultCustomer(){return {type:'particular',name:'',convenio:'ninguno',oferta:'ninguno',employee:'',note:'',promise:'',op:'venta',telegram:'',deposit:'',manualDiscount:'',manualDiscountBy:'',manualDiscountOpen:false}}
 const opSel=document.getElementById('opType'), telInput=document.getElementById('telegram'), telWrap=document.getElementById('telegramWrap');
 const depositBox=document.getElementById('depositBox');
 const depositInput=document.getElementById('depositAmt');
 
 const breakdownEl=document.getElementById('breakdown'), totalLabel=document.getElementById('totalLabel');
 function renderFin(f){
+ renderManualDiscount();const manualError=document.getElementById('manualDiscountErr');if(manualError){manualError.hidden=!f.manualInvalid;manualError.textContent=f.manualInvalid?'Indica un importe válido entre $0.00 y '+money(f.manualMax)+', con un máximo de dos decimales.':'';}
  const s=finToSale(f);
  breakdownEl.innerHTML=finRows(s).map(r=>`<div class="brow ${r[2]||''}"><span>${esc(r[0])}</span><span>${r[1]}</span></div>`).join('');
  totalLabel.textContent=dueLabel(s);
@@ -850,6 +853,7 @@ let customer=defaultCustomer();
 function customerName(){return customer.type==='sheriff'?CLIENTE_SHERIFF:customer.name.trim()}
 function specialPrices(){const n=norm(customerName());if(!n)return null;const st=PRECIOS_CLIENTE.find(c=>norm(c.cliente)===n);if(st)return st;const c=clientes.find(x=>norm(x.name)===n&&x.precios&&Object.keys(x.precios).length);return c?{precios:c.precios}:null}
 function customerOk(){
+ if(computeFin().manualInvalid){customer.manualDiscountOpen=true;renderManualDiscount();say('Revisa el descuento manual: no puede superar el importe a cobrar ni tener más de dos decimales','err');document.getElementById('manualDiscountAmt').focus();return false;}
  if(!customerName()){
   say(customer.type==='empresa'?'Indica el nombre de la empresa':'Indica el nombre del cliente');
   nameInput.focus();return false;
@@ -875,7 +879,7 @@ function customerOk(){
 }
 function renderCustomer(){
  const enc=customer.op==='encargo';
- opSel.value=customer.op;typeSel.value=customer.type;nameInput.value=customer.name;refreshDiscountSelects();refreshEmpSelect();
+ renderManualDiscount();opSel.value=customer.op;typeSel.value=customer.type;nameInput.value=customer.name;refreshDiscountSelects();refreshEmpSelect();
  telInput.value=customer.telegram;depositInput.value=customer.deposit;noteInput.value=customer.note;promiseInput.value=customer.promise;
  nameWrap.hidden=customer.type==='sheriff';
  const ld=!!loadedEnc;
@@ -914,6 +918,7 @@ function moneyField(inp,key){
  });
 }
 moneyField(depositInput,'deposit');
+bindManualDiscount();
 noteInput.addEventListener('input',()=>{customer.note=noteInput.value;customerChanged()});
 promiseInput.addEventListener('change',()=>{customer.promise=promiseInput.value;customerChanged()});
 nameInput.addEventListener('change',()=>{const c=clientes.find(x=>norm(x.name)===norm(nameInput.value.trim()));if(c)applyClient(c)});
@@ -1949,6 +1954,7 @@ function updateOrderBar(units,products,due){
  updateFinish();
 }
 function finishMissing(){
+ if(computeFin().manualInvalid)return 'Revisa el descuento manual';
  if(!selected().length)return 'Añade productos';
  if(!customerName())return customer.type==='empresa'?'Falta el nombre de la empresa':'Falta el nombre del cliente';
  if(!empName())return 'Falta elegir el empleado';
@@ -5676,7 +5682,7 @@ async function autoVentaConfirmar(){
   let res;
   try{res=await sbRpc('vender_fabricando',pending)}catch(e){
    const t=String(e.message||'');
-   if(/FALTAN_MATERIALES|RECETA_INVALIDA|CANTIDAD_INVALIDA|EMPLEADO_INVALIDO|SIN_CUENTA|VENTA_INVALIDA|VENTA_VACIA|PETICION_INVALIDA/.test(t)){
+   if(/FALTAN_MATERIALES|RECETA_INVALIDA|CANTIDAD_INVALIDA|EMPLEADO_INVALIDO|SIN_CUENTA|VENTA_INVALIDA|VENTA_VACIA|PETICION_INVALIDA|DESCUENTO_MANUAL_|TOTAL_CAMBIADO|ANTICIPO_INVALIDO/.test(t)){
     store.remove(key);try{await refreshStock()}catch(x){}
     const m=t.match(/FALTAN_MATERIALES: ([^"\\]+)/);say(m?'Faltan materiales · '+m[1].replace(/^mat:/,''):'No se puede completar la venta: '+t,'err');
    }else say('No se pudo confirmar la respuesta. Pulsa FINALIZAR otra vez para recuperar la misma venta sin duplicarla.','err');
@@ -5981,6 +5987,7 @@ function applyMe(){
  if(chip){chip.hidden=!me;if(me)chip.innerHTML=ICO_USER+esc(me.name)+(bossActive?' · JEFE':'')}
  bossBtn.hidden=!!me&&hasJefes();
  refreshEmpSelect();renderClock();renderPayPlate();
+ try{renderManualDiscount();calc(false)}catch(e){}
 }
 /* Expulsar: la dirección cierra la sesión de un empleado en todos sus dispositivos y le ficha la salida */
 var EXPUL={};
@@ -8547,3 +8554,28 @@ try{document.fonts.ready.then(fitSign);document.fonts.addEventListener&&document
 setTimeout(fitSign,50);setTimeout(fitSign,1200);
 
 
+
+
+/* Descuento fijo: solo el jefe de la sesión puede prepararlo y el servidor lo valida. */
+function manualDiscountAllowed(){try{return appMode==='venta'&&customer.op!=='encargo'&&isJefe(meEmp())}catch(e){return false}}
+function manualDiscountValue(){
+ if(!manualDiscountAllowed()||customer.manualDiscountBy!==meEmp().id)return 0;
+ const value=String(customer.manualDiscount||'').trim();
+ return /^\d{1,8}(?:[.,]\d{0,2})?$/.test(value)?parseMoney(value):0;
+}
+function renderManualDiscount(){
+ const wrap=document.getElementById('manualDiscountWrap');if(!wrap)return;
+ const allowed=manualDiscountAllowed();wrap.hidden=!allowed;
+ const toggle=document.getElementById('manualDiscountToggle'),box=document.getElementById('manualDiscountFields'),input=document.getElementById('manualDiscountAmt');
+ const own=allowed&&customer.manualDiscountBy===meEmp().id,amount=own?manualDiscountValue():0,open=allowed&&!!customer.manualDiscountOpen;
+ toggle.textContent=amount?'DESCUENTO: −'+money(amount):'DESCUENTO ($)';toggle.setAttribute('aria-expanded',String(open));box.hidden=!open;
+ if(!own||document.activeElement!==input)input.value=own?customer.manualDiscount||'':'';
+ input.disabled=!allowed;
+}
+function clearManualDiscount(){customer.manualDiscount='';customer.manualDiscountBy='';customer.manualDiscountOpen=false;renderManualDiscount()}
+function bindManualDiscount(){
+ const toggle=document.getElementById('manualDiscountToggle'),input=document.getElementById('manualDiscountAmt'),remove=document.getElementById('manualDiscountRemove');if(!toggle||!input||!remove)return;
+ toggle.onclick=()=>{if(!manualDiscountAllowed())return;customer.manualDiscountOpen=!customer.manualDiscountOpen;renderManualDiscount();if(customer.manualDiscountOpen)input.focus()};
+ input.addEventListener('input',()=>{if(!manualDiscountAllowed())return;customer.manualDiscount=input.value.trim();customer.manualDiscountBy=meEmp().id;customerChanged();renderManualDiscount()});
+ remove.onclick=()=>{if(!manualDiscountAllowed())return;clearManualDiscount();customerChanged()};
+}
