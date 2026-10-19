@@ -63,4 +63,3 @@ export function listaPrecios(L: Prod[]) {
   return { embeds: [{ title: "🏷️ " + gotica("Lista de Precios"), color: ORO, footer: { text: "Se pone al día sola cuando cambia un precio en la web · Señor Harrington" },
     description: "Precios del mostrador, en dólares y por unidad.\nLo marcado *por encargo* se pacta con el cliente.\nSi un cliente tiene precio especial, lo verá usted en su ficha de la web.", fields }], components: [] };
 }
-

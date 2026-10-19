@@ -1,3 +1,6 @@
+import {legacyBlocked} from './module-legacy.ts';
+import {handleGuide} from './module-guide.ts';
+import {handleModulePanel} from './module-runtime.ts';
 // HARRINGTON GUNSMITH · V3 · Señor Harrington: botones, formularios y órdenes de Discord
 // Discord llama aquí cada vez que alguien pulsa un botón del bot. Se comprueba la firma de Discord (clave pública)
 // y se responde. Todo lo que escribe el Señor Harrington va con el habla de 1880 y los títulos en letra gótica.
@@ -170,6 +173,12 @@ Deno.serve(async (req: Request) => {
   let i: Record<string, any> = {};
   try { i = JSON.parse(cuerpo); } catch { return json({ error: "JSON" }, 400); }
   if (i.type === 1) return json({ type: 1 }); // PING de Discord
+  const guia=await handleGuide(i,c,sb);
+  if(guia)return guia;
+  const modulos = await handleModulePanel(i,c,sb);
+  if(modulos)return modulos;
+  if(i.guild_id&&i.guild_id!==c.guild_id)return json({type:4,data:{content:'Las funciones del servidor se administran en Configuración Bot.',flags:64}});
+  if(legacyBlocked(c,i))return json({type:4,data:{content:'Este comando está desactivado por Dirección. Puedes cambiarlo en Configuración Bot.',flags:64}});
   const mejoras = handleMejoras(i, c, sb);
   if (mejoras) return mejoras;
   const equipo = handleEquipo(i, c);
@@ -616,5 +625,6 @@ Deno.serve(async (req: Request) => {
   }
   return efimero("Este botón ha caído en desuso.");
 });
+
 
 

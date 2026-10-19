@@ -1,0 +1,20 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const {JSDOM}=require(process.env.HG_JSDOM_PATH||'jsdom');
+const code=fs.readFileSync(__dirname+'/app.js','utf8'),html=fs.readFileSync(__dirname+'/index.html','utf8');
+const dom=new JSDOM(html,{url:'https://example.test',runScripts:'outside-only'}),w=dom.window;
+let me={id:'chief',puesto:'Jefe'},changed=0,discount=null;
+Object.assign(w,{appMode:'venta',customer:{op:'venta',manualDiscount:'',manualDiscountBy:'',manualDiscountOpen:false},loadedEnc:null,inputs:[{qty:2,price:500}],readQty:i=>i.qty,baseCents:i=>i.price,priceCents:i=>i.price,currentDiscount:()=>discount,benefitFor:()=>({cents:100,label:'Convenio'}),parseMoney:v=>Math.round(Number(String(v).replace(',','.'))*100),meEmp:()=>me,isJefe:e=>e?.puesto==='Jefe',money:n=>'$'+(n/100).toFixed(2),customerChanged:()=>changed++});
+const fn=code.slice(code.indexOf('function computeFin(){'),code.indexOf('\nfunction dueLabel(',code.indexOf('function computeFin(){')));
+w.eval(fn);w.eval(code.slice(code.indexOf('/* Descuento fijo: solo el jefe de la sesión')));w.bindManualDiscount();w.renderManualDiscount();
+const input=w.document.getElementById('manualDiscountAmt'),wrap=w.document.getElementById('manualDiscountWrap');
+assert.equal(wrap.hidden,false);w.document.getElementById('manualDiscountToggle').click();assert.equal(w.document.getElementById('manualDiscountFields').hidden,false);
+function amount(v){input.value=v;input.dispatchEvent(new w.Event('input',{bubbles:true}));return w.computeFin();}
+assert.equal(amount('3').final,700);assert.equal(amount('4').final,600);assert.equal(amount('3,50').final,650);assert.equal(w.finToSale(w.computeFin()).manualDiscountCents,350);assert.equal(w.computeFin().discounts.at(-1).label,'Descuento manual');assert.ok(w.finRows(w.finToSale(w.computeFin())).some(r=>r[0]==='Descuento manual'&&r[1]==='−$3.50'));
+discount={id:'conv'};assert.equal(amount('3').final,600);assert.equal(w.computeFin().discounts.length,2);assert.equal(amount('20').manualInvalid,true);assert.equal(w.computeFin().final,0);assert.equal(amount('-3').manualInvalid,true);assert.equal(amount('3.456').manualInvalid,true);
+w.loadedEnc={depositCents:700};assert.equal(amount('3').manualInvalid,true);assert.equal(amount('2').manualInvalid,false);assert.equal(w.computeFin().pending,0);w.loadedEnc=null;
+me={id:'employee',puesto:'Armero'};w.renderManualDiscount();assert.equal(wrap.hidden,true);assert.equal(w.computeFin().manual,0);assert.equal(w.computeFin().final,900);amount('4');assert.equal(w.customer.manualDiscount,'2');
+me={id:'other-chief',puesto:'Jefe'};w.renderManualDiscount();assert.equal(w.computeFin().manual,0);assert.equal(input.value,'');
+me={id:'chief',puesto:'Jefe'};amount('4');w.document.getElementById('manualDiscountRemove').click();assert.equal(w.computeFin().manual,0);assert.equal(w.customer.manualDiscount,'');
+w.customer.op='encargo';w.renderManualDiscount();assert.equal(wrap.hidden,true);assert.equal(w.computeFin().manual,0);
+assert.ok(html.indexOf('id="manualDiscountWrap"')>html.indexOf('id="opType"'));assert.ok(html.indexOf('id="manualDiscountWrap"')<html.indexOf('id="clientType"'));
+assert.ok(changed>0);dom.window.close();console.log('OK: botón bajo Tipo de operación, solo jefes, importes 3/4/3,50, combinación con convenio, límites, anticipo, cambio de usuario y retirada del descuento.');

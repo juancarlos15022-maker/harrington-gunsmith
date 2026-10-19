@@ -1,6 +1,6 @@
 export type Tile = [number, number];
 export type Game = { game: string; players: string[]; names: string[]; state: string; turn: number; hands: Tile[][]; pile: Tile[]; chain: Tile[]; passes: number; points: number[]; rolls: number[][]; round: number; winner?: number; result?: string };
-export const norm = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+export const norm = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 export function random(n: number) { const a = new Uint32Array(1), max = Math.floor(4294967296 / n) * n; do { crypto.getRandomValues(a); } while (a[0] >= max); return a[0] % n; }
 export function shuffled<T>(a: T[], rng = random) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rng(i+1); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 export function newGame(game: string, uid: string, name: string): Game { return {game, players:[uid],names:[name],state:'waiting',turn:0,hands:[],pile:[],chain:[],passes:0,points:[0,0],rolls:[[],[]],round:1}; }

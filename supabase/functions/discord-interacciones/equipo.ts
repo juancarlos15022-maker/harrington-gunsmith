@@ -3,7 +3,7 @@ import { newGame, joinGame, legalMoves, dominoMove, diceRoll, norm, reminderTime
 type Any=Record<string,any>;type Config=Record<string,string>;
 const sb=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false,autoRefreshToken:false}});
 const OWNER='1398183011232518164', GOLD=0xd7ae54, TABLE='bot_equipo';
-const safe=(v:unknown,n=1500)=>String(v??'').replace(/@(everyone|here)/gi,'@\u200b$1').slice(0,n);
+const safe=(v:unknown,n=1500)=>String(v??'').replace(/@(everyone|here)/gi,'@​$1').slice(0,n);
 const answer=(content:string,extras:Any={})=>({content:safe(content,1950),allowed_mentions:{parse:[]},...extras});
 const json=(data:Any)=>Response.json(data);
 const button=(label:string,id:string,style=2)=>({type:2,label,custom_id:'eq:'+id,style});

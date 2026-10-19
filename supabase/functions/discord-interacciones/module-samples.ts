@@ -1,0 +1,50 @@
+import {catalog} from './module-catalog.ts';
+const guild='1520875506214371439',user='1398183011232518164',channel='1520881776552313003',role='1520885100219203807',bot='1559241466654761132';
+export function sample(id:string,now=Date.now()){
+ const context={now,uid:user,chief:true,guild,bot,botTop:11,owner:user,protectedRoles:[role],visibleChannels:[channel],visibleTo:[user],randomOrder:[4,2,3,1],newId:'ejemplo'};
+ const data:Record<string,any>={
+ tickets:['abrir',{id:'ejemplo',subject:'Consulta de ejemplo'},{},{staffRole:role}],
+ responsables:['asignar',{id:'ejemplo'},{entries:{ejemplo:{status:'pendiente'}}},{}],
+ estados:['cambiar',{id:'ejemplo',status:'atendiendo'},{entries:{ejemplo:{status:'pendiente'}}},{}],
+ transcripciones:['guardar',{id:'ejemplo',channel,messages:[{id:'1',author:{id:user},content:'Ejemplo de conversación',timestamp:new Date(now).toISOString()}]},{},{}],
+ recurrentes:['crear',{id:'ejemplo',title:'Reunión semanal',channel,nextAt:now+60000,intervalDays:7},{},{}],
+ espera:['crear',{id:'ejemplo',capacity:10},{},{}],cupos:['crear',{id:'ejemplo',capacity:10,quotas:{seguridad:2,participantes:8}},{},{}],
+ horarios:['crear',{id:'ejemplo',options:['Viernes 20:00','Sábado 21:00']},{},{}],
+ recordatorios:['crear',{id:'ejemplo',channel,content:'Recordatorio de ejemplo',dueAt:now+60000},{},{}],
+ hilos:['crear',{channel,message:'1561569067607789679',title:'Evento de ejemplo'},{},{}],
+ antiraid:['evento',{actor:user,type:'join'},{},{alertChannel:channel,threshold:2}],antinuke:['evento',{actor:user,type:'channel_delete'},{},{alertChannel:channel,threshold:2}],
+ emergencia:['bloquear',{channels:[{id:channel,permission_overwrites:[{id:guild,type:0,allow:'2048',deny:'0'}]}]},{},{}],
+ copias:['guardar',{id:'ejemplo',roles:[{id:role,name:'Ejemplo',managed:false,position:1,permissions:'0'}],channels:[{id:channel,name:'ejemplo',type:0,permission_overwrites:[]}]},{},{}],
+ voz:['entrada',{user,channel,name:'Sala de ejemplo'},{},{creatorChannel:channel,capacity:8}],
+ estadisticas:['evento',{user,channel,type:'mensaje'},{},{}],
+ intereses:['poner',{role:'1559280663193198685'},{},{roles:['1559280663193198685']}],
+ fuentes:['publicaciones',{items:[{id:'ejemplo',title:'Novedad de ejemplo',link:'https://example.org/novedad'}]},{},{channel}],
+ sorteos:['crear',{id:'ejemplo',prize:'Distinción de ejemplo',endsAt:now+60000,winners:1},{},{}],
+ recompensas:['otorgar',{user,points:10,reason:'Ejemplo',requestId:'ejemplo'},{},{}],
+ panel:['ver',{}, {},{}],
+ pruebas:['simular',{module:'tareas',action:'crear',input:{id:'ejemplo',title:'Ejemplo',owner:user,dueAt:now+60000}}, {},{}],
+ permisos:['guardar',{action:'consultar',roles:[role]}, {},{}],
+ 'vista-previa':['simular',{module:'roles-estilo',action:'editar',input:{role,name:'Ejemplo',primary:13214282,roles:[{id:role,name:'Ejemplo',position:1}],guild:{id:guild,features:[]},botTop:11}}, {},{}],
+ lotes:['preparar',{actions:[{module:'tareas',action:'crear',input:{id:'ejemplo',title:'Ejemplo',owner:user,dueAt:now+60000}}]}, {},{}],
+ aprobaciones:['proponer',{id:'ejemplo',title:'Propuesta',proposal:{text:'Solo ejemplo'}}, {},{}],
+ tareas:['crear',{id:'ejemplo',title:'Revisar un asunto',owner:user,dueAt:now+60000}, {},{}],
+ relevo:['anotar',{id:'ejemplo',text:'Parte de ejemplo',pending:['Contactar con proveedor']}, {},{}],
+ lecturas:['publicar',{id:'ejemplo',text:'Comunicado de ejemplo',users:[user]}, {},{}],
+ versiones:['guardar',{id:'ejemplo',text:'Instrucción de ejemplo',reason:'Primera versión'}, {},{}],
+ formacion:['crear',{id:'ejemplo',title:'Curso',lessons:[{text:'Pregunta de ejemplo',answer:'A'}]}, {},{}],
+ seguimiento:['crear',{id:'ejemplo',subject:'Asunto de ejemplo',reference:'cliente:ejemplo'}, {},{}],
+ formularios:['crear',{id:'ejemplo',title:'Formulario',fields:[{id:'consulta',label:'Consulta',required:true}]}, {},{}],
+ satisfaccion:['crear',{id:'ejemplo',reference:'consulta:ejemplo',users:[user]}, {},{}],
+ palabras:['suscribir',{id:'ejemplo',term:'proveedor',channels:[channel]}, {},{}],
+ novedades:['consultar',{messages:[{id:'1',channel,at:now-1,content:'Novedad de ejemplo'}]}, {},{}],
+ preferencias:['guardar',{topics:['eventos'],quiet:{start:23,end:8},timezone:'Europe/Madrid',mode:'resumen'}, {},{}],
+ caducidad:['crear',{id:'ejemplo',channel,message:'1561569067607789679',dueAt:now+60000}, {},{}],
+ traduccion:['traducir',{text:'Buenas tardes',target:'inglés'}, {},{}],
+ concursos:['crear',{id:'ejemplo',title:'Concurso',categories:['Humor','Interpretación'],submissionEnd:now+60000,voteEnd:now+120000}, {},{}],
+ 'roles-estilo':['editar',{role,name:'Armero de ejemplo',primary:13214282,roles:[{id:role,name:'Ejemplo',position:8}],guild:{id:guild,features:[]},botTop:11}, {},{}],
+ sonidos:['crear',{name:'Ejemplo',sound:'data:audio/mpeg;base64,AAAA',duration:1,volume:0.5}, {},{}],
+ expresiones:['crear',{name:'ejemplo',image:'data:image/png;base64,AAAA'}, {},{}],
+ };
+ if(!data[id])throw Error('Sin ejemplo');const [action,input,state,settings]=data[id];return {module:id,action,input,state,settings,context};
+}
+export const allSamples=()=>catalog.map(m=>sample(m.id));

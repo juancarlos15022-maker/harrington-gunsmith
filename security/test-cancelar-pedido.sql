@@ -1,0 +1,34 @@
+-- Pruebas con la sesión vigente de Dirección; todos los pedidos de prueba se revierten.
+begin;
+select set_config('request.jwt.claims',(select jsonb_build_object('sub',c.uid,'role','authenticated','session_id',s.id,'app_metadata',jsonb_build_object('emp_id',c.emp_id))::text from public.cuentas c join auth.sessions s on s.user_id=c.uid where c.uid=(select owner_uid from public.hg_security_config where id=1) order by s.created_at desc limit 1),true);
+set local role authenticated;
+do $$declare base jsonb;r jsonb;st jsonb;n int;begin
+select jsonb_object_agg(producto,cantidad) into st from public.stock;
+base:='{"id":"testcancel20261019yes","code":"TEST-CANCEL-YES","proveedor":"Prueba reversible","items":[{"material":"Hierro","qty":500,"rq":250,"price":50},{"material":"Carbón","qty":800,"rq":800,"price":10},{"material":"Sal","qty":800,"rq":800,"price":7}],"totalCents":38600,"received":false,"paid":false,"cancelled":false}';
+insert into public.datos(clave,valor) values('pedido:testcancel20261019yes',base);
+r:=public.cancelar_pedido('test-cancel-20261019-yes','testcancel20261019yes',true,base);
+if (r#>>'{pedido,liquidacion,paidCents}')::int<>26100 or (r#>>'{pedido,totalCents}')::int<>26100 or (r#>>'{pedido,completedAt}')::bigint<=0 then raise exception 'TEST_SI_PAGADO';end if;
+if r#>'{pedido,originalItems}' is distinct from base->'items' or (r#>>'{pedido,items,0,qty}')::int<>250 then raise exception 'TEST_RECIBIDO';end if;
+r:=public.cancelar_pedido('test-cancel-20261019-yes','testcancel20261019yes',true,base);
+if r->>'replayed'<>'true' then raise exception 'TEST_REPLAY';end if;
+select count(*) into n from public.datos where clave='gasto:gptestcancel20261019yes';if n<>1 then raise exception 'TEST_DUPLICADO';end if;
+base:=base||'{"id":"testcancel20261019no","code":"TEST-CANCEL-NO"}';
+insert into public.datos(clave,valor) values('pedido:testcancel20261019no',base);
+r:=public.cancelar_pedido('test-cancel-20261019-noo','testcancel20261019no',false,base);
+if (r#>>'{pedido,liquidacion,paidCents}')::int<>0 or (r#>>'{pedido,liquidacion,payableCents}')::int<>26100 or (r#>>'{pedido,totalCents}')::int<>26100 then raise exception 'TEST_NO_IMPORTE';end if;
+if (r#>>'{pedido,completedAt}')::bigint<>0 or (r#>>'{pedido,cancelled}')::boolean or not (r#>>'{pedido,received}')::boolean or (r#>>'{pedido,paid}')::boolean then raise exception 'TEST_NO_SIGUE_PENDIENTE';end if;
+if exists(select 1 from public.datos where clave='gasto:gptestcancel20261019no') then raise exception 'TEST_GASTO_NO';end if;
+begin perform public.recibir_pedido('test-recibir-20261019-no','testcancel20261019no',null,null);raise exception 'TEST_RECIBIR_CANCELADO';exception when raise_exception then if sqlerrm<>'PEDIDO_YA_RECIBIDO' then raise;end if;end;
+base:=base||'{"id":"testcancel20261019pre","paid":true,"paidInitial":true}';
+insert into public.datos(clave,valor) values('pedido:testcancel20261019pre',base);
+r:=public.cancelar_pedido('test-cancel-20261019-pre','testcancel20261019pre',true,base);
+if (r#>>'{pedido,liquidacion,paidCents}')::int<>38600 or (r#>>'{pedido,liquidacion,refundDueCents}')::int<>12500 then raise exception 'TEST_ANTICIPO';end if;
+base:=base||'{"id":"testcancel20261019stale","paid":false,"paidInitial":false}';
+insert into public.datos(clave,valor) values('pedido:testcancel20261019stale',base);
+begin perform public.cancelar_pedido('test-cancel-20261019-bad','testcancel20261019stale',true,base||'{"otro":true}');raise exception 'TEST_STALE';exception when raise_exception then if sqlerrm<>'PEDIDO_CAMBIADO' then raise;end if;end;
+if st is distinct from (select jsonb_object_agg(producto,cantidad) from public.stock) then raise exception 'TEST_STOCK';end if;
+perform set_config('request.jwt.claims','{}',true);
+begin perform public.cancelar_pedido('test-cancel-20261019-bad','testcancel20261019stale',true,base);raise exception 'TEST_AUTH';exception when insufficient_privilege then null;end;
+end $$;
+rollback;
+select 'OK: Sí contabiliza; No conserva solo lo recibido pendiente de pago; sin duplicar gasto ni stock; anticipo, concurrencia y permisos.' resultado;
