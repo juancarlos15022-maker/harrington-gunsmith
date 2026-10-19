@@ -7,59 +7,81 @@
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Rye&family=Special+Elite&display=swap" rel="stylesheet">
 <title>Harrington Gunsmith · Catálogo</title>
 <!-- PÁGINA PÚBLICA PARA CLIENTES: solo catálogo y precios. No lleva la clave de la base de datos ni ningún dato privado. -->
 <style>
+/* 19/10/2026: botones de latón y de cartel, como en la tienda */
 *{box-sizing:border-box}
-:root{--gold:#d7ae54;--gold2:#f3d47c;--ink:#e9dec2;--muted:#a99a7d;--line:#5b4524}
+:root{--gold:#d7ae54;--gold2:#f3d47c;--ink:#e9dec2;--muted:#b3a383;--line:#5b4524;--oro1:#fff3c4;--oro2:#f0cd6e;--oro3:#b88931;--oro4:#6e4a12}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;color:var(--ink);font-family:"IM Fell English",Georgia,serif;min-height:100vh;background:
-radial-gradient(circle at 50% -10%,#6a3d1d55,transparent 35%),linear-gradient(#120d09cc,#050a07f5),repeating-linear-gradient(90deg,#24160f 0 2px,#170f0a 2px 7px)}
+radial-gradient(circle at 50% -10%,#6a3d1d55,transparent 35%),linear-gradient(#120d09cc,#050a07f5),url(textura-madera.webp) 0 0/420px,#170f0a}
 button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 button:focus-visible,input:focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
-.wrap{max-width:1100px;margin:auto;padding:16px 16px 140px}
-header{text-align:center;padding:18px 8px 6px}
-header svg{width:min(340px,80%);height:auto;display:block;margin:0 auto 6px}
-h1{font-family:"Cinzel Decorative",Georgia,serif;color:var(--gold2);margin:4px 0 2px;font-size:clamp(24px,6vw,40px);letter-spacing:.04em;text-shadow:0 2px 0 #000}
-.sub{color:var(--muted);font-style:italic;margin:0 0 6px}
+.wrap{max-width:1100px;margin:auto;padding:14px 14px 150px}
+header{text-align:center;padding:10px 0 4px}
+.portada{position:relative;display:block;margin:0 auto 10px;max-width:760px;aspect-ratio:2/1;border-radius:6px;overflow:hidden;border:3px double #b88931;box-shadow:0 12px 34px #000c,inset 0 0 40px #000;background:#0b0805 url(boton-clientes.webp) center/cover no-repeat}
+.portada:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,transparent 55%,#05030299);pointer-events:none}
+h1{font-family:"Rye","Cinzel Decorative",Georgia,serif;font-weight:400;margin:6px 0 2px;position:relative;font-size:clamp(26px,6.4vw,44px);letter-spacing:.03em;
+ background:linear-gradient(100deg,var(--oro4) 0,var(--oro2) 22%,var(--oro1) 30%,var(--oro2) 38%,var(--oro3) 70%,var(--oro4) 100%) 0 0/260% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 #000) drop-shadow(0 0 8px #000);animation:oro 8s ease-in-out infinite}
+@keyframes oro{0%,100%{background-position:100% 0}50%{background-position:0 0}}
+.sub{color:#e4cf98;font-style:italic;margin:0 0 6px;text-shadow:0 1px 2px #000}
 .note{color:var(--muted);font-size:14px;text-align:center;margin:0 auto 14px;max-width:640px}
-.cats{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:10px 0 14px}
-.cats button{border:1px solid var(--line);background:#1a120b;color:var(--ink);padding:7px 12px;border-radius:999px;cursor:pointer;font-size:14px;letter-spacing:.04em}
-.cats button.on{border-color:var(--gold2);background:linear-gradient(#80601f,#3a2a0c);color:#fff0b6}
-.search{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:#0d0905;color:var(--ink);font:inherit;font-size:16px;margin-bottom:10px}
-.sec{font-family:"IM Fell English SC",Georgia,serif;color:var(--gold);letter-spacing:.12em;margin:18px 2px 6px;border-bottom:1px solid var(--line);padding-bottom:4px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
-.item{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;padding:10px 12px;border:1px solid #3b2c17;border-left:4px solid #3b2c17;border-radius:8px;background:linear-gradient(90deg,#141b12,#0b130e)}
-.item.on{border-left-color:var(--gold);background:linear-gradient(90deg,#1b2a14,#0d1f16 70%)}
-.item b{font-size:17px}.item .p{color:var(--gold2);font-weight:bold;font-size:17px}
-.qty{grid-column:1/-1;display:flex;gap:6px;align-items:center}
-.qty button{width:38px;height:38px;border-radius:8px;border:1px solid var(--line);background:#1a120b;color:var(--gold2);font-size:20px;cursor:pointer}
-.qty input{width:64px;height:38px;text-align:center;border-radius:8px;border:1px solid var(--line);background:#0d0905;color:var(--ink);font:inherit;font-size:17px}
-.qty small{margin-left:auto;color:var(--muted)}
-.bar{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(#1d140b,#0a0704);border-top:2px solid var(--gold);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 18px #000a}
-.bar .in{max-width:1100px;margin:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.bar .tot{font-size:20px;color:var(--gold2);font-weight:bold;margin-right:auto}
-.bar .tot small{display:block;font-size:13px;color:var(--muted);font-weight:normal}
-.bar button{padding:10px 14px;border-radius:8px;border:1px solid var(--gold);background:linear-gradient(#2a1c0d,#0d1c14);color:var(--gold2);cursor:pointer;font-size:15px;letter-spacing:.05em}
-.list{max-width:1100px;margin:8px auto 0;font-size:14px;color:var(--ink);max-height:30vh;overflow:auto}
-.list div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dotted #3b2c17;padding:2px 0}
+.orn{display:block;width:min(360px,76%);height:22px;margin:4px auto 10px;background:url(separador-ornamento.webp) center/contain no-repeat}
+/* categorías: los mismos carteles que en la tienda */
+.cats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 16px}
+@media(min-width:760px){.cats{grid-template-columns:repeat(9,1fr)}}
+.cats button{position:relative;padding:0;border:2px solid #4a3519;border-radius:6px;background:#120c07;cursor:pointer;overflow:hidden;aspect-ratio:480/259;box-shadow:0 4px 10px #0009;transition:transform .15s,box-shadow .15s,border-color .15s;color:var(--ink)}
+.cats button img{display:block;width:100%;height:100%;object-fit:cover;filter:brightness(.82) saturate(.95);transition:filter .15s}
+.cats button span{position:absolute;inset:auto 0 0;padding:2px 4px;font:700 11px/1.3 Georgia,serif;letter-spacing:.06em;text-align:center;background:#000a}
+.cats button.img span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);padding:0}
+.cats button:hover{transform:translateY(-2px);border-color:#8b6a2e}
+.cats button:hover img{filter:brightness(1)}
+.cats button.on{border-color:var(--gold2);box-shadow:0 0 0 2px #000,0 0 16px #f3d47c88,0 6px 14px #000a;transform:translateY(-2px)}
+.cats button.on img{filter:brightness(1.08) saturate(1.1)}
+.search{width:100%;padding:12px 14px;border-radius:6px;border:1px solid #8b6a2e;background:#0d0905 linear-gradient(#ffffff06,#0000);color:var(--ink);font:inherit;font-size:16px;margin-bottom:10px;box-shadow:inset 0 2px 6px #000}
+.sec{display:flex;align-items:center;gap:10px;font-family:"IM Fell English SC",Georgia,serif;color:var(--gold2);letter-spacing:.14em;margin:20px 2px 8px;font-size:17px;text-shadow:0 1px 0 #000}
+.sec:after{content:"";flex:1;height:18px;background:url(separador-ornamento.webp) right center/auto 100% no-repeat,linear-gradient(90deg,#b88931,#b8893100) left center/100% 1px no-repeat}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px}
+.item{display:grid;grid-template-columns:auto 1fr auto;gap:8px 12px;align-items:center;padding:10px 12px;border:1px solid #4a3519;border-radius:6px;background:linear-gradient(90deg,#16201a,#0b130e);box-shadow:0 4px 12px #0008,inset 0 1px 0 #e3c26a1c;transition:border-color .15s,background .15s}
+.item .ic{width:46px;height:30px;object-fit:contain;filter:drop-shadow(0 2px 2px #000)}
+.item.on{border-color:var(--gold);background:linear-gradient(90deg,#22301a,#0e2016 70%);box-shadow:0 0 0 1px #f3d47c55,0 6px 14px #000a}
+.item b{font-size:17px}
+.item .p{color:#2a1a06;font-weight:bold;font-size:15px;padding:3px 9px;border-radius:3px;background:linear-gradient(#f6dc8c,#c99a3a);box-shadow:inset 0 1px 0 #fff6,0 1px 2px #000a;white-space:nowrap}
+.qty{grid-column:1/-1;display:flex;gap:8px;align-items:center}
+.qty button{width:40px;height:40px;border-radius:50%;border:2px solid #e3c26a;background:radial-gradient(circle at 35% 30%,#f6dc8c,#a77a25 55%,#4a3208);color:#2a1a06;font:700 22px/1 Georgia,serif;cursor:pointer;box-shadow:0 3px 6px #000b,inset 0 1px 0 #fff8;transition:transform .1s}
+.qty button:active{transform:scale(.92)}
+.qty input{width:64px;height:40px;text-align:center;border-radius:4px;border:1px solid #8a6a32;background:linear-gradient(#0a0805,#211609 45%,#0a0805);color:#ffe7a6;font:inherit;font-size:19px;box-shadow:inset 0 2px 4px #000}
+.qty small{margin-left:auto;color:var(--gold2);font-size:15px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(#24170b,#0a0704),url(textura-madera.webp) 0 0/380px;border-top:3px double var(--gold);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 22px #000c}
+.bar .in{max-width:1100px;margin:auto;display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center}
+.bar .tot{font-size:22px;color:#2a1a06;font-weight:bold;padding:4px 12px;border-radius:4px;background:linear-gradient(#f6dc8c,#b88931);box-shadow:inset 0 1px 0 #fff6,0 2px 6px #000a;justify-self:start}
+.bar .tot small{display:block;font-size:12px;color:#4a3208;font-weight:normal}
+.bar button{min-height:46px;padding:8px 14px;border-radius:5px;border:2px solid #e3c26a;background:linear-gradient(#3a2a10,#140d05);color:var(--gold2);cursor:pointer;font:700 14px Georgia,serif;letter-spacing:.08em;box-shadow:0 3px 8px #000b,inset 0 1px 0 #f6dc8c44;text-shadow:0 1px 0 #000;transition:transform .1s,background .15s}
+.bar button:hover{background:linear-gradient(#4a3614,#1c1207)}
+.bar button:active{transform:translateY(1px)}
+.bar button i{font-style:normal;margin-right:5px;color:var(--gold)}
+.bar #clear{border-color:#c0604a;color:#ffd8cc;background:linear-gradient(#5a1a10,#2a0b06)}
+.bar #clear i{color:#ffb199}
+@media(max-width:560px){.bar .in{grid-template-columns:1fr 1fr 1fr}.bar .tot{grid-column:1/-1;justify-self:stretch;text-align:center}.bar button{padding:8px 6px;font-size:13px}}
+.list{max-width:1100px;margin:8px auto 0;font-size:15px;color:#2b1d0e;max-height:30vh;overflow:auto;padding:8px 14px;border-radius:3px;background:radial-gradient(ellipse at 50% 40%,#f4e8c8,#e2cf9f);box-shadow:inset 0 0 16px #8a6a3266}
+.list div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dotted #8a6a32;padding:3px 0}
 .empty{color:var(--muted);text-align:center;padding:30px 0}
-.toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:#1d140b;border:1px solid var(--gold);padding:8px 14px;border-radius:8px;opacity:0;transition:opacity .3s;pointer-events:none}
+.empty:before{content:"";display:block;width:150px;aspect-ratio:3/2;margin:0 auto 8px;background:url(vacio-busqueda.webp) center/contain no-repeat}
+.toast{position:fixed;left:50%;bottom:130px;transform:translateX(-50%);min-width:240px;max-width:92vw;padding:10px 16px 10px 20px;color:#2b1d0e;font:15px "Special Elite","Courier New",monospace;border-style:solid;border-width:10px 12px 10px 56px;border-image:url(papel-telegrama.webp) 34 34 34 300 fill / 10px 12px 10px 56px stretch;filter:drop-shadow(0 6px 10px #000b);opacity:0;transition:opacity .3s;pointer-events:none}
 .toast.on{opacity:1}
 @media (max-width:420px){.grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){h1{animation:none}.cats button,.qty button{transition:none}}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
-<svg viewBox="0 0 340 120" aria-hidden="true"><g fill="#d7ae54" opacity=".9">
-<path d="M50 30h28l-4-6H54z"/><rect x="44" y="30" width="40" height="3" rx="1.5"/><circle cx="64" cy="44" r="10"/><path d="M46 112V70q0-14 18-14t18 14v42z"/>
-<path d="M130 22h24v10h-24z"/><rect x="124" y="31" width="36" height="3" rx="1.5"/><circle cx="142" cy="45" r="10"/><path d="M122 112V72q0-15 20-15t20 15v40z"/>
-<path d="M200 38q14-12 28 0l-4 4q-10-6-20 0z"/><circle cx="214" cy="50" r="9"/><path d="M196 112l6-38q2-12 12-12t12 12l10 38z"/>
-<path d="M266 26h26l-3-6h-20z"/><rect x="260" y="26" width="38" height="3" rx="1.5"/><circle cx="279" cy="40" r="10"/><path d="M262 112V66q0-13 17-13t17 13v46z"/></g></svg>
+<div class="portada" role="img" aria-label="Clientes esperando en el mostrador de la armería"></div>
 <h1>Harrington Gunsmith</h1>
 <p class="sub">Saint Denis · Catálogo y precios</p>
+<span class="orn" aria-hidden="true"></span>
 </header>
 <p class="note">Elige lo que quieres y verás el total al momento. Es solo un presupuesto: para comprar, habla con un empleado en la tienda.</p>
 <div class="cats" id="cats"></div>
@@ -67,7 +89,7 @@ h1{font-family:"Cinzel Decorative",Georgia,serif;color:var(--gold2);margin:4px 0
 <div id="list"></div>
 <p class="note" id="upd"></p>
 </div>
-<div class="bar"><div class="in"><div class="tot" id="tot">$0.00<small>Nada elegido</small></div><button type="button" id="ver">VER LISTA</button><button type="button" id="copy">COPIAR</button><button type="button" id="clear">VACIAR</button></div><div class="list" id="sum" hidden></div></div>
+<div class="bar"><div class="in"><div class="tot" id="tot">$0.00<small>Nada elegido</small></div><button type="button" id="ver"><i aria-hidden="true">☰</i><span>VER LISTA</span></button><button type="button" id="copy"><i aria-hidden="true">✎</i>COPIAR</button><button type="button" id="clear"><i aria-hidden="true">✕</i>VACIAR</button></div><div class="list" id="sum" hidden></div></div>
 <div class="toast" id="toast"></div>
 <script>
 /* Catálogo por defecto (se genera al publicar la web) y, si el enlace trae uno más nuevo de la tienda, ese. */
@@ -90,11 +112,15 @@ var CATALOGO={"c": [["revolveres", "Revólveres"], ["pistolas", "Pistolas"], ["r
  function norm(s){return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')}
  function save(){try{sessionStorage.setItem('hg_cli_q',JSON.stringify(Q))}catch(e){}}
  function sel(){return P.filter(function(p){return Q[p.n]>0}).map(function(p){return {n:p.n,q:Q[p.n],p:p.p}})}
- function cats(){$('cats').innerHTML='<button type="button" data-c="todos" class="'+(cat==='todos'?'on':'')+'">TODO</button>'+C.map(function(c){return '<button type="button" data-c="'+esc(c[0])+'" class="'+(cat===c[0]?'on':'')+'">'+esc(c[1].toUpperCase())+'</button>'}).join('')}
+ /* cada categoría con su cartel (el mismo de la tienda); si la imagen no carga, se queda el nombre escrito */
+ var CARTEL={todos:'boton-todos.webp',revolveres:'boton-revolveres.webp',pistolas:'boton-pistolas.webp',repetidoras:'boton-repetidoras.webp',rifles:'boton-rifles.webp',escopetas:'boton-escopetas.webp',blancas:'boton-armas-blancas.webp',municion:'boton-municion.webp',suministros:'boton-suministros.webp'};
+ var ICONO={revolveres:'icono-revolveres.webp',pistolas:'icono-pistolas.webp',repetidoras:'icono-repetidoras.webp',rifles:'icono-rifles.webp',escopetas:'icono-escopetas.webp',blancas:'icono-armas-blancas.webp',municion:'icono-municion.webp',suministros:'icono-suministros.webp'};
+ function boton(id,txt){var im=CARTEL[id];return '<button type="button" data-c="'+esc(id)+'" class="'+(cat===id?'on':'')+(im?' img':'')+'" aria-pressed="'+(cat===id)+'">'+(im?'<img src="'+im+'" alt="" decoding="async" onerror="this.parentNode.classList.remove(\'img\');this.remove()">':'')+'<span>'+esc(txt)+'</span></button>'}
+ function cats(){$('cats').innerHTML=boton('todos','TODO')+C.map(function(c){return boton(c[0],c[1].toUpperCase())}).join('')}
  function render(){
   var nq=norm(q), html='';
   C.forEach(function(c){if(cat!=='todos'&&cat!==c[0])return;var L=P.filter(function(p){return p.c===c[0]&&(!nq||norm(p.n).indexOf(nq)>=0)});if(!L.length)return;
-   html+='<div class="sec">'+esc(c[1].toUpperCase())+'</div><div class="grid">'+L.map(function(p){var v=Q[p.n]||0;return '<div class="item'+(v?' on':'')+'"><b>'+esc(p.n)+'</b><span class="p">'+money(p.p)+'</span><div class="qty"><button type="button" data-m="'+esc(p.n)+'" aria-label="Restar">−</button><input type="text" inputmode="numeric" value="'+(v||'')+'" placeholder="0" data-i="'+esc(p.n)+'" aria-label="Cantidad de '+esc(p.n)+'"><button type="button" data-p="'+esc(p.n)+'" aria-label="Sumar">+</button><small>'+(v?money(v*p.p):'')+'</small></div></div>'}).join('')+'</div>'});
+   html+='<div class="sec">'+esc(c[1].toUpperCase())+'</div><div class="grid">'+L.map(function(p){var v=Q[p.n]||0;return '<div class="item'+(v?' on':'')+'">'+(ICONO[c[0]]?'<img class="ic" src="'+ICONO[c[0]]+'" alt="" loading="lazy" decoding="async">':'<span></span>')+'<b>'+esc(p.n)+'</b><span class="p">'+money(p.p)+'</span><div class="qty"><button type="button" data-m="'+esc(p.n)+'" aria-label="Restar">−</button><input type="text" inputmode="numeric" value="'+(v||'')+'" placeholder="0" data-i="'+esc(p.n)+'" aria-label="Cantidad de '+esc(p.n)+'"><button type="button" data-p="'+esc(p.n)+'" aria-label="Sumar">+</button><small>'+(v?money(v*p.p):'')+'</small></div></div>'}).join('')+'</div>'});
   $('list').innerHTML=html||'<div class="empty">No hay productos con eso.</div>';tot();
  }
  function tot(){var S=sel(), t=S.reduce(function(a,x){return a+x.q*x.p},0), u=S.reduce(function(a,x){return a+x.q},0);
@@ -106,7 +132,7 @@ var CATALOGO={"c": [["revolveres", "Revólveres"], ["pistolas", "Pistolas"], ["r
  $('q').oninput=function(e){q=e.target.value;render()};
  $('list').onclick=function(e){var b=e.target.closest('[data-m],[data-p]');if(!b)return;var n=b.getAttribute('data-m')||b.getAttribute('data-p');setQ(n,(Q[n]||0)+(b.hasAttribute('data-p')?1:-1));render()};
  $('list').onchange=function(e){var i=e.target;if(!i.hasAttribute('data-i'))return;setQ(i.getAttribute('data-i'),i.value);render()};
- $('ver').onclick=function(){var s=$('sum');s.hidden=!s.hidden;$('ver').textContent=s.hidden?'VER LISTA':'OCULTAR'};
+ $('ver').onclick=function(){var s=$('sum');s.hidden=!s.hidden;$('ver').querySelector('span').textContent=s.hidden?'VER LISTA':'OCULTAR'};
  $('clear').onclick=function(){Q={};save();render()};
  $('copy').onclick=function(){var S=sel();if(!S.length)return toast('No has elegido nada');var t=['PRESUPUESTO · HARRINGTON GUNSMITH'].concat(S.map(function(x){return x.q+' × '+x.n+' = '+money(x.q*x.p)})).concat(['TOTAL: '+money(S.reduce(function(a,x){return a+x.q*x.p},0))]).join('\n');
   (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast('Presupuesto copiado')},function(){prompt('Copia este texto:',t)})};

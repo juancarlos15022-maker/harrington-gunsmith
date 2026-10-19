@@ -2925,3 +2925,18 @@ html.lite .g-title,html.lite .enc-head>span:first-child,html.lite .confirm-title
 .confirm-title{font-size:19px}
 @media(max-width:650px){.order-title,.enc-head{font-size:16px}.confirm-title{font-size:17px}}
 
+/* ===================== 15) Botón CLIENTES de la entrada con la escena del mostrador ===================== */
+.g-cli{position:relative;width:min(560px,100%);padding:0 0 14px;overflow:hidden;gap:2px;border:3px double #b88931;background:linear-gradient(#1a120a,#0b0805)}
+.g-cli .g-cli-esc{position:relative;display:block;width:100%;aspect-ratio:2/1;overflow:hidden;margin-bottom:8px;border-bottom:2px solid #8b6a2e}
+.g-cli .g-cli-esc img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .6s ease,filter .6s ease;filter:brightness(.92) saturate(1.02)}
+.g-cli .g-cli-esc:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 35%,transparent 55%,#0008),linear-gradient(transparent 70%,#0b0805);pointer-events:none}
+.g-cli .g-cli-esc:not(.sin) svg{display:none}
+.g-cli .g-cli-esc.sin{aspect-ratio:auto;border:0;display:grid;place-items:center;padding-top:14px}
+.g-cli .g-cli-esc.sin:after{display:none}
+.g-cli:hover .g-cli-esc img,.g-cli:focus-visible .g-cli-esc img{transform:scale(1.05);filter:brightness(1.06) saturate(1.1)}
+.g-cli b{font-family:var(--f-cartel);font-weight:400;font-size:28px;margin-top:-34px;position:relative;z-index:1;
+ background:linear-gradient(100deg,var(--hg-oro4) 0,var(--hg-oro2) 22%,var(--hg-oro1) 30%,var(--hg-oro2) 38%,var(--hg-oro3) 70%,var(--hg-oro4) 100%) 0 0/250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 #000) drop-shadow(0 0 8px #000);animation:hgPanOro 8s ease-in-out infinite}
+.g-cli .g-cli-esc.sin~b{margin-top:0}
+.g-cli span:not(.g-cli-esc){padding:0 14px}
+html.lite .g-cli b,html.lite .g-cli .g-cli-esc img{animation:none;transition:none}
+
