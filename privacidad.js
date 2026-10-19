@@ -12,5 +12,5 @@ cloudPullRecords=function(){
  };
  const p=run();flight=p;const clear=()=>{if(flight===p)flight=null};p.then(clear,clear);return p;
 };
-const aplicar=applyMe;applyMe=function(){const r=aplicar.apply(this,arguments);if(ME&&ME.id!=='emuzvkc99z8q'){gastos=[];try{localStorage.removeItem(KEY_GASTOS);localStorage.removeItem(KEY_CIERRES);const a=JSON.parse(localStorage.getItem(KEY_AUS)||'[]').map(x=>{if(x.empId!==ME.id){delete x.motivo;delete x.cat;delete x.nota;}return x});ausencias=a;localStorage.setItem(KEY_AUS,JSON.stringify(a));}catch{}}return r};
+const aplicar=applyMe;applyMe=function(){const r=aplicar.apply(this,arguments);if(ME&&!(typeof soyJefe==='function'&&soyJefe())){gastos=[];try{localStorage.removeItem(KEY_GASTOS);localStorage.removeItem(KEY_CIERRES);const a=JSON.parse(localStorage.getItem(KEY_AUS)||'[]').map(x=>{if(x.empId!==ME.id){delete x.motivo;delete x.cat;delete x.nota;}return x});ausencias=a;localStorage.setItem(KEY_AUS,JSON.stringify(a));}catch{}}return r};
 })();

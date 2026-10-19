@@ -3,7 +3,7 @@
  'use strict';
  const button=document.getElementById('hacerInventarioBtn');
  let draft=null,base={},rows=[],review=false,busy=false,conflicts=[],saved=null,query='';
- const allowed=()=>!!bossActive&&meEmp()?.id==='emuzvkc99z8q';
+ const allowed=()=>!!bossActive&&typeof soyJefe==='function'&&soyJefe();
  const draftKey=()=> 'harrington_inventario_jefe_'+meEmp().id;
  const persist=()=>localStorage.setItem(draftKey(),JSON.stringify(draft));
  function paintButton(){button.hidden=!allowed();if(!allowed()&&invView==='jefe'){closeModal(invModal);draft=null}}

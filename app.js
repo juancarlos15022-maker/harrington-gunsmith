@@ -1641,7 +1641,14 @@ function sendWeekSales(){
 const AUTO_FIRST_WEEK=dayNum(2026,10,9), AUTO_HOUR=22;
 let autoBusy=false;
 /* El propietario (Vincent) es la única cuenta que la base de datos deja administrar. */
-function soyPropietario(){return !!(typeof ME!=='undefined'&&ME&&ME.id==='emuzvkc99z8q')}
+/* 19/10/2026 · Director de la web y jefes: el director (Vincent) ve lo técnico (contraseñas, Discord, parches, nube,
+   copias, reseteo); cualquier empleado con puesto Jefe hace las funciones de jefe. La base de datos lo vuelve a comprobar. */
+var DIRECTOR_ID='emuzvkc99z8q';
+function soyPropietario(){return !!(typeof ME!=='undefined'&&ME&&ME.id===DIRECTOR_ID)}
+function soyDirector(){return soyPropietario()}
+function soyJefe(){if(typeof ME==='undefined'||!ME)return false;if(soyPropietario())return true;try{return isJefe(meEmp())}catch(e){return false}}
+const DIR_TECNICOS=new Set(['parches','discord','nube','reset','copia']);
+function dirModVisible(m){return !!m&&!m.hidden&&(!DIR_TECNICOS.has(m.id)||soyDirector())}
 function autoTargetWeek(){
  const m=madridParts(Date.now()), t=dayNum(+m.year,+m.month,+m.day), ws=weekStart(0);
  const w=(t===ws+6&&(+m.hour%24)>=AUTO_HOUR)?ws:ws-7;
@@ -2636,11 +2643,11 @@ async function savePedido(){
  if(base.completedAt||base.cancelled){savePed(base);pedView=null;renderPed();return say('Este pedido ya estaba cerrado')}
  if(!SANDBOX){
   const quiereRec=!base.received&&!!pedDraft.received&&pedDraft.received!==pedDraft.oRec, quierePago=!base.paidInitial&&pedDraft.paid!==pedDraft.oPaid&&pedDraft.paid!==!!base.paid;
-  if(quierePago&&!soyPropietario()&&!quiereRec)return say('El pago del pedido lo marca la dirección','err');
+  if(quierePago&&!soyJefe()&&!quiereRec)return say('El pago del pedido lo marca la dirección','err');
   if(quiereRec){let r;try{r=await recibirPedidoServidor(base.id,null,pedDraft.emp)}catch(e){return say(pedidoErrTxt(e),'err')}
    pedidoRecibidoUI(r);base=r.pedido||base;
    if(!quierePago)return;
-   if(!soyPropietario())return say('Recibido. El pago del pedido lo marca la dirección','err');
+   if(!soyJefe())return say('Recibido. El pago del pedido lo marca la dirección','err');
    if(base.completedAt)return;
   }
  }
@@ -2707,7 +2714,7 @@ function pedidoRecibidoUI(r){
  const rec=r.pedido||{}, got=r.got||[], all=!!r.all, items=rec.items||[], last=(rec.recs||[])[ (rec.recs||[]).length-1]||{}, por=last.by||'', completed=!!(r.completed||(r.replayed&&rec.completedAt>0));
  try{HG_REF_PEDIDO='recibido-'+rec.id+'-'+(rec.recs||[]).length}catch(e){}
  discordSend('pedidos',['ENTREGA '+(all?'FINAL':'PARCIAL')+' · '+rec.code,'Proveedor: '+rec.proveedor,'Recibido ahora: '+got.map(g=>g.qty+' × '+g.material).join(', '),'Registrado por: '+(por||'—')].concat(all?[]:['Pendiente: '+items.filter(i=>(i.rq||0)<i.qty).map(i=>(i.qty-(i.rq||0))+' × '+i.material).join(', ')]).concat(completed?['Pedido completado: pasa a la contabilidad.']:[]).join('\n'));
- if(completed&&soyPropietario())discordSend('pedidos',pedidoText(rec,'PEDIDO COMPLETADO'));
+ if(completed&&soyJefe())discordSend('pedidos',pedidoText(rec,'PEDIDO COMPLETADO'));
  if(completed)pedView=null;
  try{if(all){if(!stampImgFx('recibido',2.43))stampFx('RECIBIDO')}else stampFx('PARCIAL');playChest()}catch(e){}
  renderPed();
@@ -3921,7 +3928,7 @@ async function autoFijos(){
 setInterval(()=>{if(!document.hidden)autoFijos()},3600000);
 function empFields(d,p){
  return `<label>NOMBRE DEL EMPLEADO<input id="${p}Name" type="text" maxlength="40" autocomplete="off" placeholder="Nombre y apellido" value="${esc(d.name)}"></label>
-  <label>PUESTO<select id="${p}Puesto"><option value="">Seleccionar puesto…</option>${PUESTOS.map(x=>`<option value="${x}"${d.puesto===x?' selected':''}>${x.toUpperCase()}</option>`).join('')}</select></label>
+  <label>PUESTO<select id="${p}Puesto"${!soyDirector()&&d.puesto==='Jefe'?' disabled':''}><option value="">Seleccionar puesto…</option>${PUESTOS.filter(x=>x!=='Jefe'||soyDirector()||d.puesto==='Jefe').map(x=>`<option value="${x}"${d.puesto===x?' selected':''}>${x.toUpperCase()}</option>`).join('')}</select></label>${!soyDirector()?'<div class="enc-note">Nombrar o quitar un jefe lo hace el director de la web.</div>':''}
   <label>SUELDO SEMANAL ($)<div class="money"><i>$</i><input id="${p}Sueldo" inputmode="decimal" placeholder="Ej.: 20" autocomplete="off" value="${esc(d.sueldo)}"></div></label>
   <label>HORAS SEMANALES<input id="${p}Horas" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="10" value="${esc(d.horas)}"></label>
   <label>FECHA DE INICIO DEL CONTRATO<input id="${p}Inicio" type="date" value="${esc(d.inicio)}"></label>
@@ -3960,6 +3967,7 @@ function empCheck(d,exceptId){
 }
 function empAdd(){
  const c=empCheck(empDraft,null);
+ if(!c.err&&c.puesto==='Jefe'&&!soyDirector())c.err='Solo el director de la web puede nombrar jefes';
  if(c.err){empErr=c.err;return renderDir()}
  const e=Object.assign({id:'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),alta:Date.now()},c);
  empleados.push(e);saveEmp();empErr='';empDraft={name:'',puesto:'',sueldo:'',inicio:isoToday(),horas:'10'};renderDir();renderCustomer();
@@ -3968,6 +3976,7 @@ function empAdd(){
 function empSave(id){
  const e=empleados.find(x=>x.id===id); if(!e||!eeDraft)return;
  const c=empCheck(eeDraft,id), errEl=document.getElementById('eeErr');
+ if(!c.err&&!soyDirector()){if(id===DIRECTOR_ID)c.err='La ficha del director solo la cambia el director';else if((e.puesto==='Jefe')!==(c.puesto==='Jefe'))c.err='Solo el director de la web puede nombrar o quitar jefes';}
  if(c.err){errEl.textContent=c.err;errEl.hidden=false;return}
  const send=eeDraft.send;
  const antes=e.puesto;
@@ -3978,6 +3987,7 @@ function empSave(id){
 }
 async function empDelete(id){
  const e=empleados.find(x=>x.id===id); if(!e)return;
+ if(!soyDirector()&&(id===DIRECTOR_ID||isJefe(e)))return say('Solo el director de la web puede dar de baja a un jefe','err');
  if(!await askConfirm('Eliminar empleado',`«${e.name}» dejará de aparecer para nuevas ventas.`,'Eliminar'))return;
  empleados=empleados.filter(x=>x.id!==id);saveEmp();renderDir();renderCustomer();say('Empleado eliminado');
  if(e.discord)discordSync([e.discord]);
@@ -4361,7 +4371,7 @@ function modBadgeValue(id){
  }catch(e){}
  return null;
 }
-function dirRecent(){let L=[];try{L=JSON.parse(localStorage.getItem('harrington_dirrecent')||'[]')}catch(e){}return Array.isArray(L)?L.filter(id=>DIRECCION_MODULOS.some(m=>m.id===id&&!m.hidden)).slice(0,4):[]}
+function dirRecent(){let L=[];try{L=JSON.parse(localStorage.getItem('harrington_dirrecent')||'[]')}catch(e){}return Array.isArray(L)?L.filter(id=>DIRECCION_MODULOS.some(m=>m.id===id&&dirModVisible(m))).slice(0,4):[]}
 function dirRemember(id){try{const L=dirRecent().filter(x=>x!==id);L.unshift(id);localStorage.setItem('harrington_dirrecent',JSON.stringify(L.slice(0,4)))}catch(e){}}
 let dirLast=null;
 document.getElementById('dirModal').addEventListener('toggle',e=>{const d=e.target;if(!d.matches||!d.matches('details.mod-sec'))return;let st={};try{st=JSON.parse(localStorage.getItem('harrington_dirsec')||'{}')}catch(x){}if(d.open)st[d.dataset.sec]=1;else delete st[d.dataset.sec];try{localStorage.setItem('harrington_dirsec',JSON.stringify(st))}catch(x){}},true);
@@ -4386,8 +4396,8 @@ function renderDir0(){
   title.textContent='CONSOLA DE DIRECCIÓN';
   const card=m=>{const b=modBadge(m.id);return `<button type="button" class="enc-card mod-card${b?' has-b '+b[2]:''}" data-dir="open:${m.id}"><svg class="mod-ico" viewBox="0 0 24 24" aria-hidden="true">${MOD_ICONS[m.id]||''}</svg><div><div class="t">${m.titulo}</div><div class="it">${m.desc}</div>${b?`<span class="mod-b ${b[2]}">${b[0]} ${esc(b[1])}</span>`:''}</div></button>`};
   let st={};try{st=JSON.parse(localStorage.getItem('harrington_dirsec')||'{}')}catch(e){}
-  const used={}, secs=DIR_SECCIONES.map(([t,ids])=>{const L=ids.map(id=>DIRECCION_MODULOS.find(m=>m.id===id)).filter(Boolean);L.forEach(m=>used[m.id]=1);return [t,L]});
-  const rest=DIRECCION_MODULOS.filter(m=>!used[m.id]&&!m.hidden);if(rest.length)secs.push(['OTROS',rest]);
+  const used={}, secs=DIR_SECCIONES.map(([t,ids])=>{const L=ids.map(id=>DIRECCION_MODULOS.find(m=>m.id===id)).filter(Boolean);L.forEach(m=>used[m.id]=1);return [t,L.filter(dirModVisible)]}).filter(x=>x[1].length);
+  const rest=DIRECCION_MODULOS.filter(m=>!used[m.id]&&dirModVisible(m));if(rest.length)secs.push(['OTROS',rest]);
   const rec=dirRecent().map(id=>DIRECCION_MODULOS.find(m=>m.id===id)).filter(Boolean);
   const recHTML=rec.length?`<div class="dir-rec"><div class="dir-sec-title" style="margin-top:0">ÚLTIMOS USADOS</div><div class="dir-rec-row">${rec.map(m=>{const b=modBadge(m.id);return `<button type="button" class="rec-btn${b?' '+b[2]:''}" data-dir="open:${m.id}"><svg class="mod-ico" viewBox="0 0 24 24" aria-hidden="true">${MOD_ICONS[m.id]||''}</svg><span>${esc(m.titulo)}</span>${b?`<i>${b[0]}</i>`:''}</button>`}).join('')}</div></div>`:'';
   body.innerHTML=dirSearchHTML()+recHTML+renderDashboard()+secs.filter(s=>s[1].length).map(([t,L])=>{const B=L.map(m=>modBadge(m.id)).filter(Boolean), nb=B.reduce((a,b)=>a+b[0],0), lv=B.some(b=>b[2]==='bad')?'bad':B.some(b=>b[2]==='pend')?'pend':'info', op=st[t]!==undefined?st[t]:(t==='HOY');
@@ -4447,6 +4457,7 @@ dirModal.addEventListener('click',e=>{
  if(e.target===dirModal)return closeModal(dirModal);
  const b=e.target.closest('[data-dir]'); if(!b)return;
  const [act,arg]=b.dataset.dir.split(':');
+ if(act==='open'&&DIR_TECNICOS.has(arg)&&!soyDirector())return say('Ese apartado es del director de la web','err');
  if(act==='open'){dirRemember(arg);dirMod=arg;dirForm=null;trWork=null;agEdit=null;sueOff=0;wkType=null;wkEmp=null;wkOffset=0;clView=null;clEdit=null;fabEdit=null;renderDir();dirModal.scrollTop=0}
  else if(act==='back'){
   if(dirMod==='fabricacion'&&fabEdit){fabEdit=null;fabDraft=[]}
@@ -4903,15 +4914,21 @@ const TUTORIAL=[
 <li><b>Pedidos.</b> Los pedidos y su pago los hace la dirección. Cuando llega la mercancía, márcala tú: en <b>PEDIDOS</b>, abre el pedido y marca <b>¿Recibido? SÍ</b> (o escribe lo que ha llegado y pulsa <b>REGISTRAR ENTREGA PARCIAL</b>), o pulsa <b>Recibido entero</b> en Discord. Los materiales entran solos en el almacén y se avisa en el canal de pedidos.</li>
 <li><b>VER OPERACIONES PENDIENTES</b>: si aparece este botón, tu dispositivo guarda operaciones de una versión anterior. No se repiten solas: revísalas con la dirección.</li>
 <li><b>Discord</b>: <b>/saloon</b> (dados y dominó entre dos compañeros), <b>/idea</b> (propuestas con voto), <b>/manual</b> (instrucciones de la casa), <b>/avisame</b> (te avisa por privado cuando un compañero entra en un canal de voz), <b>/acuerdos</b> y, en el menú de un mensaje, <b>Guardar como acuerdo</b>. Con <b>/rumor</b> escribes un rumor IC de hasta 160 caracteres: se publica limpio y el mensaje original se retira.</li></ul>`],
-['Novedades para la Dirección (14 al 19 de octubre)',`<ul><li><b>Solo Vincent administra.</b> La base de datos solo deja al propietario cambiar personal, recetas, proveedores, precios, descuentos, configuración, inventarios y copias. Otro jefe ve Dirección, pero lo que guarde ahí se rechaza.</li>
+['Novedades para la Dirección (14 al 19 de octubre)',`<ul><li><b>Todos los jefes administran.</b> Desde el 19 de octubre cualquier jefe hace las funciones de jefe (mira el capítulo «Director de la web y jefes»); lo técnico queda para Vincent, el director de la web.</li>
 <li><b>HACER INVENTARIO.</b> Cuenta lo que hay en tu almacén: una casilla vacía no se toca y un <b>0</b> confirma que no queda nada. <b>GUARDAR CAMBIOS</b> te enseña las diferencias y <b>CONFIRMAR Y GUARDAR</b> las aplica. Si algo cambió mientras contabas, no guarda nada y te pide <b>ACTUALIZAR STOCK Y REVISAR</b>.</li>
 <li><b>NPC</b> (Dirección → Tienda → NPC): <b>Entregar al NPC</b> y <b>Recuperar al almacén</b> mueven unidades sin cobrar nada; <b>Revisar ventas del NPC</b> apunta como venta solo lo que falta; además, inventario del NPC, <b>Retirar para consumo</b> y precios propios del NPC.</li>
 <li><b>Entregas al personal y regalos</b>: salen del stock con su gasto de fabricación, sin ingresos.</li>
 <li><b>Sueldos</b>: se pagan como máximo <b>5 horas extra</b> por empleado y semana; el exceso queda apuntado.</li>
 <li><b>Informes semanales</b> de ventas y de gastos: cada uno va a su propio canal; configura su webhook en Discord.</li>
-<li><b>Contraseñas</b>: puedes resetear la de cualquier empleado o jefe desde su ficha; se le manda un enlace nuevo.</li>
+<li><b>Contraseñas</b>: el director de la web puede resetear la de cualquier empleado o jefe desde su ficha; se le manda un enlace nuevo.</li>
 <li><b>Fichas de contactos</b>: los telegramas del canal de telegramas se convierten solos en fichas de la agenda.</li>
-<li>En Discord, <b>/libreta</b> guarda tus notas y recordatorios, y las <b>ideas</b> las aceptas o descartas tú, explicando por qué.</li></ul>`],
+<li>En Discord, las <b>ideas</b> las acepta o descarta cualquier jefe, explicando por qué; <b>/libreta</b> es la libreta privada del director.</li></ul>`],
+['Director de la web y jefes',`<p>Desde el 19 de octubre hay dos niveles en la dirección: <b>los jefes</b> (cualquier empleado con puesto Jefe) y <b>el director de la web</b> (Vincent). La base de datos y el Señor Harrington lo comprueban siempre, aunque alguien intente saltárselo.</p>
+<ul><li><b>Cualquier jefe</b> pulsa <b>ACTIVAR DIRECCIÓN</b> y puede: contratar, editar fichas, ascender y pagar sueldos; recetas, proveedores, pedidos (y marcarlos pagados); precios, productos, convenios y ofertas; stock, inventario y NPC; gastos, cierre de caja y cuentas; entregas al personal y regalos; encargos, clientes, agenda y sorteos; informes, estadísticas, auditoría e historial; y hacer y listar copias.</li>
+<li><b>En Discord</b>, todo lo de la Dirección vale para cualquier jefe con su Discord enlazado: admitir o rechazar solicitudes, ascender y despedir desde la plantilla, sanciones, eventos, reuniones, votaciones, /caja, /compra, /agenda, /se-busca, aprobar propuestas, publicar en /manual, decidir las /idea y guardar acuerdos.</li>
+<li><b>Solo el director</b>: resetear contraseñas y la seguridad de las cuentas; la configuración de Discord (webhooks y canales); el historial de parches; la nube; resetear datos; ver y restaurar copias; el diagnóstico técnico de la IA; nombrar o quitar jefes; cambiar el Discord enlazado de alguien; y su propia ficha. Esos apartados no le salen a un jefe en la consola.</li>
+<li><b>Lo que ya pasó no se borra.</b> Un jefe no puede borrar ventas, movimientos, turnos, gastos, pedidos ni el registro de cambios; para corregir algo se anula o se apunta otro movimiento, como siempre.</li>
+<li>A un jefe no se le despide ni se le sanciona desde Discord: lo decide el director en la web.</li></ul>`],
 ['Si algo no funciona',`<ul><li><b>No deja finalizar</b>: lee el aviso; suele faltar cliente, empleado, telegrama, pago adelantado o stock.</li><li><b>Producto SIN STOCK</b>: el jefe debe sumar existencias.</li><li><b>No suena</b>: en ⚙ comprueba que el sonido diga «♪ SÍ» y el volumen del móvil.</li><li><b>Un botón no responde</b>: si muestra ⏳, está guardando; espera a que termine.</li><li><b>No suena la música</b>: los navegadores no dejan sonar nada hasta que tocas la pantalla; toca cualquier sitio. Si sigue sin sonar, en ⚙ comprueba que «Música de fondo» diga «♫ SÍ».</li><li><b>Se lee poco</b>: usa A+ o el alto contraste ◐.</li><li><b>No ves un cambio reciente</b>: abre la web en una pestaña privada.</li></ul>`]];
 const tutModal=document.getElementById('tutModal');
 /* Buscador: muestra solo los apartados que hablan de lo que escribes, abiertos y con la palabra resaltada */
@@ -4934,7 +4951,7 @@ function tutFilter(q){
 document.getElementById('tutModal').addEventListener('input',e=>{if(e.target.id==='tutQ'){clearTimeout(tutFilter.t);const v=e.target.value;tutFilter.t=setTimeout(()=>tutFilter(v),120)}});
 const HELP_MAP={npc:'NPC: asignar y precios',publico:'Página para clientes',auditoria:'Auditoría e incidencias',historial:'Historial de cambios',estadisticas:'Estadísticas',objetivo:'Objetivo, buscador y revisión',revision:'Objetivo, buscador y revisión',empficha:'Empleados y contratos',sueldos:'Sueldos',ausencias:'Ausencias',convenios:'Convenios',empleados:'Empleados y contratos',clientes:'Clientes',productos:'Modo Jefe',stock:'Fabricación y recetas',fabricar:'Fabricación y recetas',fabricacion:'Fabricación y recetas',regstock:'Modo Jefe',horarios:'Fichaje',ventas:'Modo Jefe',semanales:'Ticket, copias y Discord',gastos:'Empleados y contratos',balance:'Ticket, copias y Discord',cierre:'Modo Jefe',proveedores:'Proveedores y pedidos',particular:'Proveedores y pedidos',agenda:'Clientes',nuevopedido:'Proveedores y pedidos',regpedidos:'Proveedores y pedidos',discord:'Ticket, copias y Discord',nube:'Datos y dispositivos',reset:'Datos y dispositivos',copia:'Datos y dispositivos'};
 /* El tutorial muestra a cada uno lo suyo: los empleados no ven nada de Dirección ni de jefes */
-const TUT_BOSS=['Novedades para la Dirección (14 al 19 de octubre)','Admisiones y despidos en Discord','Fabricación y recetas','Proveedores y pedidos','Empleados y contratos','Clientes','Sueldos','Modo Jefe y Dirección','Datos y dispositivos','Modo prueba','Objetivo, buscador y revisión','Convenios, ofertas y precios especiales'];
+const TUT_BOSS=['Novedades para la Dirección (14 al 19 de octubre)','Director de la web y jefes','Admisiones y despidos en Discord','Fabricación y recetas','Proveedores y pedidos','Empleados y contratos','Clientes','Sueldos','Modo Jefe y Dirección','Datos y dispositivos','Modo prueba','Objetivo, buscador y revisión','Convenios, ofertas y precios especiales'];
 const TUT_BOSS_RE=/Dirección|DIRECCIÓN|Modo Jefe|MODO JEFE|modo jefe|contraseña de jefe|SOLO JEFE|data-dir=/;
 function tutIsBoss(t){return /tag boss/.test(t[0])||TUT_BOSS.some(n=>t[0].indexOf(n)===0)}
 function tutClean(html){const d=document.createElement('div');d.innerHTML=html;d.querySelectorAll('li,p').forEach(el=>{if(TUT_BOSS_RE.test(el.innerHTML))el.remove()});d.querySelectorAll('ul,ol').forEach(l=>{if(!l.children.length)l.remove()});return d.innerHTML}
@@ -7151,7 +7168,8 @@ const PARCHES=[
  {f:'16/10/2026',t:'Herramientas del equipo en Discord',v:'3.0',i:['/saloon: dados y dominó entre dos empleados, con ranking de 30 días','/idea: propuestas con voto, que decide el dueño explicando por qué','/manual: instrucciones del dueño, con búsqueda','/libreta: notas y recordatorios privados del dueño','/avisame: aviso privado cuando un compañero entra en un canal de voz','/acuerdos y «Guardar como acuerdo» en el menú de un mensaje','/rumor: rumores IC de hasta 160 caracteres; el mensaje original se retira y se publica limpio','Al fabricar munición, si falta pólvora y hay materiales, se fabrica la necesaria','Operaciones protegidas por el servidor y recuperación de las que quedaron pendientes','Catálogo y precios actualizados']},
  {f:'17/10/2026',t:'Aceite, accesos rápidos y acabado',v:'3.0',i:['Cada receta de aceite produce 10 unidades, con su consumo y coste por lote','Botones +5, +10 y +20 en trapos, aceite y pólvora','Fichas de producto más completas y barra de progreso en los pedidos','La dirección puede publicar en Discord el cierre de turno de otro empleado','Acabado de cuero, madera y latón más visible']},
  {f:'18/10/2026',t:'Nóminas, informes y historial',v:'3.0',i:['Se pagan como máximo 5 horas extra por empleado y semana; el exceso queda registrado','Los informes semanales de ventas y de gastos van a su propio canal de Discord','El historial de ventas se carga por partes, conservando el buscador','El propietario puede resetear la contraseña de otros jefes desde su ficha','Texturas de pavonado, latón, cuero, papel y terciopelo']},
- {f:'19/10/2026',t:'Revisión y sesiones sin cierre por inactividad',v:'3.0',i:['La sesión ya no se cierra sola tras 3 horas: solo la cierra el empleado (⏻ CERRAR SESIÓN) o la dirección (⏏ EXPULSAR en Empleados)','DIRECCIÓN abre y se desplaza más fluida: su fondo ya no es fijo y se prepara al activar el Modo Jefe','Las tareas automáticas de administración solo las hace el dispositivo del propietario; antes, desde otra cuenta, se reintentaban sin parar','Los empleados vuelven a marcar en la web la llegada de los pedidos (entera o parcial); lo registra el servidor y no se suma dos veces aunque se repita','Los pedidos y su pago siguen siendo cosa de la dirección','Corrección de «Quién es» en telegramas, contactos y materiales con pedidos pendientes']}
+ {f:'19/10/2026',t:'Revisión y sesiones sin cierre por inactividad',v:'3.0',i:['La sesión ya no se cierra sola tras 3 horas: solo la cierra el empleado (⏻ CERRAR SESIÓN) o la dirección (⏏ EXPULSAR en Empleados)','DIRECCIÓN abre y se desplaza más fluida: su fondo ya no es fijo y se prepara al activar el Modo Jefe','Las tareas automáticas de administración solo las hace el dispositivo del propietario; antes, desde otra cuenta, se reintentaban sin parar','Los empleados vuelven a marcar en la web la llegada de los pedidos (entera o parcial); lo registra el servidor y no se suma dos veces aunque se repita','Los pedidos y su pago siguen siendo cosa de la dirección','Corrección de «Quién es» en telegramas, contactos y materiales con pedidos pendientes']},
+ {f:'19/10/2026',t:'Director de la web y jefes',v:'3.0',i:['Cualquier jefe puede activar Dirección y hacer las funciones de jefe: personal, sueldos, recetas, proveedores, pedidos y su pago, precios, convenios, stock, inventario, NPC, gastos, cuentas, entregas, encargos, clientes, sorteos e informes','Vincent queda como director de la web: contraseñas, configuración de Discord, historial de parches, nube, resetear datos, ver y restaurar copias y el diagnóstico de la IA','Solo el director nombra o quita jefes, cambia el Discord enlazado de alguien y edita su propia ficha; un jefe no puede borrar el historial','En Discord, la Dirección es cualquier jefe con su Discord enlazado: solicitudes, plantilla, sanciones, eventos, reuniones, votaciones, caja, compras, agenda, Se busca, aprobaciones, manual, ideas y acuerdos','La base de datos y el Señor Harrington comprueban cada permiso en el servidor']}
 ];
 let phQ='';
 /* Versiones: cada parche lleva su versión (v); los que no la llevan son de la 1.0 */

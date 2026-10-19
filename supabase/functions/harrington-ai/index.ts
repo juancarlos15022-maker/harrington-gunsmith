@@ -140,7 +140,9 @@ async function quien(req: Request) {
   const { data } = await sb.from("datos").select("valor").eq("clave", "empleados").maybeSingle();
   const emp = Array.isArray(data?.valor) ? (data!.valor as Array<{ id?: string; name?: string; puesto?: string }>).find((e) => e && e.id === id) : null;
   if (!emp) return null;
-  return { id, nombre: emp.name || "", jefe: u?.user?.id === "98922f71-13a4-4623-bba1-33288ccdefa3" };
+  // 19/10/2026: «jefe» es cualquier empleado con puesto Jefe (lo decide la base de datos); «director», solo el director de la web.
+  const [{ data: esJefe }, { data: esDirector }] = await Promise.all([caller.rpc("hg_es_jefe"), caller.rpc("hg_es_director")]);
+  return { id, nombre: emp.name || "", jefe: !!esJefe, director: !!esDirector };
 }
 const ritmo = new Map<string, number[]>();
 function demasiadas(id: string) {
@@ -291,7 +293,7 @@ async function redactar(tarea: string, datos: unknown, extra: string, jefe: bool
       if (!r.ok) { ultimo = "IA:" + String((Array.isArray(j) ? j[0] : j)?.error?.message || r.status).slice(0, 160); continue; }
       let t = String(j?.choices?.[0]?.message?.content || "").replace(/\r/g, "").replace(/^#+\s*/gm, "");
       if (!discord && !json_) t = t.replace(/\*\*/g, "");
-      if (discord) t = t.replace(/@(everyone|here)/gi, "@​$1").replace(/<@[!&]?\d+>/g, "");
+      if (discord) t = t.replace(/@(everyone|here)/gi, "@\u200b$1").replace(/<@[!&]?\d+>/g, "");
       t = t.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim().slice(0, json_ ? 6000 : 2400);
       if (!t) { ultimo = "VACIO"; continue; }
       return { texto: t, modelo: model };
@@ -349,7 +351,7 @@ Deno.serve(async (req: Request) => {
     await cfg();
     if (b.accion === "diagnostico") {
       const autorizado = await quien(req);
-      if (!autorizado?.jefe) return json({error:"SOLO_PROPIETARIO"},403);
+      if (!autorizado?.director) return json({error:"SOLO_DIRECTOR"},403);
       // comprobación de la clave (no devuelve ningún dato privado)
       if (!CLAVE()) return json({ prov: CFG!.prov, clave: false });
       const r = await fetch(API() + "/models", { headers: { Authorization: "Bearer " + CLAVE() } });

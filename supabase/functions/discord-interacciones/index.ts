@@ -20,7 +20,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { handleMejoras } from "./mejoras.ts";
 import { handleEquipo } from "./equipo.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
-import { catalogo, diaNum, duracion, fecha, hora, hoyNum, madrid, medianoche, ORO } from "./comun.ts";
+import { catalogo, esJefeDiscord, diaNum, duracion, fecha, hora, hoyNum, madrid, medianoche, ORO } from "./comun.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 const json = (o: unknown, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { "Content-Type": "application/json" } });
@@ -135,7 +135,7 @@ function anuncio(ev: { id: string; titulo: string; cuando: string; lugar?: strin
     components: [{ type: 1, components: [{ type: 2, style: 3, label: "Me apunto", emoji: { name: "✋" }, custom_id: "ev:si:" + ev.id }, { type: 2, style: 2, label: "Me borro", custom_id: "ev:no:" + ev.id }] }],
   };
 }
-const limpio = (s: unknown, n: number) => String(s ?? "").replace(/@(everyone|here)/gi, "@​$1").replace(/<@[!&]?\d+>/g, "").trim().slice(0, n);
+const limpio = (s: unknown, n: number) => String(s ?? "").replace(/@(everyone|here)/gi, "@\u200b$1").replace(/<@[!&]?\d+>/g, "").trim().slice(0, n);
 
 // La web avisa de un cambio de plantilla (alta, ascenso, despido): se ajustan los roles según lo que diga la base de datos
 async function desdeLaWeb(req: Request, cuerpo: string, c: Record<string, string>) {
@@ -149,7 +149,7 @@ async function desdeLaWeb(req: Request, cuerpo: string, c: Record<string, string
   const { data } = await sb.from("datos").select("valor").eq("clave", "empleados").maybeSingle();
   const lista = Array.isArray(data?.valor) ? data!.valor as Array<Record<string, string>> : [];
   const quien = lista.find((e) => e.id === yo);
-  if (!quien || u?.user?.id !== "98922f71-13a4-4623-bba1-33288ccdefa3") return new Response(JSON.stringify({ error: "SOLO_DIRECCION" }), { status: 403, headers: cors });
+  if (!quien) return new Response(JSON.stringify({ error: "SOLO_DIRECCION" }), { status: 403, headers: cors });
   let b: Record<string, unknown> = {};
   try { b = JSON.parse(cuerpo); } catch { /* */ }
   const ids = (Array.isArray(b.discord) ? b.discord : [b.discord]).map((x) => String(x || "")).filter((x) => /^\d{15,22}$/.test(x)).slice(0, 10);
@@ -187,7 +187,6 @@ Deno.serve(async (req: Request) => {
     return efimero(e?'No se pudo verificar. Vuelve a solicitarlo en la web.':'Identidad confirmada. Vuelve a la web para completar el acceso o la contraseña.');
   }
   const ch = (k: string) => c[k] ? `<#${c[k]}>` : "el canal siguiente";
-  const esDireccion = () => String(user.id) === "1398183011232518164";
   // segunda tanda de órdenes y botones: las atiende discord-bot en modo «extra» (la firma de Discord ya está comprobada aquí)
   if (((i.type === 2 || i.type === 4) && EXTRA_ORDENES.includes(String(i.data?.name || ""))) || ((i.type === 3 || i.type === 5) && /^(reu|vot|duel|exa|buz|vis|ped|prb|sb|bj|bit):/.test(id))) {
     try {
@@ -196,6 +195,9 @@ Deno.serve(async (req: Request) => {
     } catch { /* */ }
     return efimero("Disculpe usted: no he podido atenderle en este momento. Inténtelo de nuevo dentro de un instante.");
   }
+  // Dirección (19/10/2026): el director o cualquier empleado con puesto «Jefe» enlazado a este Discord
+  const jefeDiscord = await esJefeDiscord(sb, String(user.id));
+  const esDireccion = () => jefeDiscord;
 
   // 0 · recorrido de entrada: aceptar normas y elegir acceso (cada botón exige el paso anterior)
   if (i.type === 3 && id.startsWith("onb:")) {
@@ -548,7 +550,7 @@ Deno.serve(async (req: Request) => {
 
   // 3 · Dirección decide
   if (i.type === 3 && (id.startsWith("sol:ok:") || id.startsWith("sol:no:"))) {
-    if (!esDireccion()) return efimero("Solo la Dirección (Jefe o Gerente) puede resolver solicitudes.");
+    if (!esDireccion()) return efimero("Solo la Dirección (los jefes) puede resolver solicitudes.");
     const [, accion, uid, puesto] = id.split(":");
     const quien = limpio(i.member?.nick || user.global_name || user.username, 60);
     const embed = (i.message?.embeds || [])[0] || { title: "✉️ " + gotica("Solicitud de Empleo") };
