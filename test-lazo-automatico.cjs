@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'), A=require('./auto-fabricacion.js');
+const recipes={Lazo:[{m:'Fibra',q:10}],'Lazo Reforzado':[{m:'Lazo',p:true,q:1},{m:'Hierro',q:1},{m:'Fibra',q:10}]};
+const key=r=>r.p?r.m:'mat:'+r.m,items=[{producto:'Lazo Reforzado',delta:1}];
+let p=A.fabrication(items,{'mat:Fibra':20,'mat:Hierro':1},recipes,key);assert(p.ok);assert.equal(p.autoRope,1);assert.equal(p.used['mat:Fibra'],20);assert.equal(p.made.Lazo-p.used.Lazo,0);
+assert(!A.fabrication(items,{'mat:Fibra':19,'mat:Hierro':1},recipes,key).ok);
+assert(!A.fabrication(items,{'mat:Fibra':20},recipes,key).ok);
+p=A.fabrication(items,{Lazo:1,'mat:Fibra':10,'mat:Hierro':1},recipes,key);assert(p.ok);assert.equal(p.autoRope,0);assert.equal(p.used['mat:Fibra'],10);
+p=A.fabrication(items,{Lazo:1,'mat:Fibra':20,'mat:Hierro':1},recipes,key,{Lazo:1});assert(p.ok);assert.equal(p.autoRope,1);
+p=A.fabrication([{producto:'Lazo Reforzado',delta:3}],{Lazo:1,'mat:Fibra':50,'mat:Hierro':3},recipes,key);assert(p.ok);assert.equal(p.autoRope,2);assert.equal(p.used['mat:Fibra'],50);
+p=A.plan([{name:'Lazo Reforzado',qty:1},{name:'Lazo',qty:1}],{Lazo:1,'mat:Fibra':20,'mat:Hierro':1},recipes,key);assert(p.ok);assert.equal(p.autoRope,1);
+console.log('PASS: fabricación, venta, lazo disponible, reservas, lotes y falta de fibra/hierro');
