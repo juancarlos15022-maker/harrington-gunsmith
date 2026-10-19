@@ -2,13 +2,13 @@
 
 ## Estado de entrega
 
-Los 40 módulos solicitados y los 3 de personalización están incluidos en el motor de capacidades. Ninguno se activa al desplegar. El registro `modules:config:<guild>` de la tabla privada `bot_equipo` guarda sus opciones y `activationLocked: true` bloquea activaciones, incluso por una llamada de configuración. No se alteran las funciones históricas.
+Los 40 módulos solicitados y los 3 de personalización están incluidos en el motor de capacidades. Ninguno se activa al desplegar. El registro `modules:config:<guild>` de la tabla privada `bot_equipo` guarda sus opciones y la activación inicial sigue apagada por módulo. La adopción del canal habilita los controles de administración (`activationLocked: false`), sin activar las funciones.
 
-El canal `1561742079477026946` contiene el panel privado para JEFE. Permite catálogo y simulaciones en memoria. Las simulaciones no escriben registros, no consultan servicios de pago y no envían operaciones a Discord. Los datos de ejemplo son ficticios, no archivos de audio o imágenes que deban subirse.
+El canal `1561742079477026946` contiene el panel privado para JEFE. Permite catálogo, activación/desactivación por módulo, opciones y permisos mediante formularios, simulaciones, configuración de canales y cargos, nombre/avatar/banner/bio del bot por servidor y estilos de roles con reintento de pendientes. El catálogo de funciones actuales permite detener comandos y grupos de tareas programadas; no invalida botones históricos ya publicados. Las claves internas de autenticación no se muestran ni se editan. Las simulaciones no escriben registros, no consultan servicios de pago y no envían operaciones a Discord. Los datos de ejemplo son ficticios, no archivos de audio o imágenes que deban subirse.
 
 ## Alcance y requisitos
 
-Cada capacidad tiene un motor de operaciones y un adaptador con bloqueo de ejecución. La API interna del bot admite `modulos` con acciones `catalogue`, `preview`, `configure`, `execute` y `event`; conserva la autenticación interna que ya usaba el bot. `execute` resuelve la identidad del miembro contra Discord. Las opciones y permisos por acción deben configurarse antes del uso real. El panel no ofrece un botón de activar.
+Cada capacidad tiene un motor de operaciones y un adaptador con bloqueo de ejecución. La API interna del bot admite `modulos` con acciones `catalogue`, `preview`, `configure`, `execute` y `event`; conserva la autenticación interna que ya usaba el bot. `execute` resuelve la identidad del miembro contra Discord. Las opciones y permisos por acción deben configurarse antes del uso real. El panel ofrece botones de activar y desactivar; comprueba dependencias y evita desactivar un módulo del que dependen otros activos.
 
 No equivale a haber puesto en marcha 40 servicios ni a disponer de todos los límites y acabados de los bots comerciales: son capacidades propias iniciales, desactivadas, con los alcances siguientes.
 
@@ -40,3 +40,11 @@ Servidor `1520875506214371439`: Soundboard disponible, nivel 0, 0 boosts, sin `E
 ## Activación posterior
 
 Requiere una instrucción expresa del propietario: quitar el bloqueo global, configurar los módulos escogidos y sus dependencias, probarlos en un canal reservado y habilitarlos individualmente. No usar una activación masiva. Las funciones no tienen acceso a secretos del bot por las respuestas del panel.
+
+## Detección del panel y apariencia
+
+La crónica busca cada cinco minutos canales de texto cuyo nombre, normalizado sin acentos ni adornos, sea Configuración Bot, en los servidores del bot. Publica o actualiza un único mensaje persistente tras restringirlo a JEFE, bot y administradores. En otros servidores usa registros aislados y no expone datos del negocio de Harrington. El perfil se modifica con PATCH /guilds/{guild}/members/@me, por servidor, sin modificar la identidad global del bot. Las imágenes se aceptan desde adjuntos HTTPS del CDN de Discord, con límite de 8 MB y sin redirecciones.
+
+El perfil visual Harrington conserva los IDs y permisos de los roles. Guarda nombre/color deseados y estado de aplicación, incluidos roles por encima del bot. Los pendientes se reintentan cada cinco minutos. Los colores de nombres de usuario siguen las reglas nativas de prioridad de roles; no se sustituyen los nombres personales. Los degradados se solicitan solo si Discord ofrece ENHANCED_ROLE_COLORS.
+
+Pruebas: node --experimental-strip-types test-modules.mjs y test-control.mjs.

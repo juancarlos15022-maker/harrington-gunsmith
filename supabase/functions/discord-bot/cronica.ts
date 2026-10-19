@@ -1,3 +1,4 @@
+import {maintainControl} from './module-control.ts';
 import {tickModules} from './module-runtime.ts';
 // HARRINGTON GUNSMITH · V3 · Señor Harrington: la crónica de la casa (tarea programada cada minuto, dentro de discord-bot)
 // Cada minuto: campanilla al abrir y cerrar, objetivo de la semana con barra y ranking, escaparate y lista de órdenes al día,
@@ -340,7 +341,8 @@ export async function atender(req: Request): Promise<Response> {
   if (!c.secreto || c.secreto.length < 20 || b.secreto !== c.secreto) return json({ error: "NO" }, 403);
   if(b.solo === "mejoras") {try{return json({ok:true,materiales:await cronMateriales(sb,c)});}catch{return json({error:"MATERIALES_NO_DISPONIBLES"},502);}}
   const hecho: Record<string, string> = {};
-  const paso = async (n: string, f: () => Promise<unknown>) => { try { await f(); hecho[n] = "ok"; } catch (e) { hecho[n] = String((e as Error)?.message || e).slice(0, 120); } };
+  const paso = async (n: string, f: () => Promise<unknown>) => { try { if(c["control_off_cron_"+n]==="true"){hecho[n]="desactivado";return;} await f(); hecho[n] = "ok"; } catch (e) { hecho[n] = String((e as Error)?.message || e).slice(0, 120); } };
+  await paso('configuracion-bot',async()=>{hecho.configuracion_bot_r=JSON.stringify(await maintainControl(sb,c));});
   await paso('modulos',async()=>{hecho.modulos_r=JSON.stringify(await tickModules(sb,c));});
   await paso('entregas_discord', async()=>{hecho.entregas_r=JSON.stringify(await entregarDiscord(sb));});
   // mantener despiertas las funciones de los botones para que Discord no espere
@@ -367,7 +369,7 @@ export async function atender(req: Request): Promise<Response> {
   if (+madrid(Date.now()).minute % 10 === 3 || b.todo) await paso("avisos", async () => { hecho.avisos_r = String(await cronAvisos(c, marcar)); });
   if (+madrid(Date.now()).minute % 30 === 7 || b.todo) await paso("banco_examen", async () => { hecho.banco_r = String(await bancoExamen(c)); });
   let mas: Record<string, string> = {};
-  try { mas = await cronicaMas(c, +madrid(Date.now()).minute % 10 === 0 || !!b.todo); } catch (e) { mas = { error: String((e as Error)?.message || e).slice(0, 120) }; }
+  try { mas = c.control_off_cron_otras==="true"?{estado:"desactivado"}:await cronicaMas(c, +madrid(Date.now()).minute % 10 === 0 || !!b.todo); } catch (e) { mas = { error: String((e as Error)?.message || e).slice(0, 120) }; }
   return json({ ok: true, hecho, mas, menc });
 }
 

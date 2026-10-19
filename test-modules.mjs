@@ -18,7 +18,7 @@ for(const s of allSamples()){
 assert.deepEqual(await tickModules(mock(),c),{disabled:43,active:0});assert.equal((await eventModules(mock(),c,{type:'MESSAGE_CREATE'})).handled,0);assert.equal(writes,0);assert.equal(rpcs,0);assert.equal(network,0);
 const jefe={guild_id:c.guild_id,channel_id:c.canal_configuracion_bot,member:{user:{id:'1520884139438379018'},roles:[c.rol_jefe]},data:{custom_id:'mod:page:0'}};
 assert.ok(isChief(c,jefe));assert.ok(!isChief(c,{...jefe,member:{user:{id:'2'},roles:['1520884932107567394']}}));
-const denied=await handleModulePanel({...jefe,member:{user:{id:'2'},roles:[]}},c,mock()).json();assert.equal(denied.type,4);assert.equal(denied.data.flags,64);
+const denied=await (await handleModulePanel({...jefe,member:{user:{id:'2'},roles:[]}},c,mock())).json();assert.equal(denied.type,4);assert.equal(denied.data.flags,64);
 assert.throws(()=>roleStyle({primary:1,secondary:2,style:'gradient'},{id:c.guild_id,features:[]},{id:'r',position:1},11),/desbloqueados/);
 assert.throws(()=>roleStyle({primary:1},{id:c.guild_id},{id:'r',position:12},11),/protegido/);
 assert.equal(roleStyle({primary:1,style:'holographic'},{id:c.guild_id,features:['ENHANCED_ROLE_COLORS']},{id:'r',position:1},11).colors.tertiary_color,16761760);

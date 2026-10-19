@@ -171,8 +171,10 @@ Deno.serve(async (req: Request) => {
   let i: Record<string, any> = {};
   try { i = JSON.parse(cuerpo); } catch { return json({ error: "JSON" }, 400); }
   if (i.type === 1) return json({ type: 1 }); // PING de Discord
-  const modulos = handleModulePanel(i,c,sb);
+  const modulos = await handleModulePanel(i,c,sb);
   if(modulos)return modulos;
+  if(i.guild_id&&i.guild_id!==c.guild_id)return json({type:4,data:{content:'Las funciones del servidor se administran en Configuración Bot.',flags:64}});
+  if(i.type===2&&c['control_off_cmd_'+String(i.data?.name||'')]==='true')return json({type:4,data:{content:'Este comando está desactivado por Dirección. Puedes cambiarlo en Configuración Bot.',flags:64}});
   const mejoras = handleMejoras(i, c, sb);
   if (mejoras) return mejoras;
   const equipo = handleEquipo(i, c);

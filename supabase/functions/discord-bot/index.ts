@@ -1,3 +1,4 @@
+import {maintainControl,prepareStyles} from './module-control.ts';
 import {installModules,modulePanel,previewModule,executeModule,configureModule,eventModules} from './module-runtime.ts';
 import {reubicarSemanal} from './reubicar-semanal.ts';
 import { contacts, clips, health } from './mejoras.ts';
@@ -41,7 +42,9 @@ Deno.serve(async (req: Request) => {
     if (!c.token) return json({ error: "SIN_TOKEN" }, 503);
     if(b.modulos){
       const m=b.modulos as Record<string,any>;let result:any;
-      if(m.action==='install')result=await installModules(sb,c);
+      if(m.action==='discover')result=await maintainControl(sb,c,true);
+      else if(m.action==='prepare-styles')result=await prepareStyles(sb,c);
+      else if(m.action==='install')result=await installModules(sb,c);
       else if(m.action==='catalogue')result=await modulePanel(sb,c,Number(m.page)||0);
       else if(m.action==='preview')result=previewModule(String(m.module));
       else if(m.action==='event'){if(m.event?.guild_id!==c.guild_id&&m.event?.id!==c.guild_id)return json({error:'OTRO_SERVIDOR'},403);result=await eventModules(sb,c,m.event);}

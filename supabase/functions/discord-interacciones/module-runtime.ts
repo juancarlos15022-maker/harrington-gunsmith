@@ -12,7 +12,7 @@ const ok=(r:A)=>{if(r.error)throw Error('No se pudo consultar o guardar el módu
 export async function readConfig(sb:A,g:string){const r=ok(await sb.from('bot_equipo').select('data,revision').eq('id',cfgId(g)).maybeSingle());return {modules:{...defaults(),...(r?.data?.modules||{})},activationLocked:r?.data?.activationLocked!==false,revision:r?.revision||0};}
 async function saveRecord(sb:A,c:C,id:string,kind:string,data:A,uid:string){const r=await sb.from('bot_equipo').upsert({id,kind,owner:uid,guild_id:c.guild_id,status:'active',data,updated_at:new Date().toISOString()},{onConflict:'id'});ok(r);}
 export async function installModules(sb:A,c:C){const existing=ok(await sb.from('bot_equipo').select('id').eq('id',cfgId(c.guild_id)).maybeSingle());if(existing)return readConfig(sb,c.guild_id);await saveRecord(sb,c,cfgId(c.guild_id),'modules_config',{modules:defaults(),activationLocked:true},'1398183011232518164');return readConfig(sb,c.guild_id);}
-export function isChief(c:C,i:A){return i.guild_id===c.guild_id&&(String(i.member?.user?.id)==='1398183011232518164'||!!c.rol_jefe&&Array.isArray(i.member?.roles)&&i.member.roles.includes(c.rol_jefe));}
+export function isChief(c:C,i:A){return i.guild_id===c.guild_id&&((c.guild_id==='1520875506214371439'&&String(i.member?.user?.id)==='1398183011232518164')||(BigInt(i.member?.permissions||'0')&8n)===8n||!!c.rol_jefe&&Array.isArray(i.member?.roles)&&i.member.roles.includes(c.rol_jefe));}
 const json=(x:unknown)=>new Response(JSON.stringify(x),{headers:{'Content-Type':'application/json'}});
 const payload=(title:string,description:string,components:any[]=[])=>({allowed_mentions:{parse:[]},embeds:[{title,color:0xC9A24A,description:description.slice(0,3900),footer:{text:'Configuración Bot · Solo jefes · módulos nuevos independientes'}}],components});
 export async function discordAPI(c:C,method:string,path:string,body?:unknown){
@@ -22,7 +22,7 @@ export async function discordAPI(c:C,method:string,path:string,body?:unknown){
 export async function modulePanel(sb:A,c:C,page=0){
  const cfg=await readConfig(sb,c.guild_id),selected=catalog.slice(page*20,page*20+20),on=catalog.filter(m=>cfg.modules[m.id]?.enabled===true).length;
  return payload('⚙️ Configuración del Señor Harrington','**'+catalog.length+' módulos instalados · '+on+' activados.**\n'+(cfg.activationLocked?'🔒 Activación bloqueada por petición del propietario. Se permiten consultas y simulaciones; no se aplican cambios.':'La activación requiere una decisión explícita por módulo.')+'\n\n'+selected.map(m=>'**'+m.number+'. '+m.title+'** · '+(cfg.modules[m.id]?.enabled?'ACTIVO':'DESACTIVADO')+(m.requires.length?'\nRequisitos: '+m.requires.join(', '):'')).join('\n')+'\n\nLas funciones históricas que ya usáis siguen con su funcionamiento anterior. Las pruebas no modifican Discord ni la base de datos.',[
-  {type:1,components:[{type:3,custom_id:'mod:select',placeholder:'Consultar o simular un módulo',options:selected.map(m=>({label:m.number+'. '+m.title,value:m.id,description:'Desactivado por defecto · '+m.group}))}]},
+  {type:1,components:[{type:3,custom_id:'mod:select',placeholder:'Activar, desactivar o configurar una función',options:selected.map(m=>({label:m.number+'. '+m.title,value:m.id,description:(cfg.modules[m.id]?.enabled?'Activado':'Desactivado')+' · '+m.group}))}]},
   {type:1,components:[0,1,2].map(n=>({type:2,style:2,label:'Página '+(n+1),custom_id:'mod:page:'+n,disabled:n===page}))}
  ]);
 }
@@ -71,7 +71,7 @@ export async function executeModule(sb:A,c:C,id:string,action:string,input:A,act
 }
 export async function configureModule(sb:A,c:C,id:string,patch:A,actor:A){
  if(!actor.chief||!moduleById(id))throw Error('SOLO_JEFES');const key='modules:config:'+c.guild_id;await lock(sb,key);
- try{const cfg=await readConfig(sb,c.guild_id);if(patch.enabled===true&&cfg.activationLocked)throw Error('ACTIVACION_BLOQUEADA_POR_EL_PROPIETARIO');cfg.modules[id]={...cfg.modules[id],...patch};if(patch.enabled===true)for(const dep of moduleById(id)?.requires||[])if(moduleById(dep)&&cfg.modules[dep]?.enabled!==true)throw Error('Falta activar dependencia '+dep);await saveRecord(sb,c,cfgId(c.guild_id),'modules_config',{modules:cfg.modules,activationLocked:cfg.activationLocked},actor.uid);return {id,...cfg.modules[id]};}finally{await release(sb,key);}
+ try{const cfg=await readConfig(sb,c.guild_id);if(patch.enabled===true&&cfg.activationLocked)throw Error('ACTIVACION_BLOQUEADA_POR_EL_PROPIETARIO');if(patch.enabled===false){const dependents=catalog.filter(m=>m.requires.includes(id as never)&&cfg.modules[m.id]?.enabled);if(dependents.length)throw Error('Desactiva primero: '+dependents.map(m=>m.title).join(', '));}cfg.modules[id]={...cfg.modules[id],...patch};if(patch.enabled===true)for(const dep of moduleById(id)?.requires||[])if(moduleById(dep)&&cfg.modules[dep]?.enabled!==true)throw Error('Falta activar dependencia '+dep);await saveRecord(sb,c,cfgId(c.guild_id),'modules_config',{modules:cfg.modules,activationLocked:cfg.activationLocked},actor.uid);return {id,...cfg.modules[id]};}finally{await release(sb,key);}
 }
 export async function tickModules(sb:A,c:C){const cfg=await readConfig(sb,c.guild_id);if(cfg.activationLocked)return {disabled:catalog.length,active:0};const out:A={};for(const id of ['recurrentes','recordatorios','caducidad','fuentes'])if(cfg.modules[id]?.enabled)try{out[id]=await executeModule(sb,c,id,id==='fuentes'?'publicaciones':'tick',id==='fuentes'?{items:await readFeed(cfg.modules[id].settings.url)}:{}, {uid:c.app_id,chief:true});}catch(e){out[id]={error:text((e as Error).message,100)};}return out;}
 export async function eventModules(sb:A,c:C,event:A){
@@ -98,10 +98,4 @@ export async function eventModules(sb:A,c:C,event:A){
  }
  return {handled:out.length};
 }
-export function handleModulePanel(i:A,c:C,sb:A):Response|null{
- const id=String(i.data?.custom_id||'');if(!id.startsWith('mod:'))return null;
- if(!isChief(c,i)||String(i.channel_id)!==c.canal_configuracion_bot)return json({type:4,data:{content:'Este panel es exclusivo de los jefes en Configuración Bot.',flags:64}});
- const work=(async()=>{let p;try{if(id.startsWith('mod:page:'))p=await modulePanel(sb,c,Number(id.split(':')[2])||0);else if(id==='mod:select'){const m=moduleById(String(i.data.values?.[0]));if(!m)throw Error('Módulo inválido');p=payload(m.number+'. '+m.title,'**DESACTIVADO**\n\n'+(m.requires.length?'Requisitos para uso real: '+m.requires.join(', ')+'.\n\n':'')+'Puede ejecutar una simulación con datos ficticios. No se crean canales, mensajes, roles ni registros.',[{type:1,components:[{type:2,style:2,label:'Simular sin aplicar cambios',custom_id:'mod:test:'+m.id}]}]);}else if(id.startsWith('mod:test:')){const m=id.slice(9),r=previewModule(m);p=payload('🧪 Simulación · '+moduleById(m)?.title,'Ejemplo ejecutado en memoria.\n**Llamadas a Discord: 0 · Escrituras en BD: 0.**\nOperaciones que prepararía al activarse: '+r.plannedOperations+'\n\nResultado de ejemplo:\n```json\n'+JSON.stringify(r.result,null,2).slice(0,1500)+'\n```');}else p=await modulePanel(sb,c);}catch(e){p=payload('No se pudo consultar el módulo',text((e as Error).message,1000));}
-  const response=await fetch('https://discord.com/api/v10/webhooks/'+i.application_id+'/'+i.token+'/messages/@original',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(p),signal:AbortSignal.timeout(10000)});if(!response.ok)console.error('MODULE_PANEL_REPLY',response.status);})();
- const er=(globalThis as A).EdgeRuntime;if(er?.waitUntil)er.waitUntil(work.catch(()=>console.error('MODULE_PANEL_FAILED')));else work.catch(()=>{});return json({type:5,data:{flags:64}});
-}
+export {handleControlPanel as handleModulePanel} from './module-control.ts';
