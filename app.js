@@ -2634,6 +2634,16 @@ async function savePedido(){
   const rows=await r.json();if(rows[0]&&rows[0].valor&&!rows[0].valor.deleted)base=rows[0].valor;
  }catch(e){return say('Sin conexión: no se puede actualizar el pedido ahora')}
  if(base.completedAt||base.cancelled){savePed(base);pedView=null;renderPed();return say('Este pedido ya estaba cerrado')}
+ if(!SANDBOX){
+  const quiereRec=!base.received&&!!pedDraft.received&&pedDraft.received!==pedDraft.oRec, quierePago=!base.paidInitial&&pedDraft.paid!==pedDraft.oPaid&&pedDraft.paid!==!!base.paid;
+  if(quierePago&&!soyPropietario()&&!quiereRec)return say('El pago del pedido lo marca la dirección','err');
+  if(quiereRec){let r;try{r=await recibirPedidoServidor(base.id,null,pedDraft.emp)}catch(e){return say(pedidoErrTxt(e),'err')}
+   pedidoRecibidoUI(r);base=r.pedido||base;
+   if(!quierePago)return;
+   if(!soyPropietario())return say('Recibido. El pago del pedido lo marca la dirección','err');
+   if(base.completedAt)return;
+  }
+ }
  const emp=(empleados.find(e=>e.id===pedDraft.emp)||{}).name||'', now=Date.now(), rec=Object.assign({},base);
  if(!base.received&&pedDraft.received!==pedDraft.oRec&&pedDraft.received!==!!base.received){rec.received=pedDraft.received;rec.receivedBy=pedDraft.received?emp:'';rec.receivedAt=pedDraft.received?now:0}
  if(!base.paidInitial&&pedDraft.paid!==pedDraft.oPaid&&pedDraft.paid!==!!base.paid){rec.paid=pedDraft.paid;rec.paidBy=pedDraft.paid?emp:'';rec.paidAt=pedDraft.paid?now:0}
@@ -2666,6 +2676,44 @@ async function savePedido(){
  }else say('Pedido actualizado');
  renderPed();
 }
+/* Llegada de pedidos (19/10/2026): la registra el servidor con recibir_pedido, así cualquier empleado puede marcar
+   la mercancía como recibida aunque solo el propietario cree y pague los pedidos. Cada intento guarda su número de
+   petición: si se pierde la respuesta y se vuelve a pulsar, el servidor reconoce la misma entrega y no suma dos veces. */
+async function recibirPedidoServidor(pedId,lineas,porId){
+ const key='hg_recibir_'+pedId,l=lineas&&lineas.length?lineas:null;let pet=null;try{pet=JSON.parse(store.get(key)||'null')}catch(e){}
+ if(!pet||JSON.stringify(pet.l)!==JSON.stringify(l))pet={id:(window.crypto&&crypto.randomUUID?crypto.randomUUID():('p'+Date.now().toString(36)+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2))).replace(/[^a-zA-Z0-9-]/g,'').slice(0,60),l};
+ store.set(key,JSON.stringify(pet));
+ const r=await sbRpc('recibir_pedido',{p_peticion:pet.id,p_pedido:pedId,p_lineas:l,p_por:porId||null});
+ store.remove(key);
+ if(r&&r.stock)applyStockMap(r.stock);
+ if(r&&Array.isArray(r.records))applyRecords(r.records);
+ if(r&&!r.replayed)try{invChanged((r.got||[]).map(g=>({producto:matKey(canonMat(g.material)),delta:g.qty})),'Pedido '+((r.pedido||{}).code||''))}catch(e){}
+ return r;
+}
+function pedidoErrTxt(e){
+ let m=String(e&&e.message||'');try{const j=JSON.parse(m);m=String(j.message||m)}catch(x){}
+ if(!e||!e.status)return 'Sin conexión: no se puede registrar la entrega ahora. Vuelve a pulsar cuando haya conexión (no se sumará dos veces).';
+ if(/EMPLEADO_INVALIDO/.test(m))return 'Solo puedes registrar la entrega a tu nombre: elige tu ficha en «Registrado por».';
+ if(/PEDIDO_YA_RECIBIDO/.test(m))return 'Este pedido ya está recibido.';
+ if(/PEDIDO_CANCELADO/.test(m))return 'Este pedido está cancelado.';
+ if(/PEDIDO_NO_EXISTE/.test(m))return 'Este pedido ya no existe.';
+ if(/PEDIDO_CAMBIADO/.test(m))return 'Otro dispositivo acaba de registrar una entrega de este pedido: revisa y vuelve a intentarlo.';
+ if(/CANTIDAD_EXCEDE/.test(m))return 'No puede llegar más de lo que falta: '+m.replace(/^.*CANTIDAD_EXCEDE:\s*/,'');
+ if(/NADA_QUE_RECIBIR/.test(m))return 'No queda nada pendiente de este pedido.';
+ if(/SIN_CUENTA/.test(m)||e.status===401)return 'Tu sesión no es válida: vuelve a entrar con tu tarjeta.';
+ return 'No se pudo registrar la entrega: '+m.slice(0,140);
+}
+function pedidoRecibidoUI(r){
+ const rec=r.pedido||{}, got=r.got||[], all=!!r.all, items=rec.items||[], last=(rec.recs||[])[ (rec.recs||[]).length-1]||{}, por=last.by||'', completed=!!(r.completed||(r.replayed&&rec.completedAt>0));
+ try{HG_REF_PEDIDO='recibido-'+rec.id+'-'+(rec.recs||[]).length}catch(e){}
+ discordSend('pedidos',['ENTREGA '+(all?'FINAL':'PARCIAL')+' · '+rec.code,'Proveedor: '+rec.proveedor,'Recibido ahora: '+got.map(g=>g.qty+' × '+g.material).join(', '),'Registrado por: '+(por||'—')].concat(all?[]:['Pendiente: '+items.filter(i=>(i.rq||0)<i.qty).map(i=>(i.qty-(i.rq||0))+' × '+i.material).join(', ')]).concat(completed?['Pedido completado: pasa a la contabilidad.']:[]).join('\n'));
+ if(completed&&soyPropietario())discordSend('pedidos',pedidoText(rec,'PEDIDO COMPLETADO'));
+ if(completed)pedView=null;
+ try{if(all){if(!stampImgFx('recibido',2.43))stampFx('RECIBIDO')}else stampFx('PARCIAL');playChest()}catch(e){}
+ renderPed();
+ say(all?(completed?'Entrega final: pedido recibido entero y completado; pasa a la contabilidad':'Entrega final: pedido recibido entero'):'Entrega parcial registrada: '+got.map(g=>g.qty+' × '+g.material).join(', '));
+}
+var HG_REF_PEDIDO='';
 /* Entrega parcial: solo se suma lo que llega ahora; el pedido sigue pendiente hasta recibirlo todo */
 async function savePartial(){
  const x=pendingPed().find(p=>p.id===pedView); if(!x||!pedDraft)return;
@@ -2679,6 +2727,7 @@ async function savePartial(){
  const items=base.items.map(i=>Object.assign({},i)), got=[];
  for(const k of Object.keys(want)){const i=items[+k];if(!i)continue;const pe=i.qty-Math.min(i.qty,i.rq||0);if(want[k]>pe)return say('De '+i.material+' solo faltan '+pe+' por recibir','err');i.rq=Math.min(i.qty,i.rq||0)+want[k];got.push({material:i.material,qty:want[k]})}
  if(!got.length)return;
+ if(!SANDBOX){let r;try{r=await recibirPedidoServidor(base.id,Object.keys(want).map(k=>({i:+k,qty:want[k]})),pedDraft.emp)}catch(e){return say(pedidoErrTxt(e),'err')}pedDraft.part={};pedidoRecibidoUI(r);return}
  const emp=(empleados.find(e=>e.id===pedDraft.emp)||{}).name||'', now=Date.now(), n=(base.recs||[]).length+1;
  try{if(!await claimRow('recibido-'+base.id+'-'+n,{ts:now,by:emp})){await cloudPullRecords();renderPed();return say('Otro dispositivo acaba de registrar una entrega de este pedido: revisa y vuelve a intentarlo','err')}}
  catch(e){return say(String(e&&e.message)==='403'?'Desde tu cuenta no se puede registrar en la web la llegada de un pedido (solo el propietario). Usa el botón «Recibido entero» del pedido en Discord o avisa a la dirección.':'Sin conexión: no se puede registrar la entrega ahora','err')}
@@ -4851,7 +4900,7 @@ const TUTORIAL=[
 <li><b>Munición y pólvora.</b> Al fabricar munición, si falta pólvora y hay materiales, se fabrica la pólvora necesaria.</li>
 <li><b>Aceite.</b> Cada receta de aceite produce <b>10 unidades</b>.</li>
 <li><b>+5, +10 y +20</b> en trapos, aceite y pólvora, para no pulsar tantas veces.</li>
-<li><b>Pedidos.</b> La llegada de un pedido se registra con el botón <b>Recibido entero</b> del pedido en Discord (en la web solo puede el propietario).</li>
+<li><b>Pedidos.</b> Los pedidos y su pago los hace la dirección. Cuando llega la mercancía, márcala tú: en <b>PEDIDOS</b>, abre el pedido y marca <b>¿Recibido? SÍ</b> (o escribe lo que ha llegado y pulsa <b>REGISTRAR ENTREGA PARCIAL</b>), o pulsa <b>Recibido entero</b> en Discord. Los materiales entran solos en el almacén y se avisa en el canal de pedidos.</li>
 <li><b>VER OPERACIONES PENDIENTES</b>: si aparece este botón, tu dispositivo guarda operaciones de una versión anterior. No se repiten solas: revísalas con la dirección.</li>
 <li><b>Discord</b>: <b>/saloon</b> (dados y dominó entre dos compañeros), <b>/idea</b> (propuestas con voto), <b>/manual</b> (instrucciones de la casa), <b>/avisame</b> (te avisa por privado cuando un compañero entra en un canal de voz), <b>/acuerdos</b> y, en el menú de un mensaje, <b>Guardar como acuerdo</b>. Con <b>/rumor</b> escribes un rumor IC de hasta 160 caracteres: se publica limpio y el mensaje original se retira.</li></ul>`],
 ['Novedades para la Dirección (14 al 19 de octubre)',`<ul><li><b>Solo Vincent administra.</b> La base de datos solo deja al propietario cambiar personal, recetas, proveedores, precios, descuentos, configuración, inventarios y copias. Otro jefe ve Dirección, pero lo que guarde ahí se rechaza.</li>
@@ -7102,7 +7151,7 @@ const PARCHES=[
  {f:'16/10/2026',t:'Herramientas del equipo en Discord',v:'3.0',i:['/saloon: dados y dominó entre dos empleados, con ranking de 30 días','/idea: propuestas con voto, que decide el dueño explicando por qué','/manual: instrucciones del dueño, con búsqueda','/libreta: notas y recordatorios privados del dueño','/avisame: aviso privado cuando un compañero entra en un canal de voz','/acuerdos y «Guardar como acuerdo» en el menú de un mensaje','/rumor: rumores IC de hasta 160 caracteres; el mensaje original se retira y se publica limpio','Al fabricar munición, si falta pólvora y hay materiales, se fabrica la necesaria','Operaciones protegidas por el servidor y recuperación de las que quedaron pendientes','Catálogo y precios actualizados']},
  {f:'17/10/2026',t:'Aceite, accesos rápidos y acabado',v:'3.0',i:['Cada receta de aceite produce 10 unidades, con su consumo y coste por lote','Botones +5, +10 y +20 en trapos, aceite y pólvora','Fichas de producto más completas y barra de progreso en los pedidos','La dirección puede publicar en Discord el cierre de turno de otro empleado','Acabado de cuero, madera y latón más visible']},
  {f:'18/10/2026',t:'Nóminas, informes y historial',v:'3.0',i:['Se pagan como máximo 5 horas extra por empleado y semana; el exceso queda registrado','Los informes semanales de ventas y de gastos van a su propio canal de Discord','El historial de ventas se carga por partes, conservando el buscador','El propietario puede resetear la contraseña de otros jefes desde su ficha','Texturas de pavonado, latón, cuero, papel y terciopelo']},
- {f:'19/10/2026',t:'Revisión y sesiones sin cierre por inactividad',v:'3.0',i:['La sesión ya no se cierra sola tras 3 horas: solo la cierra el empleado (⏻ CERRAR SESIÓN) o la dirección (⏏ EXPULSAR en Empleados)','DIRECCIÓN abre y se desplaza más fluida: su fondo ya no es fijo y se prepara al activar el Modo Jefe','Las tareas automáticas de administración solo las hace el dispositivo del propietario; antes, desde otra cuenta, se reintentaban sin parar','Si un empleado intenta registrar la llegada de un pedido en la web, se le explica que lo haga con «Recibido entero» en Discord, en vez de decir «Sin conexión»','Corrección de «Quién es» en telegramas, contactos y materiales con pedidos pendientes']}
+ {f:'19/10/2026',t:'Revisión y sesiones sin cierre por inactividad',v:'3.0',i:['La sesión ya no se cierra sola tras 3 horas: solo la cierra el empleado (⏻ CERRAR SESIÓN) o la dirección (⏏ EXPULSAR en Empleados)','DIRECCIÓN abre y se desplaza más fluida: su fondo ya no es fijo y se prepara al activar el Modo Jefe','Las tareas automáticas de administración solo las hace el dispositivo del propietario; antes, desde otra cuenta, se reintentaban sin parar','Los empleados vuelven a marcar en la web la llegada de los pedidos (entera o parcial); lo registra el servidor y no se suma dos veces aunque se repita','Los pedidos y su pago siguen siendo cosa de la dirección','Corrección de «Quién es» en telegramas, contactos y materiales con pedidos pendientes']}
 ];
 let phQ='';
 /* Versiones: cada parche lleva su versión (v); los que no la llevan son de la 1.0 */

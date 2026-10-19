@@ -24,6 +24,16 @@ if(kind==='ventas'||kind==='encargos'){
  const b=await balanceRegistro(admin,f);title=b.title;desc=b.description;
 }else if(kind==='resumen'){
  const now=new Date().toLocaleDateString('es-ES',{timeZone:'Europe/Madrid'});const {data,error}=await admin.from('datos').select('valor').like('clave','venta:%');if(error)throw Error('DATOS');const a=(data||[]).map((x:any)=>x.valor).filter((x:any)=>{const p=String(x.date||'').split('/').map(Number),d=now.split('/').map(Number);return !x.voided&&p[0]===d[0]&&p[1]===d[1]&&p[2]===d[2]});title='RESUMEN DEL DÍA · '+now;desc='Operaciones: '+a.length+'\nIngresos: '+cash(a.reduce((s:number,x:any)=>s+(x.op==='encargo'?x.totalCents-x.dueCents:x.dueCents),0));record='resumen:'+now;
+}else if(kind==='pedidos'){
+ // Aviso de la llegada de un pedido (19/10/2026): lo publica quien la registró con recibir_pedido; el texto sale del registro guardado.
+ if(!/^recibido-[A-Za-z0-9_-]{1,60}-\d{1,4}$/.test(ref))throw Error('PEDIDO_NO_CONFIRMADO');
+ const r=await row(ref);if(!r||!Array.isArray(r.items))throw Error('PEDIDO_NO_CONFIRMADO');
+ if(!owner&&r.by!==nom)throw Error('OPERACION_AJENA');
+ const p=await row('pedido:'+ref.slice(9).replace(/-\d+$/,''));if(!p)throw Error('PEDIDO_NO_CONFIRMADO');
+ const pend=(p.items||[]).filter((i:any)=>(Number(i.rq)||0)<Number(i.qty));
+ title=(r.parcial?'ENTREGA PARCIAL · ':'ENTREGA FINAL · ')+p.code;
+ desc='Proveedor: '+p.proveedor+'\nRecibido ahora: '+r.items.map((x:any)=>x.qty+' × '+x.material).join(', ')+'\nRegistrado por: '+(r.by||'—')+(r.parcial&&pend.length?'\nPendiente: '+pend.map((i:any)=>(Number(i.qty)-(Number(i.rq)||0))+' × '+i.material).join(', '):'')+(!r.parcial&&p.completedAt?'\nPedido completado: pasa a la contabilidad.':'');
+ record=ref;
 }else throw Error('CANAL_SOLO_PROPIETARIO');
 return {title:String(title).slice(0,250),description:String(desc).slice(0,3900)||'Registro confirmado',record};
 }
