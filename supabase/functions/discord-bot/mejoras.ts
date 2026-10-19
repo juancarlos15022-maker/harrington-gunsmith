@@ -17,7 +17,7 @@ async function discord(c:Config,method:string,path:string,body?:unknown){
  const send=()=>fetch('https://discord.com/api/v10'+path,{method,headers:{Authorization:'Bot '+c.token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(8000)});
  let r=await send();
  if(r.status===429){const d=await r.json();if(Number(d.retry_after)>5)throw Error('Discord está ocupado; inténtelo en unos segundos.');await new Promise(x=>setTimeout(x,Math.max(100,Number(d.retry_after)*1000)));r=await send();}
- const d=await r.json().catch(()=>null);if(!r.ok)throw Error('Discord no ha podido completar la consulta ('+r.status+').');return d;
+ const d=await r.json().catch(()=>null);if(!r.ok)throw Object.assign(Error('Discord no ha podido completar la consulta ('+r.status+').'),{status:r.status});return d;
 }
 const checked=(r:Any)=>{if(r.error)throw Error('No se ha podido consultar la base de datos.');return r.data;};
 async function value(sb:Any,key:string){return checked(await sb.from('datos').select('valor').eq('clave',key).maybeSingle())?.valor;}
@@ -78,7 +78,7 @@ export async function health(sb:Any,c:Config){
 }
 export function handleMejoras(i:Any,c:Config,sb:Any):Response|null{
  const name=i.data?.name,id=String(i.data?.custom_id||''),cmd=['contactos','clips','conexiones','materiales'].includes(name)?name:id.startsWith('mej:')?id.slice(4):'';
- if(!cmd)return null;
+ if(!['contactos','clips','conexiones','materiales'].includes(cmd))return null;
  if(i.guild_id!==c.guild_id||!staff(c,i))return json({type:4,data:{content:'Solo el personal de Harrington puede usar esta consulta.',flags:64}});
  if((cmd==='conexiones'||cmd==='materiales')&&!direction(c,i))return json({type:4,data:{content:'Esta consulta es exclusiva de Dirección.',flags:64}});
  if(cmd==='contactos'&&i.type!==5&&!i.data?.options?.length)return json({type:9,data:{custom_id:'mej:contactos',title:'Buscar contactos',components:[{type:1,components:[{type:4,custom_id:'query',label:'Nombre, negocio o telegrama',style:1,min_length:2,max_length:100,required:true}]}]}});
@@ -95,6 +95,7 @@ export async function cronMateriales(sb:Any,c:Config){
  try{
   const report=await materials(sb),old=checked(await sb.from('bot_equipo').select('message_id,channel_id,data').eq('id','mejoras:materiales').maybeSingle());
   const signature=JSON.stringify(report.payload);let message=old?.message_id;
+  if(message&&old.channel_id===c.canal_despacho){try{await discord(c,'GET','/channels/'+c.canal_despacho+'/messages/'+message);}catch(e){if((e as Any).status===404)message=null;else throw e;}}
   if(!message||old.channel_id!==c.canal_despacho){const m=await discord(c,'POST','/channels/'+c.canal_despacho+'/messages',{...report.payload,nonce:'hg-materiales-v1',enforce_nonce:true,components:[{type:1,components:[{type:2,style:2,label:'Consultar materiales',custom_id:'mej:materiales'},{type:2,style:2,label:'Estado de conexiones',custom_id:'mej:conexiones'}]}]});message=m.id;}
   else if(old.data?.signature!==signature)await discord(c,'PATCH','/channels/'+c.canal_despacho+'/messages/'+message,report.payload);
   const saved=await sb.from('bot_equipo').upsert({id:'mejoras:materiales',kind:'materiales',owner:OWNER,guild_id:c.guild_id,status:'active',data:{signature,low:report.rows.length},channel_id:c.canal_despacho,message_id:message,updated_at:new Date().toISOString()},{onConflict:'id'});if(saved.error)throw Error('GUARDAR_MATERIALES');
