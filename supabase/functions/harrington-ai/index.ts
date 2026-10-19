@@ -13,6 +13,7 @@
 // «tutorial_sync»: un jefe deja aquí el texto del Tutorial de la web (en ia_cfg) para que Harrington lo use en Discord.
 // «charla_leer» / «charla_apuntar»: la conversación de cada empleado con Harrington (tabla ia_charla), compartida con Discord.
 // v8: con Gemini pide «pensar poco» (más rápido) y deja para el final, 5 minutos, el modelo que acaba de fallar o colgarse.
+// v14 (19/10/2026): «retrato» mira la foto del personaje (hombre o mujer, sombrero y dónde está la cabeza) para encuadrar el retrato.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 
@@ -338,6 +339,47 @@ async function transcribir(b64: string, tipo: string) {
   return { texto: txt(j.text, 400) };
 }
 
+// ---------- Retrato: mira la foto del personaje (hombre o mujer, sombrero y dónde está la cabeza) ----------
+// Solo devuelve esos datos; la foto no se guarda aquí ni se manda a ningún otro sitio.
+async function retrato(img: string) {
+  if (CFG!.prov !== "gemini") return { error: "SIN_VISION" };
+  if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(img) || img.length > 700000) return { error: "IMAGEN" };
+  const pide = "Analiza esta imagen de un personaje (una captura de un videojuego del oeste de 1880). Devuelve SOLO un objeto JSON, sin texto alrededor, con esta forma exacta: " +
+    '{"persona":true,"genero":"hombre","sombrero":true,"tipo":"vaquero","caja":[ymin,xmin,ymax,xmax]}. ' +
+    "«persona»: si se ve la cabeza de una persona. «genero»: \"hombre\", \"mujer\" o \"desconocido\" según su aspecto. «sombrero»: si lleva algo en la cabeza. " +
+    "«tipo»: \"vaquero\", \"bombin\", \"chistera\", \"ala_ancha\", \"gorra\", \"otro\" o \"ninguno\". " +
+    "«caja»: el rectángulo de la cabeza COMPLETA de la persona principal, incluyendo todo el sombrero, el pelo y la barbilla, en coordenadas de 0 a 1000 (ymin, xmin, ymax, xmax). Si hay varias personas, la más grande y centrada.";
+  for (const model of modelosEnOrden().slice(0, 2)) {
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 20000);
+    try {
+      const r = await fetch(API() + "/chat/completions", {
+        method: "POST", signal: ctl.signal, headers: { Authorization: "Bearer " + CLAVE(), "Content-Type": "application/json" },
+        body: JSON.stringify({ model, temperature: 0, max_tokens: 800, ...PENSAR(), messages: [{ role: "user", content: [
+          { type: "text", text: pide },
+          { type: "image_url", image_url: { url: img } },
+        ] }] }),
+      });
+      if (r.status === 429) { malo(model); continue; }
+      if (r.status === 401 || r.status === 403) return { error: "CLAVE_MALA" };
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { malo(model); continue; }
+      const t = String(j?.choices?.[0]?.message?.content || ""), m = t.match(/\{[\s\S]*\}/);
+      if (!m) continue;
+      const o = JSON.parse(m[0]);
+      const g = ["hombre", "mujer"].includes(o?.genero) ? o.genero : "desconocido";
+      const tipos = ["vaquero", "bombin", "chistera", "ala_ancha", "gorra", "otro", "ninguno"];
+      const tipo = tipos.includes(o?.tipo) ? o.tipo : (o?.sombrero ? "otro" : "ninguno");
+      let caja: number[] | null = null;
+      if (Array.isArray(o?.caja) && o.caja.length === 4 && o.caja.every((v: unknown) => typeof v === "number" && isFinite(v as number))) {
+        const [y0, x0, y1, x1] = o.caja.map((v: number) => Math.max(0, Math.min(1000, Math.round(v))));
+        if (y1 - y0 >= 20 && x1 - x0 >= 20) caja = [y0, x0, y1, x1];
+      }
+      return { ok: true, persona: o?.persona !== false, genero: g, sombrero: !!o?.sombrero && tipo !== "ninguno", tipo, caja, modelo: model };
+    } catch (_e) { malo(model); } finally { clearTimeout(to); }
+  }
+  return { error: "IA_CAIDA" };
+}
+
 async function cuotaPersistente(id:string){
  const a=await sb.rpc('hg_consumir_limite',{p_key:'ia:persona:'+id,p_max:30,p_segundos:900});if(a.error||a.data!==true)return false;
  const b=await sb.rpc('hg_consumir_limite',{p_key:'ia:global',p_max:1000,p_segundos:86400});return !b.error&&b.data===true;
@@ -377,6 +419,22 @@ Deno.serve(async (req: Request) => {
       if(!(await cuotaPersistente('pruebas-tecnicas')))return json({error:'LIMITE'},429);
       const r = await redactar(tarea, b.datos, txt(b.extra, 400), !!b.jefe, "Prueba");
       return json({ ...r, traza: TRAZA.slice() }, "error" in r ? 502 : 200);
+    }
+    if (b.accion === "prueba_retrato") {
+      // prueba técnica del retrato con una imagen de la propia web (solo con la contraseña de prueba de ia_cfg)
+      const { data } = await sb.from("ia_cfg").select("valor").eq("clave", "prueba").maybeSingle();
+      if (!data?.valor || data.valor.length < 20 || b.secreto !== data.valor) return json({ error: "NO" }, 403);
+      const u = String(b.url || "");
+      if (!/^https:\/\/juancarlos15022-maker\.github\.io\/[\w./-]+\.(webp|png|jpe?g)$/.test(u)) return json({ error: "URL" }, 400);
+      if(!(await cuotaPersistente('pruebas-tecnicas')))return json({error:'LIMITE'},429);
+      const r0 = await fetch(u);
+      if (!r0.ok) return json({ error: "IMAGEN_WEB", st: r0.status }, 502);
+      const by = new Uint8Array(await r0.arrayBuffer());
+      let bin = "";
+      for (let i = 0; i < by.length; i += 0x8000) bin += String.fromCharCode(...by.subarray(i, i + 0x8000));
+      const tipo = /\.png$/.test(u) ? "png" : /\.webp$/.test(u) ? "webp" : "jpeg";
+      const r = await retrato("data:image/" + tipo + ";base64," + btoa(bin));
+      return json(r, "error" in r ? 502 : 200);
     }
     if (b.accion === "interno") {
       // el Señor Harrington de Discord: solo con la contraseña interna (la misma que usa discord-bot), nunca desde la web
@@ -429,6 +487,11 @@ Deno.serve(async (req: Request) => {
       if (!a) return json({ error: "AUDIO" }, 400);
       const r = await transcribir(a, txt(b.tipo, 40));
       return json(r, "error" in r ? (r.error === "LIMITE" ? 429 : 502) : 200);
+    }
+
+    if (acc === "retrato") {
+      const r = await retrato(typeof b.img === "string" ? b.img : "");
+      return json(r, "error" in r ? (r.error === "IMAGEN" || r.error === "SIN_VISION" ? 400 : 502) : 200);
     }
 
     if (acc === "resultado") {

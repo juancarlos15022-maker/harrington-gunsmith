@@ -4603,6 +4603,8 @@ dirModal.addEventListener('click',e=>{
  else if(act==='obj-off')saveObjetivo(true);
  else if(act==='emp-reset')once('rst-'+arg,()=>empResetClave(arg),b);
  else if(act==='emp-foto')empPickFoto(arg);
+ else if(act==='emp-sil'){const q=arg.split('|');siluetaGuardar(q[0],q[1])}
+ else if(act==='emp-encuadre')empEncuadrar(arg);
  else if(act==='emp-nofoto')once('nf-'+arg,()=>empNoFoto(arg),b);
  else if(act==='scat'){stockCat=arg;renderDir()}
  else if(act==='splus'||act==='sminus'){
@@ -4946,6 +4948,16 @@ const TUTORIAL=[
 ['Objetivo, buscador y revisión',`<ul><li><b>Objetivo semanal</b> (Dirección → Ventas y caja → OBJETIVO SEMANAL): pon una meta de ventas para la semana (viernes a jueves). En la pantalla principal sale una barra dorada que se va llenando con lo cobrado; al llegar a la meta se pone verde y salta la celebración.</li><li><b>Buscador</b> (arriba en la consola de Dirección): escribe un cliente, un número de serie, un ticket, un encargo, un pedido o un empleado y pulsa ABRIR para ir a su apartado.</li><li><b>Revisión de datos</b> (Dirección → Sistema): comprueba stock negativo, turnos abiertos de hace mucho, ventas sin empleado, gastos o clientes repetidos, encargos y pedidos atascados y productos que se van a acabar, y te dice cómo arreglarlo. No cambia nada sola.</li><li><b>Productos que se acaban</b>: si al ritmo de ventas de las dos últimas semanas a un producto le quedan 5 días o menos, sale un aviso en Dirección.</li><li><b>Ficha completa</b> (Empleados → 📋 FICHA COMPLETA): ventas, cobrado, horas, sueldos, ausencias y ascensos de cada empleado.</li><li>Detalles nuevos: monedas de oro que caen al total al cobrar, el reloj de bolsillo junto a tu nombre mientras estás fichado, el cartel de «SE BUSCA» del empleado de la semana, los sellos ENTREGADO y RECIBIDO, la tablilla de AGOTADO y los mensajes de Discord con su imagen.</li></ul>`],
 ['Instalar la aplicación',`<p>Abajo del todo de la página principal está <b>DESCARGAR APLICACIÓN</b>. Instala Harrington Gunsmith como una aplicación: con su icono, en su propia ventana y con los mismos datos que la web, sincronizados al momento en todos los dispositivos.</p>
 <ul><li><b>Enlace directo de descarga</b>: el botón <b>Descargar la aplicación</b> de Discord abre la web con la ventana de instalar ya abierta, sin tener que entrar con la tarjeta. Pulsa <b>INSTALAR AHORA</b> (o sigue los pasos en iPhone). Si Discord lo abre dentro de su propio navegador, elige antes «Abrir en el navegador».</li><li><b>Ordenador (Chrome o Edge) y Android</b>: al pulsarlo pone «PREPARANDO LA DESCARGA…» y sale la ventana del navegador para instalarla; confirma con «Instalar». Si el navegador todavía no la ofrece (a veces la primera vez hay que usar la web un momento), salen los pasos y, en cuanto puede, aparece <b>INSTALAR AHORA</b>.</li><li><b>Samsung Internet</b> (el navegador de serie de los Samsung) no deja instalar desde un botón: el botón ofrece <b>ABRIR EN CHROME E INSTALAR</b>, o los pasos para instalarla desde el menú de Samsung Internet.</li><li><b>iPhone y iPad</b>: Apple no deja instalarla con un botón; el botón te enseña los pasos (Safari → Compartir → «Añadir a pantalla de inicio»).</li><li><b>Firefox en el ordenador</b> no instala aplicaciones: usa Chrome o Edge.</li><li><b>Se actualiza sola</b> con cada parche, sin pulsar nada: al abrirla ya carga la versión más reciente y, si la tienes abierta cuando sale un parche, se pone al día sola en cuanto es seguro (al volver a la aplicación o cuando lleva un minuto sin tocarla; nunca mientras escribes o tienes una ventana abierta). La venta que tengas a medias se conserva. Sale el aviso «Actualizada a la versión nueva».</li><li>Cuando ya la estás usando como aplicación, el botón no sale.</li><li><b>Atajos</b>: mantén pulsado el icono de la aplicación y salen <b>Nueva venta</b>, <b>Fichar</b> y <b>Encargos</b> para ir directo (si no has entrado, primero te pide tu tarjeta).</li><li><b>Tu sesión no se cierra al salir de la aplicación</b>, aunque el móvil la cierre por detrás para ahorrar memoria: al volver sigues dentro. Se cierra con <b>⏻ CERRAR SESIÓN</b> (en tu ficha, tocando tu nombre arriba), al fichar la salida si eliges cerrarla, o si la dirección te la cierra con <b>⏏ EXPULSAR</b>. <b>No se cierra por inactividad.</b> El Modo Jefe solo sigue activo si eres jefe o si saliste hace menos de 5 minutos.</li><li>Sigue haciendo falta internet para vender, fichar o fabricar.</li></ul>`],
+['La casa por dentro: portada, telegramas y retratos',`<p>Desde el 19 de octubre la web tiene otro aire, más de 1880. Nada cambia en cómo se trabaja: es solo cómo se ve.</p>
+<ul><li><b>La portada sigue la hora de Saint Denis</b> (la hora española): de 7:00 a 17:00 se ve <b>de mañana</b>, con sol por los ventanales; de 17:00 a 21:00, <b>al atardecer</b>; y de 21:00 a 7:00, <b>de noche</b>, con las lámparas encendidas que parpadean. Si en ⚙ Ajustes eliges el ambiente <b>☀ DÍA</b> o <b>☾ NOCHE</b>, la portada lo sigue.</li>
+<li><b>Pantalla de carga</b>: la primera vez que abres la web en una pestaña sale el sello de lacre de la casa sobre un pergamino durante un segundo.</li>
+<li><b>Los avisos llegan en telegrama</b>: los mensajes de abajo («Venta guardada», «Sin conexión»…) salen en una tira de papel de telegrama; los urgentes, con «URGENTE».</li>
+<li><b>Ventanas</b>: se abren como un cajón; NOTAS, ENCARGOS, AUSENCIAS y los eventos se desenrollan como un pergamino.</li>
+<li><b>El ticket se imprime línea a línea</b> y, al sellarse <b>PAGADO</b>, saltan unas monedas de oro.</li>
+<li><b>El cartel ABIERTO / CERRADO</b> se balancea y da la vuelta cuando cambia.</li>
+<li><b>Tu retrato</b>: en <b>Mi ficha</b> (tu nombre, arriba) pulsa <b>📷 SUBIR MI FOTO</b> y elige una captura de tu personaje. Harrington la mira, centra tu cara (con tu sombrero, si lo llevas) y sale en tu tarjeta de la entrada como un retrato antiguo en sepia, con marco ovalado dorado. Solo puedes cambiar <b>tu</b> foto. Si no subes ninguna, sale una silueta de hombre o de mujer.</li>
+<li><b>Pantallas vacías</b> con su dibujo dorado (ventas, búsquedas, inventario, avisos, empleados…).</li>
+<li>Si prefieres menos movimiento, en ⚙ Ajustes pon <b>Animaciones: LIGERAS</b>: todo se queda quieto.</li></ul>`],
 ['Novedades de octubre (14 al 19)',`<p>Lo que ha cambiado del 14 al 19 de octubre. Los apartados de siempre siguen valiendo; aquí tienes lo nuevo.</p>
 <ul><li><b>Tu contraseña es solo tuya.</b> Al admitirte en Discord te llega una carta privada con un <b>enlace de alta</b> (sirve una vez y caduca en 24 horas) para crear tu contraseña. Si la olvidas, pide a Vincent que la resetee: te llegará un enlace nuevo y se cerrarán tus sesiones anteriores. La antigua palabra de seguridad ya no sirve para recuperarla.</li>
 <li><b>Tu sesión no se cierra sola.</b> Solo se cierra con <b>⏻ CERRAR SESIÓN</b> (en tu ficha) o si la dirección la cierra con <b>⏏ EXPULSAR</b>.</li>
@@ -4956,7 +4968,7 @@ const TUTORIAL=[
 <li><b>Pedidos.</b> Los pedidos y su pago los hace la dirección. Cuando llega la mercancía, márcala tú: en <b>PEDIDOS</b>, abre el pedido y marca <b>¿Recibido? SÍ</b> (o escribe lo que ha llegado y pulsa <b>REGISTRAR ENTREGA PARCIAL</b>), o pulsa <b>Recibido entero</b> en Discord. Los materiales entran solos en el almacén y se avisa en el canal de pedidos.</li>
 <li><b>VER OPERACIONES PENDIENTES</b>: si aparece este botón, tu dispositivo guarda operaciones de una versión anterior. No se repiten solas: revísalas con la dirección.</li>
 <li><b>Discord</b>: <b>/saloon</b> (dados y dominó entre dos compañeros), <b>/idea</b> (propuestas con voto), <b>/manual</b> (instrucciones de la casa), <b>/avisame</b> (te avisa por privado cuando un compañero entra en un canal de voz), <b>/acuerdos</b> y, en el menú de un mensaje, <b>Guardar como acuerdo</b>. Con <b>/rumor</b> escribes un rumor IC de hasta 160 caracteres: se publica limpio y el mensaje original se retira.</li></ul>`],
-['Novedades para la Dirección (14 al 19 de octubre)',`<ul><li><b>Todos los jefes administran.</b> Desde el 19 de octubre cualquier jefe hace las funciones de jefe (mira el capítulo «Director de la web y jefes»); lo técnico queda para Vincent, el director de la web.</li>
+['Novedades para la Dirección (14 al 19 de octubre)',`<ul><li><b>Retratos y despacho.</b> En Dirección → Empleados cada ficha tiene su retrato con marco; elige la <b>Silueta</b> (hombre o mujer) de quien no tenga foto, y con <b>✦ ENCUADRAR CON IA</b> Harrington recoloca las fotos antiguas. La consola se abre con el <b>despacho de la Dirección</b>, el resumen de hoy en contadores de latón y la semana en el libro de cuentas, a tinta.</li><li><b>Todos los jefes administran.</b> Desde el 19 de octubre cualquier jefe hace las funciones de jefe (mira el capítulo «Director de la web y jefes»); lo técnico queda para Vincent, el director de la web.</li>
 <li><b>HACER INVENTARIO.</b> Cuenta lo que hay en tu almacén: una casilla vacía no se toca y un <b>0</b> confirma que no queda nada. <b>GUARDAR CAMBIOS</b> te enseña las diferencias y <b>CONFIRMAR Y GUARDAR</b> las aplica. Si algo cambió mientras contabas, no guarda nada y te pide <b>ACTUALIZAR STOCK Y REVISAR</b>.</li>
 <li><b>NPC</b> (Dirección → Tienda → NPC): <b>Entregar al NPC</b> y <b>Recuperar al almacén</b> mueven unidades sin cobrar nada; <b>Revisar ventas del NPC</b> apunta como venta solo lo que falta; además, inventario del NPC, <b>Retirar para consumo</b> y precios propios del NPC.</li>
 <li><b>Entregas al personal y regalos</b>: salen del stock con su gasto de fabricación, sin ingresos.</li>
@@ -6052,7 +6064,7 @@ setInterval(()=>{if(!document.hidden&&!dirModal.hidden&&dirMod==='empleados')loa
 function empExtra(e){
  const me=meEmp(), self=me&&me.id===e.id, jf=isJefe(e), ph=PHOTOS[e.id], canReset=ME?.id==='emuzvkc99z8q'&&AUTH?.emp===ME.id&&e.id!==ME.id;
  return `<div class="it">${ph?`<img class="emp-ph" src="${ph}" alt="">`:''}<span class="pres" data-pres="${esc(e.id)}">…</span>${jf?'<span class="clv ok">🔑 Contraseña personal</span>':`<span class="clv" data-clave="${esc(e.id)}">🔑 …</span>`}</div>
-  <div class="enc-actions two">${canReset?`<button type="button" data-dir="emp-reset:${esc(e.id)}">🔑 RESETEAR CONTRASEÑA</button>`:'<span></span>'}<button type="button" data-dir="emp-foto:${esc(e.id)}">📷 ${ph?'CAMBIAR FOTO':'FOTO'}</button></div>${ph?`<div class="enc-actions"><button type="button" class="warn" data-dir="emp-nofoto:${esc(e.id)}">QUITAR FOTO</button></div>`:''}`+(self?'':`<div class="enc-actions"><button type="button" class="warn" data-dir="emp-kick:${esc(e.id)}">⏏ EXPULSAR</button></div>`);
+  <div class="enc-actions two">${canReset?`<button type="button" data-dir="emp-reset:${esc(e.id)}">🔑 RESETEAR CONTRASEÑA</button>`:'<span></span>'}<button type="button" data-dir="emp-foto:${esc(e.id)}">📷 ${ph?'CAMBIAR FOTO':'FOTO'}</button></div>${ph?`<div class="enc-actions${PHOTO_IA[e.id]?'':' two'}">${PHOTO_IA[e.id]?'':`<button type="button" data-dir="emp-encuadre:${esc(e.id)}">✦ ENCUADRAR CON IA</button>`}<button type="button" class="warn" data-dir="emp-nofoto:${esc(e.id)}">QUITAR FOTO</button></div>`:''}<div class="sil-elige" role="group" aria-label="Silueta del retrato"><span>Silueta${ph?' (si quita la foto)':''}:</span><button type="button" class="${siluetaDe(e.id)==='hombre'?'on':''}" data-dir="emp-sil:${esc(e.id)}|hombre" aria-pressed="${siluetaDe(e.id)==='hombre'}">Hombre</button><button type="button" class="${siluetaDe(e.id)==='mujer'?'on':''}" data-dir="emp-sil:${esc(e.id)}|mujer" aria-pressed="${siluetaDe(e.id)==='mujer'}">Mujer</button></div>`+(self?'':`<div class="enc-actions"><button type="button" class="warn" data-dir="emp-kick:${esc(e.id)}">⏏ EXPULSAR</button></div>`);
 }
 
 /* ===== Entrada: fachada, puerta, «¿Quién entra hoy?» y saludo ===== */
@@ -6206,6 +6218,10 @@ async function empResetClave(id){
 }
 /* ---- fotos de los personajes ---- */
 var PHOTO_TS={};try{PHOTO_TS=JSON.parse(localStorage.getItem('harrington_fotos_ts_v1')||'{}')||{}}catch(e){PHOTO_TS={}}
+/* 19/10/2026: lo que la IA ha visto en cada foto (hombre o mujer, sombrero) y la silueta elegida para quien no tiene foto */
+var PHOTO_IA={};try{PHOTO_IA=JSON.parse(localStorage.getItem('harrington_fotos_ia_v1')||'{}')||{}}catch(e){PHOTO_IA={}}
+var SILUETAS={};try{SILUETAS=JSON.parse(localStorage.getItem('harrington_siluetas_v1')||'{}')||{}}catch(e){SILUETAS={}}
+function siluetaDe(id){const s=SILUETAS[id]||(PHOTO_IA[id]&&PHOTO_IA[id].g);return s==='mujer'?'mujer':'hombre'}
 async function loadPhotos(){
  try{
   /* primero solo la lista con la fecha de cada foto (ocupa poquísimo); después, solo las fotos nuevas o cambiadas */
@@ -6215,10 +6231,11 @@ async function loadPhotos(){
   const m={};Object.keys(ts).forEach(id=>{if(PHOTOS[id]&&need.indexOf('foto-'+id)<0)m[id]=PHOTOS[id]});
   for(let i=0;i<need.length;i+=20){
    const r2=await sbFetch('/rest/v1/datos?select=clave,valor&clave=in.('+need.slice(i,i+20).map(encodeURIComponent).join(',')+')');if(!r2.ok)return;
-   (await r2.json()).forEach(x=>{if(x.valor&&x.valor.img)m[x.clave.slice(5)]=x.valor.img});
+   (await r2.json()).forEach(x=>{const id=x.clave.slice(5);if(x.valor&&x.valor.img){m[id]=x.valor.img;if(x.valor.ia)PHOTO_IA[id]=x.valor.ia;else delete PHOTO_IA[id]}if(id==='siluetas'&&x.valor&&x.valor.map)SILUETAS=x.valor.map});
   }
+  Object.keys(PHOTO_IA).forEach(id=>{if(!m[id])delete PHOTO_IA[id]});
   const ch=JSON.stringify(m)!==JSON.stringify(PHOTOS);PHOTOS=m;PHOTO_TS=ts;
-  try{localStorage.setItem('harrington_fotos_v1',JSON.stringify(m));localStorage.setItem('harrington_fotos_ts_v1',JSON.stringify(ts))}catch(e){}
+  try{localStorage.setItem('harrington_fotos_v1',JSON.stringify(m));localStorage.setItem('harrington_fotos_ts_v1',JSON.stringify(ts));localStorage.setItem('harrington_fotos_ia_v1',JSON.stringify(PHOTO_IA));localStorage.setItem('harrington_siluetas_v1',JSON.stringify(SILUETAS))}catch(e){}
   if(ch){paintPhotos();if(!dirModal.hidden&&dirMod==='empleados'&&!document.activeElement.matches('input,select,textarea'))renderDir()}
  }catch(e){}
 }
@@ -6232,29 +6249,76 @@ function empPickFoto(id){
  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
  inp.onchange=()=>{const f=inp.files&&inp.files[0];if(f)empSaveFoto(id,f)};inp.click();
 }
+/* 19/10/2026: antes de guardarla, la IA mira la foto (hombre o mujer, si lleva sombrero y dónde está la cabeza)
+   y la web la recorta para que la cabeza, con su sombrero, quede centrada dentro del marco ovalado del retrato.
+   Si la IA no está disponible, se recorta por el centro como siempre. La foto original no sale de la web. */
+async function fotoIA(im){
+ try{
+  if(typeof aiApi!=='function')return null;
+  const M=512, k=Math.min(1,M/Math.max(im.width,im.height)), c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+  c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+  const r=await aiApi({accion:'retrato',img:c.toDataURL('image/jpeg',.82)});
+  return r&&r.st===200&&r.j&&r.j.ok?r.j:null;
+ }catch(e){return null}
+}
+function fotoRecorte(im,ia){
+ const W=320,H=400,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+ const iw=im.width, ih=im.height;let sx,sy,sw,sh;
+ if(ia&&Array.isArray(ia.caja)&&ia.persona!==false){
+  const y0=ia.caja[0]/1000*ih, x0=ia.caja[1]/1000*iw, y1=ia.caja[2]/1000*ih, x1=ia.caja[3]/1000*iw, hh=Math.max(8,y1-y0), cx=(x0+x1)/2, cy=(y0+y1)/2;
+  /* la cabeza (con el sombrero) ocupa algo más de la mitad del alto y queda un poco por encima del centro, como en un retrato de estudio */
+  sh=hh/(ia.sombrero?.58:.52);sw=sh*W/H;
+  const f=Math.min(1,iw/sw,ih/sh);sw*=f;sh*=f;
+  sx=Math.min(Math.max(0,cx-sw/2),iw-sw);sy=Math.min(Math.max(0,cy-sh*(ia.sombrero?.42:.4)),ih-sh);
+ }else{
+  const s=Math.max(W/iw,H/ih);sw=W/s;sh=H/s;sx=(iw-sw)/2;sy=Math.max(0,(ih-sh)/2.6);
+ }
+ g.drawImage(im,sx,sy,sw,sh,0,0,W,H);
+ let url=c.toDataURL('image/webp',.8);if(url.indexOf('data:image/webp')!==0)url=c.toDataURL('image/jpeg',.8);
+ return url;
+}
+const SOMBREROS={vaquero:'sombrero vaquero',bombin:'bombín',chistera:'chistera',ala_ancha:'sombrero de ala ancha',gorra:'gorra',otro:'sombrero'};
 async function empSaveFoto(id,file){
  const e=empleados.find(x=>x.id===id);if(!e)return;
- let url='';
+ let im,src;
+ try{src=URL.createObjectURL(file);im=await new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=ko;i.src=src})}catch(err){return say('No se ha podido leer esa imagen')}
+ say('Harrington está mirando la foto para encuadrar el retrato…','long');
+ const ia=await fotoIA(im);
+ let url='';try{url=fotoRecorte(im,ia)}catch(err){return say('No se ha podido leer esa imagen')}finally{try{URL.revokeObjectURL(src)}catch(x){}}
+ const meta=ia?{g:ia.genero,s:!!ia.sombrero,t:ia.tipo||'ninguno',c:Array.isArray(ia.caja)&&ia.persona!==false?1:0,ts:Date.now()}:null;
  try{
-  const src=URL.createObjectURL(file), im=await new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=ko;i.src=src});
-  const W=240,H=300,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
-  const s=Math.max(W/im.width,H/im.height), w=im.width*s, hh=im.height*s;g.drawImage(im,(W-w)/2,(H-hh)/2.6,w,hh);
-  /* WebP ocupa bastante menos; si el navegador no sabe hacerlo (algunos iPhone antiguos), JPEG */
-  url=c.toDataURL('image/webp',.8);if(url.indexOf('data:image/webp')!==0)url=c.toDataURL('image/jpeg',.8);URL.revokeObjectURL(src);
- }catch(err){return say('No se ha podido leer esa imagen')}
- try{
-  const r=await sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify([{clave:'foto-'+id,valor:{img:url,ts:Date.now()},actualizado:new Date().toISOString()}])});
+  const r=await sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify([{clave:'foto-'+id,valor:meta?{img:url,ts:Date.now(),ia:meta}:{img:url,ts:Date.now()},actualizado:new Date().toISOString()}])});
   if(!r.ok)throw new Error(r.status);
  }catch(err){return say('Sin conexión: la foto no se ha guardado')}
- PHOTOS[id]=url;try{localStorage.setItem('harrington_fotos_v1',JSON.stringify(PHOTOS))}catch(x){}
- renderDir();if(!miModal.hidden)renderMi();say('Foto de '+e.name+' guardada');
+ PHOTOS[id]=url;if(meta)PHOTO_IA[id]=meta;else delete PHOTO_IA[id];
+ try{localStorage.setItem('harrington_fotos_v1',JSON.stringify(PHOTOS));localStorage.setItem('harrington_fotos_ia_v1',JSON.stringify(PHOTO_IA))}catch(x){}
+ /* la silueta (para cuando no tenga foto) sigue lo que ha visto la IA; solo la Dirección guarda la lista */
+ if(meta&&(meta.g==='hombre'||meta.g==='mujer')&&SILUETAS[id]!==meta.g&&typeof soyJefe==='function'&&soyJefe())siluetaGuardar(id,meta.g,true);
+ renderDir();if(!miModal.hidden)renderMi();try{paintPhotos()}catch(x){}
+ say('Foto de '+e.name+' guardada'+(meta?(meta.c?' · encuadrada por Harrington':' · no se ve bien la cara: se ha centrado sin más')+(meta.s?' · con su '+(SOMBREROS[meta.t]||'sombrero'):''):''),'long');
+}
+/* una foto subida antes de que existiera el encuadre: Harrington la vuelve a mirar y la recoloca */
+async function empEncuadrar(id){
+ const ph=PHOTOS[id];if(!ph)return;
+ try{const im=await new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=ko;i.src=ph});const c=document.createElement('canvas');c.width=im.width;c.height=im.height;c.getContext('2d').drawImage(im,0,0);
+  const b=await new Promise(ok=>c.toBlob(ok,'image/png'));if(!b)throw 0;await empSaveFoto(id,b)}catch(e){say('No se ha podido volver a encuadrar la foto')}
+}
+async function siluetaGuardar(id,g,quiet){
+ const m=Object.assign({},SILUETAS);m[id]=g==='mujer'?'mujer':'hombre';
+ try{
+  const r=await sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify([{clave:'foto-siluetas',valor:{map:m,ts:Date.now()},actualizado:new Date().toISOString()}])});
+  if(!r.ok)throw new Error(r.status);
+ }catch(err){if(!quiet)say('Sin conexión: no se ha cambiado la silueta');return false}
+ SILUETAS=m;try{localStorage.setItem('harrington_siluetas_v1',JSON.stringify(m))}catch(x){}
+ if(!quiet){renderDir();try{paintPhotos()}catch(x){}say('Silueta de '+((empleados.find(x=>x.id===id)||{}).name||'')+': '+(m[id]==='mujer'?'mujer':'hombre'))}
+ return true;
 }
 async function empNoFoto(id){
  const e=empleados.find(x=>x.id===id);if(!e)return;
- if(!await askConfirm('Quitar foto','La tarjeta de '+e.name+' volverá a mostrar sus iniciales.','Quitar'))return;
+ if(!await askConfirm('Quitar foto','La tarjeta de '+e.name+' volverá a mostrar su silueta de '+siluetaDe(id)+'.','Quitar'))return;
  try{const r=await sbFetch('/rest/v1/datos?clave=eq.'+encodeURIComponent('foto-'+id),{method:'DELETE'});if(!r.ok)throw new Error(r.status)}catch(err){return say('Sin conexión: no se ha quitado')}
- delete PHOTOS[id];try{localStorage.setItem('harrington_fotos_v1',JSON.stringify(PHOTOS))}catch(x){}
- renderDir();if(!miModal.hidden)renderMi();say('Foto quitada');
+ delete PHOTOS[id];delete PHOTO_IA[id];try{localStorage.setItem('harrington_fotos_v1',JSON.stringify(PHOTOS));localStorage.setItem('harrington_fotos_ia_v1',JSON.stringify(PHOTO_IA))}catch(x){}
+ renderDir();if(!miModal.hidden)renderMi();try{paintPhotos()}catch(x){}say('Foto quitada: saldrá su silueta');
 }
 /* ---- la tarjeta elegida se acerca, pide la contraseña y se da la vuelta ---- */
 function gBigOpen(e,src){
@@ -6472,7 +6536,8 @@ try{pwEyes(document.getElementById('bossModal'))}catch(e){}
 
 /* En el ordenador, si existe la cabecera alargada (cabecera-web-ancha), se usa esa */
 (function(){const img=document.querySelector('.hero-banner img');if(!img)return;let done=false;
- const tryW=()=>{if(done||innerWidth<1100)return;done=true;gTry(['cabecera-web-ancha.webp','cabecera-web-ancha.webp'],u=>{img.src=u;img.classList.add('ancha')},()=>{})};
+ /* 19/10/2026: la portada alargada es la de la hora de Saint Denis (mañana, atardecer o noche), la elige franja.js */
+ const tryW=()=>{if(done||innerWidth<1100)return;done=true;const w=window.hgPortadaSrc?hgPortadaSrc(true):'cabecera-web-ancha.webp';gTry([w,'cabecera-web-ancha.webp'],u=>{img.src=u;img.classList.add('ancha')},()=>{})};
  tryW();window.addEventListener('resize',tryW)})();
 /* ===== Modo prueba: barra, visor de Discord y entrada automática como Arthur Ayudante ===== */
 function sbxPaint(){const b=document.getElementById('sbxDc');if(b)b.textContent='DISCORD ('+SBX.dc.length+')'}
@@ -6644,7 +6709,7 @@ function renderMi(){
  document.getElementById('miBody').innerHTML=`<div class="mi-photo">${ph?`<img src="${ph}" alt="">`:`<b>${esc(ini)}</b>`}</div><div class="mi-name">${esc(e.name)}</div><div class="mi-role">${esc(e.puesto||'Empleado')}</div>
   ${miWeekHTML(e)}
   <div class="enc-actions"><button type="button" class="primary" id="miFoto">📷 ${ph?'CAMBIAR MI FOTO':'SUBIR MI FOTO'}</button>${ph?'<button type="button" class="warn" id="miNoFoto">QUITAR MI FOTO</button>':''}</div>
-  <p class="bk-note" style="margin:4px 0 0">Sale en tu tarjeta de la entrada en tono sepia, como un retrato antiguo. Por ejemplo, una captura de tu personaje.</p>
+  <p class="bk-note" style="margin:4px 0 0">Sube una captura de tu personaje: Harrington la mira, centra tu cara (con tu sombrero, si lo llevas) y sale en tu tarjeta de la entrada como un retrato antiguo en sepia. Si no subes ninguna, sale una silueta.</p>
   ${pushMiHTML()}
   <div class="enc-actions" style="margin-top:12px"><button type="button" class="warn" id="miLogout">⏻ CERRAR SESIÓN</button></div>
   <p class="bk-note" style="margin:4px 0 0">Tu sesión se queda abierta aunque salgas de la aplicación. Ciérrala aquí cuando acabes, para que nadie use la web a tu nombre (no se cierra sola: solo tú, o la dirección con ⏏ EXPULSAR).</p>`;
@@ -7212,7 +7277,8 @@ const PARCHES=[
  {f:'17/10/2026',t:'Aceite, accesos rápidos y acabado',v:'3.0',i:['Cada receta de aceite produce 10 unidades, con su consumo y coste por lote','Botones +5, +10 y +20 en trapos, aceite y pólvora','Fichas de producto más completas y barra de progreso en los pedidos','La dirección puede publicar en Discord el cierre de turno de otro empleado','Acabado de cuero, madera y latón más visible']},
  {f:'18/10/2026',t:'Nóminas, informes y historial',v:'3.0',i:['Se pagan como máximo 5 horas extra por empleado y semana; el exceso queda registrado','Los informes semanales de ventas y de gastos van a su propio canal de Discord','El historial de ventas se carga por partes, conservando el buscador','El propietario puede resetear la contraseña de otros jefes desde su ficha','Texturas de pavonado, latón, cuero, papel y terciopelo']},
  {f:'19/10/2026',t:'Revisión y sesiones sin cierre por inactividad',v:'3.0',i:['La sesión ya no se cierra sola tras 3 horas: solo la cierra el empleado (⏻ CERRAR SESIÓN) o la dirección (⏏ EXPULSAR en Empleados)','DIRECCIÓN abre y se desplaza más fluida: su fondo ya no es fijo y se prepara al activar el Modo Jefe','Las tareas automáticas de administración solo las hace el dispositivo del propietario; antes, desde otra cuenta, se reintentaban sin parar','Los empleados vuelven a marcar en la web la llegada de los pedidos (entera o parcial); lo registra el servidor y no se suma dos veces aunque se repita','Los pedidos y su pago siguen siendo cosa de la dirección','Corrección de «Quién es» en telegramas, contactos y materiales con pedidos pendientes']},
- {f:'19/10/2026',t:'Director de la web y jefes',v:'3.0',i:['Cualquier jefe puede activar Dirección y hacer las funciones de jefe: personal, sueldos, recetas, proveedores, pedidos y su pago, precios, convenios, stock, inventario, NPC, gastos, cuentas, entregas, encargos, clientes, sorteos e informes','Vincent queda como director de la web: contraseñas, configuración de Discord, historial de parches, nube, resetear datos, ver y restaurar copias y el diagnóstico de la IA','Solo el director nombra o quita jefes, cambia el Discord enlazado de alguien y edita su propia ficha; un jefe no puede borrar el historial','En Discord, la Dirección es cualquier jefe con su Discord enlazado: solicitudes, plantilla, sanciones, eventos, reuniones, votaciones, caja, compras, agenda, Se busca, aprobaciones, manual, ideas y acuerdos','La base de datos y el Señor Harrington comprueban cada permiso en el servidor']}
+ {f:'19/10/2026',t:'Director de la web y jefes',v:'3.0',i:['Cualquier jefe puede activar Dirección y hacer las funciones de jefe: personal, sueldos, recetas, proveedores, pedidos y su pago, precios, convenios, stock, inventario, NPC, gastos, cuentas, entregas, encargos, clientes, sorteos e informes','Vincent queda como director de la web: contraseñas, configuración de Discord, historial de parches, nube, resetear datos, ver y restaurar copias y el diagnóstico de la IA','Solo el director nombra o quita jefes, cambia el Discord enlazado de alguien y edita su propia ficha; un jefe no puede borrar el historial','En Discord, la Dirección es cualquier jefe con su Discord enlazado: solicitudes, plantilla, sanciones, eventos, reuniones, votaciones, caja, compras, agenda, Se busca, aprobaciones, manual, ideas y acuerdos','La base de datos y el Señor Harrington comprueban cada permiso en el servidor']},
+ {f:'19/10/2026',t:'La casa por dentro: mejoras visuales',v:'3.0',i:['La portada cambia con la hora de Saint Denis: mañana (7 a 17 h), atardecer (17 a 21 h) y noche (21 a 7 h), en ordenador y en móvil, con fundido al cambiar','Lámparas de la portada que parpadean, polvo en la luz y rayos de sol por la mañana','Pantalla de carga con el sello de lacre (una vez por pestaña)','Avisos en papel de telegrama con el telégrafo; los errores, como URGENTE','Ventanas que se abren como un cajón; Notas, Encargos, Ausencias y Eventos se desenrollan como un pergamino','Ticket que se imprime línea a línea y monedas de oro al sellar PAGADO','Cartel ABIERTO / CERRADO que se balancea y gira al cambiar','Contadores de latón en el resumen de la Dirección y gráfica de la semana dibujada a tinta en el libro de cuentas','Cabecera con el despacho de la Dirección','Retratos sepia con marco ovalado dorado; silueta de hombre o de mujer si no hay foto','Al subir una foto, Harrington (IA) mira si es hombre o mujer, si lleva sombrero y dónde está la cabeza, y la encuadra en el óvalo','Cada empleado puede subir, cambiar o quitar su propia foto desde Mi ficha (solo la suya)','Dibujos dorados en las pantallas vacías: ventas, búsqueda, inventario, avisos y empleados','Ornamentos victorianos, títulos con pan de oro y nuevas letras de época','Botón del micrófono de Harrington a la derecha, banda más oscura bajo el nombre de la categoría y títulos del mismo tamaño']},
 ];
 let phQ='';
 /* Versiones: cada parche lleva su versión (v); los que no la llevan son de la 1.0 */
