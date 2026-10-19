@@ -4,7 +4,7 @@
 
 Los 40 módulos solicitados y los 3 de personalización están incluidos en el motor de capacidades. Ninguno se activa al desplegar. El registro `modules:config:<guild>` de la tabla privada `bot_equipo` guarda sus opciones y la activación inicial sigue apagada por módulo. La adopción del canal habilita los controles de administración (`activationLocked: false`), sin activar las funciones.
 
-El canal `1561742079477026946` contiene el panel privado para JEFE. Permite catálogo, activación/desactivación por módulo, opciones y permisos mediante formularios, simulaciones, configuración de canales y cargos, nombre/avatar/banner/bio del bot por servidor y estilos de roles con reintento de pendientes. El catálogo de funciones actuales permite detener comandos y grupos de tareas programadas; no invalida botones históricos ya publicados. Las claves internas de autenticación no se muestran ni se editan. Las simulaciones no escriben registros, no consultan servicios de pago y no envían operaciones a Discord. Los datos de ejemplo son ficticios, no archivos de audio o imágenes que deban subirse.
+El canal `1561742079477026946` contiene el panel privado para JEFE. Permite catálogo, activación/desactivación por módulo, opciones y permisos mediante asistentes con selectores, simulaciones, configuración de canales y cargos, nombre/avatar/banner/bio del bot por servidor y estilos de roles con reintento de pendientes. El catálogo de funciones actuales permite detener comandos y grupos de tareas programadas; no invalida botones históricos ya publicados. Las claves internas de autenticación no se muestran ni se editan. Las simulaciones no escriben registros, no consultan servicios de pago y no envían operaciones a Discord. Los datos de ejemplo son ficticios, no archivos de audio o imágenes que deban subirse.
 
 ## Alcance y requisitos
 
@@ -48,3 +48,13 @@ La crónica busca cada cinco minutos canales de texto cuyo nombre, normalizado s
 El perfil visual Harrington conserva los IDs y permisos de los roles. Guarda nombre/color deseados y estado de aplicación, incluidos roles por encima del bot. Los pendientes se reintentan cada cinco minutos. Los colores de nombres de usuario siguen las reglas nativas de prioridad de roles; no se sustituyen los nombres personales. Los degradados se solicitan solo si Discord ofrece ENHANCED_ROLE_COLORS.
 
 Pruebas: node --experimental-strip-types test-modules.mjs y test-control.mjs.
+
+## Configuración guiada e instrucciones
+
+`/instrucciones` devuelve una guía privada de cinco pasos y enlaza el canal de administración. La detección del canal registra el comando por servidor sin sobrescribir los demás comandos. El panel contiene fichas para las 43 funciones con todas sus acciones manuales, requisitos y límites. Las opciones ya no requieren JSON: se eligen canales, roles, miembros, valores, horarios de Madrid, listas y tablas por líneas en formularios guiados. Los formularios admiten preguntas de texto, número y opciones.
+
+Los asistentes guardan borradores privados, ligados a servidor y usuario y con caducidad de 30 minutos. Permiten volver atrás, conservar valores y cancelar. Solo la confirmación guarda la configuración o ejecuta una acción real; no activa automáticamente módulos. Los pasos antiguos se rechazan y la confirmación usa una reserva para evitar duplicados simultáneos. El lote permite acumular hasta diez acciones y preparar su plan, sin ejecutarlas.
+
+Los registros tienen consulta paginada y etiquetas legibles. Las fichas históricas se obtienen de los comandos reales de Discord e incluyen sus opciones; permiten activar/desactivar comandos, subcomandos, grupos de cron y botones por flujo. La ayuda y administración no quedan bloqueadas por estos interruptores. La configuración de permisos, canales y cargos se conserva. Los permisos y la jerarquía propios de Discord, los boosts y la instalación de una conexión Gateway permanente siguen siendo requisitos externos: el panel los explica sin afirmar que los active por sí mismo.
+
+Validación adicional: `node --experimental-strip-types test-guide.mjs` (43 fichas, formatos y horario de Madrid, privacidad, cancelación, confirmaciones, datos sin cambios previos, tarea real en adaptador simulado, lotes sin ejecución, subcomandos y botones).

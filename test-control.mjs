@@ -10,6 +10,7 @@ const roles=[{id:c.guild_id,position:0,permissions:'0',name:'everyone'},{id:'bot
 const channel={id:c.canal_configuracion_bot,type:0,name:'⚙️・configuración-bot',permission_overwrites:[]};
 const oldFetch=globalThis.fetch;globalThis.EdgeRuntime={waitUntil(p){deferred.push(p)}};
 globalThis.fetch=async(url,options={})=>{const path=new URL(url).pathname.replace('/api/v10',''),method=options.method||'GET',body=options.body?JSON.parse(options.body):null;let result={};
+ if(path.startsWith('/applications/')&&path.endsWith('/commands')&&method==='POST')return Response.json({id:'help-command',name:'instrucciones'});
  if(path.startsWith('/webhooks/')){replies.push(body);return Response.json({});}
  if(path==='/users/@me/guilds')result=[{id:c.guild_id}];
  else if(path==='/guilds/'+c.guild_id+'/channels')result=[channel];

@@ -1,3 +1,4 @@
+import {requirementLabel} from './module-guide-data.ts';
 import {canView} from "./module-access.ts";
 import {readFeed} from "./module-feed.ts";
 import {restoreStructure} from "./module-restore.ts";
@@ -14,14 +15,14 @@ async function saveRecord(sb:A,c:C,id:string,kind:string,data:A,uid:string){cons
 export async function installModules(sb:A,c:C){const existing=ok(await sb.from('bot_equipo').select('id').eq('id',cfgId(c.guild_id)).maybeSingle());if(existing)return readConfig(sb,c.guild_id);await saveRecord(sb,c,cfgId(c.guild_id),'modules_config',{modules:defaults(),activationLocked:true},'1398183011232518164');return readConfig(sb,c.guild_id);}
 export function isChief(c:C,i:A){return i.guild_id===c.guild_id&&((c.guild_id==='1520875506214371439'&&String(i.member?.user?.id)==='1398183011232518164')||(BigInt(i.member?.permissions||'0')&8n)===8n||!!c.rol_jefe&&Array.isArray(i.member?.roles)&&i.member.roles.includes(c.rol_jefe));}
 const json=(x:unknown)=>new Response(JSON.stringify(x),{headers:{'Content-Type':'application/json'}});
-const payload=(title:string,description:string,components:any[]=[])=>({allowed_mentions:{parse:[]},embeds:[{title,color:0xC9A24A,description:description.slice(0,3900),footer:{text:'Configuración Bot · Solo jefes · módulos nuevos independientes'}}],components});
+const payload=(title:string,description:string,components:any[]=[])=>({allowed_mentions:{parse:[]},embeds:[{title,color:0xC9A24A,description:description.slice(0,3900),footer:{text:'Configuración Bot · Solo jefes · Configuración guiada'}}],components});
 export async function discordAPI(c:C,method:string,path:string,body?:unknown){
  const send=()=>fetch('https://discord.com/api/v10'+path,{method,headers:{Authorization:'Bot '+c.token,'Content-Type':'application/json','X-Audit-Log-Reason':'Configuracion%20modular%20de%20Harrington'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(10000)});
  let r=await send();if(r.status===429){const d=await r.json();if(Number(d.retry_after)>5)throw Error('Discord pide esperar antes de continuar');await new Promise(x=>setTimeout(x,Math.max(100,Number(d.retry_after)*1000)));r=await send();}const d=await r.json().catch(()=>null);if(!r.ok)throw Object.assign(Error('Discord '+r.status),{status:r.status});return d;
 }
 export async function modulePanel(sb:A,c:C,page=0){
  const cfg=await readConfig(sb,c.guild_id),selected=catalog.slice(page*20,page*20+20),on=catalog.filter(m=>cfg.modules[m.id]?.enabled===true).length;
- return payload('⚙️ Configuración del Señor Harrington','**'+catalog.length+' módulos instalados · '+on+' activados.**\n'+(cfg.activationLocked?'🔒 Activación bloqueada por petición del propietario. Se permiten consultas y simulaciones; no se aplican cambios.':'La activación requiere una decisión explícita por módulo.')+'\n\n'+selected.map(m=>'**'+m.number+'. '+m.title+'** · '+(cfg.modules[m.id]?.enabled?'ACTIVO':'DESACTIVADO')+(m.requires.length?'\nRequisitos: '+m.requires.join(', '):'')).join('\n')+'\n\nLas funciones históricas que ya usáis siguen con su funcionamiento anterior. Las pruebas no modifican Discord ni la base de datos.',[
+ return payload('⚙️ Configuración del Señor Harrington','**'+catalog.length+' módulos instalados · '+on+' activados.**\n'+(cfg.activationLocked?'🔒 Activación bloqueada por petición del propietario. Se permiten consultas y simulaciones; no se aplican cambios.':'La activación requiere una decisión explícita por módulo.')+'\n\n'+selected.map(m=>'**'+m.number+'. '+m.title+'** · '+(cfg.modules[m.id]?.enabled?'ACTIVO':'DESACTIVADO')+(m.requires.length?'\nRequisitos: '+m.requires.map(x=>moduleById(x)?.title||requirementLabel(x)).join(', '):'')).join('\n')+'\n\nLas funciones históricas que ya usáis siguen con su funcionamiento anterior. Las pruebas no modifican Discord ni la base de datos.',[
   {type:1,components:[{type:3,custom_id:'mod:select',placeholder:'Activar, desactivar o configurar una función',options:selected.map(m=>({label:m.number+'. '+m.title,value:m.id,description:(cfg.modules[m.id]?.enabled?'Activado':'Desactivado')+' · '+m.group}))}]},
   {type:1,components:[0,1,2].map(n=>({type:2,style:2,label:'Página '+(n+1),custom_id:'mod:page:'+n,disabled:n===page}))}
  ]);

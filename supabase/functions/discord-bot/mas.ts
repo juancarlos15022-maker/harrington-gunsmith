@@ -334,7 +334,7 @@ async function cronBitacora(c: C) {
 // ── crónica: todo lo periódico de esta tanda ──
 export async function cronicaMas(c: C, cada10: boolean) {
   const hecho: Record<string, string> = {};
-  const paso = async (n: string, f: () => Promise<unknown>) => { try { await f(); hecho[n] = "ok"; } catch (e) { hecho[n] = String((e as Error)?.message || e).slice(0, 120); } };
+  const paso = async (n: string, f: () => Promise<unknown>) => { try { if(c["control_off_cron_social_"+n]==="true"){hecho[n]="desactivado";return;} await f(); hecho[n] = "ok"; } catch (e) { hecho[n] = String((e as Error)?.message || e).slice(0, 120); } };
   await paso("pedidos", () => cronPedidos(c));
   await paso("nominas", () => cronNominas(c));
   await paso("bitacora", () => cronBitacora(c));
@@ -498,4 +498,5 @@ function cartel(b: Any) {
     footer: { text: `Por orden de la Dirección · ${fecha(b.ts)} · Casa Harrington, Saint Denis` } }],
     components: vivo ? [{ type: 1, components: [{ type: 2, style: 2, label: "Retirar cartel (Dirección)", custom_id: "sb:del:" + b.id }] }] : [] };
 }
+
 
