@@ -2584,7 +2584,8 @@ function pedidoText(r,title){
  if(r.proveedorTel)L.push('Telegrama: '+r.proveedorTel);
  L.push('Fecha: '+r.date+' '+r.time,'','Materiales:');
  r.items.forEach(x=>L.push(`  ${x.qty} × ${x.material} · ${money(x.price)} = ${money(x.qty*x.price)}`));
- L.push('','TOTAL: '+money(r.totalCents),'Pagado: '+(r.paid?'SÍ':'NO')+(r.paidBy?' ('+r.paidBy+')':'')+' · Recibido: '+(r.received?'SÍ':'NO')+(r.receivedBy?' ('+r.receivedBy+')':''));
+ if(r.liquidacion){const z=r.liquidacion;L.push('','Resto pendiente CANCELADO','Valor recibido: '+money(z.receivedCents),'Valor cancelado sin recibir: '+money(z.cancelledCents),'Gasto pagado: '+money(z.paidCents),'Pendiente de pago: '+money(z.payableCents),'Pendiente de devolución: '+money(z.refundDueCents));r.items.forEach(i=>L.push('Recibido: '+(r.received?i.qty:Math.min(i.qty,i.rq||0))+' × '+i.material));}
+ L.push('','TOTAL ORIGINAL: '+money(r.originalTotalCents||r.totalCents),'Pagado: '+(r.paid?'SÍ':'NO')+(r.paidBy?' ('+r.paidBy+')':'')+' · Recibido: '+(r.received?'SÍ':'NO')+(r.receivedBy?' ('+r.receivedBy+')':''));
  return L.join('\n');
 }
 function pedRecv(x){const q=(x.items||[]).reduce((a,i)=>a+i.qty,0), r=(x.items||[]).reduce((a,i)=>a+Math.min(i.qty,i.rq||0),0);return {q:q,r:x.received?q:r}}
@@ -2608,7 +2609,7 @@ function renderPed(){
   <div class="cartrow carthead"><span>Material</span><span>Cant.</span><span>P. unit.</span><span>Subtotal</span></div>${x.items.map(i=>cartRow({name:i.material,qty:i.qty,cents:i.price})).join('')}
   <div class="brow due" style="margin-top:8px"><span>TOTAL</span><span>${money(x.totalCents)}</span></div>
   <div class="alb-stamps">${x.received?'<span class="alb-st ok">RECIBIDO</span>':''}${x.paid?'<span class="alb-st ok">PAGADO</span>':'<span class="alb-st bad">POR PAGAR</span>'}</div></div>
-  <div class="badges" style="margin:8px 0">${pedBadges(x)}</div>
+  <div class="badges" style="margin:8px 0">${pedBadges(x)}</div>${x.remainderCancelled?'<div class="enc-note">El resto no recibido está cancelado. Este pedido conserva solo la mercancía recibida y seguirá aquí hasta confirmar el pago.</div>':''}
   <div class="enc-sec">
    <label>EMPLEADO QUE LO REGISTRA<select id="pdEmp"${meEmp()?' disabled':''}><option value="">Seleccionar empleado</option>${empleados.map(e=>`<option value="${esc(e.id)}"${pedDraft.emp===e.id?' selected':''}>${esc(e.name)}</option>`).join('')}</select></label>
    <label>¿RECIBIDO?<select id="pdRec"${x.received?' disabled':''}><option value="0"${!pedDraft.received?' selected':''}>NO</option><option value="1"${pedDraft.received?' selected':''}>SÍ</option></select></label>
@@ -2621,7 +2622,7 @@ function renderPed(){
    ${x.paidInitial?'<div class="enc-note">Este pedido ya se dejó pagado: no se puede cambiar.</div>':''}
    <div class="enc-note">Cuando esté recibido y pagado, el pedido sale de la lista y pasa a la contabilidad.</div>
   </div>
-  <div class="enc-actions"><button type="button" class="gold" data-pact="save">GUARDAR CAMBIOS</button><button type="button" data-pact="tele">COPIAR PEDIDO (TELEGRAMA)</button>${bossActive?'<button type="button" class="warn" data-pact="cancel">CANCELAR PEDIDO</button>':''}</div>`;
+  <div class="enc-actions"><button type="button" class="gold" data-pact="save">GUARDAR CAMBIOS</button><button type="button" data-pact="tele">COPIAR PEDIDO (TELEGRAMA)</button>${bossActive&&!x.remainderCancelled?'<button type="button" class="warn" data-pact="cancel">CANCELAR PEDIDO</button>':''}</div>`;
 }
 async function savePedido(){
  const x=pendingPed().find(p=>p.id===pedView); if(!x||!pedDraft)return;
@@ -2666,7 +2667,7 @@ async function savePedido(){
   }
   rec.matIn=true;
  }
- if(rec.received&&rec.paid){rec.completedAt=now;done=true}
+ if(rec.received&&rec.paid){rec.completedAt=now;done=true;if(rec.liquidacion)rec.liquidacion=Object.assign({},rec.liquidacion,{paidCents:rec.totalCents,payableCents:0,paidBy:emp,paidAt:now})}
  savePed(rec);
  if(done){
   const m=madridParts(now), g={id:'gp'+rec.id,cat:'proveedor',concepto:`Pedido ${rec.code} · ${rec.proveedor}`,cents:rec.totalCents,day:dayNum(+m.year,+m.month,+m.day),date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`,pedido:rec.id};
@@ -2737,7 +2738,7 @@ async function savePartial(){
  const rec=Object.assign({},base,{items:items,recs:(base.recs||[]).concat([{ts:now,by:emp,items:got}])});
  const all=items.every(i=>(i.rq||0)>=i.qty);
  if(all){rec.received=true;rec.receivedBy=emp;rec.receivedAt=now;rec.matIn=true;try{await claimRow('recibido-'+rec.id,{ts:now,by:emp,parcial:true})}catch(e){}}
- let done=false;if(rec.received&&rec.paid){rec.completedAt=now;done=true}
+ let done=false;if(rec.received&&rec.paid){rec.completedAt=now;done=true;if(rec.liquidacion)rec.liquidacion=Object.assign({},rec.liquidacion,{paidCents:rec.totalCents,payableCents:0,paidBy:emp,paidAt:now})}
  savePed(rec);pedDraft.part={};
  actLog('recepcion',{pedido:rec.code,proveedor:rec.proveedor,items:got,parcial:!all},emp);
  discordSend('pedidos',['ENTREGA '+(all?'FINAL':'PARCIAL')+' · '+rec.code,'Proveedor: '+rec.proveedor,'Recibido ahora: '+got.map(g=>g.qty+' × '+g.material).join(', '),'Registrado por: '+(emp||'—')].concat(all?[]:['Pendiente: '+items.filter(i=>(i.rq||0)<i.qty).map(i=>(i.qty-(i.rq||0))+' × '+i.material).join(', ')]).join('\n'));
@@ -2745,20 +2746,54 @@ async function savePartial(){
  try{stampFx(all?'RECIBIDO':'PARCIAL');playChest()}catch(e){}
  renderPed();say(all?'Entrega final: pedido recibido entero':'Entrega parcial registrada: '+got.map(g=>g.qty+' × '+g.material).join(', '));
 }
-async function cancelPedido(id){
- const x=pendingPed().find(p=>p.id===id); if(!x)return;
- if(!await askConfirm('Cancelar pedido','El pedido '+x.code+' a '+x.proveedor+' se cancelará y dejará de estar pendiente.','Cancelar pedido'))return;
- let base=x;
- try{ /* comprobar en la nube que nadie lo ha completado o cancelado ya */
-  const r=await sbFetch('/rest/v1/datos?select=valor&clave=eq.'+encodeURIComponent('pedido:'+x.id));
-  if(!r.ok)throw new Error(r.status);
-  const rows=await r.json();if(rows[0]&&rows[0].valor&&!rows[0].valor.deleted)base=rows[0].valor;
- }catch(e){return say('Sin conexión: no se puede cancelar el pedido ahora')}
- if(base.completedAt||base.cancelled){savePed(base);pedView=null;renderPed();return say('Este pedido ya estaba cerrado')}
- const rec=Object.assign({},base,{cancelled:true,cancelledAt:Date.now()});
- savePed(rec);discordSend('pedidos',pedidoText(rec,'PEDIDO CANCELADO'));
- pedView=null;renderPed();say('Pedido cancelado');
+function pedidoCancelResumen(p){
+ let total=0,recibido=0,unidades=0;
+ const pendientes=[];
+ (p.items||[]).forEach(i=>{const q=Number(i.qty),rq=p.received?q:Math.min(q,Math.max(0,Number(i.rq||0))),price=Number(i.price);total+=q*price;recibido+=rq*price;unidades+=rq;if(q>rq)pendientes.push((q-rq)+' × '+i.material)});
+ return {total,recibido,unidades,pendientes};
 }
+function askPedidoRecibidoPagado(p,r){
+ const el=document.createElement('div');el.className='modal-overlay confirm';
+ el.innerHTML='<div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="pcTitle"><div class="confirm-title" id="pcTitle">¿Está pagado lo que has recibido?</div><p id="pcSummary"></p><div class="confirm-actions"><button type="button" data-pc="back">Volver</button><button type="button" data-pc="no">No, dejar pendiente de pago</button><button type="button" class="ok" data-pc="yes">Sí, registrar gasto y cancelar</button></div></div>';
+ el.querySelector('#pcSummary').textContent='Pedido '+p.code+' · '+p.proveedor+'. Has recibido material por '+money(r.recibido)+'. Se conservará en el almacén. Se cancelará únicamente lo que falta por llegar: '+(r.pendientes.join(', ')||'nada')+'.'+((p.paid||p.paidInitial)?' Este pedido figura pagado por adelantado: se conservará el pago registrado y quedará pendiente de devolución el importe de lo no recibido.':' Si eliges Sí, se registrará '+money(r.recibido)+' en gastos. Si eliges No, el pedido se reducirá a lo recibido y seguirá pendiente hasta que lo marques pagado.');
+ el.querySelector('.confirm-actions').style.gridTemplateColumns='1fr';document.body.appendChild(el);openModal(el);
+ return new Promise(resolve=>{
+  const end=v=>{document.removeEventListener('keydown',key,true);closeModal(el);el.remove();resolve(v)};
+  const key=e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();end(null)}};
+  document.addEventListener('keydown',key,true);el.onclick=e=>{const b=e.target.closest('[data-pc]');if(b)end(b.dataset.pc==='back'?null:b.dataset.pc==='yes');else if(e.target===el)end(null)};
+  el.querySelector('[data-pc="back"]').focus();
+ });
+}
+async function cancelPedido(id){
+ const x=pendingPed().find(p=>p.id===id);if(!x)return;
+ if(!bossActive)return say('Solo la dirección puede cancelar pedidos','err');
+ if(SANDBOX)return say('La cancelación con liquidación se realiza desde la cuenta conectada','err');
+ let base;
+ try{const r=await sbFetch('/rest/v1/datos?select=valor&clave=eq.'+encodeURIComponent('pedido:'+x.id));if(!r.ok)throw Error(r.status);const rows=await r.json();base=rows[0]&&rows[0].valor;if(!base||base.deleted)throw Error('PEDIDO_NO_EXISTE')}
+ catch(e){return say('No se pudo consultar el pedido. Revisa la conexión y vuelve a intentarlo','err')}
+ if(base.completedAt||base.cancelled||base.remainderCancelled){savePed(base);pedView=null;renderPed();return say('Este pedido ya estaba cerrado')}
+ const resumen=pedidoCancelResumen(base);let pagado=false;
+ if(resumen.unidades>0){pagado=await askPedidoRecibidoPagado(base,resumen);if(pagado===null)return;if(!pagado&&(base.paid||base.paidInitial))return say('El pedido ya figura pagado. Revisa ese pago antes de indicar que no está pagado','err')}
+ else if(!await askConfirm('Cancelar pedido','No se ha recibido material de '+base.code+'. Se cancelará lo pendiente.'+((base.paid||base.paidInitial)?' El pago anticipado se conservará en gastos y quedará pendiente de devolución.':''),'Cancelar pedido'))return;
+ const key='hg_cancelar_'+id;let pet=store.get(key);if(!pet){pet=crypto.randomUUID();store.set(key,pet)}
+ let result;
+ try{result=await sbRpc('cancelar_pedido',{p_peticion:pet,p_pedido:id,p_recibido_pagado:!!pagado,p_esperado:base})}
+ catch(e){let m=String(e&&e.message||'');if(/PEDIDO_CAMBIADO/.test(m)){store.remove(key);await cloudPullRecords();pedDraft=null;renderPed();return say('El pedido ha cambiado en otro dispositivo. Revisa lo recibido y vuelve a cancelar','err')}
+  if(/SOLO_DIRECCION|42501/.test(m))return say('Solo la dirección puede cancelar este pedido','err');
+  if(/GASTO_PEDIDO_REVISAR|PAGO_YA_CONFIRMADO/.test(m))return say('Ya existe un pago registrado: revísalo antes de cancelar para no duplicarlo ni borrarlo','err');
+  return say('No se pudo confirmar la cancelación. Vuelve a intentarlo: el gasto no se duplicará','err');
+ }
+ store.remove(key);if(Array.isArray(result.records))applyRecords(result.records);LOTC=null;
+ const rec=result.pedido;if(!rec)return say('No se pudo confirmar la cancelación','err');
+ // La respuesta del servidor ya está guardada: no reenviar una copia local sobre ella.
+ pedView=rec.completedAt||rec.cancelled?null:rec.id;pedDraft=null;updatePedBtn();renderPed();
+ if(!result.replayed)discordSend('pedidos',pedidoText(rec,'PEDIDO · RESTO CANCELADO'));
+ const l=rec.liquidacion||{};say((!rec.completedAt&&!rec.cancelled?'Pedido reducido a lo recibido y pendiente de pago.':'Resto del pedido cancelado. Material recibido conservado.')+(l.paidCents?' Gasto registrado: '+money(l.paidCents)+'.':' Sin gasto añadido.')+(l.payableCents?' Pendiente de pago: '+money(l.payableCents)+'.':'')+(l.refundDueCents?' Pendiente de devolución: '+money(l.refundDueCents)+'.':''));
+}
+function pedidoCierreTs(p){return p.completedAt||(p.liquidacion&&p.cancelledAt)||0}
+function pedidoContado(p){return p.liquidacion?p.liquidacion.paidCents:(p.totalCents||0)}
+function pedidoLiquidacionHTML(p){const l=p.liquidacion;if(!l)return '';return '<div class="enc-note">Recibido: <b>'+money(l.receivedCents)+'</b> · Cancelado sin recibir: <b>'+money(l.cancelledCents)+'</b> · Gasto pagado: <b>'+money(l.paidCents)+'</b>'+(l.payableCents?' · Pendiente de pago: <b>'+money(l.payableCents)+'</b>':'')+(l.refundDueCents?' · Pendiente de devolución: <b>'+money(l.refundDueCents)+'</b>':'')+'</div>'}
+
 pedBtn.onclick=()=>{pedView=null;pedDraft=null;renderPed();openModal(pedModal);pedModal.scrollTop=0};
 document.getElementById('pedClose').onclick=()=>closeModal(pedModal);
 pedModal.addEventListener('click',e=>{
@@ -2769,7 +2804,7 @@ pedModal.addEventListener('click',e=>{
  if(a.dataset.pact==='back'){pedView=null;pedDraft=null;renderPed()}
  else if(a.dataset.pact==='save'){if(!offlineBlock('recibir o pagar un pedido'))once('ped',savePedido,a)}
  else if(a.dataset.pact==='partial'){if(!offlineBlock('apuntar una entrega'))once('pedp',savePartial,a)}
- else if(a.dataset.pact==='cancel')once('pedc',()=>cancelPedido(pedView),a);
+ else if(a.dataset.pact==='cancel'){if(!offlineBlock('cancelar un pedido'))once('pedc',()=>cancelPedido(pedView),a);}
  else if(a.dataset.pact==='tele'){const x=pendingPed().find(p=>p.id===pedView);if(x)copyMsg(pedidoTelegram(x.proveedor,x.items,x.paid,x.code),'Pedido copiado · pégalo en el telegrama al proveedor')}
 });
 pedModal.addEventListener('input',e=>{const t=e.target;if(!pedDraft||t.dataset.prq===undefined)return;const v=t.value.replace(/[^0-9]/g,'').slice(0,6);if(v!==t.value)t.value=v;pedDraft.part=pedDraft.part||{};pedDraft.part[t.dataset.prq]=v});
@@ -3362,7 +3397,7 @@ function monthlyText(off){
  const em=Object.keys(a.emp).map(n=>[n,a.emp[n].c,a.emp[n].n]).sort((x,y)=>y[1]-x[1]);
  const cl=Object.keys(a.cli).map(n=>[n,a.cli[n].c]).sort((x,y)=>y[1]-x[1])[0];
  const pct=(x,y)=>!y?(x?'nuevo':'—'):((x-y)>=0?'▲ ':'▼ ')+Math.abs(Math.round((x-y)/y*100))+' %';
- const peds=pedidos.filter(x=>{if(!x.completedAt)return false;const m=madridParts(x.completedAt),d=dayNum(+m.year,+m.month,+m.day);return d>=r.s&&d<=r.e});
+ const peds=pedidos.filter(x=>{const ts=pedidoCierreTs(x);if(!ts)return false;const m=madridParts(ts),d=dayNum(+m.year,+m.month,+m.day);return d>=r.s&&d<=r.e});
  const L=['RESUMEN DEL MES · '+r.label.toUpperCase(),'',
   'Ventas cobradas: '+money(a.tot)+' ('+pct(a.tot,b.tot)+' respecto a '+p.label+')',
   'Operaciones: '+a.ops+' · Ticket medio: '+money(a.ops?Math.round(a.tot/a.ops):0)+' · Unidades: '+a.units,
@@ -3371,7 +3406,7 @@ function monthlyText(off){
   'Mejor vendedor: '+(em[0]?em[0][0]+' ('+money(em[0][1])+' en '+em[0][2]+' '+(em[0][2]===1?'venta':'ventas')+')':'—'),
   'Lo más vendido: '+(top.length?top.map((x,i)=>(i+1)+'. '+x[0]+' ('+x[1]+' uds.)').join(' · '):'—'),
   'Mejor cliente: '+(cl?cl[0]+' ('+money(cl[1])+')':'—'),
-  'Pedidos a proveedores completados: '+peds.length+' ('+money(peds.reduce((s,x)=>s+x.totalCents,0))+')','',
+  'Pedidos a proveedores cerrados: '+peds.length+' ('+money(peds.reduce((s,x)=>s+pedidoContado(x),0))+')','',
   'El precio de un apellido.'];
  return L.join('\n');
 }
@@ -3763,25 +3798,26 @@ function emitPedido(){
  npDraft={prov:'',rows:[{m:'',q:'',p:''}],paid:'0',lq:{}};renderDir();say('Pedido emitido: '+rec.code);
 }
 /* --- Registro de pedidos completados --- */
-function pedidosIn(r){return pedidos.filter(x=>{if(!x.completedAt)return false;const m=madridParts(x.completedAt),d=dayNum(+m.year,+m.month,+m.day);return d>=r.s&&d<=r.e})}
+function pedidosIn(r){return pedidos.filter(x=>{const ts=pedidoCierreTs(x);if(!ts)return false;const m=madridParts(ts),d=dayNum(+m.year,+m.month,+m.day);return d>=r.s&&d<=r.e})}
 function pedidosDoc(){
  const pi=periodInfo('p'), L=pedidosIn(pi.r), line='────────────────────', now=Date.now();
  const o=['HARRINGTON GUNSMITH','REGISTRO DE PEDIDOS A PROVEEDORES · '+pi.kind,'Saint Denis · 1880','',(pi.sem?'Semana: ':'Día: ')+pi.label,'Generado: '+fmtDate(now)+' '+fmtTime(now),''];
  L.forEach(r=>{
-  o.push(`${r.code} · ${r.proveedor}${r.proveedorTipo?' ('+r.proveedorTipo+')':''}`,'Completado: '+fmtDate(r.completedAt)+' '+fmtTime(r.completedAt));
+  o.push(`${r.code} · ${r.proveedor}${r.proveedorTipo?' ('+r.proveedorTipo+')':''}`,(r.cancelled?'Cancelado: ':'Completado: ')+fmtDate(pedidoCierreTs(r))+' '+fmtTime(pedidoCierreTs(r)));
   r.items.forEach(x=>o.push(`  ${x.qty} × ${x.material} · ${money(x.price)} = ${money(x.qty*x.price)}`));
-  o.push('Total: '+money(r.totalCents),'Recibido por: '+(r.receivedBy||'—')+' · Pagado por: '+(r.paidBy||'—'),'');
+  if(r.liquidacion){const z=r.liquidacion;o.push('Recibido: '+money(z.receivedCents),'Cancelado sin recibir: '+money(z.cancelledCents),'Gasto pagado: '+money(z.paidCents),'Pendiente de pago: '+money(z.payableCents),'Pendiente de devolución: '+money(z.refundDueCents));}
+  o.push('Total original: '+money(r.originalTotalCents||r.totalCents),'Recibido por: '+(r.receivedBy||'—')+' · Pagado por: '+(r.paidBy||'—'),'');
  });
- if(!L.length)o.push('Sin pedidos completados en este periodo.','');
- o.push(line,'Pedidos: '+L.length,'TOTAL EN PEDIDOS: '+money(L.reduce((a,x)=>a+x.totalCents,0)),line,'','El precio de un apellido.');
+ if(!L.length)o.push('Sin pedidos cerrados en este periodo.','');
+ o.push(line,'Pedidos: '+L.length,'TOTAL EN PEDIDOS: '+money(L.reduce((a,x)=>a+pedidoContado(x),0)),line,'','El precio de un apellido.');
  return o.join('\n');
 }
 function renderModRegPedidos(){
  const pi=periodInfo('p'), L=pedidosIn(pi.r), pend=pendingPed();
- return `${periodBar('p')}<div class="dir-sec-title" style="margin-top:0">PEDIDOS COMPLETADOS (${L.length})</div>`+
-  (L.length?L.slice().reverse().map(r=>`<div class="enc-card dir-item"><div class="t">${esc(r.proveedor)}</div><div class="it">${esc(r.code)} · completado ${esc(fmtDate(r.completedAt))} ${esc(fmtTime(r.completedAt))}<br>${r.items.map(x=>`${x.qty} × ${esc(x.material)}`).join(', ')}</div><div class="enc-money"><span>Total: <b>${money(r.totalCents)}</b></span><span>Recibido: ${esc(r.receivedBy||'—')}</span><span>Pagado: ${esc(r.paidBy||'—')}</span></div></div>`).join(''):'<div class="enc-empty">No hay pedidos completados en este periodo.</div>')+
-  `<div class="brow due"><span>TOTAL EN PEDIDOS</span><span>${money(L.reduce((a,x)=>a+x.totalCents,0))}</span></div>
-  <p class="bk-note">Hay ${pend.length} ${pend.length===1?'pedido pendiente':'pedidos pendientes'} de recibir o pagar. Al completarse, cada pedido entra también en el registro y el balance de gastos como «Proveedor».</p>${repButtons('p')}`;
+ return `${periodBar('p')}<div class="dir-sec-title" style="margin-top:0">PEDIDOS CERRADOS (${L.length})</div>`+
+  (L.length?L.slice().reverse().map(r=>`<div class="enc-card dir-item"><div class="t">${esc(r.proveedor)}</div><div class="it">${esc(r.code)} · ${r.cancelled||r.remainderCancelled?'resto cancelado':'completado'} ${esc(fmtDate(pedidoCierreTs(r)))} ${esc(fmtTime(pedidoCierreTs(r)))}<br>${r.items.map(x=>`${x.qty} × ${esc(x.material)}`).join(', ')}</div><div class="enc-money"><span>${r.liquidacion?'Pagado':'Total'}: <b>${money(pedidoContado(r))}</b></span><span>Recibido: ${esc(r.receivedBy||'—')}</span><span>Pagado: ${esc(r.paidBy||'—')}</span></div>${pedidoLiquidacionHTML(r)}</div>`).join(''):'<div class="enc-empty">No hay pedidos cerrados en este periodo.</div>')+
+  `<div class="brow due"><span>TOTAL EN PEDIDOS</span><span>${money(L.reduce((a,x)=>a+pedidoContado(x),0))}</span></div>
+  <p class="bk-note">Hay ${pend.length} ${pend.length===1?'pedido pendiente':'pedidos pendientes'} de recibir o pagar. Al completar o cancelar, se conserva el detalle del pedido. Los gastos de cancelación incluyen únicamente el pago confirmado.</p>${repButtons('p')}`;
 }
 dirModal.addEventListener('input',e=>{
  const t=e.target, id=t.id, d=t.dataset||{};
@@ -5460,7 +5496,7 @@ function recipeText(name){const r=recipeOf(name);return r.length?r.map(x=>x.q+' 
    el precio en la ficha de ese proveedor (entonces vale el corregido); si no hay pedidos, la lista del proveedor */
 function matCostBase(n){
  let best=null,bt=-1;
- pedidos.forEach(p=>{if(!p.received||p.cancelled)return;const t=p.receivedAt||p.ts||0;(p.items||[]).forEach(x=>{if(sameMat(x.material,n)&&t>=bt){bt=t;best={c:x.price,src:'pedido',code:p.code||'',prov:p.proveedor||'',provId:p.proveedorId||'',t:t}}})});
+ pedidos.forEach(p=>{if(!p.received&&!p.liquidacion)return;if(p.cancelled&&!p.liquidacion)return;const t=p.receivedAt||((p.recs||[]).slice(-1)[0]||{}).ts||p.ts||0;(p.items||[]).forEach(x=>{if((p.received||Number(x.rq)>0)&&sameMat(x.material,n)&&t>=bt){bt=t;best={c:x.price,src:'pedido',code:p.code||'',prov:p.proveedor||'',provId:p.proveedorId||'',t:t}}})});
  if(best){
   const v=proveedores.find(y=>y.id===best.provId)||proveedores.find(y=>norm(y.name)===norm(best.prov));
   const x=v&&(v.prods||[]).find(y=>sameMat(y.name,n));
@@ -8509,4 +8545,5 @@ function fitSign(){try{const sg=document.querySelector('.g-sign'), t=document.ge
 window.addEventListener('resize',()=>{clearTimeout(fitSign.t);fitSign.t=setTimeout(fitSign,120)});
 try{document.fonts.ready.then(fitSign);document.fonts.addEventListener&&document.fonts.addEventListener('loadingdone',fitSign)}catch(e){}
 setTimeout(fitSign,50);setTimeout(fitSign,1200);
+
 
