@@ -3791,7 +3791,7 @@ function renderModNuevoPedido(){
   <div class="enc-actions two"><button type="button" data-dir="np-tele">COPIAR TELEGRAMA</button><button type="button" class="primary" data-dir="np-emit">EMITIR PEDIDO</button></div></div>
   <p class="bk-note">Al emitirlo se publica en el canal de Discord «Pedidos» con cada producto, su precio por unidad, el total de cada línea y el total del pedido. Queda pendiente de recibir y aparece en el botón PEDIDOS de todos los empleados. Si lo dejas «no pagado», quien lo reciba lo marcará como pagado.</p>`;
 }
-function emitPedido(){
+async function emitPedido(){
  const err=t=>{const e=document.getElementById('npErr');e.textContent=t;e.hidden=false}, prov=proveedores.find(x=>x.id===npDraft.prov);
  if(!prov)return err('Selecciona el proveedor');
  const items=[];
@@ -3806,8 +3806,23 @@ function emitPedido(){
  }
  if(!items.length)return err('Indica la cantidad de al menos un producto');
  const total=items.reduce((a,x)=>a+x.qty*x.price,0), now=Date.now(), m=madridParts(now), paid=npDraft.paid==='1';
- const rec={id:'p'+now.toString(36)+Math.random().toString(36).slice(2,5),code:`PED-${m.day}${m.month}${m.year.slice(-2)}-${m.hour}${m.minute}`,ts:now,date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`,proveedorId:prov.id,proveedor:prov.name,proveedorTel:prov.tel||'',proveedorTipo:prov.tipo||'',items:items,totalCents:total,paid:paid,paidInitial:paid,paidBy:paid?'Jefe':'',paidAt:paid?now:0,received:false,receivedBy:'',receivedAt:0,completedAt:0,cancelled:false};
- savePed(rec);(async()=>{let blob=null;try{blob=await pedidoBlob(rec)}catch(e){}discordSend('pedidos',pedidoText(rec,'NUEVO PEDIDO A PROVEEDOR'),blob,'Pedido_'+rec.code+'.png')})();
+ let rec={id:'p'+now.toString(36)+Math.random().toString(36).slice(2,5),code:`PED-${m.day}${m.month}${m.year.slice(-2)}-${m.hour}${m.minute}`,ts:now,date:`${m.day}/${m.month}/${m.year}`,time:`${m.hour}:${m.minute}`,proveedorId:prov.id,proveedor:prov.name,proveedorTel:prov.tel||'',proveedorTipo:prov.tipo||'',items:items,totalCents:total,paid:paid,paidInitial:paid,paidBy:paid?'Jefe':'',paidAt:paid?now:0,received:false,receivedBy:'',receivedAt:0,completedAt:0,cancelled:false};
+ if(!SANDBOX){
+  const pending=npDraft.pendingRecord;
+  if(pending&&pending.proveedorId===rec.proveedorId&&pending.paid===rec.paid&&JSON.stringify(pending.items)===JSON.stringify(rec.items))rec=pending;
+  else npDraft.pendingRecord=rec;
+  try{
+   const r=await sbFetch('/rest/v1/datos?on_conflict=clave',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=representation'},body:JSON.stringify([{clave:'pedido:'+rec.id,valor:rec,actualizado:new Date().toISOString()}])});
+   if(!r.ok)throw new Error('HTTP '+r.status);
+   const check=await sbFetch('/rest/v1/datos?select=valor&clave=eq.'+encodeURIComponent('pedido:'+rec.id));
+   if(!check.ok)throw new Error('Sin confirmación del servidor');
+   const rows=await check.json();
+   if(!rows[0]?.valor||rows[0].valor.code!==rec.code)throw new Error('Sin confirmación del servidor');
+   rec=rows[0].valor;
+  }catch(e){return err('No se ha podido confirmar el guardado del pedido. Se conserva el formulario: revisa la conexión y vuelve a intentarlo. No se ha anunciado como emitido.')}
+  const existing=pedidos.findIndex(x=>x.id===rec.id);if(existing>=0)pedidos[existing]=rec;else pedidos.push(rec);pedidos.sort((a,b)=>(a.ts||0)-(b.ts||0));LOTC=null;store.set(KEY_PEDIDOS,JSON.stringify(pedidos));updatePedBtn();cloudRev();
+ }else savePed(rec);
+ (async()=>{let blob=null;try{blob=await pedidoBlob(rec)}catch(e){}discordSend('pedidos',pedidoText(rec,'NUEVO PEDIDO A PROVEEDOR'),blob,'Pedido_'+rec.code+'.png')})();
  npDraft={prov:'',rows:[{m:'',q:'',p:''}],paid:'0',lq:{}};renderDir();say('Pedido emitido: '+rec.code);
 }
 /* --- Registro de pedidos completados --- */
