@@ -1,0 +1,107 @@
+/* HARRINGTON · Botones con imagen (v3.0 · 20/10/2026)
+   Cada botón es una pieza pintada que se estira sin deformarse (los extremos se quedan como son y solo se alarga el centro):
+   · cuero marrón: botones normales      · placa de latón: botones principales
+   · cuero rojo: borrar, salir, cancelar · billete: finalizar, cobrar y pagar
+   · cuero verde: la botonera de gestión · etiqueta de whisky: VENTA / PRESUPUESTO / MATERIALES
+   · tecla de caja registradora: los botones pequeños redondos (+, −, ⚙, micrófono)
+   Si una imagen no carga, el botón sigue funcionando con su color de fondo. */
+
+:root{--bi-ink:#2a1a06;--bi-gold:#f6dc8c}
+
+/* ---------- base común de las piezas alargadas ---------- */
+:is(.enc-actions,.actions,.receipt-actions,.confirm-actions,.emp-btns,.dir-form,.enc-sec,.set-row) button:not(.cat-btn):not(.enc-card):not(.mod-card):not(.plus):not(.minus):not(.pin),
+.clock-link,.clock-btn,.enc-back,#finish,#finishEnc,#obGo,.ob-go,.mode-tab,.tut-btn,.most-go,.most-clear,.g-enter,.gp-ok,.gp-no{
+ border-style:solid!important;border-radius:0!important;background:none!important;box-shadow:none!important;outline:0;
+ -webkit-tap-highlight-color:transparent;filter:drop-shadow(0 3px 3px #000a);transition:filter .15s,transform .1s}
+:is(.enc-actions,.actions,.receipt-actions,.confirm-actions,.emp-btns,.dir-form,.enc-sec,.set-row) button:not(.cat-btn):not(.enc-card):not(.mod-card):not(.plus):not(.minus):not(.pin)::after,
+:is(.enc-actions,.actions,.receipt-actions,.confirm-actions,.emp-btns,.dir-form,.enc-sec,.set-row) button:not(.cat-btn):not(.enc-card):not(.mod-card):not(.plus):not(.minus):not(.pin)::before,
+.clock-link:not(.enc-btn)::after,.clock-link:not(.enc-btn)::before,.management-nav>.clock-link:not(#bellBtn)::after,.clock-btn::after,.clock-btn::before,.enc-back::after,.enc-back::before,#finish::after,#finish::before,#obGo::after,#obGo::before,.ob-go::after,.mode-tab::after,.mode-tab::before{display:none!important}
+:is(.enc-actions,.actions,.receipt-actions,.confirm-actions,.emp-btns,.dir-form,.enc-sec,.set-row) button:focus-visible,.clock-link:focus-visible,.clock-btn:focus-visible,.enc-back:focus-visible,#finish:focus-visible,#obGo:focus-visible,.mode-tab:focus-visible{outline:2px solid #fff3c4!important;outline-offset:2px}
+:is(.enc-actions,.actions,.receipt-actions,.confirm-actions,.emp-btns,.dir-form,.enc-sec,.set-row) button:hover:not(:disabled),.clock-link:hover,.clock-btn:hover,.enc-back:hover,#finish:hover,#obGo:hover,.mode-tab:hover{filter:drop-shadow(0 4px 5px #000c) brightness(1.08)}
+:is(.enc-actions,.actions,.receipt-actions,.confirm-actions,.emp-btns,.dir-form,.enc-sec,.set-row) button:active:not(:disabled),.clock-link:active,.clock-btn:active,.enc-back:active,#finish:active,#obGo:active,.mode-tab:active{transform:translateY(2px)!important;filter:drop-shadow(0 1px 1px #000a) brightness(.9)}
+:is(.enc-actions,.actions,.receipt-actions,.confirm-actions,.emp-btns,.dir-form,.enc-sec,.set-row) button:disabled{filter:grayscale(.7) brightness(.75)}
+
+/* ---------- cuero marrón: botones normales ---------- */
+:is(.enc-actions,.actions,.receipt-actions,.confirm-actions,.emp-btns,.dir-form,.enc-sec) button:not(.primary):not(.gold):not(.warn):not(.danger):not(.ok):not(.cat-btn):not(.enc-card):not(.mod-card):not(.plus):not(.minus):not(.pin),
+.clock-link:not(.enc-btn),.enc-back,.most-clear,.gp-no{
+ border-width:9px 20px!important;border-image:url(boton-cuero.webp) 36 56 36 56 fill / 9px 20px round stretch!important;
+ color:#f3d47c!important;text-shadow:0 1px 1px #000,0 0 6px #0008!important;padding:7px 4px!important;min-height:46px}
+
+/* ---------- placa de latón: principales ---------- */
+:is(.enc-actions,.actions,.receipt-actions,.confirm-actions,.emp-btns,.dir-form,.enc-sec) button:is(.primary,.gold,.ok),.clock-btn:not(.out),.g-enter,.gp-ok{
+ border-width:9px 26px!important;border-image:url(boton-laton.webp) 30 86 30 86 fill / 9px 26px stretch!important;
+ color:var(--bi-ink)!important;text-shadow:0 1px 0 #fff7,0 -1px 0 #6e4a1244!important;font-weight:700;padding:6px 2px!important;min-height:46px}
+
+/* ---------- cuero rojo: peligro ---------- */
+:is(.enc-actions,.actions,.receipt-actions,.confirm-actions,.emp-btns,.dir-form,.enc-sec) button:is(.warn,.danger),.enc-head button.danger,.clock-btn.out,.confirm-actions .danger{
+ border-style:solid!important;border-radius:0!important;background:none!important;box-shadow:none!important;
+ border-width:9px 20px!important;border-image:url(boton-cuero-rojo.webp) 36 56 36 56 fill / 9px 20px round stretch!important;
+ color:#ffe6c8!important;text-shadow:0 1px 1px #000!important;padding:6px 4px!important;min-height:42px;filter:drop-shadow(0 3px 3px #000a)}
+.enc-head button.danger::after,.enc-head button.danger::before{display:none!important}
+
+/* ---------- billete: finalizar, cobrar y pagar ---------- */
+#finish,#finishEnc,#obGo,.ob-go,.most-go,[data-dir^="su-pay"],[data-dir="ped-pay"],[data-pact="pay"]{
+ border-style:solid!important;border-radius:0!important;background:none!important;box-shadow:none!important;
+ border-width:10px 34px!important;border-image:url(boton-billete.webp) 34 124 34 124 fill / 10px 34px round stretch!important;
+ color:#173823!important;text-shadow:0 1px 0 #fff8!important;font-weight:700!important;letter-spacing:.08em;padding:8px 2px!important;min-height:52px}
+#finish.not-ready,#obGo.not-ready{filter:grayscale(.55) brightness(.85) drop-shadow(0 3px 3px #000a);color:#4a3a1c!important}
+
+/* ---------- cuero verde: la botonera de gestión ---------- */
+.management-nav .clock-link.enc-btn{
+ border-width:12px 20px!important;border-image:url(boton-cuero-verde.webp) 36 56 36 56 fill / 12px 20px round stretch!important;
+ color:#f6dc8c!important;text-shadow:0 1px 1px #000,0 0 6px #0009!important;padding:6px 2px!important}
+.management-nav{background:none!important;box-shadow:none!important}
+.management-nav .clock-link.enc-btn svg{filter:drop-shadow(0 1px 1px #000)}
+.clock-link.bell-btn{min-width:56px}
+
+/* ---------- etiqueta de whisky: pestañas VENTA / PRESUPUESTO / MATERIALES ---------- */
+.mode-tab{border-width:8px 32px!important;border-image:url(boton-etiqueta.webp) 30 130 30 130 fill / 8px 32px stretch!important;
+ color:#1e4a2a!important;text-shadow:0 1px 0 #fff8!important;font-weight:700;padding:6px 0!important;opacity:.62;filter:grayscale(.45) drop-shadow(0 2px 2px #0009)}
+.mode-tab.on{opacity:1;filter:drop-shadow(0 3px 4px #000b)}
+.mode-tabs{background:none!important;border:0!important;box-shadow:none!important;gap:6px!important}
+
+/* ---------- tecla de caja registradora: botones redondos ---------- */
+.qty button.plus,.qty button.minus,.qty>button,#setBtn,.ai-fab,.tut-btn>b,.to-top{
+ border:0!important;border-radius:50%!important;box-shadow:none!important;outline:0;
+ background:url(boton-tecla.webp) center/contain no-repeat!important;color:#3a2405!important;text-shadow:0 1px 0 #fff8!important;
+ filter:drop-shadow(0 3px 3px #000a);transition:transform .08s}
+.qty button.plus,.qty button.minus,.qty>button{width:40px!important;height:38px!important;padding:0 0 4px!important;font:700 21px/1 Georgia,serif!important;display:grid;place-items:center}
+.qty button.plus:active,.qty button.minus:active,.qty>button:active,#setBtn:active,.ai-fab:active,.to-top:active{background-image:url(boton-tecla-pulsada.webp)!important;transform:translateY(2px) scale(.96)}
+.qty button.plus::after,.qty button.minus::after,.qty button.plus::before,.qty button.minus::before,#setBtn::after,#setBtn::before{display:none!important}
+#setBtn{width:50px!important;height:47px!important;padding:0 0 4px!important;font-size:21px!important;border-width:0!important;border-image:none!important;min-height:0}
+.ai-fab{width:60px!important;height:57px!important;padding-bottom:5px!important}
+.ai-fab svg{stroke:#3a2405!important;width:24px;height:24px}
+.ai-fab .ai-badge,.ai-fab b{z-index:1}
+.to-top{width:46px!important;height:44px!important}
+.tut-btn{border-width:7px 22px!important;border-image:url(boton-cuero.webp) 36 56 36 56 fill / 7px 22px round stretch!important;color:#f3d47c!important;padding:2px 2px!important}
+.tut-btn>b{display:inline-grid!important;place-items:center;width:24px;height:23px;margin-right:6px;font-size:14px}
+
+/* ---------- textos dentro de las piezas ---------- */
+:is(.enc-actions,.actions,.receipt-actions,.confirm-actions,.emp-btns,.dir-form,.enc-sec) button,.clock-link,.clock-btn,#finish,#obGo{line-height:1.15;white-space:normal}
+.set-row .boss-btn{min-height:38px;border-width:7px 16px!important;border-image:url(boton-cuero.webp) 36 56 36 56 fill / 7px 16px round stretch!important}
+.set-row .boss-btn.on{border-image:url(boton-laton.webp) 30 86 30 86 fill / 7px 20px stretch!important;color:var(--bi-ink)!important;text-shadow:0 1px 0 #fff7!important}
+html.hc :is(.enc-actions,.actions,.receipt-actions,.confirm-actions) button,html.hc .clock-link,html.hc .clock-btn{border-image:none!important;background:#000!important;border:2px solid #fff!important;color:#fff!important}
+@media(max-width:600px){.mode-tab{border-width:7px 20px!important;border-image-width:7px 20px!important;font-size:12px!important;letter-spacing:.04em!important;min-width:0}.mode-tabs{gap:3px!important}}
+
+/* ---------- teclas: el texto, el icono o el número, centrados sobre el marfil ----------
+   El marfil de la tecla está un poco por encima del centro de la imagen (a un 36 % de alto), así que cada tecla
+   lleva la imagen a su tamaño exacto y el contenido se coloca justo en el centro del marfil. */
+.qty button.plus,.qty button.minus,.qty>button,#setBtn,.ai-fab,.to-top{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ background-size:100% 100%!important;background-position:center!important;aspect-ratio:168/160;
+ padding:0 0 calc(var(--tk-h) * .278) 0!important;line-height:1!important;text-align:center!important;letter-spacing:0!important;text-indent:0!important}
+.qty button.plus,.qty button.minus,.qty>button{--tk-h:40px;width:42px!important;height:40px!important;font:700 22px/1 Georgia,serif!important}
+#setBtn{--tk-h:48px;width:50px!important;height:48px!important;font-size:22px!important}
+.ai-fab{--tk-h:58px;width:61px!important;height:58px!important}
+.to-top{--tk-h:44px;width:46px!important;height:44px!important}
+.qty button.plus>*,.qty button.minus>*,#setBtn>*,.ai-fab>svg,.to-top>*{display:block;margin:0!important}
+.ai-fab>svg{width:24px!important;height:24px!important}
+/* la «AI» de la etiqueta se queda en su esquina, fuera del marfil */
+.ai-fab>:not(svg){position:absolute!important}
+/* la tecla pulsada tiene el marfil un poco más abajo: el contenido baja con ella */
+.qty button.plus:active,.qty button.minus:active,.qty>button:active,#setBtn:active,.ai-fab:active,.to-top:active{padding-bottom:calc(var(--tk-h) * .252)!important}
+/* el «?» del botón TUTORIAL, centrado en su tecla */
+.tut-btn>b{--tk-h:24px;display:inline-flex!important;align-items:center;justify-content:center;width:25px!important;height:24px!important;padding:0 0 calc(var(--tk-h) * .278)!important;line-height:1!important;background-size:100% 100%!important;font-size:14px!important}
+/* ajuste fino de los símbolos que dibujan su glifo algo desplazado */
+#setBtn{padding-left:3px!important}
+.to-top{padding-left:3px!important;padding-bottom:calc(var(--tk-h) * .278 + 3px)!important}
