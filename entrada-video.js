@@ -11,7 +11,9 @@ if(!gate||!stage||typeof window.gateEnter!=='function')return;
 var SRC={v:['entrada-video.webm','entrada-video.mp4']};   // [webm, mp4]   // w: pendiente del vídeo apaisado
 var VER='2';
 var vid=null, listo=false, lk='';
-function calm(){try{return calmFx()}catch(e){return false}}
+/* solo se quita si eliges LIGERAS a mano o el sistema pide menos movimiento: la medición automática de fluidez no cuenta,
+   porque el vídeo lo decodifica el chip del móvil y pesa menos que la animación de repuesto */
+function calm(){try{return (typeof FX!=='undefined'&&FX.mode==='lite')||gReduced()}catch(e){return false}}
 function bajo(){try{return !!G.low}catch(e){return false}}
 function capa(){try{return G.lk||''}catch(e){return ''}}
 function quitar(){if(vid){try{vid.pause()}catch(e){}vid.remove();vid=null}listo=false;lk=''}
@@ -54,7 +56,48 @@ window.gateEnter=function(){
  if(p&&p.catch)p.catch(function(){if(fin)return;fin=true;gate.classList.remove('g-envideo','g-vplay');gPh('scene');orig.apply(window,[])});
  setTimeout(acabar,8000);   // por si el vídeo se queda parado
 };
+/* Al cerrar la sesión, el mismo vídeo al revés: sales de la tienda y las puertas se cierran detrás de ti.
+   Termina en la fachada con ENTRAR (la portada de siempre). Solo donde hay vídeo y sin «Animaciones: LIGERAS». */
+var SAL={v:['salida-video.webm','salida-video.mp4']}, sal=null, salK='';
+function prepSalida(){
+ var k=capa();if(!SAL[k]||calm()||bajo())return;
+ if(sal&&salK===k)return;
+ if(sal)sal.remove();salK=k;
+ sal=D.createElement('video');sal.className='g-video g-video-salida';sal.muted=true;sal.defaultMuted=true;sal.playsInline=true;
+ ['muted','playsinline','webkit-playsinline','disablepictureinpicture','disableremoteplayback'].forEach(function(a){sal.setAttribute(a,'')});
+ sal.setAttribute('aria-hidden','true');sal.preload='auto';sal._listo=false;
+ var mp4=false;try{mp4=!!sal.canPlayType('video/mp4; codecs="avc1.640028"')}catch(e){}
+ sal.src=SAL[k][mp4?1:0]+'?v='+VER;
+ sal.addEventListener('canplaythrough',function(){sal._listo=true},{once:true});
+ sal.addEventListener('loadeddata',function(){if(sal&&sal.readyState>=3)sal._listo=true});
+}
+/* se descarga con calma cuando ya estás dentro de la web */
+setTimeout(function(){try{if(gate.hidden)prepSalida()}catch(e){}},9000);
+if(typeof window.logoutToGate==='function'){
+ var origOut=window.logoutToGate;
+ window.logoutToGate=function(msg){
+  try{prepSalida()}catch(e){}
+  var v=sal, rq=false;try{rq=gReduced()}catch(e){}
+  if(!v||!v._listo||calm()||bajo()||rq||salK!==capa()){return origOut.apply(this,arguments)}
+  var r=origOut.apply(this,arguments);        // cierra la sesión como siempre (queda en las tarjetas)
+  var fin=false;
+  gate.classList.add('g-salida');
+  stage.insertAdjacentElement('afterend',v);
+  try{v.currentTime=0}catch(e){}
+  function acabar(){
+   if(fin)return;fin=true;
+   try{gateOpen({msg:msg||''})}catch(e){}  // la portada con ENTRAR
+   setTimeout(function(){gate.classList.add('g-sfin')},1600);
+   setTimeout(function(){gate.classList.remove('g-salida','g-sfin');try{v.pause();v.currentTime=0}catch(e){}v.remove()},2700);
+  }
+  v.onended=acabar;v.ontimeupdate=function(){if(v.duration&&v.currentTime>=v.duration-.08)acabar()};
+  var p;try{p=v.play()}catch(e){p=null}
+  if(p&&p.catch)p.catch(function(){if(!fin){fin=true;gate.classList.remove('g-salida');v.remove()}});
+  setTimeout(acabar,8000);
+  return r;
+ };
+}
 new MutationObserver(preparar).observe(gate,{attributes:true,attributeFilter:['hidden','data-ph','class']});
 preparar();
-window.hgEntradaVideo={preparar:preparar,listo:function(){return listo}};
+window.hgEntradaVideo={preparar:preparar,listo:function(){return listo},prepSalida:prepSalida,salidaLista:function(){return !!(sal&&sal._listo)}};
 })();

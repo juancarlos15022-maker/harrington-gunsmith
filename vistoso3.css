@@ -157,3 +157,18 @@ html body:not(.hc) .money>i{color:#5a3f1a!important;background:none!important;bo
 .gate:is([data-ph="open"],[data-ph="zoom"]) :is(.g-fog,.g-grain,.g-lamp){animation-play-state:paused}
 .gate:is([data-ph="open"],[data-ph="zoom"]) .g-grain{opacity:0;transition:opacity .4s}
 .gate[data-ph="zoom"] .g-stage{transition:transform 2.3s cubic-bezier(.42,0,.4,1),opacity .3s;will-change:transform}
+
+/* ===================== 14) Venta / Presupuesto: el contenido sale como un cajón de madera (20/10/2026) ===================== */
+@keyframes hgCajon{0%{opacity:.2;transform:perspective(1100px) translateY(-26px) rotateX(9deg) scale(.985);transform-origin:50% 0}
+ 60%{opacity:1;transform:perspective(1100px) translateY(3px) rotateX(-1deg) scale(1)}100%{opacity:1;transform:none}}
+.grid.flip{animation:hgCajon .55s cubic-bezier(.3,.7,.35,1) both;position:relative}
+.grid.flip:before{content:"";position:absolute;left:0;right:0;top:0;height:16px;z-index:5;pointer-events:none;border-radius:4px 4px 0 0;
+ background:linear-gradient(#0000,#0000),url(textura-madera.webp) 0 0/300px;box-shadow:0 6px 12px #000a,inset 0 -2px 0 #c9a24a66;animation:hgCajonFrente .55s ease both}
+@keyframes hgCajonFrente{0%{opacity:1;transform:translateY(0)}70%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
+html.lite .grid.flip,html.lite .grid.flip:before{animation:none}html.lite .grid.flip:before{display:none}
+@media(prefers-reduced-motion:reduce){.grid.flip,.grid.flip:before{animation:none}.grid.flip:before{display:none}}
+
+/* ===================== 15) Salida: las puertas se cierran al cerrar la sesión ===================== */
+.gate.g-salida .g-ui,.gate.g-salida .g-felt{opacity:0!important;pointer-events:none}
+.gate.g-salida .g-video{opacity:1;transition:none}
+.gate.g-salida.g-sfin .g-video{opacity:0;transition:opacity .9s ease}
