@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const source=fs.readFileSync(new URL('./diplomas.ts',import.meta.url),'utf8').replace('import {diplomaPNG} from "./diploma-render.ts";','async function diplomaPNG(){return new Uint8Array(1001)}');
+const {enviarDiplomas,promociones}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const employee={id:'employee-test',name:'Empleado de prueba',discord:'123456789012345678',ascensos:[{ts:1792500821371,de:'Aprendiz de armero',a:'Armero',nuevo:2500,desde:20747}]};
+assert.equal(promociones([{...employee,ascensos:[{...employee.ascensos[0],ts:100}]}]).length,0);
+const db=new Map([['empleados',{valor:[employee]}]]);let sent=0,closed=false;const calls=[];
+const sb={rpc:async()=>({data:true}),from:()=>{let key='',operation='select';const q={select(){return q},eq(k,v){key=v;return q},single:async()=>({data:db.get(key)}),maybeSingle:async()=>({data:db.get(key)}),upsert:async row=>{db.set(row.clave,{valor:row.valor});return{}},delete(){operation='delete';return q},then(resolve){resolve({})}};return q}};
+globalThis.fetch=async(url,opts)=>{calls.push(url);if(url.endsWith('/users/@me/channels')){assert.equal(JSON.parse(opts.body).recipient_id,employee.discord);return Response.json({id:'dm-test'})}if(opts.method==='POST'){if(closed)return Response.json({code:50007},{status:403});const payload=JSON.parse(opts.body.get('payload_json'));assert.equal(payload.allowed_mentions.parse.length,0);assert.equal(payload.enforce_nonce,true);assert(payload.content.includes('Armero'));const file=opts.body.get('files[0]');assert.equal(file.type,'image/png');assert(file.size>1000);sent++;return Response.json({id:'message-test',embeds:[{image:{url:'https://cdn.discordapp.com/attachments/test/'+payload.attachments[0].filename}}]})}return Response.json([])};
+let result=await enviarDiplomas(sb,{token:'test'});assert.equal(result.sent,1);assert.equal(sent,1);assert.equal(db.get('diploma:employee-test:1792500821371').valor.status,'sent');
+result=await enviarDiplomas(sb,{token:'test'});assert.equal(sent,1);assert.equal(result.outcomes[0].status,'already_sent');
+db.delete('diploma:employee-test:1792500821371');closed=true;result=await enviarDiplomas(sb,{token:'test'});assert.equal(result.pending,1);assert.equal(db.get('diploma:employee-test:1792500821371').valor.status,'pending');assert.equal(sent,1);
+console.log('PASS: destinatario enlazado, imagen PNG, texto personalizado, sin duplicados y privados cerrados');
