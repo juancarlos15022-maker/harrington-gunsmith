@@ -213,8 +213,8 @@ function norm(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u030
 function readQty(i){return Math.min(MAX_QTY,Math.max(0,parseInt(i.value)||0))}
 function baseCents(i){return Math.round(parseFloat(i.dataset.price)*100)}
 /* Precio efectivo: precio especial del cliente > precio de convenio > descuento de convenio > precio base */
-function priceCents(i){
- const name=i.dataset.name, sp=specialPrices();
+function priceCents(i,sp=specialPrices()){
+ const name=i.dataset.name;
  const fz=loadedEnc&&loadedEnc.items.find(x=>x.name===name);
  if(fz)return fz.cents;
  if(sp&&sp.precios[name]!=null)return Math.round(sp.precios[name]*100);
@@ -259,7 +259,7 @@ function say(t,kind,undo){window.__lastSay=Date.now();const bad=kind==='err'||(k
 
 /* ===== Pedido ===== */
 function selected(){
- return inputs.map(i=>({name:i.dataset.name,cents:priceCents(i),qty:readQty(i),oq:origQty(i.dataset.name)})).filter(x=>x.qty>0);
+ const items=[];let sp,resolved=false;for(const i of inputs){const qty=readQty(i);if(qty>0){if(!resolved){sp=specialPrices();resolved=true;}items.push({name:i.dataset.name,cents:priceCents(i,sp),qty,oq:origQty(i.dataset.name)});}}return items;
 }
 function saveOrder(items){
  if(!items.length) return store.remove(KEY_ORDER);
@@ -282,16 +282,17 @@ function productNodes(input){
 }
 function calc(animate=true){
  applyStockLimits(animate);
- let totalCents=0,units=0,products=0;
+ let totalCents=0,baseTotal=0,units=0,products=0;
+ const prices=specialPrices();
  inputs.forEach(i=>{
-  const p=productNodes(i),q=readQty(i), ec=priceCents(i), sub=q*ec, row=p.row, subEl=p.subtotal, txt=money(sub);
+  const p=productNodes(i),q=readQty(i), ec=priceCents(i,prices), sub=q*ec, row=p.row, subEl=p.subtotal, txt=money(sub);
   if(subEl.textContent!==txt){subEl.textContent=txt;if(animate)bump(subEl)}
   const pe=p.price, bc=baseCents(i), ptxt=ec!==bc?`<small class="was">${money(bc)}</small>${money(ec)}`:money(ec);
   if(pe.dataset.v!==ptxt){pe.innerHTML=ptxt;pe.dataset.v=ptxt}
   if(row.classList.contains('has-qty')!==(q>0))row.classList.toggle('has-qty',q>0);
-  totalCents+=sub;units+=q;if(q>0)products++;
+  totalCents+=sub;baseTotal+=q*bc;units+=q;if(q>0)products++;
  });
- const fin=computeFin();renderFin(fin);
+ const fin=computeFin({base:baseTotal,afterPrices:totalCents});renderFin(fin);
  const gTxt=money(fin.due);
  if(grand.dataset.v!==gTxt){grand.dataset.v=gTxt;rollTo(grand,fin.due,!animate);if(animate)bump(grand)}
  updateOrderBar(units,products,fin.due);
@@ -361,9 +362,9 @@ function clearAfterSale(s){doneSale=s;clearQuantities();resetSale();resetCustome
 async function ticketSale(){if(doneSale&&!receiptModal.hidden&&!selected().length)return doneSale;return await ensureSaleCloud()}
 /* Desglose económico: subtotal, convenio, precio final, señal / abonado */
 function parseMoney(v){const n=parseFloat(numIn(v).replace(/[^0-9.]/g,''));return isFinite(n)&&n>0?Math.round(Math.min(n,99999999)*100):0}
-function computeFin(){
- let base=0,afterPrices=0;
- inputs.forEach(i=>{const q=readQty(i);if(q){base+=q*baseCents(i);afterPrices+=q*priceCents(i)}});
+function computeFin(totals){
+ let base=totals?totals.base:0,afterPrices=totals?totals.afterPrices:0;
+ if(!totals){let prices,resolved=false;inputs.forEach(i=>{const q=readQty(i);if(q){if(!resolved){prices=specialPrices();resolved=true;}base+=q*baseCents(i);afterPrices+=q*priceCents(i,prices)}});}
  /* Convenio u oferta: beneficio calculado sobre la mercancía (ver benefitFor) */
  const dsc=currentDiscount(), bd=dsc?benefitFor(dsc,afterPrices):{cents:0,label:''};
  const beforeManual=Math.max(0,afterPrices-bd.cents),manual=manualDiscountValue(),final=Math.max(0,beforeManual-manual),discounts=[];
@@ -5408,6 +5409,27 @@ async function authToken(){
  if(authFresh())return AUTH.at;
  const a=await authRefresh();return a&&a.at||null;
 }
+/* Solo agrupa lecturas idénticas mientras esperan cabeceras; nunca guarda respuestas. */
+const sbReadFlights=new Map();
+function sbReadRequest(path,opts,token,send){
+ const method=(opts.method||'GET').toUpperCase();
+ if(method!=='GET'&&method!=='HEAD'){
+  sbReadFlights.clear();
+  return Promise.resolve().then(send).finally(()=>sbReadFlights.clear());
+ }
+ const eligible=method==='GET'&&/^\/rest\/v1\/(?!rpc\/)/.test(path)&&Object.keys(opts).every(k=>['_tk','method','headers'].includes(k));
+ if(!eligible)return send();
+ const headers=Object.entries(opts.headers||{}).sort(([a],[b])=>a.localeCompare(b));
+ const key=JSON.stringify([path,token,headers]);
+ let flight=sbReadFlights.get(key);
+ if(!flight){
+  flight=Promise.resolve().then(send);
+  if(sbReadFlights.size<128)sbReadFlights.set(key,flight);
+  const clear=()=>{if(sbReadFlights.get(key)===flight)sbReadFlights.delete(key);};
+  flight.then(response=>{clear();queueMicrotask(()=>{if(response.body)response.body.cancel().catch(()=>{});});},clear);
+ }
+ return flight.then(response=>response.clone());
+}
 async function sbFetch(path,opts){
  opts=opts||{};const startedEmp=ME?.id||'';
  let tk=null;if(opts._tk!==undefined)tk=opts._tk;else try{tk=await authToken()}catch(e){}
@@ -5422,7 +5444,7 @@ async function sbFetch(path,opts){
  const requestEmp=tk&&AUTH?AUTH.emp:null;
  const valid=()=>!requestEmp||AUTH&&AUTH.emp===requestEmp&&ME&&ME.id===requestEmp;
  const obsolete=()=>new Response(JSON.stringify({message:'SESION_CAMBIADA'}),{status:401,headers:{'Content-Type':'application/json'}});
- const r=await go(tk);if(!valid())return obsolete();
+ const r=await sbReadRequest(path,opts,tk,()=>go(tk));if(!valid())return obsolete();
  if(r.status===401&&tk){const a=await authRefresh();if(!valid())return obsolete();const retried=await go(a&&a.at&&a.at!==tk?a.at:null);return valid()?retried:obsolete()}
  return r;
 }
