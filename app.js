@@ -5445,7 +5445,7 @@ async function sbFetch(path,opts){
  const valid=()=>!requestEmp||AUTH&&AUTH.emp===requestEmp&&ME&&ME.id===requestEmp;
  const obsolete=()=>new Response(JSON.stringify({message:'SESION_CAMBIADA'}),{status:401,headers:{'Content-Type':'application/json'}});
  const r=await sbReadRequest(path,opts,tk,()=>go(tk));if(!valid())return obsolete();
- if(r.status===401&&tk){const a=await authRefresh();if(!valid())return obsolete();const retried=await go(a&&a.at&&a.at!==tk?a.at:null);return valid()?retried:obsolete()}
+ if(r.status===401&&tk){const a=await authRefresh();if(!valid())return obsolete();const nextToken=a&&a.at&&a.at!==tk?a.at:null;const retried=await sbReadRequest(path,opts,nextToken,()=>go(nextToken));return valid()?retried:obsolete()}
  return r;
 }
 /* Llamada a la función «cuentas» (comprueba la contraseña en el servidor y abre la cuenta segura) */
