@@ -3391,7 +3391,8 @@ html body:not(.hc) .money>i{color:#5a3f1a!important;background:none!important;bo
 .cartel-inv span small{margin-top:2px;font-size:clamp(10px,2.5vw,13px)}
 #dirModal .dir-top>.enc-back{flex:0 0 auto;width:auto;max-width:70%;margin-bottom:0}
 /* Las palabras de los botones no se parten por la mitad («COPIAR TELEGRAM-A») y el total deja aire a los botones */
-:is(.enc-actions,.actions,.receipt-actions,.confirm-actions,.emp-btns) button{overflow-wrap:normal!important;word-break:normal!important;hyphens:none}
+:is(.enc-actions,.actions,.receipt-actions,.confirm-actions,.emp-btns) button{overflow-wrap:break-word!important;word-break:normal!important;-webkit-hyphens:auto;hyphens:auto}
+.enc-actions.emp3 button,.enc-actions.two button{font-size:clamp(11px,3.1vw,14px)}
 @media(max-width:520px){.enc-actions.two button{font-size:12.5px;letter-spacing:.02em}}
 .brow.due+.enc-actions{margin-top:14px}
 /* Carrito vacío en ordenador: la caja crece lo justo para que se lean las dos líneas */
@@ -3477,4 +3478,9 @@ html.lite #products .product::before{display:none}
 /* En segundo plano no se dibujan animaciones que el usuario no puede ver. */
 html.hg-en-segundo-plano *,html.hg-en-segundo-plano *::before,html.hg-en-segundo-plano *::after{animation-play-state:paused!important}
 body.gate-open .hero-banner *,body.gate-open .hero-banner::before,body.gate-open .hero-banner::after{animation-play-state:paused!important}
+/* Botones de cuero estrechos (rejillas de 2-3 columnas y botones pequeños de las fichas): remates más finos para que
+   quepa la palabra entera («CONTRATO», «RESETEAR CONTRASEÑA», «ELIMINAR») sin partirla */
+#dirBody .enc-actions.emp3 button,#dirBody .enc-actions.two button,#dirBody .enc-card .enc-actions button{
+ border-width:8px 13px!important;border-image-width:8px 13px!important;padding-left:1px!important;padding-right:1px!important;letter-spacing:.01em!important}
+@media(max-width:520px){#dirBody .enc-actions.two button{font-size:11.5px!important}}
 

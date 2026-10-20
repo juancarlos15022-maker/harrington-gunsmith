@@ -91,6 +91,8 @@ if(typeof window.logoutToGate==='function'){
    setTimeout(function(){gate.classList.remove('g-salida','g-sfin');try{v.pause();v.currentTime=0}catch(e){}v.remove()},2700);
   }
   v.onended=acabar;v.ontimeupdate=function(){if(v.duration&&v.currentTime>=v.duration-.08)acabar()};
+  /* crujido al salir y golpe de las puertas al cerrarse */
+  v.onplaying=function(){try{gCreak()}catch(e){}setTimeout(function(){try{playThump()}catch(e){}},Math.max(800,((v.duration||5)-1.1)*1000))};
   var p;try{p=v.play()}catch(e){p=null}
   if(p&&p.catch)p.catch(function(){if(!fin){fin=true;gate.classList.remove('g-salida');v.remove()}});
   setTimeout(acabar,8000);

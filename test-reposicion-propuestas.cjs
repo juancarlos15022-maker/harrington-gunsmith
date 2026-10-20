@@ -7,13 +7,14 @@ test('telegrama IC: de Vincent al establecimiento, sin número de pedido, con sa
  const t=load().telegramaIC({...base,aceptadoAt:Date.parse('2026-10-20T16:00:00Z')});
  assert.match(t,/^Herrería de Saint Denis:/);assert.match(t,/Buenas tardes/);assert.match(t,/Vincent Harrington/);
  assert.match(t,/10 cañones de escopeta/);assert.match(t,/1 pieza de arma especial/);assert.match(t,/29 tornillos/);
- assert.match(t,/entrega/);assert.match(t,/(gracias|agradec|agradez)/i);assert.match(t,/(saludo|atentamente)/i);
- assert.doesNotMatch(t,/PED-|Referencia|\$/);
+ assert.match(t,/(reciba|llegue|recepción|traérmelo|recibirlo)/);assert.match(t,/(gracias|agradec|agradez)/i);assert.match(t,/(saludo|atentamente)/i);
+ assert.doesNotMatch(t,/PED-|Referencia|\$|recog/);
 });
-test('privado: la propuesta abierta lleva el botón con su enlace; aceptada o anulada, sin botón',()=>{
+test('privado: la propuesta abierta lleva el botón de aceptar; aceptada, el de ver pedido y albarán; anulada, sin botón',()=>{
  const a=load(),job={pedido_id:'auto-x',token:'f'.repeat(64)};
  const p=a.vistaPrivada({...base,propuesta:true},job);assert.equal(p.components[0].components[0].style,5);assert.match(p.components[0].components[0].url,/aceptar\.html\?t=f{64}$/);assert.equal(p.embeds[0].footer.text,'Reposición auto-x');
- assert.equal(a.vistaPrivada({...base,propuesta:false,aceptadoAt:Date.now()},job).components.length,0);
+ const ac=a.vistaPrivada({...base,propuesta:false,aceptadoAt:Date.now()},job).components;assert.equal(ac.length,1);assert.match(ac[0].components[0].label,/albarán/);assert.match(ac[0].components[0].url,/aceptar\.html\?t=f{64}$/);
+ assert.equal(a.vistaPrivada({...base,propuesta:false,cancelled:true,propuestaCerrada:'sin-faltas'},job).components.length,0);
  assert.match(a.vistaPrivada({...base,propuesta:false,cancelled:true,propuestaCerrada:'sin-faltas'},job).content,/Ya no hace falta/);
 });
 test('tarjeta de la empresa: propuesta con su aviso y botón de recibir',()=>{

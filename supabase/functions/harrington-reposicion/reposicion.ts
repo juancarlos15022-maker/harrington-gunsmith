@@ -31,8 +31,8 @@ export function telegramaIC(o:Any){
  const intro=pick(['Les escribe Vincent Harrington, de la Armería Harrington Gunsmith de Saint Denis. Quisiera hacerles el siguiente encargo:',
   'Soy Vincent Harrington, de la Armería Harrington Gunsmith. Les agradecería que me prepararan el siguiente encargo:',
   'Les saluda Vincent Harrington, de la Armería Harrington Gunsmith de Saint Denis. Necesitaría que me tuvieran listo lo siguiente:'],seed);
- const pago=o.paid?'El importe ya está abonado.':pick(['Abonaré el importe a la entrega, como de costumbre.','Pagaré a la entrega, como acostumbramos.','El pago, como siempre, a la entrega de la mercancía.'],seed+'p');
- const aviso=pick(['Les ruego que me avisen por telegrama en cuanto lo tengan listo.','Avísenme, por favor, cuando esté preparado y pasaré a recogerlo.','Quedo a la espera de su aviso para la recogida.'],seed+'a');
+ const pago=o.paid?'El importe ya está abonado.':pick(['Abonaré el importe cuando lo reciba, como de costumbre.','Pagaré en cuanto me llegue la mercancía, como acostumbramos.','El pago, como siempre, a la recepción del encargo.'],seed+'p');
+ const aviso=pick(['Les ruego que me avisen por telegrama cuando vayan a traérmelo a la armería.','Avísenme, por favor, cuando esté listo para traérmelo.','Quedo a la espera de recibirlo en la armería.'],seed+'a');
  const gracias=pick(['Les quedo muy agradecido por su diligencia.','Muchas gracias de antemano por su atención.','Les agradezco de veras su buen hacer.'],seed+'g');
  const adios=pick(['Reciban un cordial saludo,','Atentamente,','Sin otro particular, les saluda atentamente,'],seed+'d');
  const lista=(o.items||[]).map((x:Any)=>'— '+nombreIC(x.material,Number(x.qty))).join('\n');
@@ -40,6 +40,8 @@ export function telegramaIC(o:Any){
 }
 
 /* ---------- vistas ---------- */
+// botón para volver a abrir la página del pedido aceptado (telegrama + albarán descargable); no pide inicio de sesión
+const verAlbaran=(job:Any)=>job.token?[{type:1,components:[{type:2,style:5,label:'Ver pedido y albarán',emoji:{name:'🧾'},url:WEB+'aceptar.html?t='+job.token}]}]:[];
 export function vistaPrivada(o:Any,job:Any){
  const foot={text:'Reposición '+job.pedido_id};
  const total='\n\n**Total:** '+dolar(o.totalCents)+(o.paid?' · pagado':' · se paga a la entrega');
@@ -53,9 +55,9 @@ export function vistaPrivada(o:Any,job:Any){
   const motivo=o.propuestaCerrada==='sin-faltas'?'Ya no hace falta: el almacén ha vuelto a estar por encima de los mínimos.':'El pedido se ha cancelado.';
   return {content:'🎩 Propuesta para **'+o.proveedor+'** anulada. '+motivo,embeds:[{title:'Anulada · '+o.proveedor,description:lineas(o),color:APAGADO,footer:foot}],components:[]};
  }
- if(o.received||o.completedAt)return {content:'🎩 El pedido a **'+o.proveedor+'** ya está recibido y en el almacén.',embeds:[{title:'📦 Recibido · '+o.proveedor,description:lineas(o)+total,color:VERDE,footer:foot}],components:[]};
+ if(o.received||o.completedAt)return {content:'🎩 El pedido a **'+o.proveedor+'** ya está recibido y en el almacén.',embeds:[{title:'📦 Recibido · '+o.proveedor,description:lineas(o)+total,color:VERDE,footer:foot}],components:o.aceptadoAt?verAlbaran(job):[]};
  if(o.aceptadoAt)return {content:'✅ **Propuesta aceptada** el '+fechaHora(o.aceptadoAt)+'. Ya no se suman más materiales a este pedido. Debajo tienes el telegrama para **'+o.proveedor+'**, listo para copiar.',
-  embeds:[{title:'✅ Pedido aceptado · '+o.proveedor,description:lineas(o)+total,color:VERDE,footer:foot}],components:[]};
+  embeds:[{title:'✅ Pedido aceptado · '+o.proveedor,description:lineas(o)+total,color:VERDE,footer:foot}],components:verAlbaran(job)};
  // pedido que dejó de ser propuesta por otra vía (pagado o recibido en parte desde la web)
  return {content:'🎩 El pedido a **'+o.proveedor+'** ya está en marcha (pagado o recibido en parte desde la web): ya no se ajusta solo.',embeds:[{title:'Pedido en marcha · '+o.proveedor,description:lineas(o)+total,color:VERDE,footer:foot}],components:[]};
 }

@@ -28,6 +28,11 @@ var pending=new Set(),paperFrame=0;
 new MutationObserver(function(ms){ms.forEach(function(m){if(m.target.nodeType===1&&m.target.matches('.enc-empty:not(.hg-cargando)'))pending.add(m.target);for(var n of m.addedNodes)if(n.nodeType===1&&(n.matches('.enc-empty:not(.hg-cargando)')||n.querySelector('.enc-empty:not(.hg-cargando)')))pending.add(n)});if(pending.size&&!paperFrame)paperFrame=requestAnimationFrame(function(){paperFrame=0;var roots=Array.from(pending);pending.clear();roots.forEach(function(r){if(r.isConnected)papel(r)})})}).observe(D.body,{childList:true,subtree:true});
 papel();
 
+/* sonido del papel al rasgarse (con el sonido de los ajustes) */
+function rasgar(){
+ if(typeof soundOn!=='undefined'&&!soundOn)return;var c=typeof ac==='function'&&ac();if(!c||typeof scratch!=='function')return;
+ var t=c.currentTime+.02;[[.07,1800,.32],[.06,2600,.28],[.09,3400,.24],[.05,2200,.18]].forEach(function(x,i){scratch(c,t+i*.055,x[0],x[1],x[2])});
+}
 /* 3) El ticket se arranca por la línea de puntos al cerrarlo */
 var rm=D.getElementById('receiptModal');
 if(rm&&typeof window.closeModal==='function'){
@@ -44,7 +49,7 @@ if(rm&&typeof window.closeModal==='function'){
       c.style.margin='0';c.style.width='100%';
       /* sin las animaciones de impresión: el papel sale tal cual se ve */
       [c].concat([].slice.call(c.querySelectorAll('*'))).forEach(function(x){x.style.animation='none';x.style.transition='none';x.style.opacity='';});c.style.clipPath='none';c.style.transform='none';w.appendChild(c);D.body.appendChild(w);
-      try{if(typeof playPrint==='function')playPrint()}catch(x){}
+      try{rasgar()}catch(x){}
       setTimeout(function(){w.remove()},950);
      }}
    }

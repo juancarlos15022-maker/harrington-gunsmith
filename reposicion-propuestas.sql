@@ -210,3 +210,6 @@ begin
   update public.hg_reposicion_avisos set version=sent_version+1 where pedido_id=r.valor->>'id' and status='sent';
  end loop;
 end $$;
+
+-- 20/10/2026 · imagen del albarán (la dibuja aceptar.html y el servidor la manda al privado)
+alter table public.hg_reposicion_avisos add column if not exists img_message_id text;
