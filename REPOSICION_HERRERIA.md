@@ -39,3 +39,12 @@ Archivos: `reposicion-propuestas.sql`, `aceptar.html`, `aceptar.js`. Pruebas: `t
 Nace como propuesta (`origen:'reposicion-tala'`, código `PED-…-T…`), llega al mismo privado de la Dirección, se le añaden los materiales que bajen después y se cierra al aceptarla, con su telegrama IC y su albarán. La revisión de cada minuto (`harrington-reposicion`) la llama después de la herrería y la mina; si falla, no frena las otras dos.
 
 Desde el 20/10/2026 una propuesta sin aceptar **no se puede recibir**: su tarjeta del canal de pedidos no lleva «Recibido entero» y la revisión deja el cerrojo `recibido-<pedido>` (`bloqueo:'propuesta'`), que se quita al aceptarla.
+
+## Agricultura Jacksons Farm y función común (20/10/2026)
+
+`hg_reponer_lotes(cfg)` (archivo `reposicion-lotes.sql`) es la versión común para cualquier proveedor con `modo:'lote-por-material'`; cada configuración lleva `origen`, `idPrefijo` y `prefijo` (letra del código). `hg_reponer_tala()`, que es la que llama la revisión de cada minuto, ahora recorre todas esas configuraciones (si una falla, sigue con las demás).
+
+- `cfg:reposicion-tala`: Tala Annesburg (tabla de arriba), código `PED-…-T…`.
+- `cfg:reposicion-granja`: Agricultura Jacksons Farm. **Tela**: si baja de 40, propuesta de 100 a $0.50 la unidad. Código `PED-…-G…`.
+
+Para añadir otro proveedor basta con otra configuración `cfg:reposicion-<nombre>` con ese modo, sin tocar la función.
