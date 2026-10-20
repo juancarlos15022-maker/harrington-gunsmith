@@ -2894,13 +2894,13 @@ html.lite .grafica-tinta .trazo,html.lite .grafica-tinta .relleno,html.lite .gra
 .empty-art.mini svg{display:none}
 
 /* ===================== 11) Cabecera del despacho de la Dirección ===================== */
-.dir-cab{position:relative;height:clamp(120px,22vw,210px);margin:-2px 0 14px;border-radius:6px;overflow:hidden;border:2px solid #8b6a2e;box-shadow:0 8px 22px #000a,inset 0 0 40px #000;
+.dir-cab{position:relative;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:clamp(4px,1vw,8px);padding:0 0 0 clamp(14px,3.4vw,34px);box-sizing:border-box;height:clamp(120px,22vw,210px);margin:-2px 0 14px;border-radius:6px;overflow:hidden;border:2px solid #8b6a2e;box-shadow:0 8px 22px #000a,inset 0 0 40px #000;
  background:linear-gradient(90deg,#050302f2 0,#05030299 34%,transparent 62%),url(cabecera-direccion-ancha.webp) 70% 40%/cover no-repeat,#0b0805}
-.dir-cab:before{content:"Despacho de la Dirección";position:absolute;left:clamp(14px,3.4vw,34px);top:50%;transform:translateY(-62%);font:400 clamp(22px,4.2vw,40px)/1.05 var(--f-cartel);letter-spacing:.03em;max-width:55%;
+.dir-cab:before{content:"Despacho de la Dirección";position:static;font:400 clamp(22px,4.2vw,40px)/1.05 var(--f-cartel);letter-spacing:.03em;max-width:55%;
  background:linear-gradient(100deg,var(--hg-oro4) 0,var(--hg-oro2) 22%,var(--hg-oro1) 30%,var(--hg-oro2) 38%,var(--hg-oro3) 70%,var(--hg-oro4) 100%) 0 0/250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
  filter:drop-shadow(0 2px 0 #000) drop-shadow(0 0 10px #0009);animation:hgPanOro 7s ease-in-out infinite}
-.dir-cab:after{content:"Casa Harrington · Saint Denis, 1880";position:absolute;left:clamp(15px,3.5vw,36px);top:calc(50% + clamp(14px,2.6vw,26px));font:italic 400 clamp(12px,1.8vw,16px)/1.2 'IM Fell English',Georgia,serif;color:#d9bf86;letter-spacing:.06em;text-shadow:0 1px 2px #000}
-@media(max-width:700px){.dir-cab{background:linear-gradient(180deg,#050302d9 0,#05030266 55%,transparent 80%),url(cabecera-direccion.webp) 50% 60%/cover no-repeat,#0b0805}.dir-cab:before{top:24%;transform:none;max-width:90%}.dir-cab:after{top:calc(24% + clamp(26px,7vw,44px))}}
+.dir-cab:after{content:"Casa Harrington · Saint Denis, 1880";position:static;max-width:60%;padding-left:1px;font:italic 400 clamp(12px,1.8vw,16px)/1.2 'IM Fell English',Georgia,serif;color:#d9bf86;letter-spacing:.06em;text-shadow:0 1px 2px #000}
+@media(max-width:700px){.dir-cab{background:linear-gradient(180deg,#050302d9 0,#05030266 55%,transparent 80%),url(cabecera-direccion.webp) 50% 60%/cover no-repeat,#0b0805}.dir-cab{justify-content:flex-start;padding-top:clamp(12px,4vw,22px)}.dir-cab:before{max-width:90%}.dir-cab:after{max-width:90%}}
 
 /* ===================== 12) Ornamentos victorianos ===================== */
 .dir-sec-title{background:url(separador-ornamento.webp) right 2px bottom -1px/auto 16px no-repeat,linear-gradient(90deg,#b88931,#b8893100 92%) left bottom/100% 1px no-repeat}
@@ -2940,6 +2940,12 @@ html.lite .g-title,html.lite .enc-head>span:first-child,html.lite .confirm-title
 .g-cli .g-cli-esc.sin~b{margin-top:0}
 .g-cli span:not(.g-cli-esc){padding:0 14px}
 html.lite .g-cli b,html.lite .g-cli .g-cli-esc img{animation:none;transition:none}
+/* 20/10/2026 · Cabecera de Dirección: con la fuente Rye el título ocupa dos líneas altas; más interlineado y separación
+   para que «Casa Harrington · Saint Denis, 1880» no se monte, y la cabecera crece en vez de recortar */
+.dir-cab{height:auto;min-height:clamp(120px,22vw,210px);padding-top:clamp(12px,2.4vw,20px);padding-bottom:clamp(12px,2.4vw,20px);gap:clamp(8px,1.6vw,14px)}
+.dir-cab:before{line-height:1.22;max-width:min(62%,560px);padding-top:.06em}
+.dir-cab:after{line-height:1.35}
+@media(max-width:700px){.dir-cab:before{max-width:92%}}
 
 
 /* Fuente: vistoso2.css */
