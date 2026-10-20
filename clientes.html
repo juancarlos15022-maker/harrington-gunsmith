@@ -49,6 +49,8 @@ h1{font-family:"Rye","Cinzel Decorative",Georgia,serif;font-weight:400;margin:6p
 .item.on{border-color:var(--gold);background:linear-gradient(90deg,#22301a,#0e2016 70%);box-shadow:0 0 0 1px #f3d47c55,0 6px 14px #000a}
 .item b{font-size:17px}
 .item .p{color:#2a1a06;font-weight:bold;font-size:15px;padding:3px 9px;border-radius:3px;background:linear-gradient(#f6dc8c,#c99a3a);box-shadow:inset 0 1px 0 #fff6,0 1px 2px #000a;white-space:nowrap}
+/* 20/10/2026: el precio va en una etiqueta de cartón con su cordel, como en la tienda */
+.p{border:solid transparent;border-width:4px 6px 4px 30px;border-image:url(etiqueta-precio.webp) 22 22 22 175 fill / 4px 6px 4px 30px stretch;border-radius:0;padding:2px 5px 2px 2px;background:none;box-shadow:none;color:#2a1a0d;filter:drop-shadow(0 2px 2px #0009)}
 .qty{grid-column:1/-1;display:flex;gap:8px;align-items:center}
 .qty button{width:40px;height:40px;border-radius:50%;border:2px solid #e3c26a;background:radial-gradient(circle at 35% 30%,#f6dc8c,#a77a25 55%,#4a3208);color:#2a1a06;font:700 22px/1 Georgia,serif;cursor:pointer;box-shadow:0 3px 6px #000b,inset 0 1px 0 #fff8;transition:transform .1s}
 .qty button:active{transform:scale(.92)}

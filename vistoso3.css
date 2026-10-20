@@ -1,0 +1,134 @@
+/* HARRINGTON · Vistoso, tercera tanda (v3.0 · 20/10/2026)
+   Retrato del Señor Harrington, escenas de Dirección, iconos de latón en la barra del móvil, etiquetas de precio,
+   la vela de «Mi semana», la pizarra del mostrador, el cartel de CERRADO POR INVENTARIO, campos de papel con línea
+   de tinta, desplegables de madera, barra de desplazamiento de latón, cursor de pluma, termómetro del objetivo
+   y las puertas del despacho al entrar en Dirección. Solo aspecto: no cambia ningún dato. */
+
+/* ===================== 1) Retrato del Señor Harrington ===================== */
+.ai-seal{width:30px;height:36px;border-radius:50%;background:url(retrato-harrington-mini.webp) 50% 30%/cover,#3a2a0c;color:transparent;font-size:0;
+ border:2px solid #c9a24a;box-shadow:0 0 0 1px #3a2a0c,0 2px 5px #000a}
+.ai-msg.a b.ai-who{display:flex;align-items:center;gap:7px}
+.ai-msg.a b.ai-who:before{content:"";flex:none;width:22px;height:27px;border-radius:50%;background:url(retrato-harrington-mini.webp) 50% 30%/cover;border:1.5px solid #c9a24a;box-shadow:0 1px 3px #000a}
+.hg-retrato-cab{flex:none;width:40px;height:48px;margin-right:10px;border-radius:50%;background:url(retrato-harrington-mini.webp) 50% 30%/cover;border:2px solid #d7ae54;box-shadow:0 0 0 2px #2a1c0d,0 3px 8px #000c}
+#aiModal .enc-head>span:first-child{display:flex;align-items:center}
+
+/* ===================== 2) Escenas de Dirección ===================== */
+.escena-ventas{background-image:url(escena-ventas.webp);background-position:62% 42%}
+.escena-gastos{background-image:url(escena-gastos.webp);background-position:50% 55%}
+.escena-empleados{background-image:url(escena-empleados.webp);background-position:60% 40%}
+.escena-sueldos{background-image:url(escena-sueldos.webp);background-position:45% 45%}
+.escena-eventos{background-image:url(escena-eventos.webp);background-position:40% 50%}
+.escena-convenios{background-image:url(escena-convenios.webp);background-position:50% 45%}
+.escena-clientes{background-image:url(escena-clientes.webp);background-position:50% 45%}
+.escena-ventas:after,.escena-sueldos:after,.escena-gastos:after{content:"";position:absolute;right:6%;top:18%;width:22%;height:50%;border-radius:50%;background:radial-gradient(circle,#ffb84a33,#0000 70%);mix-blend-mode:screen;animation:hgParpadeo 3.2s infinite;pointer-events:none}
+html.lite .escena:after{animation:none}
+
+/* ===================== 3) Iconos de latón en la barra del móvil ===================== */
+.mnav button[data-mn]>.bi,.mnav button[data-mn]>.mn-i{display:none}
+.mnav button[data-mn]:before{content:"";display:block;width:30px;height:30px;background:url(iconos-barra.webp) 0 0/700% 100% no-repeat;filter:drop-shadow(0 1px 1px #000c)}
+.mnav button[data-mn="encBtn"]:before{background-position:16.6667% 0}
+.mnav button[data-mn="pedBtn"]:before{background-position:33.3333% 0}
+.mnav button[data-mn="ausBtn"]:before{background-position:50% 0}
+.mnav button[data-mn="libroBtn"]:before{background-position:66.6667% 0}
+.mnav button[data-mn="dirBtn"]:before{background-position:83.3333% 0}
+.mnav button[data-mn="clock"]:before{background-position:100% 0}
+.mnav .mn-clock.on:before{filter:drop-shadow(0 0 5px #9fd884) drop-shadow(0 1px 1px #000c)}
+.mnav button:active:before{transform:translateY(1px) scale(.96)}
+.mnav .mn-n{top:0}
+
+/* ===================== 4) Etiquetas de precio con cordel ===================== */
+.product .price{border:solid transparent;border-width:4px 6px 4px 30px;border-radius:0;padding:2px 5px 2px 2px;margin-right:2px;background:none;
+ border-image:url(etiqueta-precio.webp) 22 22 22 175 fill / 4px 6px 4px 30px stretch;color:#2a1a0d;text-shadow:none;box-shadow:none;filter:drop-shadow(0 2px 2px #0009)}
+.product .price:before,.product .price:after{display:none}
+.product .price small.was{color:#7a6448}
+.product.noprice .price{color:#8a2a1a}
+@media(max-width:700px){.product .price{border-width:3px 5px 3px 25px;border-image-width:3px 5px 3px 25px;padding:1px 4px 1px 1px}}
+
+/* ===================== 5) La vela de «Mi semana» ===================== */
+.mi-week{position:relative}
+.mi-week.con-vela{padding-right:64px}
+.mw-vela{position:absolute;right:4px;top:0;width:54px;height:90px;pointer-events:none}
+.mw-vela img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity 1.2s ease}
+.mw-vela img.g{opacity:var(--p,0)}
+.mw-vela img.e{opacity:calc(1 - var(--p,0))}
+.mw-vela:after{content:"";position:absolute;left:50%;top:calc(4% + var(--p,0)*52%);width:30px;height:30px;margin-left:-15px;border-radius:50%;background:radial-gradient(circle,#ffcf6a66,#0000 70%);animation:hgParpadeo 1.8s infinite}
+html.lite .mw-vela:after{animation:none}
+
+/* ===================== 6) La pizarra del mostrador ===================== */
+.most-list{border:solid transparent;border-width:14px 14px 20px;border-image:url(pizarra.webp) 40 40 62 40 fill / 14px 14px 20px stretch;background:none;border-radius:0;padding:4px 8px}
+.most-list .most-line{border-color:#ffffff1f;color:#f1ece0}
+.most-list .most-line b{color:#fbf7ec;font-family:'IM Fell English',Georgia,serif;font-weight:400;letter-spacing:.02em;text-shadow:0 0 1px #fff8}
+.most-list .most-line small{color:#d9d3c4}
+.most-list:empty:before,.most-list>.most-empty{color:#e9e3d3;font-family:'IM Fell English',Georgia,serif}
+
+/* ===================== 7) Cartel de CERRADO POR INVENTARIO ===================== */
+.cartel-inv{position:relative;width:min(420px,86%);aspect-ratio:900/586;margin:2px auto 8px;background:url(cartel-inventario.webp) 50% 0/100% 100% no-repeat;
+ transform-origin:50% 3%;animation:hgCartel 5s ease-in-out infinite;filter:drop-shadow(0 6px 8px #000a)}
+.cartel-inv span{position:absolute;left:10%;right:10%;top:60%;transform:translateY(-50%);text-align:center;font:400 clamp(17px,4.6vw,27px)/1.12 var(--f-cartel);color:#7a1d14;letter-spacing:.03em;text-shadow:0 1px 0 #fff6}
+.cartel-inv span small{display:block;margin-top:4px;font:italic 400 clamp(11px,2.8vw,14px)/1.2 'IM Fell English',Georgia,serif;color:#4a3216;letter-spacing:.04em}
+@keyframes hgCartel{0%,100%{transform:rotate(-1.2deg)}50%{transform:rotate(1.2deg)}}
+html.lite .cartel-inv{animation:none}
+
+/* ===================== 8) Campos de papel con línea de tinta y desplegables de madera ===================== */
+html body:not(.hc) :is(input[type=text],input[type=search],input[type=number],input[type=date],input[type=time],input[type=datetime-local],input[type=password],input[type=email],input[type=tel],input[type=url],input:not([type]),textarea):not(.qty input):not(.money input):not([type=checkbox]):not([type=radio]){
+ background:linear-gradient(transparent calc(100% - 2px),#3a2610cc calc(100% - 2px)),linear-gradient(#f4e9cc,#ead9b2)!important;color:#2a1a0d!important;
+ border:1px solid #a88a52!important;border-radius:3px!important;box-shadow:inset 0 1px 3px #6b4e1c40!important;caret-color:#7a1d14}
+html body:not(.hc) :is(input,textarea):not(.qty input):not(.money input)::placeholder{color:#7d6646;opacity:1;font-style:italic}
+html body:not(.hc) :is(input[type=text],input[type=search],input[type=number],input[type=date],input[type=time],input[type=password],input:not([type]),textarea):not(.qty input):not(.money input):focus{
+ outline:0;background:linear-gradient(transparent calc(100% - 2px),#7a1d14 calc(100% - 2px)),linear-gradient(#fbf2d9,#efdfba)!important;box-shadow:0 0 0 2px #d7ae5499,inset 0 1px 3px #6b4e1c40!important}
+html body:not(.hc) .money{background:linear-gradient(transparent calc(100% - 2px),#3a2610cc calc(100% - 2px)),linear-gradient(#f4e9cc,#ead9b2)!important;border-color:#a88a52!important;color:#2a1a0d}
+html body:not(.hc) .money input{color:#2a1a0d!important}
+html body:not(.hc) .money:focus-within{box-shadow:0 0 0 2px #d7ae5499}
+html body:not(.hc) input[type=date]::-webkit-calendar-picker-indicator{filter:sepia(1) saturate(2) brightness(.5)}
+html body:not(.hc) select{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%23f0d278' stroke-width='2'/%3E%3C/svg%3E") right 12px center/14px 9px no-repeat,linear-gradient(#2a1a0dcc,#120a05e6),url(textura-madera.webp) 0 0/260px!important;
+ -webkit-appearance:none;appearance:none;padding-right:34px!important;color:#f3dfa6!important;border:1px solid #8b6a2e!important;border-radius:4px!important;box-shadow:inset 0 1px 0 #f0d27833,inset 0 -2px 4px #0008,0 1px 2px #0008!important;text-shadow:0 1px 0 #000}
+html body:not(.hc) select option{background:#1a110a;color:#f3dfa6}
+
+/* ===================== 9) Cursor de pluma en los campos de texto (ordenador) ===================== */
+@media(pointer:fine){
+ :is(input[type=text],input[type=search],input[type=number],input[type=password],input:not([type]),textarea){cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M3 29 L7 20 C12 11 20 4 30 2 C28 12 21 20 12 25 Z' fill='%23f3e7c8' stroke='%232a1a0d' stroke-width='1.3'/%3E%3Cpath d='M3 29 L19 12' stroke='%238b6a2e' stroke-width='1.2'/%3E%3Cpath d='M3 29 L5.5 23.5' stroke='%232a1a0d' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E") 3 29,text}
+}
+
+/* ===================== 10) Barra de desplazamiento de latón (ordenador) ===================== */
+@media(pointer:fine){
+ html{scrollbar-color:#c9a24a #0a120d}
+ ::-webkit-scrollbar{width:12px;height:12px}
+ ::-webkit-scrollbar-track{background:linear-gradient(90deg,#050a07,#0d1a12 50%,#050a07);box-shadow:inset 0 0 3px #000}
+ ::-webkit-scrollbar-thumb{border:2px solid #0a120d;border-radius:7px;background:linear-gradient(90deg,#6b4e1c,#f0d278 45%,#b88931 60%,#5a4016)}
+ ::-webkit-scrollbar-thumb:horizontal{background:linear-gradient(#6b4e1c,#f0d278 45%,#b88931 60%,#5a4016)}
+ ::-webkit-scrollbar-thumb:hover{background:linear-gradient(90deg,#7d5c22,#ffe39a 45%,#d0a040 60%,#6b4e1c)}
+ ::-webkit-scrollbar-corner{background:#0a120d}
+}
+
+/* ===================== 11) Termómetro de mercurio del objetivo ===================== */
+.goal-bar .gl-track{height:16px;margin:6px 0 0 14px;border-radius:0 8px 8px 0;overflow:visible;background:linear-gradient(#ffffff2e,#ffffff08 40%,#0000 60%,#ffffff14),linear-gradient(#0c0f0d,#1a1f1c);
+ border:1.5px solid #d9cfb4aa;border-left:0;box-shadow:inset 0 2px 3px #000,0 0 0 1px #0008}
+.goal-bar .gl-track:before{content:"";position:absolute;left:-17px;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff9a8a,#c0221a 45%,#6b0c08);border:1.5px solid #d9cfb4aa;box-shadow:0 0 8px #c0221a88,inset 0 -2px 3px #0006;z-index:1}
+.goal-bar .gl-track:after{content:"";position:absolute;inset:2px 4px 2px 6px;background:repeating-linear-gradient(90deg,#d9cfb466 0 1px,#0000 1px 10%);pointer-events:none;mix-blend-mode:screen}
+.goal-bar .gl-fill{top:4px;bottom:4px;left:0;border-radius:0 4px 4px 0;background:linear-gradient(#ff8070,#c0221a 55%,#7a100a);box-shadow:0 0 8px #e0302a88}
+.goal-bar.done .gl-track:before{background:radial-gradient(circle at 35% 35%,#ffe7a0,#e8b923 45%,#7a5a10);box-shadow:0 0 10px #e8b923aa}
+.goal-bar.done .gl-fill{background:linear-gradient(#fff1b0,#e8b923 55%,#8a6410)}
+
+/* ===================== 12) Puertas del despacho al entrar en Dirección ===================== */
+.hg-puertas{position:fixed;inset:0;z-index:2147483000;pointer-events:none;perspective:1400px;display:flex}
+.hg-puertas i{flex:1;position:relative;background:linear-gradient(90deg,#00000066,#0000 20%,#0000 80%,#00000066),url(textura-madera.webp) 0 0/320px,#3a2410;
+ box-shadow:inset 0 0 0 10px #2a170a,inset 0 0 0 12px #8b6a2e,inset 0 0 40px #000c;backface-visibility:hidden}
+.hg-puertas i:before{content:"";position:absolute;inset:14% 16%;border:3px solid #8b6a2e;border-radius:4px;box-shadow:inset 0 0 0 6px #2a170a,inset 0 0 0 8px #6b4e1c,inset 0 0 30px #000a}
+.hg-puertas i:after{content:"";position:absolute;top:50%;width:18px;height:18px;margin-top:-9px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff1b0,#c9a24a 45%,#5a4016);box-shadow:0 2px 4px #000}
+.hg-puertas i:first-child{transform-origin:0 50%;animation:hgPuertaI .95s .12s cubic-bezier(.55,.05,.35,1) forwards}
+.hg-puertas i:last-child{transform-origin:100% 50%;animation:hgPuertaD .95s .12s cubic-bezier(.55,.05,.35,1) forwards}
+.hg-puertas i:first-child:after{right:7%}.hg-puertas i:last-child:after{left:7%}
+@keyframes hgPuertaI{to{transform:rotateY(-105deg);opacity:.2}}
+@keyframes hgPuertaD{to{transform:rotateY(105deg);opacity:.2}}
+
+/* ===================== Ajustes tras revisar las capturas ===================== */
+#aiTitle{white-space:normal;overflow-wrap:normal;word-break:normal;line-height:1.1;letter-spacing:.08em;overflow:visible;text-overflow:clip}
+@media(max-width:520px){#aiTitle{font-size:13.5px;letter-spacing:.04em}.hg-retrato-cab{width:32px;height:38px;margin-right:7px}}
+.mi-week.con-vela{padding-right:inherit}
+.mi-week.con-vela .mw-vela{top:40px}
+.mi-week.con-vela>.mw-bar,.mi-week.con-vela>.mw-row{margin-right:62px}
+html body:not(.hc) .money input::placeholder{color:#7d6646;opacity:1;font-style:italic}
+html body:not(.hc) .money>i{color:#5a3f1a!important;background:none!important;border-color:#a88a52!important}
+.cartel-inv span{top:71%;left:12%;right:12%;font-size:clamp(14px,3.9vw,22px)}
+.cartel-inv span small{margin-top:2px;font-size:clamp(10px,2.5vw,13px)}
+#dirModal .dir-top>.enc-back{flex:0 0 auto;width:auto;max-width:70%;margin-bottom:0}

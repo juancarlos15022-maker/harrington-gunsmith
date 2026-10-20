@@ -155,7 +155,10 @@ function escena(tipo,titulo){return '<div class="escena escena-'+tipo+'" aria-hi
   var m=D.getElementById(x[0]);if(!m)return;var h=m.querySelector('.enc-head');if(h&&!m.querySelector('.escena'))h.insertAdjacentHTML('afterend',escena(x[1],x[2]));
  });
 })();
-var DIR_ESC={fabricar:['taller','El taller'],fabricacion:['taller','El taller'],balfab:['taller','El taller'],regpedidos:['muelle','El muelle de carga']};
+var DIR_ESC={fabricar:['taller','El taller'],fabricacion:['taller','El taller'],balfab:['taller','El taller'],regpedidos:['muelle','El muelle de carga'],
+ /* 20/10/2026: escenas de la tercera tanda */
+ ventas:['ventas','La caja registradora'],gastos:['gastos','El libro de gastos'],empleados:['empleados','El vestuario del personal'],sueldos:['sueldos','La caja fuerte'],
+ eventos:['eventos','Sorteos y eventos'],convenios:['convenios','Tratos y convenios'],clientes:['clientes','El registro de clientes']};
 var escenasDir=ok(function(){
  var b=D.getElementById('dirBody');if(!b)return;var mod=null;try{mod=dirMod}catch(e){}
  var want=DIR_ESC[mod], cur=b.querySelector(':scope>.escena');
