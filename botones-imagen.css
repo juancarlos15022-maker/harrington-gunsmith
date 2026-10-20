@@ -35,7 +35,7 @@
 /* ---------- cuero rojo: peligro ---------- */
 :is(.enc-actions,.actions,.receipt-actions,.confirm-actions,.emp-btns,.dir-form,.enc-sec) button:is(.warn,.danger),.enc-head button.danger,.clock-btn.out,.confirm-actions .danger{
  border-style:solid!important;border-radius:0!important;background:none!important;box-shadow:none!important;
- border-width:9px 20px!important;border-image:url(boton-cuero-rojo.webp) 36 56 36 56 fill / 9px 20px round stretch!important;
+ border-width:9px 20px!important;border-image:url(boton-cuero-rojo.webp?v=2) 36 56 36 56 fill / 9px 20px round stretch!important;
  color:#ffe6c8!important;text-shadow:0 1px 1px #000!important;padding:6px 4px!important;min-height:42px;filter:drop-shadow(0 3px 3px #000a)}
 .enc-head button.danger::after,.enc-head button.danger::before{display:none!important}
 
@@ -48,7 +48,7 @@
 
 /* ---------- cuero verde: la botonera de gestión ---------- */
 .management-nav .clock-link.enc-btn{
- border-width:12px 20px!important;border-image:url(boton-cuero-verde.webp) 36 56 36 56 fill / 12px 20px round stretch!important;
+ border-width:12px 20px!important;border-image:url(boton-cuero-verde.webp?v=2) 36 56 36 56 fill / 12px 20px round stretch!important;
  color:#f6dc8c!important;text-shadow:0 1px 1px #000,0 0 6px #0009!important;padding:6px 2px!important}
 .management-nav{background:none!important;box-shadow:none!important}
 .management-nav .clock-link.enc-btn svg{filter:drop-shadow(0 1px 1px #000)}
