@@ -2919,7 +2919,8 @@ html.lite .g-title,html.lite .enc-head>span:first-child,html.lite .confirm-title
 @media(prefers-reduced-motion:reduce){.g-title,.enc-head>span:first-child,.confirm-title,.order-title>span:first-child,.dir-cab:before,.hero-fx .luz,.hero-fx .mota,.hero-fx .rayo,.shop-sign{animation:none!important}.hero-fx .mota{display:none}}
 
 /* ===================== 14) Ajustes: micrófono, nombre de la categoría y títulos ===================== */
-.ai-fab{left:auto;right:14px;width:52px;height:52px}
+/* 20/10/2026: el micrófono vuelve a la izquierda: a la derecha tapaba FINALIZAR y «Fichar entrada» */
+.ai-fab{width:52px;height:52px}
 .category-visual .visual-title{background:linear-gradient(90deg,#000000d9,#000000a6 60%,#00000000);padding-right:48px}
 .order-title,.enc-head{font-size:18px}
 .confirm-title{font-size:19px}
@@ -3018,7 +3019,7 @@ body.gate-open .hg-capa{z-index:400}
 .hg-moneda{position:fixed;top:0;z-index:266;width:30px;height:30px;margin-left:-15px;pointer-events:none;background:url(moneda-oro.webp) center/contain no-repeat;filter:drop-shadow(0 3px 3px #0008)}
 
 /* ===================== 7) Medallas ===================== */
-.g-card .gc-med{position:absolute;right:4%;top:6%;z-index:3;display:flex;flex-direction:column;gap:2px;width:13%;pointer-events:auto}
+.g-card .gc-med{position:absolute;left:4%;top:15%;z-index:3;display:flex;flex-direction:column;gap:2px;width:13%;pointer-events:auto}
 .g-card .gc-med img{display:block;width:100%;height:auto;filter:drop-shadow(0 2px 2px #000a)}
 .mi-med{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:6px;margin:-2px 0 10px}
 .mi-med img{width:30px;height:auto;filter:drop-shadow(0 2px 2px #000a)}
@@ -3117,4 +3118,14 @@ html.lite .net-bar .poste{animation:none}
 @keyframes hgCae{0%{transform:translateY(-60px) rotate(-25deg);opacity:0}55%{transform:translateY(4px) rotate(8deg);opacity:1}75%{transform:rotate(-5deg)}100%{transform:rotate(0)}}
 
 @media(prefers-reduced-motion:reduce){.hero-lluvia,.nostock.cae,.category-visual.pasa img,.escena b{animation:none!important}}
+
+/* ===================== 17) Correcciones de colocación (20/10/2026) ===================== */
+/* las ventanas pequeñas más altas que la pantalla (Mi ficha, confirmaciones…) empiezan arriba y se desplazan, sin cortarse */
+.modal-overlay.confirm{align-items:flex-start}
+.modal-overlay.confirm>*{margin-top:auto!important;margin-bottom:auto!important}
+/* en el pedido vacío del ordenador, el dibujo más pequeño para que se lea el texto */
+@media(min-width:901px){.cart .empty{padding:6px 0}.cart .empty .empty-art:not(.nofile){width:min(140px,55%)}}
+/* «Fichar entrada» con sitio suficiente junto a DIRECCIÓN y ⚙ en el móvil */
+@media(max-width:600px){.clock-actions>#bossBtn{flex:1 1 0;min-width:0;letter-spacing:.06em;padding-left:8px;padding-right:8px}.clock-actions>.clock-btn{flex:1 1 0;min-width:112px}}
+.enc-card .ficha-retrato{float:left;width:84px;margin:0 14px 4px 0}
 

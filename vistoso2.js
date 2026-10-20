@@ -302,9 +302,19 @@ window.hgLluvia=function(si){H.dataset.lluvia=si?'si':'no';lluvia();return !!llu
  })).observe(D.body,{subtree:true,attributes:true,attributeFilter:['hidden'],attributeOldValue:true});
 })();
 
+/* ===================== 17) Retrato en la ficha del empleado de Dirección ===================== */
+var retratoFicha=ok(function(){
+ var b=D.getElementById('dirBody');if(!b)return;var id=null;try{if(dirMod==='empficha')id=fichaEmp}catch(e){}
+ var c=b.querySelector('.ficha-retrato');
+ if(!id){if(c)c.remove();return}
+ var ph='';try{ph=PHOTOS[id]||''}catch(e){}var src=ph||('silueta-'+(function(){try{return siluetaDe(id)}catch(e){return 'hombre'}})()+'.webp');
+ if(c&&c.dataset.src===src)return;if(c)c.remove();
+ var card=b.querySelector('.enc-card.dir-item');if(!card)return;
+ card.insertAdjacentHTML('afterbegin','<span class="retrato ficha-retrato" data-src="'+E(src)+'" aria-hidden="true"><span class="ret-foto"><img src="'+E(src)+'" alt=""></span></span>');
+});
 /* ===================== Un solo vigilante para lo que se pinta de nuevo ===================== */
 var pend=null;
-function repasar(){pend=null;escenasDir();corcho();calendario();mapa();medallas(D.body);firmaAlbaran()}
+function repasar(){pend=null;retratoFicha();escenasDir();corcho();calendario();mapa();medallas(D.body);firmaAlbaran()}
 new MutationObserver(function(){if(!pend)pend=(window.requestAnimationFrame||setTimeout)(repasar)}).observe(D.body,{childList:true,subtree:true});
 repasar();
 (function(){var rm=D.getElementById('receiptModal');if(!rm)return;var antes=rm.hidden;new MutationObserver(function(){if(antes&&!rm.hidden)setTimeout(firmaTicket,0);antes=rm.hidden}).observe(rm,{attributes:true,attributeFilter:['hidden']});
