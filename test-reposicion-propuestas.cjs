@@ -17,8 +17,9 @@ test('privado: la propuesta abierta lleva el botón de aceptar; aceptada, el de 
  assert.equal(a.vistaPrivada({...base,propuesta:false,cancelled:true,propuestaCerrada:'sin-faltas'},job).components.length,0);
  assert.match(a.vistaPrivada({...base,propuesta:false,cancelled:true,propuestaCerrada:'sin-faltas'},job).content,/Ya no hace falta/);
 });
-test('tarjeta de la empresa: propuesta con su aviso y botón de recibir',()=>{
- const t=load().tarjetaEmpresa({...base,propuesta:true});assert.match(t.embeds[0].title,/Propuesta/);assert.match(t.embeds[0].description,/aún sin encargar/);assert.equal(t.components[0].components[0].custom_id,'ped:rec:auto-x');
+test('tarjeta de la empresa: la propuesta lleva su aviso y NO se puede recibir; aceptada, sí',()=>{
+ const a=load(),t=a.tarjetaEmpresa({...base,propuesta:true});assert.match(t.embeds[0].title,/Propuesta/);assert.match(t.embeds[0].description,/aún sin encargar/);assert.equal(t.components.length,0);
+ assert.equal(a.tarjetaEmpresa({...base,propuesta:false,aceptadoAt:Date.now()}).components[0].components[0].custom_id,'ped:rec:auto-x');
 });
 test('revisión: edita el privado y la tarjeta al cambiar la propuesta y manda el telegrama al aceptarla',async()=>{
  const a=load();const job={pedido_id:'auto-x',status:'sent',cerrado:false,version:3,sent_version:2,card_version:2,ic_status:'pending',channel_id:'dm',message_id:'m1',nonce:'rep-x',token:'a'.repeat(64)};

@@ -68,7 +68,8 @@ export function tarjetaEmpresa(o:Any){
   :o.cancelled?(o.propuestaCerrada==='sin-faltas'?'Propuesta anulada: ya no hacía falta · Señor Harrington':'Pedido cancelado · Señor Harrington'):'✅ Recibido por '+(o.receivedBy||'—')+' · material en el almacén';
  return {embeds:[{title:(o.propuesta&&a?'📝 Propuesta ':'🚂 Pedido ')+o.code+' · '+String(o.proveedor||'').slice(0,60),color:a?COMPRAS:o.cancelled?APAGADO:VERDE,
   description:lineas(o)+'\n\n**Total:** '+dolar(o.totalCents)+' · '+(o.paid?'pagado por adelantado':'se paga a la entrega')+nota,footer:{text:pie}}],
-  components:a?[{type:1,components:[{type:2,style:3,label:'Recibido entero',emoji:{name:'📦'},custom_id:'ped:rec:'+o.id}]}]:[]};
+  // una propuesta sin aceptar aún no está encargada: no se puede recibir (20/10/2026, tras pulsarlo por error)
+  components:a&&!o.propuesta?[{type:1,components:[{type:2,style:3,label:'Recibido entero',emoji:{name:'📦'},custom_id:'ped:rec:'+o.id}]}]:[]};
 }
 
 export async function runReposicion(sb:Any,c:Record<string,string>,request=fetch,solo?:string){
@@ -134,6 +135,10 @@ export async function runReposicion(sb:Any,c:Record<string,string>,request=fetch
    const order=checked(await sb.from('datos').select('valor').eq('clave','pedido:'+job.pedido_id).maybeSingle())?.valor;
    if(!order||!gestionada(order)){if(!order||!abierto(order))checked(await avisos({cerrado:true},job.pedido_id));continue;}
    const ver=Number(job.version||1);
+   // Mientras es propuesta, el cerrojo «recibido-» impide recibirla desde el bot o la web; al aceptarla (o dejar de ser propuesta) se quita.
+   const cerrojo='recibido-'+job.pedido_id;
+   if(order.propuesta&&abierto(order))await sb.from('datos').upsert({clave:cerrojo,valor:{ts:Date.now(),by:'Propuesta sin aceptar',bloqueo:'propuesta'},actualizado:new Date().toISOString()},{onConflict:'clave',ignoreDuplicates:true});
+   else await sb.from('datos').delete().eq('clave',cerrojo).eq('valor->>bloqueo','propuesta');
    // un cambio de estado que no pasó por la propuesta (recibido, pagado, cancelado desde la web) también se refleja
    const firma=(o:Any)=>[!!o.propuesta,!!o.cancelled,!!(o.received||o.completedAt),!!o.paid,!!o.aceptadoAt].join('');
    const cambioExterno=job.ultimo_estado!==undefined&&job.ultimo_estado!==null&&job.ultimo_estado!==firma(order);
