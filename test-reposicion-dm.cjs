@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),{stripTypeScriptTypes}=require('node:module');
-const source=stripTypeScriptTypes(fs.readFileSync(__dirname+'/supabase/functions/harrington-reposicion/reposicion.ts','utf8'),{mode:'strip'}).replace('export async function','async function');
+const source=stripTypeScriptTypes(fs.readFileSync(__dirname+'/supabase/functions/harrington-reposicion/reposicion.ts','utf8'),{mode:'strip'}).replace(/^export /gm,'');
 function setup(options={}){
  const job={pedido_id:'auto-test',status:'pending',config_key:options.mine?'cfg:reposicion-mina':'cfg:reposicion-herreria',recipient_id:'123',texto:'Telegrama',nonce:'rep-test',attempts:options.attempts||0,created_at:'2026-10-20T00:00:00Z',channel_id:options.channel?'dm':null};
  const order={id:job.pedido_id,code:'PED-TEST',proveedor:'Herrería',paid:false,received:false};let posts=0;

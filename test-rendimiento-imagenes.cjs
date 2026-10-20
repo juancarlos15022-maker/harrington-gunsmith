@@ -19,7 +19,7 @@ function worker(code,shared,network,broken=false){
 test('imágenes: otra versión de código reutiliza el archivo; cambiar su huella descarga el nuevo',async()=>{
  const stores=new Map(),net=[],a=worker(sw,stores,net),url='https://sitio.invalid/app/diploma.webp';
  assert.equal(await(await a.get(url)).text(),'imagen-1');assert.equal(await(await a.get(url+'?v=otra')).text(),'imagen-1');assert.equal(net.length,1);
- const b=worker(sw.replace("PREFIX+'20261020-minas5'","PREFIX+'release-test-2'"),stores,net);await b.activate();assert.equal(await(await b.get(url)).text(),'imagen-1');assert.equal(net.length,2);assert.equal(await(await b.get(url)).text(),'imagen-1');assert.equal(net.length,2);
+ const b=worker(sw.replace("PREFIX+'20261020-propuestas1'","PREFIX+'release-test-2'"),stores,net);await b.activate();assert.equal(await(await b.get(url)).text(),'imagen-1');assert.equal(net.length,2);assert.equal(await(await b.get(url)).text(),'imagen-1');assert.equal(net.length,2);
  const changed=sw.replace(/("diploma.webp":")[a-f0-9]+"/,'$1'+'b'.repeat(40)+'"'),c=worker(changed,stores,net);await c.activate();assert.equal(await(await c.get(url)).text(),'imagen-3');assert.equal(net.length,3);
  assert.equal(await c.get(url,{Authorization:'Bearer cuenta'}),undefined);assert.equal(await c.get('https://otro.invalid/diploma.webp'),undefined);
 });
