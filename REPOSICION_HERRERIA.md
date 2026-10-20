@@ -15,3 +15,11 @@ Los materiales se guardan como `Cañon de …`, sin tilde en la o. Las formas co
 Archivos: `reposicion-herreria.sql` define funciones y cola privada; `reposicion-configurar.sql` normaliza datos y configura los mínimos; `reposicion-programar.sql` instala el trabajo por minuto; `supabase/functions/harrington-reposicion` procesa el pedido y su aviso. La función HTTP requiere el secreto interno del bot; no usa una contraseña pública ni expone el token de Discord.
 
 Pruebas: `npm run test:reposicion`. Incluyen reposición exacta, idempotencia, pendientes, recepciones parciales, precios ausentes, identidad de destino, reconocimiento de nombres, envío confirmado, privados cerrados y recuperación de envíos. No se realizan ventas, pagos ni recepciones reales para probar.
+
+## Propuestas (20/10/2026)
+
+Los pedidos automáticos de herrería y mina nacen como **propuesta** (`propuesta:true`). Mientras no se aceptan, cada revisión de un minuto los ajusta: en herrería la cantidad de cada material vuelve a ser `mínimo − existencias − pendiente de otros pedidos` (si ya no falta nada, la propuesta se anula sola con `propuestaCerrada:'sin-faltas'`); en mina los materiales nuevos bajo el umbral se añaden a la propuesta abierta. Cada cambio sube `version` en `hg_reposicion_avisos` y `harrington-reposicion` edita el privado y la tarjeta del canal de pedidos (`bot_pedmsg`).
+
+El privado lleva un botón de enlace «Aceptar propuesta» a `aceptar.html?t=<token>` (64 hex, único por aviso). La página llama a `harrington-reposicion` con `{accion:'aceptar',token}`; `hg_reposicion_aceptar` bloquea el pedido (`propuesta:false`, `aceptadoAt`, `aceptadoPor`), lo apunta en el historial y marca el telegrama IC como pendiente. El servidor envía al privado el telegrama de Vincent Harrington para el proveedor (sin número de pedido, precios ni referencias) y la página lo muestra con un botón de copiar. Una propuesta deja de serlo también si se paga, se recibe (aunque sea en parte), se abona o se cancela.
+
+Archivos: `reposicion-propuestas.sql`, `aceptar.html`, `aceptar.js`. Pruebas: `test-reposicion-propuestas.cjs`.
