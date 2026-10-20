@@ -180,3 +180,32 @@ html.lite .grid.flip,html.lite .grid.flip:before{animation:none}html.lite .grid.
 .escena-agenda{background-image:url(escena-agenda.webp);background-position:45% 45%}
 .escena-historial{background-image:url(escena-historial.webp);background-position:45% 45%}
 .escena-cierre:after,.escena-balance:after,.escena-historial:after{content:"";position:absolute;right:8%;top:16%;width:24%;height:52%;border-radius:50%;background:radial-gradient(circle,#ffb84a2e,#0000 70%);mix-blend-mode:screen;animation:hgParpadeo 3s infinite;pointer-events:none}
+
+/* ===================== 16) Cuarta tanda: libro, papel, ticket y quinqué (20/10/2026) ===================== */
+/* el tutorial pasa página */
+@keyframes hgPagina{0%{opacity:0;transform:perspective(1200px) rotateY(-24deg);transform-origin:0 50%;filter:brightness(.6)}
+ 55%{opacity:1;filter:brightness(1.05)}100%{opacity:1;transform:none;filter:none}}
+.tut-c.hg-pagina{animation:hgPagina .7s cubic-bezier(.25,.8,.35,1) both;position:relative}
+.tut-c.hg-pagina:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,#0008,#0000 18%);animation:hgPaginaSombra .7s ease both}
+@keyframes hgPaginaSombra{from{opacity:1}to{opacity:0}}
+/* «Cargando…» escrito en papel */
+.enc-empty.hg-cargando{position:relative;max-width:420px;margin:14px auto;padding:16px 22px 18px;border-radius:3px;text-align:left;color:#3a2610;
+ background:linear-gradient(#0000 0 31px,#a88a5244 31px 32px) 0 6px/100% 32px,linear-gradient(#f4e9cc,#e6d3a6);box-shadow:0 4px 12px #0009,inset 0 0 30px #8b6a2e33}
+.hg-cargando .hg-cg-t{display:block;font:italic 16px/32px 'IM Fell English',Georgia,serif;margin-bottom:0}
+.hg-cargando i{display:block;height:2px;margin:15px 0 15px;border-radius:2px;background:linear-gradient(90deg,#3a2610aa,#3a261055);transform-origin:0 50%;transform:scaleX(0);animation:hgEscribe 1.8s ease-in-out infinite}
+.hg-cargando i:nth-of-type(2){animation-delay:.35s;width:86%}.hg-cargando i:nth-of-type(3){animation-delay:.7s;width:93%}.hg-cargando i:nth-of-type(4){animation-delay:1.05s;width:62%}
+@keyframes hgEscribe{0%{transform:scaleX(0);opacity:1}55%{transform:scaleX(1);opacity:1}85%,100%{transform:scaleX(1);opacity:0}}
+html.lite .hg-cargando i{animation:none;transform:scaleX(1);opacity:.5}
+/* el ticket se arranca */
+.hg-ticket-fuera{position:fixed;z-index:2147482000;pointer-events:none;transform-origin:20% 0;animation:hgArranca .9s cubic-bezier(.5,0,.7,.4) forwards;
+ -webkit-mask:linear-gradient(#000,#000) 0 0/100% calc(100% - 9px) no-repeat,conic-gradient(from -45deg at 50% 100%,#000 90deg,#0000 0) 0 100%/14px 9px repeat-x;
+ mask:linear-gradient(#000,#000) 0 0/100% calc(100% - 9px) no-repeat,conic-gradient(from -45deg at 50% 100%,#000 90deg,#0000 0) 0 100%/14px 9px repeat-x}
+@keyframes hgArranca{0%{transform:none;opacity:1}18%{transform:translateY(-6px) rotate(-1.5deg)}100%{transform:translate(55vw,-30vh) rotate(24deg) scale(.7);opacity:0}}
+/* luz de quinqué en el catálogo */
+#products .product::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .35s ease;z-index:0;
+ background:radial-gradient(circle 160px at var(--lx,50%) var(--ly,50%),#ffcf7a2e,#ffb04a14 45%,#0000 75%);mix-blend-mode:screen}
+#products .product.hg-luz::before{opacity:1}
+#products .product{position:relative}
+html.lite #products .product::before{display:none}
+.hg-ticket-fuera *{animation:none!important;transition:none!important}
+.hg-ticket-fuera [class*="rc-"],.hg-ticket-fuera .receipt-paper *{opacity:1}
