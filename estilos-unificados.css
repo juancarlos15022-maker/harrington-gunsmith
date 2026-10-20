@@ -3390,4 +3390,11 @@ html body:not(.hc) .money>i{color:#5a3f1a!important;background:none!important;bo
 .cartel-inv span{top:71%;left:12%;right:12%;font-size:clamp(14px,3.9vw,22px)}
 .cartel-inv span small{margin-top:2px;font-size:clamp(10px,2.5vw,13px)}
 #dirModal .dir-top>.enc-back{flex:0 0 auto;width:auto;max-width:70%;margin-bottom:0}
+/* Las palabras de los botones no se parten por la mitad («COPIAR TELEGRAM-A») y el total deja aire a los botones */
+:is(.enc-actions,.actions,.receipt-actions,.confirm-actions,.emp-btns) button{overflow-wrap:normal!important;word-break:normal!important;hyphens:none}
+@media(max-width:520px){.enc-actions.two button{font-size:12.5px;letter-spacing:.02em}}
+.brow.due+.enc-actions{margin-top:14px}
+/* Carrito vacío en ordenador: la caja crece lo justo para que se lean las dos líneas */
+.cart:has(>.empty){max-height:none}
+@media(min-width:901px){.cart .empty .empty-art:not(.nofile){width:min(110px,45%)}}
 
