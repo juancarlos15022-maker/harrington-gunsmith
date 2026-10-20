@@ -1092,9 +1092,9 @@ function telegramConfirm(e){
 function telegramRemind(e){
  return `Sr./Sra. ${e.client}: le recordamos que su encargo (${encItemsTxt(e)}) le espera en Armería Harrington Gunsmith, Saint Denis.${e.pendingCents>0?` Importe pendiente: ${money(e.pendingCents)}.`:''}\n\nRecuerde que dispone de 10 días desde el aviso para recogerlo; pasado ese plazo, perderá el producto y la fianza.\n\nAtentamente, Vincent Harrington · Telegrama SD8112\n\nEl precio de un apellido.`;
 }
-function pedidoTelegram(prov,items,paid,code){
+function pedidoTelegram(prov,items,paid,code,abono=0){
  const tot=items.reduce((a,x)=>a+x.qty*x.price,0);
- return `Armería Harrington Gunsmith, Saint Denis.\nPedido para ${prov}:\n\n${items.map(x=>`• ${x.qty} × ${x.material} a ${money(x.price)} = ${money(x.qty*x.price)}`).join('\n')}\n\nTotal: ${money(tot)}. ${paid?'Pagado por adelantado.':'Se paga a la entrega.'}${code?`\nReferencia: ${code}`:''}\n\nEl precio de un apellido.`;
+ return `Armería Harrington Gunsmith, Saint Denis.\nPedido para ${prov}:\n\n${items.map(x=>`• ${x.qty} × ${x.material} a ${money(x.price)} = ${money(x.qty*x.price)}`).join('\n')}\n\nTotal: ${money(tot)}. ${paid?'Pagado por adelantado.':abono>0?'Ya abonado: '+money(abono)+'. Pendiente a la entrega: '+money(Math.max(0,tot-abono))+'.':'Se paga a la entrega.'}${code?`\nReferencia: ${code}`:''}\n\nEl precio de un apellido.`;
 }
 async function copyMsg(t,ok){if(await copyText(t))say(ok||'Mensaje copiado · pégalo en el telegrama');else prompt('Copia este texto:',t)}
 async function copyTelegram(id){
@@ -2842,7 +2842,7 @@ pedModal.addEventListener('click',e=>{
  else if(a.dataset.pact==='save'){if(!offlineBlock('recibir o pagar un pedido'))once('ped',savePedido,a)}
  else if(a.dataset.pact==='partial'){if(!offlineBlock('apuntar una entrega'))once('pedp',savePartial,a)}
  else if(a.dataset.pact==='cancel'){if(!offlineBlock('cancelar un pedido'))once('pedc',()=>cancelPedido(pedView),a);}
- else if(a.dataset.pact==='tele'){const x=pendingPed().find(p=>p.id===pedView);if(x)copyMsg(pedidoTelegram(x.proveedor,x.items,x.paid,x.code),'Pedido copiado · pégalo en el telegrama al proveedor')}
+ else if(a.dataset.pact==='tele'){const x=pendingPed().find(p=>p.id===pedView);if(x)copyMsg(pedidoTelegram(x.proveedor,x.items,x.paid,x.code,x.abonoCents||0),'Pedido copiado · pégalo en el telegrama al proveedor')}
 });
 pedModal.addEventListener('input',e=>{const t=e.target;if(!pedDraft||t.dataset.prq===undefined)return;const v=t.value.replace(/[^0-9]/g,'').slice(0,6);if(v!==t.value)t.value=v;pedDraft.part=pedDraft.part||{};pedDraft.part[t.dataset.prq]=v});
 pedModal.addEventListener('change',e=>{
