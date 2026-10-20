@@ -9,7 +9,7 @@
 var D=document, gate=D.getElementById('gate'), stage=D.getElementById('gStage');
 if(!gate||!stage||typeof window.gateEnter!=='function')return;
 var SRC={v:['entrada-video.webm','entrada-video.mp4']};   // [webm, mp4]   // w: pendiente del vídeo apaisado
-var VER='1';
+var VER='2';
 var vid=null, listo=false, lk='';
 function calm(){try{return calmFx()}catch(e){return false}}
 function bajo(){try{return !!G.low}catch(e){return false}}
