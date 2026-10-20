@@ -172,3 +172,11 @@ html.lite .grid.flip,html.lite .grid.flip:before{animation:none}html.lite .grid.
 .gate.g-salida .g-ui,.gate.g-salida .g-felt{opacity:0!important;pointer-events:none}
 .gate.g-salida .g-video{opacity:1;transition:none}
 .gate.g-salida.g-sfin .g-video{opacity:0;transition:opacity .9s ease}
+/* Escenas de Dirección, cuarta tanda (20/10/2026) */
+.escena-cierre{background-image:url(escena-cierre.webp);background-position:42% 60%}
+.escena-balance{background-image:url(escena-balance.webp);background-position:55% 45%}
+.escena-estadisticas{background-image:url(escena-estadisticas.webp);background-position:50% 50%}
+.escena-stock{background-image:url(escena-stock.webp);background-position:50% 40%}
+.escena-agenda{background-image:url(escena-agenda.webp);background-position:45% 45%}
+.escena-historial{background-image:url(escena-historial.webp);background-position:45% 45%}
+.escena-cierre:after,.escena-balance:after,.escena-historial:after{content:"";position:absolute;right:8%;top:16%;width:24%;height:52%;border-radius:50%;background:radial-gradient(circle,#ffb84a2e,#0000 70%);mix-blend-mode:screen;animation:hgParpadeo 3s infinite;pointer-events:none}
