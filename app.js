@@ -3588,31 +3588,31 @@ const RECETAS_LOTES=[
   'Munición Repetidora':[['Pólvora',1,1],['Hierro',1],['Papel',1]],
   'Munición Escopeta':[['Pólvora',3,1],['Hierro',1],['Papel',1]]}},
  {v:'2',r:{ /* armas de fuego: pieza de arma (normal o especial), cañón y culata de su familia, y tornillos */
-  'Cattleman Revolver':[['Pieza de arma',1],['Cañón de revólver',2],['Culata de revólver',4],['Tornillo',5]],
-  'Doble Action Revolver':[['Pieza de arma',1],['Cañón de revólver',2],['Culata de revólver',4],['Tornillo',8]],
-  'Schofield Revolver':[['Pieza de arma',13],['Cañón de revólver',2],['Culata de revólver',4],['Tornillo',20]],
-  'Lemat Revolver':[['Pieza de arma especial',2],['Cañón de revólver',2],['Culata de revólver',2],['Tornillo',30]],
-  'Navy Revolver':[['Pieza de arma especial',3],['Cañón de revólver',2],['Culata de revólver',2],['Tornillo',20]],
-  'Navy Crossover Revolver':[['Pieza de arma especial',4],['Cañón de revólver',2],['Culata de revólver',2],['Tornillo',27]],
-  'Mauser Pistola':[['Pieza de arma',21],['Cañón de pistola',1],['Culata de pistola',2],['Tornillo',15]],
-  'Semiautomática Pistola':[['Pieza de arma',24],['Cañón de pistola',1],['Culata de pistola',1],['Tornillo',5]],
-  'Volcanic Pistola':[['Pieza de arma especial',5],['Cañón de pistola',1],['Culata de pistola',1],['Tornillo',1]],
-  'M1899 Pistola':[['Pieza de arma especial',4],['Cañón de pistola',1],['Culata de pistola',1],['Tornillo',20]],
-  'Carabina Repetición':[['Pieza de arma',15],['Cañón de repetidora',1],['Culata de repetidora',1],['Tornillo',2]],
-  'Evans Repetición':[['Pieza de arma especial',5],['Cañón de repetidora',1],['Culata de repetidora',1],['Tornillo',10]],
-  'Henry Repetición':[['Pieza de arma especial',6],['Cañón de repetidora',1],['Culata de repetidora',2],['Tornillo',20]],
-  'Winchester Repetición':[['Pieza de arma especial',7],['Cañón de repetidora',2],['Culata de repetidora',3],['Tornillo',15]],
-  'Varmint':[['Pieza de arma',2],['Cañón de rifle',1],['Culata de rifle',1],['Tornillo',8]],
-  'Springfield Rifle':[['Pieza de arma especial',10],['Cañón de rifle',1],['Culata de rifle',2],['Tornillo',20]],
-  'Cerrojo Rifle':[['Pieza de arma especial',11],['Cañón de rifle',1],['Culata de rifle',1],['Tornillo',35]],
-  'Recortada Escopeta':[['Pieza de arma especial',8],['Cañón de escopeta',2],['Culata de escopeta',1],['Tornillo',30]],
-  'Doble Cañón Escopeta':[['Pieza de arma especial',9],['Cañón de escopeta',2],['Culata de escopeta',1],['Tornillo',30]]}}
+  'Cattleman Revolver':[['Pieza de arma',1],['Cañon de revólver',2],['Culata de revólver',4],['Tornillo',5]],
+  'Doble Action Revolver':[['Pieza de arma',1],['Cañon de revólver',2],['Culata de revólver',4],['Tornillo',8]],
+  'Schofield Revolver':[['Pieza de arma',13],['Cañon de revólver',2],['Culata de revólver',4],['Tornillo',20]],
+  'Lemat Revolver':[['Pieza de arma especial',2],['Cañon de revólver',2],['Culata de revólver',2],['Tornillo',30]],
+  'Navy Revolver':[['Pieza de arma especial',3],['Cañon de revólver',2],['Culata de revólver',2],['Tornillo',20]],
+  'Navy Crossover Revolver':[['Pieza de arma especial',4],['Cañon de revólver',2],['Culata de revólver',2],['Tornillo',27]],
+  'Mauser Pistola':[['Pieza de arma',21],['Cañon de pistola',1],['Culata de pistola',2],['Tornillo',15]],
+  'Semiautomática Pistola':[['Pieza de arma',24],['Cañon de pistola',1],['Culata de pistola',1],['Tornillo',5]],
+  'Volcanic Pistola':[['Pieza de arma especial',5],['Cañon de pistola',1],['Culata de pistola',1],['Tornillo',1]],
+  'M1899 Pistola':[['Pieza de arma especial',4],['Cañon de pistola',1],['Culata de pistola',1],['Tornillo',20]],
+  'Carabina Repetición':[['Pieza de arma',15],['Cañon de repetidora',1],['Culata de repetidora',1],['Tornillo',2]],
+  'Evans Repetición':[['Pieza de arma especial',5],['Cañon de repetidora',1],['Culata de repetidora',1],['Tornillo',10]],
+  'Henry Repetición':[['Pieza de arma especial',6],['Cañon de repetidora',1],['Culata de repetidora',2],['Tornillo',20]],
+  'Winchester Repetición':[['Pieza de arma especial',7],['Cañon de repetidora',2],['Culata de repetidora',3],['Tornillo',15]],
+  'Varmint':[['Pieza de arma',2],['Cañon de rifle',1],['Culata de rifle',1],['Tornillo',8]],
+  'Springfield Rifle':[['Pieza de arma especial',10],['Cañon de rifle',1],['Culata de rifle',2],['Tornillo',20]],
+  'Cerrojo Rifle':[['Pieza de arma especial',11],['Cañon de rifle',1],['Culata de rifle',1],['Tornillo',35]],
+  'Recortada Escopeta':[['Pieza de arma especial',8],['Cañon de escopeta',2],['Culata de escopeta',1],['Tornillo',30]],
+  'Doble Cañón Escopeta':[['Pieza de arma especial',9],['Cañon de escopeta',2],['Culata de escopeta',1],['Tornillo',30]]}}
 ];
 /* Proveedores dictados por la dirección: se crean una sola vez (si ya existe uno con ese nombre, no se toca) */
 const PROVEEDORES_BASE=[
  {k:'roanoke',name:'Roanoke Mining Company',tipo:'Mina',ubic:'Annesburg',tel:'ER6080',prods:[['Mena de hierro',0.50],['Mena de carbón',0.10],['Azufre',0.10],['Sal',0.07],['Piedra',0.07]]},
  {k:'tala-annesburg',name:'Tala Annesburg',tipo:'Tala',ubic:'Annesburg',tel:'AN5025',prods:[['Fibra',0.07],['Trozo de madera',1.33],['Tablones',0.74]]},
- {k:'foster',name:'Herrería Foster',tipo:'Herrería',ubic:'',tel:'VL2508',extra:[{k:'Nota',v:'«Cuchillo A» y «El chapo A»: nombres por confirmar'},{k:'Precio provisional',v:'Culata de pistola y de revólver a $2.88'}],prods:[['Pieza de arma',2.52],['Pieza de arma especial',20.45],['Cañón de pistola',2.52],['Cañón de revólver',2.52],['Culata de pistola',2.88],['Culata de revólver',2.88],['Cañón de repetidora',4.86],['Culata de repetidora',5.22],['Cañón de rifle',7.20],['Culata de rifle',7.56],['Cañón de escopeta',7.20],['Culata de escopeta',7.56],['Barra de hierro',2.34],['Tornillo',0.23],['Hojalata',0.42],['Herradura',0.72],['Kit de reparación de arma',26.87],['Kit de reparación de carros',5.14],['Cuchillo A',4.14],['Corbillo',0.96],['Rastrillo',3.24],['Hacha',3.24],['Martillo',3.24],['Pico',3.24],['Batea de rocas',3.52],['Fundidora',12.53],['Alambique nuevo',11.61],['Alambique tradicional',11.61],['Regadera de hojalata',0.88],['Regadera de cobre',1.06],['Pala',2.88],['Tijeras de podar',1.20],['Cubo vacío',1.62],['Linterna (tipo 1)',3.06],['Linterna (tipo 2)',3.06],['Binoculares mejorados',6.90],['Encendedor',1.10],['Dardos',6.48],['El chapo A',2.52]]}
+ {k:'foster',name:'Herrería Foster',tipo:'Herrería',ubic:'',tel:'VL2508',extra:[{k:'Nota',v:'«Cuchillo A» y «El chapo A»: nombres por confirmar'},{k:'Precio provisional',v:'Culata de pistola y de revólver a $2.88'}],prods:[['Pieza de arma',2.52],['Pieza de arma especial',20.45],['Cañon de pistola',2.52],['Cañon de revólver',2.52],['Culata de pistola',2.88],['Culata de revólver',2.88],['Cañon de repetidora',4.86],['Culata de repetidora',5.22],['Cañon de rifle',7.20],['Culata de rifle',7.56],['Cañon de escopeta',7.20],['Culata de escopeta',7.56],['Barra de hierro',2.34],['Tornillo',0.23],['Hojalata',0.42],['Herradura',0.72],['Kit de reparación de arma',26.87],['Kit de reparación de carros',5.14],['Cuchillo A',4.14],['Corbillo',0.96],['Rastrillo',3.24],['Hacha',3.24],['Martillo',3.24],['Pico',3.24],['Batea de rocas',3.52],['Fundidora',12.53],['Alambique nuevo',11.61],['Alambique tradicional',11.61],['Regadera de hojalata',0.88],['Regadera de cobre',1.06],['Pala',2.88],['Tijeras de podar',1.20],['Cubo vacío',1.62],['Linterna (tipo 1)',3.06],['Linterna (tipo 2)',3.06],['Binoculares mejorados',6.90],['Encendedor',1.10],['Dardos',6.48],['El chapo A',2.52]]}
 ];
 async function proveedoresBase(){
  for(const b of PROVEEDORES_BASE){
@@ -3629,7 +3629,7 @@ async function proveedoresBase(){
 /* Entradas de almacén dictadas por la dirección (lo que el staff dejó en el almacén del juego): se suman una sola vez entre todos los dispositivos.
    [nombre, cantidad, 1 = es un PRODUCTO de la tienda (va al stock de productos, no al almacén)] */
 const ENTRADAS_BASE=[
- {k:'inicial-1',why:'Almacén inicial (dejado por el staff)',items:[['Hierro',50],['Papel',50],['Trozo de madera',50],['Portapapeles',5],['Pieza de arma',10],['Cañón de revólver',10],['Culata de revólver',10],['Tornillo',50],['Pólvora',50,1],['Fibra',50]]}
+ {k:'inicial-1',why:'Almacén inicial (dejado por el staff)',items:[['Hierro',50],['Papel',50],['Trozo de madera',50],['Portapapeles',5],['Pieza de arma',10],['Cañon de revólver',10],['Culata de revólver',10],['Tornillo',50],['Pólvora',50,1],['Fibra',50]]}
 ];
 async function entradasBase(){
  for(const b of ENTRADAS_BASE){
@@ -5586,8 +5586,8 @@ function ingLabel(m){return isProdIng(m)?m+' (producto)':m}
 function isMat(k){return String(k).indexOf('mat:')===0}
 function matNames(){const L=Object.keys(stockMap).filter(isMat).map(k=>k.slice(4)).filter(n=>!(MAT_ALIAS[norm(n)]&&!stockMap[matKey(n)])&&!isMatProd(n));matProdList().forEach(n=>{if(isMatProd(n))L.push(n)});return L.sort((a,b)=>a.localeCompare(b,'es'))}
 /* Nombres de la mina → nombre en el almacén de la tienda */
-const MAT_ALIAS={'mena de hierro':'Hierro','menas de hierro':'Hierro','mena de carbon':'Carbón','menas de carbon':'Carbón','tablones':'Tabla de madera','tablon':'Tabla de madera','tablas de madera':'Tabla de madera','trozo madera':'Trozo de madera','trozos de madera':'Trozo de madera','tornillos':'Tornillo','pieza de armas':'Pieza de arma','piezas de arma':'Pieza de arma','piezas de armas':'Pieza de arma','canon de revolver':'Cañón de revólver','culata de revolver':'Culata de revólver','canon de repetidora':'Cañón de repetidora','canon de reptidora':'Cañón de repetidora','canones de repetidora':'Cañón de repetidora'};
-function canonMat(n){n=String(n||'').trim().replace(/\s+/g,' ');const a=MAT_ALIAS[norm(n)];if(a)n=a;const f=matNames().find(x=>norm(x)===norm(n));return f||n}
+const MAT_ALIAS={'mena de hierro':'Hierro','menas de hierro':'Hierro','mena de carbon':'Carbón','menas de carbon':'Carbón','tablones':'Tabla de madera','tablon':'Tabla de madera','tablas de madera':'Tabla de madera','trozo madera':'Trozo de madera','trozos de madera':'Trozo de madera','tornillos':'Tornillo','pieza de armas':'Pieza de arma','piezas de arma':'Pieza de arma','piezas de armas':'Pieza de arma','canon de pistola':'Cañon de pistola','canones de pistola':'Cañon de pistola','canon de rifle':'Cañon de rifle','canones de rifle':'Cañon de rifle','canon de escopeta':'Cañon de escopeta','canones de escopeta':'Cañon de escopeta','canones de revolver':'Cañon de revólver','canon de revolver':'Cañon de revólver','culata de revolver':'Culata de revólver','canon de repetidora':'Cañon de repetidora','canon de reptidora':'Cañon de repetidora','canones de repetidora':'Cañon de repetidora'};
+function canonMat(n){n=String(n||'').trim().replace(/\s+/g,' ');const a=MAT_ALIAS[norm(n)];if(a)return a;const f=matNames().find(x=>norm(x)===norm(n));return f||n}
 function sameMat(a,b){return norm(canonMat(a))===norm(canonMat(b))}
 function recipeOf(name){return (recetas[name]||[]).filter(r=>r&&r.m&&r.q>0)}
 function recipeText(name){const r=recipeOf(name);return r.length?r.map(x=>x.q+' × '+x.m+(x.p&&!isMatProd(x.m)?' (producto)':'')).join(', '):''}
