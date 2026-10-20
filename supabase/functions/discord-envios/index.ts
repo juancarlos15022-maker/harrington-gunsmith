@@ -5,6 +5,10 @@ import {validarMensaje} from "./discord-validar.ts";
 const URL_=Deno.env.get('SUPABASE_URL')!;
 const admin=createClient(URL_,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false,autoRefreshToken:false}});
 const CORS={'Access-Control-Allow-Origin':'https://juancarlos15022-maker.github.io','Access-Control-Allow-Headers':'authorization, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'};
+// 20/10/2026: cada tarjeta lleva en el lateral el color de la categoría de Dirección de su canal (el mismo que en la web).
+const CAT_COLOR:Record<string,number>={DINERO:0xD4A93A,PERSONAL:0x3F6FB0,TIENDA:0xA8322A,ALMACEN:0x3E8E4E,COMPRAS:0xC2702A};
+const KIND_CAT:Record<string,string>={ventas:'DINERO',ventas_semanales:'DINERO',cierres:'DINERO',gastos:'DINERO',gastos_semanales:'DINERO',balance:'DINERO',anulaciones:'DINERO',mensual:'DINERO',resumen:'DINERO',empleados:'PERSONAL',fichajes:'PERSONAL',ausencias:'PERSONAL',sueldos:'PERSONAL',clientes:'TIENDA',agenda:'TIENDA',eventos:'TIENDA',encargos:'TIENDA',stock:'ALMACEN',materiales:'ALMACEN',fabricacion:'ALMACEN',proveedores:'COMPRAS',pedidos:'COMPRAS'};
+const colorDe=(k:string)=>CAT_COLOR[KIND_CAT[k]]||0xC9A24A;
 const out=(o:unknown,st=200)=>new Response(JSON.stringify(o),{status:st,headers:{...CORS,'Content-Type':'application/json','Cache-Control':'no-store'}});
 Deno.serve(async(req:Request)=>{
 if(req.method==='OPTIONS')return new Response('ok',{headers:CORS});if(req.method!=='POST')return out({error:'METODO'},405);
@@ -33,7 +37,7 @@ if(b.wait||!owner)url.searchParams.set('wait','true');
 let payload=b.payload||{};const meta=payload._hg||{};delete payload._hg;let registro='';const kind=String(meta.kind||'');
 if(owner&&meta.ref&&['ventas','encargos','stock','materiales','clientes','agenda','fichajes','ausencias','fabricacion','resumen'].includes(kind)&&metodo!=='DELETE'){
  const target=cfg?.valor?.urls?.[kind]||cfg?.valor?.url;if(!target||new URL(target).pathname.split('/')[3]!==String(b.webhook))return out({error:'CANAL_INVALIDO'},403);
- try{const verified=await validarMensaje(admin,kind,String(meta.ref),emp,nom,true);registro=verified.record;if(['fabricacion','stock','materiales','fichajes'].includes(kind)){payload={username:'Harrington Gunsmith',embeds:[{title:verified.title,description:verified.description,color:0xC9A24A,footer:{text:'Harrington · Datos verificados por registro'}}]};files=[];}}catch{return out({error:'OPERACION_INVALIDA'},403);}
+ try{const verified=await validarMensaje(admin,kind,String(meta.ref),emp,nom,true);registro=verified.record;if(['fabricacion','stock','materiales','fichajes'].includes(kind)){payload={username:'Harrington Gunsmith',embeds:[{title:verified.title,description:verified.description,color:colorDe(kind),footer:{text:'Harrington · Datos verificados por registro'}}]};files=[];}}catch{return out({error:'OPERACION_INVALIDA'},403);}
  leaseKey=kind+':'+registro;const claim=await admin.rpc('hg_discord_reservar',{p_key:leaseKey});if(claim.error||claim.data!==true){leaseKey='';return out({error:'ENVIO_EN_CURSO'},409);}
  if(metodo==='POST'){const {data:m}=await admin.from('hg_discord_messages').select('message_id,webhook_id').eq('kind',kind).eq('record_key',registro).maybeSingle();if(m?.message_id&&m.webhook_id===String(b.webhook)){b.mensaje=m.message_id;url.pathname=url.pathname.replace(/\/$/,'')+'/messages/'+m.message_id;metodo='PATCH';}}
  url.searchParams.set('wait','true');
@@ -52,7 +56,7 @@ if(!owner){
   }
  }
  const image=files.length&&['ventas','encargos'].includes(kind)?{url:'attachment://'+files[0].name}:undefined;
- payload={username:'Harrington Gunsmith',embeds:[{title:canonical.title,description:canonical.description,color:0xC9A24A,footer:{text:'Harrington · Registro verificado por el servidor'},timestamp:new Date().toISOString(),...(image?{image}:{})}]};
+ payload={username:'Harrington Gunsmith',embeds:[{title:canonical.title,description:canonical.description,color:colorDe(kind),footer:{text:'Harrington · Registro verificado por el servidor'},timestamp:new Date().toISOString(),...(image?{image}:{})}]};
  if(!image)files=[];
 }
 payload.allowed_mentions={parse:[]};if(JSON.stringify(payload).length>30000){if(leaseKey)await admin.from('hg_discord_leases').delete().eq('clave',leaseKey);return out({error:'TAMANO'},413);}

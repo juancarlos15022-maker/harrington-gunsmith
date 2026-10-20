@@ -183,3 +183,12 @@ html.lite .net-bar .poste{animation:none}
 /* «Fichar entrada» con sitio suficiente junto a DIRECCIÓN y ⚙ en el móvil */
 @media(max-width:600px){.clock-actions>#bossBtn{flex:1 1 0;min-width:0;letter-spacing:.06em;padding-left:8px;padding-right:8px}.clock-actions>.clock-btn{flex:1 1 0;min-width:112px}}
 .enc-card .ficha-retrato{float:left;width:84px;margin:0 14px 4px 0}
+
+/* 20/10/2026 · Marcadores de color por categoría de Dirección (el mismo color que llevan sus tarjetas en Discord) */
+#dirModal .mod-sec[style*="--cat"]{--tab:var(--cat)}
+#dirModal .mod-sec[style*="--cat"] .mod-card{position:relative;overflow:hidden}
+#dirModal .mod-sec[style*="--cat"] .mod-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,color-mix(in srgb,var(--cat) 70%,#fff) ,var(--cat) 30%,color-mix(in srgb,var(--cat) 70%,#000));box-shadow:1px 0 2px #0007;pointer-events:none}
+#dirModal .dir-top[style*="--cat"]{position:relative;padding-left:16px}
+#dirModal .dir-top[style*="--cat"]::before{content:"";position:absolute;left:0;top:-6px;width:10px;height:calc(100% + 4px);background:var(--cat);clip-path:polygon(0 0,100% 0,100% 100%,50% 82%,0 100%);box-shadow:0 2px 4px #0008;pointer-events:none}
+.wh-row.cat{position:relative;padding-left:14px}
+.wh-row.cat::before{content:"";position:absolute;left:0;top:2px;bottom:2px;width:6px;border-radius:2px;background:var(--cat);box-shadow:0 1px 2px #0008}
