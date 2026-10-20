@@ -76,6 +76,8 @@ export async function runReposicion(sb:Any,c:Record<string,string>,request=fetch
  const checked=(r:Any)=>{if(r.error)throw Error('REPOSICION_BASE_DE_DATOS');return r.data;};
  const plan=solo?null:checked(await sb.rpc('hg_reponer_herreria'));
  const mina=solo?null:checked(await sb.rpc('hg_reponer_mina'));
+ // 20/10/2026: la Tala Annesburg, con su lote por material (un fallo aquí no frena la herrería ni la mina)
+ let tala:Any=null;if(!solo){const t=await sb.rpc('hg_reponer_tala');if(!t.error)tala=t.data;}
  let q=sb.from('hg_reposicion_avisos').select('*').eq('status','pending').lte('next_at',new Date().toISOString()).order('created_at').limit(3);
  if(solo)q=sb.from('hg_reposicion_avisos').select('*').eq('status','pending').eq('pedido_id',solo).limit(1);
  const jobs=checked(await q)||[];
@@ -158,5 +160,5 @@ export async function runReposicion(sb:Any,c:Record<string,string>,request=fetch
    checked(await avisos({ultimo_estado:firma(order),...(fin?{cerrado:true}:{})},job.pedido_id));
   }catch{/* se reintenta en la próxima revisión */}finally{await sb.from('hg_discord_leases').delete().eq('clave',key);}
  }
- return {created:!!plan?.created||!!mina?.created,pedido:plan?.pedido?.code||null,pedidoMina:mina?.pedido?.code||null,sent,pending,updated};
+ return {created:!!plan?.created||!!mina?.created||!!tala?.created,pedido:plan?.pedido?.code||null,pedidoMina:mina?.pedido?.code||null,pedidoTala:tala?.pedido?.code||null,sent,pending,updated};
 }

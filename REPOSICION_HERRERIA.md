@@ -23,3 +23,19 @@ Los pedidos automáticos de herrería y mina nacen como **propuesta** (`propuest
 El privado lleva un botón de enlace «Aceptar propuesta» a `aceptar.html?t=<token>` (64 hex, único por aviso). La página llama a `harrington-reposicion` con `{accion:'aceptar',token}`; `hg_reposicion_aceptar` bloquea el pedido (`propuesta:false`, `aceptadoAt`, `aceptadoPor`), lo apunta en el historial y marca el telegrama IC como pendiente. El servidor envía al privado el telegrama de Vincent Harrington para el proveedor (sin número de pedido, precios ni referencias) y la página lo muestra con un botón de copiar. El telegrama pide que se lo traigan a la armería y se paga al recibirlo. Una propuesta deja de serlo también si se paga, se recibe (aunque sea en parte), se abona o se cancela.
 
 Archivos: `reposicion-propuestas.sql`, `aceptar.html`, `aceptar.js`. Pruebas: `test-reposicion-propuestas.cjs`.
+
+
+## Tala Annesburg (20/10/2026)
+
+`hg_reponer_tala()` (archivo `reposicion-tala.sql`, configuración `cfg:reposicion-tala`) funciona como la mina, pero con un **lote por material** (`lotes`): si las existencias bajan del mínimo y no viene ya en otro pedido abierto, se propone el lote.
+
+| Material | Mínimo (se pide si baja de) | Lote |
+|---|---|---|
+| Trozo de madera | 200 | 300 |
+| Fibra | 300 | 300 |
+| Papel | 300 | 300 |
+| Tabla de madera («Tablones») | 10 | 20 |
+
+Nace como propuesta (`origen:'reposicion-tala'`, código `PED-…-T…`), llega al mismo privado de la Dirección, se le añaden los materiales que bajen después y se cierra al aceptarla, con su telegrama IC y su albarán. La revisión de cada minuto (`harrington-reposicion`) la llama después de la herrería y la mina; si falla, no frena las otras dos.
+
+Desde el 20/10/2026 una propuesta sin aceptar **no se puede recibir**: su tarjeta del canal de pedidos no lleva «Recibido entero» y la revisión deja el cerrojo `recibido-<pedido>` (`bloqueo:'propuesta'`), que se quita al aceptarla.
