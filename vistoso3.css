@@ -209,3 +209,9 @@ html.lite .hg-cargando i{animation:none;transform:scaleX(1);opacity:.5}
 html.lite #products .product::before{display:none}
 .hg-ticket-fuera *{animation:none!important;transition:none!important}
 .hg-ticket-fuera [class*="rc-"],.hg-ticket-fuera .receipt-paper *{opacity:1}
+.escena-revision{background-image:url(escena-revision.webp);background-position:55% 50%}
+.escena-horarios{background-image:url(escena-horarios.webp);background-position:50% 40%}
+.escena-particular{background-image:url(escena-particular.webp);background-position:45% 50%}
+.escena-discord{background-image:url(escena-discord.webp);background-position:50% 50%}
+.escena-copia{background-image:url(escena-copia.webp);background-position:50% 50%}
+.escena-parches{background-image:url(escena-parches.webp);background-position:45% 55%}

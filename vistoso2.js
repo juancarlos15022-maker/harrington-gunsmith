@@ -160,7 +160,9 @@ var DIR_ESC={fabricar:['taller','El taller'],fabricacion:['taller','El taller'],
  ventas:['ventas','La caja registradora'],gastos:['gastos','El libro de gastos'],empleados:['empleados','El vestuario del personal'],sueldos:['sueldos','La caja fuerte'],
  eventos:['eventos','Sorteos y eventos'],convenios:['convenios','Tratos y convenios'],clientes:['clientes','El registro de clientes'],
  cierre:['cierre','El cierre de caja'],balance:['balance','La balanza de cuentas'],estadisticas:['estadisticas','El libro mayor'],stock:['stock','La trastienda'],regstock:['stock','La trastienda'],
- agenda:['agenda','El tarjetero'],historial:['historial','El archivo'],auditoria:['historial','El archivo']};
+ agenda:['agenda','El tarjetero'],historial:['historial','El archivo'],auditoria:['historial','El archivo'],
+ revision:['revision','El escritorio del dueño'],horarios:['horarios','El reloj de turnos'],particular:['particular','Compra en el mostrador'],
+ discord:['discord','La oficina de telégrafos'],copia:['copia','La cámara acorazada'],nube:['copia','La cámara acorazada'],parches:['parches','La imprenta']};
 var escenasDir=ok(function(){
  var b=D.getElementById('dirBody');if(!b)return;var mod=null;try{mod=dirMod}catch(e){}
  var want=DIR_ESC[mod], cur=b.querySelector(':scope>.escena');
