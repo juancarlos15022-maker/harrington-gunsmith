@@ -200,12 +200,14 @@ const store={
  remove(k){try{localStorage.removeItem(k)}catch(e){}}
 };
 const moneyFmt=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-function money(cents){return '$'+moneyFmt.format(cents/100)}
+const moneyCache=new Map();
+function money(cents){if(cents&&typeof cents==='object')return '$'+moneyFmt.format(cents/100);if(moneyCache.has(cents))return moneyCache.get(cents);const text='$'+moneyFmt.format(cents/100);if(moneyCache.size>=256)moneyCache.delete(moneyCache.keys().next().value);moneyCache.set(cents,text);return text}
 function numIn(v){let s=String(v||'').trim();if(s.indexOf(',')>=0&&s.indexOf('.')>=0){s=s.lastIndexOf(',')>s.lastIndexOf('.')?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,'')}else s=s.replace(',','.');return s}
 function pad(n,l=2){return String(n).padStart(l,'0')}
 /* Hora de España (Europe/Madrid), sea cual sea el país del usuario */
 const madridFmt=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
-function madridParts(ms){const o={};madridFmt.formatToParts(new Date(ms)).forEach(p=>{if(p.type!=='literal')o[p.type]=p.value});return o}
+const madridPartsCache=new Map();
+function madridParts(ms){const date=new Date(ms),key=Math.floor(date.getTime()/60000);let o=madridPartsCache.get(key);if(!o){o={};madridFmt.formatToParts(date).forEach(p=>{if(p.type!=='literal')o[p.type]=p.value});if(madridPartsCache.size>=128)madridPartsCache.delete(madridPartsCache.keys().next().value);madridPartsCache.set(key,o)}return {...o}}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function norm(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
 function readQty(i){return Math.min(MAX_QTY,Math.max(0,parseInt(i.value)||0))}
@@ -270,22 +272,30 @@ function restoreOrder(){
   inputs.forEach(i=>{const q=parseInt(o[i.dataset.name]);if(q>0)i.value=Math.min(MAX_QTY,q)});
  }catch(e){}
 }
+const productNodesCache=new WeakMap();
+function productNodes(input){
+ let p=productNodesCache.get(input);
+ if(p&&p.row.contains(input)&&p.price.isConnected&&p.qty.childElementCount===p.children&&p.qty.lastElementChild===p.last&&(!p.quick||p.quick.firstElementChild===p.firstQuick&&p.quick.childElementCount===p.quickChildren))return p;
+ const row=input.closest('.product'),qty=input.closest('.qty'),quick=qty.querySelector('.quick');
+ p={row,qty,quick,children:qty.childElementCount,last:qty.lastElementChild,firstQuick:quick&&quick.firstElementChild,quickChildren:quick&&quick.childElementCount,price:row.querySelector('.price'),subtotal:row.querySelector('.subtotal'),none:row.querySelector('.nostock'),down:[...row.querySelectorAll('.qty input,.minus')],up:[...row.querySelectorAll('.plus,.quick button')]};
+ productNodesCache.set(input,p);return p;
+}
 function calc(animate=true){
  applyStockLimits(animate);
  let totalCents=0,units=0,products=0;
  inputs.forEach(i=>{
-  const q=readQty(i), ec=priceCents(i), sub=q*ec, row=i.closest('.product'), subEl=row.querySelector('.subtotal'), txt=money(sub);
+  const p=productNodes(i),q=readQty(i), ec=priceCents(i), sub=q*ec, row=p.row, subEl=p.subtotal, txt=money(sub);
   if(subEl.textContent!==txt){subEl.textContent=txt;if(animate)bump(subEl)}
-  const pe=row.querySelector('.price'), bc=baseCents(i), ptxt=ec!==bc?`<small class="was">${money(bc)}</small>${money(ec)}`:money(ec);
+  const pe=p.price, bc=baseCents(i), ptxt=ec!==bc?`<small class="was">${money(bc)}</small>${money(ec)}`:money(ec);
   if(pe.dataset.v!==ptxt){pe.innerHTML=ptxt;pe.dataset.v=ptxt}
-  row.classList.toggle('has-qty',q>0);
+  if(row.classList.contains('has-qty')!==(q>0))row.classList.toggle('has-qty',q>0);
   totalCents+=sub;units+=q;if(q>0)products++;
  });
  const fin=computeFin();renderFin(fin);
  const gTxt=money(fin.due);
  if(grand.dataset.v!==gTxt){grand.dataset.v=gTxt;rollTo(grand,fin.due,!animate);if(animate)bump(grand)}
  updateOrderBar(units,products,fin.due);
- summaryEl.textContent=summaryText(products,units);
+ const summary=summaryText(products,units);if(summaryEl.textContent!==summary)summaryEl.textContent=summary;
  const items=selected();
  const cartView=!items.length?'<div class="empty">'+emptyArt('rev')+'Aún no hay productos en el pedido.<br>Añade cantidades desde el catálogo.</div>':cartHTML(items);
  if(cart.innerHTML!==cartView)cart.innerHTML=cartView;
@@ -729,13 +739,13 @@ function applyStockLimits(animate){
  const reserved=autoVentaOn()?saleReservations():undefined;
  let clamped=null;
  inputs.forEach(i=>{
-  const lim=limitFor(i.dataset.name,reserved), row=i.closest('.product'), none=lim<=0;
+  const p=productNodes(i),lim=limitFor(i.dataset.name,reserved), row=p.row, none=lim<=0;
   if(readQty(i)>lim){i.value=Math.max(0,lim);clamped=i.dataset.name}
-  row.classList.toggle('no-stock',none);
+  if(row.classList.contains('no-stock')!==none)row.classList.toggle('no-stock',none);
   const q=readQty(i);
-  row.querySelectorAll('.qty input,.minus').forEach(el=>{el.disabled=none});
-  row.querySelectorAll('.plus,.quick button').forEach(el=>{el.disabled=q>=lim});
-  const f=row.querySelector('.nostock');if(f)f.hidden=!none;
+  p.down.forEach(el=>{if(el.disabled!==none)el.disabled=none});
+  p.up.forEach(el=>{if(el.disabled!==(q>=lim))el.disabled=q>=lim});
+  const f=p.none;if(f&&f.hidden===none)f.hidden=!none;
  });
  if(clamped&&animate)say('No hay más unidades disponibles de '+clamped);
 }
@@ -1945,7 +1955,7 @@ function rollTo(el,cents,instant){
  if(el._raf)cancelAnimationFrame(el._raf);
  const from=el._cur===undefined?cents:el._cur;
  el._cur=cents;
- if(instant||from===cents||calmFx()){el.textContent=money(cents);return}
+ if(instant||from===cents||calmFx()){const text=money(cents);if(el.textContent!==text)el.textContent=text;return}
  const t0=performance.now();
  const step=now=>{const k=Math.min(1,(now-t0)/380), e=1-Math.pow(1-k,3);el.textContent=money(Math.round(from+(cents-from)*e));if(k<1)el._raf=requestAnimationFrame(step);else el.textContent=money(cents)};
  el._raf=requestAnimationFrame(step);
@@ -1955,8 +1965,8 @@ let orderVisible=false, lastBar={units:0,products:0,due:0};
 function updateOrderBar(units,products,due){
  if(units!==undefined)lastBar={units:units,products:products,due:due};
  const show=lastBar.units>0&&!orderVisible&&window.matchMedia('(max-width:900px)').matches;
- orderBar.hidden=!show;document.body.classList.toggle('has-bar',show);
- document.getElementById('obCount').textContent=summaryText(lastBar.products,lastBar.units);
+ if(orderBar.hidden===show)orderBar.hidden=!show;if(document.body.classList.contains('has-bar')!==show)document.body.classList.toggle('has-bar',show);
+ const count=document.getElementById('obCount'),text=summaryText(lastBar.products,lastBar.units);if(count.textContent!==text)count.textContent=text;
  rollTo(document.getElementById('obTotal'),lastBar.due,orderBar.hidden);
  updateFinish();
 }
@@ -1979,7 +1989,7 @@ function updateFinish(){
  const enc=customer.op==='encargo'&&!loadedEnc, ready=enc?'GUARDAR ENCARGO':'FINALIZAR VENTA';
  const t=miss||ready; if(f.textContent!==t)f.textContent=t;
  f.classList.toggle('not-ready',!!miss);
- if(go){go.textContent=miss?'FALTA ALGO':'FINALIZAR';go.classList.toggle('not-ready',!!miss)}
+ if(go){const label=miss?'FALTA ALGO':'FINALIZAR';if(go.textContent!==label)go.textContent=label;go.classList.toggle('not-ready',!!miss)}
 }
 function chartSVG(r){
  const days=[];for(let d=r.s;d<=r.e;d++){const a=accounts({s:d,e:d});days.push({d:d,ing:a.ing,gas:a.gas})}
@@ -4778,7 +4788,12 @@ function prodBossHTML(n){
 /* Marca de agua de la casa: una «H» de lacre muy tenue en el centro del papel */
 function wmark(g,W,cy){try{g.save();g.globalAlpha=.07;g.strokeStyle='#7a1608';g.fillStyle='#7a1608';g.lineWidth=6;g.beginPath();g.arc(W/2,cy,150,0,Math.PI*2);g.stroke();g.lineWidth=2;g.beginPath();g.arc(W/2,cy,132,0,Math.PI*2);g.stroke();g.font='bold 220px Georgia,serif';g.textAlign='center';g.textBaseline='middle';g.fillText('H',W/2,cy+8);g.restore()}catch(e){}}
 /* Ticket como imagen (para pegarlo en Discord con su aspecto de papel) */
-function loadImage(src){return new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src})}
+const documentImages=new Map();
+function loadImage(src){
+ if(documentImages.has(src))return documentImages.get(src);
+ const p=new Promise(res=>{const i=new Image();i.decoding='async';let finished=false;const done=value=>{if(finished)return;finished=true;clearTimeout(timer);i.onload=i.onerror=null;if(!value)documentImages.delete(src);res(value)},timer=setTimeout(()=>done(null),15000);i.onload=()=>done(i);i.onerror=()=>done(null);i.src=src});
+ documentImages.set(src,p);if(documentImages.size>8)documentImages.delete(documentImages.keys().next().value);return p;
+}
 async function ticketBlob(s){
  try{
   const W=640,P=34,ink='#2a1a0d',ff="'IM Fell English',Georgia,'Times New Roman',serif",fb="'Cinzel Decorative',Georgia,serif";
@@ -5336,7 +5351,9 @@ lastShift=loadJSON(KEY_LASTSHIFT);if(lastShift&&!(lastShift.name&&lastShift.star
 renderClock();
 
 /* ===== Imágenes decorativas opcionales: si el archivo existe se usa, si no se mantiene el dibujo en código ===== */
-function probeImg(src,ok){const t=new Image();t.onload=()=>ok(t);t.src=src}
+const optionalImages=[];let optionalRunning=0,optionalScheduled=false;
+function optionalImagesRun(){optionalScheduled=false;while(optionalRunning<2&&optionalImages.length){const [src,ok]=optionalImages.shift(),t=new Image();optionalRunning++;t.decoding='async';t.fetchPriority='low';let ended=false;const done=()=>{if(ended)return;ended=true;clearTimeout(timer);optionalRunning--;t.onload=t.onerror=null;if(optionalImages.length)setTimeout(optionalImagesRun,0)},timer=setTimeout(done,12000);t.onload=()=>{try{ok(t)}finally{done()}};t.onerror=done;t.src=src}}
+function probeImg(src,ok){optionalImages.push([src,ok]);if(optionalScheduled||optionalRunning>=2)return;optionalScheduled=true;if(window.requestIdleCallback)requestIdleCallback(optionalImagesRun,{timeout:1800});else setTimeout(optionalImagesRun,120)}
 probeImg('sello-lacre.webp',()=>document.body.classList.add('has-lacre'));
 probeImg('sello-pagado.png',()=>document.body.classList.add('has-pagado'));
 probeImg('esquina-ornamento.png',img=>{

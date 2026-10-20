@@ -253,9 +253,9 @@ var cabecera=ok(function(){
 });
 
 /* ===================== Un solo vigilante para todo lo que se pinta de nuevo ===================== */
-var pend=null;
-function repasar(){pend=null;var r=D.body;cabecera();contadores(D.getElementById('dirBody')||r);retratos(r);vacios(r)}
-new MutationObserver(function(){if(!pend)pend=(window.requestAnimationFrame||setTimeout)(repasar)}).observe(D.body,{childList:true,subtree:true});
+var pend=null,roots=new Set(),decor='.gc-oval,.mi-photo,.it>[data-pres],.enc-empty,.dash-card';
+function repasar(){pend=null;var all=!roots.size,L=all?[D.body]:Array.from(roots);roots.clear();var b=D.getElementById('dirBody');if(all||L.some(function(r){return b&&(r===b||b.contains(r)||r.contains(b))})){cabecera();if(b)contadores(b)}L.forEach(function(r){if(r.isConnected){retratos(r);vacios(r)}})}
+new MutationObserver(function(ms){ms.forEach(function(m){for(var n of m.addedNodes){if(n.nodeType!==1||!n.matches(decor)&&!n.querySelector(decor))continue;var r=n.parentElement||n;if(!Array.from(roots).some(function(p){return p.contains(r)})){roots.forEach(function(p){if(r.contains(p))roots.delete(p)});roots.add(r)}}});if(roots.size&&!pend)pend=(window.requestAnimationFrame||setTimeout)(repasar)}).observe(D.body,{childList:true,subtree:true});
 repasar();
 /* cuando llegan fotos nuevas de la nube, se repintan los retratos */
 if(typeof paintPhotos==='function'){var vp=paintPhotos;window.paintPhotos=function(){var r=vp.apply(this,arguments);try{retratos(D.body)}catch(e){}return r}}

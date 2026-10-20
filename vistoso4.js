@@ -18,13 +18,14 @@ if(tut)tut.addEventListener('toggle',ok(function(e){
 
 /* 2) «Cargando…»: renglones de papel que se van escribiendo mientras llegan los datos */
 var papel=ok(function(root){
- (root||D).querySelectorAll('.enc-empty:not(.hg-cargando)').forEach(function(el){
+ var list=Array.from((root||D).querySelectorAll('.enc-empty:not(.hg-cargando)'));if(root&&root.matches&&root.matches('.enc-empty:not(.hg-cargando)'))list.unshift(root);list.forEach(function(el){
   if(!/^\s*Cargando/.test(el.textContent))return;
   el.classList.add('hg-cargando');
   var t=el.textContent.trim();el.innerHTML='<span class="hg-cg-t">'+t.replace(/[<&]/g,'')+'</span><i></i><i></i><i></i><i></i>';
  });
 });
-new MutationObserver(function(m){for(var i=0;i<m.length;i++)if(m[i].addedNodes.length){papel();break}}).observe(D.body,{childList:true,subtree:true});
+var pending=new Set(),paperFrame=0;
+new MutationObserver(function(ms){ms.forEach(function(m){if(m.target.nodeType===1&&m.target.matches('.enc-empty:not(.hg-cargando)'))pending.add(m.target);for(var n of m.addedNodes)if(n.nodeType===1&&(n.matches('.enc-empty:not(.hg-cargando)')||n.querySelector('.enc-empty:not(.hg-cargando)')))pending.add(n)});if(pending.size&&!paperFrame)paperFrame=requestAnimationFrame(function(){paperFrame=0;var roots=Array.from(pending);pending.clear();roots.forEach(function(r){if(r.isConnected)papel(r)})})}).observe(D.body,{childList:true,subtree:true});
 papel();
 
 /* 3) El ticket se arranca por la línea de puntos al cerrarlo */
@@ -62,7 +63,7 @@ if(prods&&window.matchMedia&&matchMedia('(pointer:fine)').matches){
   var b=row.getBoundingClientRect();row.style.setProperty('--lx',((ev.clientX-b.left)/b.width*100).toFixed(1)+'%');row.style.setProperty('--ly',((ev.clientY-b.top)/b.height*100).toFixed(1)+'%');
   row.classList.add('hg-luz');last=row;
  })},{passive:true});
- prods.addEventListener('pointerleave',function(){if(last)last.classList.remove('hg-luz');last=null});
+ prods.addEventListener('pointerleave',function(){if(raf)cancelAnimationFrame(raf);raf=0;ev=null;if(last)last.classList.remove('hg-luz');last=null});
 }
 /* en el móvil, al tocar un producto */
 if(prods)prods.addEventListener('pointerdown',function(e){if(e.pointerType==='mouse'||calm())return;var row=e.target.closest&&e.target.closest('.product');if(!row)return;

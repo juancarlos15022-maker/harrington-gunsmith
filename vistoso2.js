@@ -320,9 +320,9 @@ var retratoFicha=ok(function(){
  card.insertAdjacentHTML('afterbegin','<span class="retrato ficha-retrato" data-src="'+E(src)+'" aria-hidden="true"><span class="ret-foto"><img src="'+E(src)+'" alt=""></span></span>');
 });
 /* ===================== Un solo vigilante para lo que se pinta de nuevo ===================== */
-var pend=null;
-function repasar(){pend=null;retratoFicha();escenasDir();corcho();calendario();mapa();medallas(D.body);firmaAlbaran()}
-new MutationObserver(function(){if(!pend)pend=(window.requestAnimationFrame||setTimeout)(repasar)}).observe(D.body,{childList:true,subtree:true});
+var pend=null,regions=new Set(),watch=new MutationObserver(function(ms){ms.forEach(function(m){var r=m.target.nodeType===1?m.target:m.target.parentElement;while(r&&!['dirBody','gUi','miBody','pedBody'].includes(r.id))r=r.parentElement;if(r)regions.add(r.id)});if(regions.size&&!pend)pend=(window.requestAnimationFrame||setTimeout)(repasar)});
+function repasar(){pend=null;var all=!regions.size;if(all||regions.has('dirBody')){retratoFicha();escenasDir();corcho();calendario();mapa()}['dirBody','gUi','miBody'].forEach(function(id){var root=D.getElementById(id);if(root&&(all||regions.has(id)))medallas(root)});if(all||regions.has('pedBody'))firmaAlbaran();regions.clear()}
+['dirBody','gUi','miBody','pedBody'].forEach(function(id){var r=D.getElementById(id);if(r)watch.observe(r,{childList:true,subtree:true})});
 repasar();
 (function(){var rm=D.getElementById('receiptModal');if(!rm)return;var antes=rm.hidden;new MutationObserver(function(){if(antes&&!rm.hidden)setTimeout(firmaTicket,0);antes=rm.hidden}).observe(rm,{attributes:true,attributeFilter:['hidden']});
  var e=D.getElementById('rcEmp');if(e)new MutationObserver(function(){firmaTicket()}).observe(e,{childList:true,characterData:true,subtree:true})})();

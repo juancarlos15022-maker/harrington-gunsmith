@@ -108,3 +108,5 @@
   const clear=()=>{if(flight===entry)flight=null;};entry.promise.then(clear,clear);return entry.promise;
  };
 })();
+/* El navegador puede suspender el trabajo visual; la sincronización conserva sus reglas. */
+(function(){const pause=()=>document.documentElement.classList.toggle('hg-en-segundo-plano',document.hidden);document.addEventListener('visibilitychange',pause,{passive:true});pause();})();

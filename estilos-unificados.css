@@ -3474,4 +3474,7 @@ html.lite #products .product::before{display:none}
 .escena-copia{background-image:url(escena-copia.webp);background-position:50% 50%}
 .escena-parches{background-image:url(escena-parches.webp);background-position:45% 55%}
 .escena-productos{background-image:url(escena-productos.webp);background-position:45% 55%}
+/* En segundo plano no se dibujan animaciones que el usuario no puede ver. */
+html.hg-en-segundo-plano *,html.hg-en-segundo-plano *::before,html.hg-en-segundo-plano *::after{animation-play-state:paused!important}
+body.gate-open .hero-banner *,body.gate-open .hero-banner::before,body.gate-open .hero-banner::after{animation-play-state:paused!important}
 
