@@ -139,3 +139,21 @@ html body:not(.hc) .money>i{color:#5a3f1a!important;background:none!important;bo
 /* Carrito vacío en ordenador: la caja crece lo justo para que se lean las dos líneas */
 .cart:has(>.empty){max-height:none}
 @media(min-width:901px){.cart .empty .empty-art:not(.nofile){width:min(110px,45%)}}
+
+/* ===================== 13) Entrada en vídeo y fluidez de la puerta (20/10/2026) ===================== */
+.g-video{position:absolute;top:0;left:50%;height:100%;aspect-ratio:var(--ar,2/3);transform:translateX(-50%);object-fit:cover;opacity:0;pointer-events:none;transition:opacity .35s ease;background:transparent}
+.gate.g-envideo.g-vplay .g-video{opacity:1}
+.gate[data-ph="video"] .g-stage{opacity:1}
+.gate[data-ph="video"] .g-ui{opacity:0;pointer-events:none}
+.gate.g-envideo :is(.g-fog,.g-grain,.g-dust,.g-bolt){opacity:0!important;transition:opacity .4s;animation-play-state:paused!important}
+.gate.g-envideo .g-lamp{animation-play-state:paused}
+.gate[data-ph="cards"].g-envideo .g-video{transition:opacity .9s ease}
+.gate[data-ph="cards"].g-envideo .g-video{opacity:1}
+/* La animación de siempre (ordenador, o si el vídeo no está): solo se mueve, sin repintar filtros en cada fotograma */
+.g-leaf{transition:transform 1.9s cubic-bezier(.5,.05,.25,1);will-change:transform}
+.g-leaf:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#000c,#0006);opacity:0;transition:opacity 1.9s ease;pointer-events:none}
+.gate[data-ph="open"] .g-leaf,.gate[data-ph="zoom"] .g-leaf{filter:none}
+.gate[data-ph="open"] .g-leaf:after,.gate[data-ph="zoom"] .g-leaf:after{opacity:.45}
+.gate:is([data-ph="open"],[data-ph="zoom"]) :is(.g-fog,.g-grain,.g-lamp){animation-play-state:paused}
+.gate:is([data-ph="open"],[data-ph="zoom"]) .g-grain{opacity:0;transition:opacity .4s}
+.gate[data-ph="zoom"] .g-stage{transition:transform 2.3s cubic-bezier(.42,0,.4,1),opacity .3s;will-change:transform}
