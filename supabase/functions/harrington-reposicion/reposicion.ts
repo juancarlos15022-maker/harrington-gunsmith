@@ -2,6 +2,7 @@ type Any=any;
 export async function runReposicion(sb:Any,c:Record<string,string>,request=fetch){
  const checked=(r:Any)=>{if(r.error)throw Error('REPOSICION_BASE_DE_DATOS');return r.data;};
  const plan=checked(await sb.rpc('hg_reponer_herreria'));
+ const mina=checked(await sb.rpc('hg_reponer_mina'));
  const jobs=checked(await sb.from('hg_reposicion_avisos').select('*').eq('status','pending').lte('next_at',new Date().toISOString()).order('created_at').limit(3))||[];
  let sent=0,pending=0;
  async function api(method:string,path:string,body?:Any){
@@ -14,7 +15,7 @@ export async function runReposicion(sb:Any,c:Record<string,string>,request=fetch
   const key='reposicion:'+job.pedido_id;
   if(checked(await sb.rpc('hg_discord_reservar',{p_key:key}))!==true){pending++;continue;}
   try{
-   const cfg=checked(await sb.from('datos').select('valor').eq('clave','cfg:reposicion-herreria').single())?.valor;
+   const cfg=checked(await sb.from('datos').select('valor').eq('clave',job.config_key||'cfg:reposicion-herreria').single())?.valor;
    const binding=checked(await sb.from('hg_discord_bindings').select('discord_id').eq('emp_id',cfg?.ownerEmp||'').maybeSingle());
    if(!cfg?.enabled||job.recipient_id!==cfg.recipientId||binding?.discord_id!==job.recipient_id)throw Error('DESTINATARIO_REPOSICION_CAMBIADO');
    const order=checked(await sb.from('datos').select('valor').eq('clave','pedido:'+job.pedido_id).maybeSingle())?.valor;
@@ -35,7 +36,7 @@ export async function runReposicion(sb:Any,c:Record<string,string>,request=fetch
    if(!message){
     checked(await sb.from('hg_reposicion_avisos').update({attempts:job.attempts+1}).eq('pedido_id',job.pedido_id));
     const response=await api('POST','/channels/'+channel+'/messages',{allowed_mentions:{parse:[]},nonce:job.nonce,enforce_nonce:true,
-     content:'🎩 He creado el pedido **'+order.code+'** por mínimos de almacén. Está **sin pagar y sin recibir**. Aquí tienes el telegrama listo para copiar y enviarlo a la herrería:',
+     content:'🎩 He '+(order.ampliacion?'actualizado':'creado')+' el pedido **'+order.code+'** por mínimos de almacén. Está **pendiente de completar el pago y de recibir**. Aquí tienes el telegrama listo para copiar y enviarlo al proveedor:',
      embeds:[{title:'Telegrama para '+order.proveedor,description:job.texto,color:0xC9A24A,footer:{text:'Reposición '+job.pedido_id}}]});
     message=response?.id;if(!message)throw Error('RESPUESTA_PRIVADA_INVALIDA');
    }
@@ -46,5 +47,5 @@ export async function runReposicion(sb:Any,c:Record<string,string>,request=fetch
    checked(await sb.from('hg_reposicion_avisos').update({attempts:job.attempts+1,last_error:code,next_at:new Date(Date.now()+delay).toISOString()}).eq('pedido_id',job.pedido_id));pending++;
   }finally{await sb.from('hg_discord_leases').delete().eq('clave',key);}
  }
- return {created:!!plan?.created,pedido:plan?.pedido?.code||null,sent,pending};
+ return {created:!!plan?.created||!!mina?.created,pedido:plan?.pedido?.code||null,pedidoMina:mina?.pedido?.code||null,sent,pending};
 }

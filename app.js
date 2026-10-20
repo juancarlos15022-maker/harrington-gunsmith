@@ -2613,12 +2613,14 @@ function savePed(rec){LOTC=null;
  pedidos.sort((a,b)=>(a.ts||0)-(b.ts||0));
  store.set(KEY_PEDIDOS,JSON.stringify(pedidos));cloudPut('pedido:'+rec.id,rec);updatePedBtn();
 }
+function pedidoAbonoHTML(p){const abono=Math.min(p.totalCents||0,Math.max(0,Number(p.abonoCents)||0));if(!abono)return '';return '<div class="enc-note">Ya abonado antes de la ampliación: <b>'+money(abono)+'</b> · Pendiente de pago: <b>'+money(p.paid?0:Math.max(0,p.totalCents-abono))+'</b>. Marca pagado cuando se haya abonado todo el pedido.</div>'}
 function pedidoText(r,title){
  const L=[title,'Pedido: '+r.code,'Proveedor: '+r.proveedor+(r.proveedorTipo?' ('+r.proveedorTipo+')':'')];
  if(r.proveedorTel)L.push('Telegrama: '+r.proveedorTel);
  L.push('Fecha: '+r.date+' '+r.time,'','Materiales:');
  r.items.forEach(x=>L.push(`  ${x.qty} × ${x.material} · ${money(x.price)} = ${money(x.qty*x.price)}`));
  if(r.liquidacion){const z=r.liquidacion;L.push('','Resto pendiente CANCELADO','Valor recibido: '+money(z.receivedCents),'Valor cancelado sin recibir: '+money(z.cancelledCents),'Gasto pagado: '+money(z.paidCents),'Pendiente de pago: '+money(z.payableCents),'Pendiente de devolución: '+money(z.refundDueCents));r.items.forEach(i=>L.push('Recibido: '+(r.received?i.qty:Math.min(i.qty,i.rq||0))+' × '+i.material));}
+ if(r.abonoCents)L.push('Ya abonado: '+money(r.abonoCents),'Pendiente de pago: '+money(r.paid?0:Math.max(0,r.totalCents-r.abonoCents)));
  L.push('','TOTAL ORIGINAL: '+money(r.originalTotalCents||r.totalCents),'Pagado: '+(r.paid?'SÍ':'NO')+(r.paidBy?' ('+r.paidBy+')':'')+' · Recibido: '+(r.received?'SÍ':'NO')+(r.receivedBy?' ('+r.receivedBy+')':''));
  return L.join('\n');
 }
@@ -2642,6 +2644,7 @@ function renderPed(){
   <div class="enc-kv"><div class="full"><span>Proveedor</span><b>${esc(x.proveedor)}</b></div><div><span>Se dedica a</span><b>${esc(x.proveedorTipo||'—')}</b></div><div><span>Telegrama</span><b>${esc(x.proveedorTel||'—')}</b></div></div>
   <div class="cartrow carthead"><span>Material</span><span>Cant.</span><span>P. unit.</span><span>Subtotal</span></div>${x.items.map(i=>cartRow({name:i.material,qty:i.qty,cents:i.price})).join('')}
   <div class="brow due" style="margin-top:8px"><span>TOTAL</span><span>${money(x.totalCents)}</span></div>
+  ${pedidoAbonoHTML(x)}
   <div class="alb-stamps">${x.received?'<span class="alb-st ok">RECIBIDO</span>':''}${x.paid?'<span class="alb-st ok">PAGADO</span>':'<span class="alb-st bad">POR PAGAR</span>'}</div></div>
   <div class="badges" style="margin:8px 0">${pedBadges(x)}</div>${x.remainderCancelled?'<div class="enc-note">El resto no recibido está cancelado. Este pedido conserva solo la mercancía recibida y seguirá aquí hasta confirmar el pago.</div>':''}
   <div class="enc-sec">
@@ -2789,7 +2792,7 @@ function pedidoCancelResumen(p){
 function askPedidoRecibidoPagado(p,r){
  const el=document.createElement('div');el.className='modal-overlay confirm';
  el.innerHTML='<div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="pcTitle"><div class="confirm-title" id="pcTitle">¿Está pagado lo que has recibido?</div><p id="pcSummary"></p><div class="confirm-actions"><button type="button" data-pc="back">Volver</button><button type="button" data-pc="no">No, dejar pendiente de pago</button><button type="button" class="ok" data-pc="yes">Sí, registrar gasto y cancelar</button></div></div>';
- el.querySelector('#pcSummary').textContent='Pedido '+p.code+' · '+p.proveedor+'. Has recibido material por '+money(r.recibido)+'. Se conservará en el almacén. Se cancelará únicamente lo que falta por llegar: '+(r.pendientes.join(', ')||'nada')+'.'+((p.paid||p.paidInitial)?' Este pedido figura pagado por adelantado: se conservará el pago registrado y quedará pendiente de devolución el importe de lo no recibido.':' Si eliges Sí, se registrará '+money(r.recibido)+' en gastos. Si eliges No, el pedido se reducirá a lo recibido y seguirá pendiente hasta que lo marques pagado.');
+ el.querySelector('#pcSummary').textContent='Pedido '+p.code+' · '+p.proveedor+(p.abonoCents?' · Abono registrado: '+money(p.abonoCents)+', que se conservará en la liquidación.':'')+'. Has recibido material por '+money(r.recibido)+'. Se conservará en el almacén. Se cancelará únicamente lo que falta por llegar: '+(r.pendientes.join(', ')||'nada')+'.'+((p.paid||p.paidInitial)?' Este pedido figura pagado por adelantado: se conservará el pago registrado y quedará pendiente de devolución el importe de lo no recibido.':' Si eliges Sí, se registrará '+money(r.recibido)+' en gastos. Si eliges No, el pedido se reducirá a lo recibido y seguirá pendiente hasta que lo marques pagado.');
  el.querySelector('.confirm-actions').style.gridTemplateColumns='1fr';document.body.appendChild(el);openModal(el);
  return new Promise(resolve=>{
   const end=v=>{document.removeEventListener('keydown',key,true);closeModal(el);el.remove();resolve(v)};
@@ -2808,7 +2811,7 @@ async function cancelPedido(id){
  if(base.completedAt||base.cancelled||base.remainderCancelled){savePed(base);pedView=null;renderPed();return say('Este pedido ya estaba cerrado')}
  const resumen=pedidoCancelResumen(base);let pagado=false;
  if(resumen.unidades>0){pagado=await askPedidoRecibidoPagado(base,resumen);if(pagado===null)return;if(!pagado&&(base.paid||base.paidInitial))return say('El pedido ya figura pagado. Revisa ese pago antes de indicar que no está pagado','err')}
- else if(!await askConfirm('Cancelar pedido','No se ha recibido material de '+base.code+'. Se cancelará lo pendiente.'+((base.paid||base.paidInitial)?' El pago anticipado se conservará en gastos y quedará pendiente de devolución.':''),'Cancelar pedido'))return;
+ else if(!await askConfirm('Cancelar pedido','No se ha recibido material de '+base.code+'. Se cancelará lo pendiente.'+((base.paid||base.paidInitial||base.abonoCents>0)?' El pago anticipado se conservará en gastos y quedará pendiente de devolución.':''),'Cancelar pedido'))return;
  const key='hg_cancelar_'+id;let pet=store.get(key);if(!pet){pet=crypto.randomUUID();store.set(key,pet)}
  let result;
  try{result=await sbRpc('cancelar_pedido',{p_peticion:pet,p_pedido:id,p_recibido_pagado:!!pagado,p_esperado:base})}

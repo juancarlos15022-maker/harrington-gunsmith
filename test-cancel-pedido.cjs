@@ -9,7 +9,7 @@ Object.assign(w,{pedidos:[structuredClone(base)],gastos:[],pedView:'p1',pedDraft
  money:n=>'$'+(n/100).toFixed(2),pendingPed:()=>w.pedidos.filter(p=>!p.cancelled&&!p.completedAt),store:{get:k=>mem.get(k),set:(k,v)=>mem.set(k,v),remove:k=>mem.delete(k)},
  openModal:e=>e.hidden=false,closeModal:e=>e.hidden=true,sbFetch:async()=>({ok:true,json:async()=>[{valor:structuredClone(w.pedidos[0])}]}),
  sbRpc:async(name,body)=>{rpc++;assert.equal(name,'cancelar_pedido');assert.equal(body.p_recibido_pagado,choice==='yes');const rec={...structuredClone(base),items:base.items.map(i=>({...i,qty:i.rq})),totalCents:26100,received:true,paid:choice==='yes',completedAt:choice==='yes'?1:0,remainderCancelled:true,liquidacion:{receivedCents:26100,cancelledCents:12500,paidCents:choice==='yes'?26100:0,payableCents:choice==='yes'?0:26100}};return {pedido:rec,records:[{clave:'pedido:p1',valor:rec}]};},
- applyRecords:r=>{rows=r;w.pedidos[0]=r[0].valor},renderPed:()=>{},updatePedBtn:()=>{},say:m=>notifications.push(m),pedidoText:()=>'Pedido',discordSend:()=>true,cloudPut:()=>{},cloudPullRecords:async()=>{},soyPropietario:()=>true,saveGastos:()=>{},savePed:r=>w.pedidos[0]=r,
+ applyRecords:r=>{rows=r;w.pedidos[0]=r[0].valor},renderPed:()=>{},updatePedBtn:()=>{},say:m=>notifications.push(m),pedidoText:()=>'Pedido',discordSend:()=>true,cloudPut:()=>{},cloudPullRecords:async()=>{},soyPropietario:()=>true,soyJefe:()=>true,saveGastos:()=>{},savePed:r=>w.pedidos[0]=r,
  madridParts:()=>({year:'2026',month:'10',day:'19',hour:'16',minute:'00'}),dayNum:()=>20745});
 w.eval(code.slice(a,b));w.eval(save);
 const task=w.cancelPedido('p1');await new Promise(r=>setImmediate(r));

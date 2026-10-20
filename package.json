@@ -2,12 +2,12 @@
   "name": "harrington-gunsmith-checks",
   "private": true,
   "scripts": {
-    "test": "node build-styles.cjs --check && node --test test-auto-fabricacion.cjs test-venta-ui.cjs test-inventario.cjs test-npc.cjs test-estabilidad.cjs test-discord-alta.cjs test-equipo.mjs test-equipo-integration.mjs test-rumores.mjs test-sesion.cjs test-discord-fichajes.mjs test-balance-exacto.cjs test-balance-registro.mjs test-webhook-fabricacion.mjs test-almacen-estable.cjs test-aceite-lotes.cjs test-discord-entregas.mjs test-nominas-limite.cjs test-discord-semanales.mjs test-reset-jefes.cjs test-rendimiento-imagenes.cjs test-observadores-visuales.cjs test-procesos-rapidos.cjs test-reposicion.cjs test-reposicion-dm.cjs test-materiales-canonicos.cjs",
+    "test": "node build-styles.cjs --check && node --test test-auto-fabricacion.cjs test-venta-ui.cjs test-inventario.cjs test-npc.cjs test-estabilidad.cjs test-discord-alta.cjs test-equipo.mjs test-equipo-integration.mjs test-rumores.mjs test-sesion.cjs test-discord-fichajes.mjs test-balance-exacto.cjs test-balance-registro.mjs test-webhook-fabricacion.mjs test-almacen-estable.cjs test-aceite-lotes.cjs test-discord-entregas.mjs test-nominas-limite.cjs test-discord-semanales.mjs test-reset-jefes.cjs test-rendimiento-imagenes.cjs test-observadores-visuales.cjs test-procesos-rapidos.cjs test-reposicion.cjs test-reposicion-dm.cjs test-materiales-canonicos.cjs test-reposicion-mina.cjs test-unificar-minas.cjs",
     "build:styles": "node build-styles.cjs",
     "test:performance": "node build-styles.cjs --check && node --test test-rendimiento-imagenes.cjs test-observadores-visuales.cjs test-estabilidad.cjs test-venta-ui.cjs test-almacen-estable.cjs test-procesos-rapidos.cjs",
     "benchmark:catalogo": "node benchmark-catalogo.cjs",
     "benchmark:procesos": "node benchmark-procesos.cjs",
-    "test:reposicion": "node --test test-reposicion.cjs test-reposicion-dm.cjs test-materiales-canonicos.cjs"
+    "test:reposicion": "node --test test-reposicion.cjs test-reposicion-dm.cjs test-materiales-canonicos.cjs test-reposicion-mina.cjs test-unificar-minas.cjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.14",
