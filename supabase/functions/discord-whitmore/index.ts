@@ -38,17 +38,19 @@ async function control(body: any, c: Record<string, string>) {
     const metodo = String(o.metodo || "GET").toUpperCase(), ruta = String(o.ruta || "");
     if (!/^(GET|POST|PATCH|PUT|DELETE)$/.test(metodo) || !/^\/[A-Za-z0-9_\-\/?=&.%:@]+$/.test(ruta)) { res.push({ ruta, metodo, st: 400, datos: "RUTA_NO_VALIDA" }); continue; }
     // imágenes (foto de perfil, banner): se descargan del repositorio de la casa y van como data URI
+    let fallo = false;
     if (o.imagenes && typeof o.imagenes === "object") {
       o.cuerpo = { ...(o.cuerpo || {}) };
       for (const [campo, url] of Object.entries(o.imagenes)) {
         const u = String(url);
-        if (!/^https:\/\/(raw\.githubusercontent\.com\/juancarlos15022-maker\/|juancarlos15022-maker\.github\.io\/)/.test(u)) { res.push({ ruta, metodo, st: 400, datos: "IMAGEN_NO_PERMITIDA" }); continue; }
-        const im = await fetch(u); if (!im.ok) { res.push({ ruta, metodo, st: im.status, datos: "IMAGEN_NO_DESCARGADA" }); continue; }
+        if (!/^https:\/\/(raw\.githubusercontent\.com\/juancarlos15022-maker\/|juancarlos15022-maker\.github\.io\/)/.test(u)) { res.push({ ruta, metodo, st: 400, datos: "IMAGEN_NO_PERMITIDA" }); fallo = true; break; }
+        const im = await fetch(u); if (!im.ok) { res.push({ ruta, metodo, st: im.status, datos: "IMAGEN_NO_DESCARGADA" }); fallo = true; break; }
         const bytes = new Uint8Array(await im.arrayBuffer()); let bin = ""; for (let k = 0; k < bytes.length; k += 0x8000) bin += String.fromCharCode(...bytes.subarray(k, k + 0x8000));
         const tipo = /\.png$/i.test(u) ? "image/png" : /\.gif$/i.test(u) ? "image/gif" : "image/jpeg";
         o.cuerpo[campo] = "data:" + tipo + ";base64," + btoa(bin);
       }
     }
+    if (fallo) continue;
     const r = await fetch("https://discord.com/api/v10" + ruta, { method: metodo, headers: { Authorization: "Bot " + tk, "Content-Type": "application/json", "X-Audit-Log-Reason": encodeURIComponent(String(o.motivo || "Señor Whitmore").slice(0, 400)) }, body: o.cuerpo === undefined ? undefined : JSON.stringify(o.cuerpo) });
     const datos = r.status === 204 ? null : await r.json().catch(() => null);
     await sb.from("whitmore_registro").insert({ metodo, ruta: ruta.slice(0, 300), estado: r.status, motivo: String(o.motivo || "").slice(0, 400) });
