@@ -10,4 +10,4 @@ Cuando estén, se guardan como `escena-<nombre>.webp` (1200×800) y se añaden a
 5. **Página para clientes** (`publico`): Fotografía cinematográfica del escaparate de una armería de 1880 visto desde la calle, de noche, con un cartel de precios escrito a mano detrás del cristal, faroles y reflejos de lluvia en el vidrio. Sin personas, texto ilegible. Formato apaisado 3:2.
 6. **Resetear datos** (`reset`): Fotografía cinematográfica de una chimenea de piedra de 1880 con papeles y libros de cuentas viejos ardiendo, brasas y chispas, junto a un atizador de hierro. Ambiente serio y oscuro. Sin personas, texto ilegible. Formato apaisado 3:2.
 
-Vídeo pendiente: entrada del ordenador (Kling, 5 s, 16:9) con `3-ordenador-INICIO-fachada.png` (con el letrero escrito) y `4-ordenador-FINAL-interior.png`.
+Vídeo de la entrada del ordenador: puesto el 21/10/2026 (`entrada-video-ancho.*` y `salida-video-ancho.*`, hecho con PixVerse a partir de `3-ordenador-INICIO-fachada.png` y `4-ordenador-FINAL-interior.png`). **Pendiente:** cambiarlo por la versión sin marca de agua cuando la Dirección la consiga (mismos nombres de archivo; subir `VER` en entrada-video.js).

@@ -3402,6 +3402,8 @@ html body:not(.hc) .money>i{color:#5a3f1a!important;background:none!important;bo
 /* ===================== 13) Entrada en vídeo y fluidez de la puerta (20/10/2026) ===================== */
 .g-video{position:absolute;top:0;left:50%;height:100%;aspect-ratio:var(--ar,2/3);transform:translateX(-50%);object-fit:cover;opacity:0;pointer-events:none;transition:opacity .35s ease;background:transparent}
 .gate.g-envideo.g-vplay .g-video{opacity:1}
+/* Ordenador (21/10/2026): el vídeo ocupa exactamente el mismo sitio que la fachada (ancho, alto y altura de la escena) */
+.gate.lw .g-video{--gw:max(112vw,150vh);width:var(--gw);height:calc(var(--gw) / 1.5);aspect-ratio:auto;top:clamp(calc(100vh - var(--gw) / 1.5),calc(50vh - var(--gw) / 1.5 * .56),0px)}
 .gate[data-ph="video"] .g-stage{opacity:1}
 .gate[data-ph="video"] .g-ui{opacity:0;pointer-events:none}
 .gate.g-envideo :is(.g-fog,.g-grain,.g-dust,.g-bolt){opacity:0!important;transition:opacity .4s;animation-play-state:paused!important}

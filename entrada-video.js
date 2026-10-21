@@ -3,12 +3,12 @@
    y la cámara entrando hasta el tapete verde; su último fotograma es el mismo interior que hay detrás de las tarjetas,
    así que las tarjetas aparecen con un fundido. El vídeo está recortado al encuadre exacto de la fachada.
    Si el vídeo no está listo, falla, hay «Animaciones: LIGERAS», ahorro de datos o batería baja, sale la animación de siempre.
-   Ahora mismo hay vídeo para la entrada vertical (móvil); la apaisada (ordenador) sigue con la animación hasta tener el suyo. */
+   Hay vídeo para la entrada vertical (móvil) y, desde el 21/10/2026, para la apaisada (ordenador: entrada-video-ancho). */
 (function(){
 'use strict';
 var D=document, gate=D.getElementById('gate'), stage=D.getElementById('gStage');
 if(!gate||!stage||typeof window.gateEnter!=='function')return;
-var SRC={v:['entrada-video.webm','entrada-video.mp4']};   // [webm, mp4]   // w: pendiente del vídeo apaisado
+var SRC={v:['entrada-video.webm','entrada-video.mp4'],w:['entrada-video-ancho.webm','entrada-video-ancho.mp4']};   // [webm, mp4]
 var VER='2';
 var vid=null, listo=false, lk='';
 /* solo se quita si eliges LIGERAS a mano o el sistema pide menos movimiento: la medición automática de fluidez no cuenta,
@@ -16,6 +16,9 @@ var vid=null, listo=false, lk='';
 function calm(){try{return (typeof FX!=='undefined'&&FX.mode==='lite')||gReduced()}catch(e){return false}}
 function bajo(){try{return !!G.low}catch(e){return false}}
 function capa(){try{return G.lk||''}catch(e){return ''}}
+/* el vídeo se coloca donde está la fachada (en el ordenador la escena se desplaza para centrar la puerta) y con su mismo zoom lento */
+function encajar(v){try{v.style.left=stage.style.left||'';var sc=getComputedStyle(stage).scale;v.style.transition='none';v.style.scale=(sc&&sc!=='none')?sc:'';
+ requestAnimationFrame(function(){v.style.transition='opacity .35s ease, scale 1.2s ease';v.style.scale='1'})}catch(e){}}
 function quitar(){if(vid){try{vid.pause()}catch(e){}vid.remove();vid=null}listo=false;lk=''}
 function preparar(){
  var k=capa();
@@ -42,7 +45,7 @@ window.gateEnter=function(){
  try{gClear()}catch(e){}
  try{gBell()}catch(e){}
  try{gUi.innerHTML=''}catch(e){}
- gate.classList.add('g-envideo');gPh('video');
+ encajar(v);gate.classList.add('g-envideo');gPh('video');
  try{v.currentTime=0}catch(e){}
  function acabar(){
   if(fin)return;fin=true;
@@ -58,7 +61,7 @@ window.gateEnter=function(){
 };
 /* Al cerrar la sesión, el mismo vídeo al revés: sales de la tienda y las puertas se cierran detrás de ti.
    Termina en la fachada con ENTRAR (la portada de siempre). Solo donde hay vídeo y sin «Animaciones: LIGERAS». */
-var SAL={v:['salida-video.webm','salida-video.mp4']}, sal=null, salK='';
+var SAL={v:['salida-video.webm','salida-video.mp4'],w:['salida-video-ancho.webm','salida-video-ancho.mp4']}, sal=null, salK='';
 function prepSalida(){
  var k=capa();if(!SAL[k]||calm()||bajo())return;
  if(sal&&salK===k)return;
@@ -82,7 +85,7 @@ if(typeof window.logoutToGate==='function'){
   var r=origOut.apply(this,arguments);        // cierra la sesión como siempre (queda en las tarjetas)
   var fin=false;
   gate.classList.add('g-salida');
-  stage.insertAdjacentElement('afterend',v);
+  stage.insertAdjacentElement('afterend',v);try{v.style.left=stage.style.left||''}catch(e){}
   try{v.currentTime=0}catch(e){}
   function acabar(){
    if(fin)return;fin=true;
