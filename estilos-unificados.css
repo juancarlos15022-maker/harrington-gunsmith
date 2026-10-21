@@ -3486,3 +3486,9 @@ body.gate-open .hero-banner *,body.gate-open .hero-banner::before,body.gate-open
  border-width:8px 13px!important;border-image-width:8px 13px!important;padding-left:1px!important;padding-right:1px!important;letter-spacing:.01em!important}
 @media(max-width:520px){#dirBody .enc-actions.two button{font-size:11.5px!important}}
 
+
+/* El descuento conserva contraste sobre su fondo oscuro al escribir y autocompletar. */
+html body #manualDiscountFields .money{background:#040b08}
+html body #manualDiscountAmt,html body #manualDiscountAmt:focus{background:#040b08!important;color:#fff0d2!important;-webkit-text-fill-color:#fff0d2!important;caret-color:#f3d47c}
+html body #manualDiscountAmt::placeholder{color:#b4ad98!important;-webkit-text-fill-color:#b4ad98!important;opacity:1}
+html body #manualDiscountAmt:-webkit-autofill{box-shadow:inset 0 0 0 1000px #040b08!important;-webkit-text-fill-color:#fff0d2!important;caret-color:#f3d47c}
