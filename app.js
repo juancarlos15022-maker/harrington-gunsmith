@@ -213,11 +213,14 @@ function norm(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u030
 function readQty(i){return Math.min(MAX_QTY,Math.max(0,parseInt(i.value)||0))}
 function baseCents(i){return Math.round(parseFloat(i.dataset.price)*100)}
 /* Precio efectivo: precio especial del cliente > precio de convenio > descuento de convenio > precio base */
-function priceCents(i,sp=specialPrices()){
+/* 22/10/2026: un convenio puede traer su propia lista de precios por producto (p. ej. Parker Security) */
+function convPrecios(){try{const d=currentDiscount();return d&&d.kind==='convenio'&&d.precios&&typeof d.precios==='object'?d.precios:null}catch(e){return null}}
+function priceCents(i,sp=specialPrices(),cp=convPrecios()){
  const name=i.dataset.name;
  const fz=loadedEnc&&loadedEnc.items.find(x=>x.name===name);
  if(fz)return fz.cents;
  if(sp&&sp.precios[name]!=null)return Math.round(sp.precios[name]*100);
+ if(cp&&cp[name]!=null&&isFinite(cp[name]))return Math.round(Number(cp[name])*100);
  return baseCents(i);
 }
 function summaryText(p,u){return `${p} ${p===1?'producto':'productos'} · ${u} ${u===1?'unidad':'unidades'}`}
@@ -283,9 +286,9 @@ function productNodes(input){
 function calc(animate=true){
  applyStockLimits(animate);
  let totalCents=0,baseTotal=0,units=0,products=0;
- const prices=specialPrices();
+ const prices=specialPrices(), cprices=convPrecios();
  inputs.forEach(i=>{
-  const p=productNodes(i),q=readQty(i), ec=priceCents(i,prices), sub=q*ec, row=p.row, subEl=p.subtotal, txt=money(sub);
+  const p=productNodes(i),q=readQty(i), ec=priceCents(i,prices,cprices), sub=q*ec, row=p.row, subEl=p.subtotal, txt=money(sub);
   if(subEl.textContent!==txt){subEl.textContent=txt;if(animate)bump(subEl)}
   const pe=p.price, bc=baseCents(i), ptxt=ec!==bc?`<small class="was">${money(bc)}</small>${money(ec)}`:money(ec);
   if(pe.dataset.v!==ptxt){pe.innerHTML=ptxt;pe.dataset.v=ptxt}
@@ -364,12 +367,12 @@ async function ticketSale(){if(doneSale&&!receiptModal.hidden&&!selected().lengt
 function parseMoney(v){const n=parseFloat(numIn(v).replace(/[^0-9.]/g,''));return isFinite(n)&&n>0?Math.round(Math.min(n,99999999)*100):0}
 function computeFin(totals){
  let base=totals?totals.base:0,afterPrices=totals?totals.afterPrices:0;
- if(!totals){let prices,resolved=false;inputs.forEach(i=>{const q=readQty(i);if(q){if(!resolved){prices=specialPrices();resolved=true;}base+=q*baseCents(i);afterPrices+=q*priceCents(i,prices)}});}
+ if(!totals){let prices,cprices,resolved=false;inputs.forEach(i=>{const q=readQty(i);if(q){if(!resolved){prices=specialPrices();cprices=convPrecios();resolved=true;}base+=q*baseCents(i);afterPrices+=q*priceCents(i,prices,cprices)}});}
  /* Convenio u oferta: beneficio calculado sobre la mercancía (ver benefitFor) */
  const dsc=currentDiscount(), bd=dsc?benefitFor(dsc,afterPrices):{cents:0,label:''};
  const beforeManual=Math.max(0,afterPrices-bd.cents),manual=manualDiscountValue(),final=Math.max(0,beforeManual-manual),discounts=[];
  const manualMax=Math.max(0,beforeManual-(loadedEnc?loadedEnc.depositCents||0:0)),manualText=manualDiscountAllowed()&&customer.manualDiscountBy===meEmp().id?String(customer.manualDiscount||'').trim():'',manualInvalid=!!manualText&&(!/^\d{1,8}(?:[.,]\d{0,2})?$/.test(manualText)||manual>manualMax);
- if(base-afterPrices>0)discounts.push({label:'Precio especial',cents:base-afterPrices});
+ if(base-afterPrices>0)discounts.push({label:dsc&&dsc.precios?'Precios de convenio '+dsc.nombre:'Precio especial',cents:base-afterPrices});
  if(bd.cents>0)discounts.push({label:bd.label,cents:bd.cents});
  if(manual>0)discounts.push({label:'Descuento manual',cents:manual});
  const enc=customer.op==='encargo'&&!loadedEnc&&appMode==='venta';
@@ -764,15 +767,17 @@ function applyStock(sl){
 const GROUPS={suministros:['suministros'],municiones:['municion'],ambos:['suministros','municion']};
 const GROUP_NAMES={suministros:'SUMINISTROS',municiones:'MUNICIONES',ambos:'SUMINISTROS Y MUNICIONES'};
 function discText(d){
+ if(d.benefit==='precios')return `${d.nombre} — precios de convenio`;
  if(!d.group)return `${d.nombre} — ${d.pct} %`;
  return `${d.nombre} — ${GROUP_NAMES[d.group]}: `+(d.benefit==='gratis'?`${d.freeUnits} gratis por cada ${d.threshold}`:`${d.pct} % desde ${d.threshold} uds.`);
 }
 function leftTxt(d){if(!d.endMs)return '';const n=Math.max(0,Math.ceil((d.endMs-Date.now())/86400000));return ` · caduca en ${n} ${n===1?'día':'días'}`}
-function discTag(d){return d?(d.group?d.nombre:`${d.nombre} (${d.pct} %)`):''}
+function discTag(d){return d?(d.group||d.benefit==='precios'?d.nombre:`${d.nombre} (${d.pct} %)`):''}
 /* Beneficio de un convenio u oferta. Convenio por grupo: el porcentaje se activa al llegar al umbral (no se multiplica);
    las unidades gratis se repiten por bloques completos y salen las más baratas de las realmente seleccionadas. */
 function benefitFor(d,total){
  const tag=d.kind==='oferta'?'Oferta':'Convenio';
+ if(d.benefit==='precios')return {cents:0,label:''};   // sus precios ya van en cada producto (priceCents)
  if(!d.group)return {cents:Math.round(total*d.pct/100),label:`${tag} ${d.nombre} (${d.pct} %)`};
  const cats=GROUPS[d.group]||[], el=[];
  inputs.forEach(i=>{const q=readQty(i);if(q&&cats.includes(i.closest('.product').dataset.cat))el.push({q:q,price:priceCents(i)})});
@@ -808,7 +813,7 @@ function currentDiscount(){
  const id=customer.convenio!=='ninguno'?customer.convenio:(customer.oferta!=='ninguno'?customer.oferta:null);
  if(!id)return null;
  const d=descuentos.find(x=>x.id===id&&isActiveDisc(x)&&(x.kind!=='convenio'||x.clientType===customer.type));
- return d?{id:d.id,kind:d.kind,nombre:d.nombre,pct:d.pct||0,group:d.group||'',threshold:d.threshold||0,benefit:d.benefit||'',freeUnits:d.freeUnits||0}:null;
+ return d?{id:d.id,kind:d.kind,nombre:d.nombre,pct:d.pct||0,group:d.group||'',threshold:d.threshold||0,benefit:d.benefit||'',freeUnits:d.freeUnits||0,...(d.precios?{precios:d.precios}:{})}:null;
 }
 let discSig='';
 function refreshDiscountSelects(){
@@ -1475,24 +1480,29 @@ function fmtLong(ms){return new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Ma
 function plural(n,a,b){return n===1?a:b}
 function descItemHTML(d){
  const act=isActiveDisc(d), conv=d.kind==='convenio';
- const ben=d.group?(d.benefit==='gratis'?`${d.freeUnits} ${d.freeUnits===1?'unidad gratis':'unidades gratis'}`:`${d.pct} % de descuento`):`${d.pct} % de descuento`;
+ const np=d.precios?Object.keys(d.precios).length:0;
+ const ben=d.benefit==='precios'?`precios de convenio (${np} ${np===1?'producto':'productos'})`:d.group?(d.benefit==='gratis'?`${d.freeUnits} ${d.freeUnits===1?'unidad gratis':'unidades gratis'}`:`${d.pct} % de descuento`):`${d.pct} % de descuento`;
  return `<div class="enc-card dir-item"><div class="t">${esc(d.nombre.toUpperCase())}</div>`+
   (conv?`<div class="it">Tipo: ${esc((TYPE_NAMES[d.clientType]||'').toUpperCase())}</div>`:'')+
   (d.group?`<div class="enc-money"><span>Aplica a: ${GROUP_NAMES[d.group]}</span><span>Por cada: ${d.threshold} uds.</span></div>`:'')+
   `<div class="enc-money"><span>Beneficio: ${ben}</span><span>Duración: ${d.days} ${plural(d.days,'día','días')}</span></div>`+
   `<div class="enc-money"><span>Inicio: ${fmtLong(d.startMs)}</span><span>${conv?'Caduca':'Finalización'}: ${fmtLong(d.endMs)}</span></div>`+
   `<div class="badges"><span class="badge ${act?'fab':'no'}">Estado: ${act?(conv?'ACTIVO':'ACTIVA'):(conv?'CADUCADO':'CADUCADA')}</span></div>`+
+  (np?`<details class="conv-precios"><summary>Ver precios del convenio</summary>${Object.keys(d.precios).map(n=>`<div class="enc-money"><span>${esc(n)}</span><span>${money(Math.round(Number(d.precios[n])*100))}</span></div>`).join('')}</details>`:'')+
   `<div class="enc-actions" style="margin-top:8px"><button type="button" class="warn" data-dir="del:${esc(d.id)}">ELIMINAR</button></div></div>`;
 }
+/* productos del catálogo (sin repetir) con su precio actual, para la lista de precios de un convenio */
+function convProdList(){const seen=new Set(),out=[];inputs.forEach(i=>{const n=i.dataset.name;if(!n||seen.has(n))return;seen.add(n);const c=baseCents(i);if(c>0)out.push([n,c])});return out}
 function renderModConvenios(){
  if(dirForm){
   const conv=dirForm==='convenio';
   return `<div class="dir-form enc-sec"><div class="dir-sec-title" style="margin-top:0">${conv?'AÑADIR CONVENIO':'AÑADIR OFERTA'}</div>
    <label>${conv?'NOMBRE DEL CONVENIO':'NOMBRE DE LA OFERTA'}<input id="dfName" type="text" maxlength="40" autocomplete="off" placeholder="${conv?'Ej.: Blackwater Transport':'Ej.: Semana Harrington'}"></label>`+
    (conv?`<label>TIPO DE CLIENTE<select id="dfType"><option value="">Seleccionar…</option><option value="particular">PARTICULAR</option><option value="empresa">EMPRESA</option><option value="sheriff">DEPARTAMENTO DEL SHERIFF</option></select></label>`:'')+
-   (conv?`<label>APLICAR A<select id="dfGroup"><option value="">Seleccionar…</option><option value="suministros">SUMINISTROS</option><option value="municiones">MUNICIONES</option><option value="ambos">SUMINISTROS Y MUNICIONES</option></select></label>
-   <label>POR CADA (UNIDADES)<input id="dfThr" type="number" inputmode="numeric" min="1" step="1" placeholder="Ej.: 25"></label>
-   <label>TIPO DE BENEFICIO<select id="dfBenefit"><option value="">Seleccionar…</option><option value="porcentaje">DESCUENTO POR PORCENTAJE</option><option value="gratis">UNIDADES GRATIS</option></select></label>
+   (conv?`<label id="dfGroupWrap">APLICAR A<select id="dfGroup"><option value="">Seleccionar…</option><option value="suministros">SUMINISTROS</option><option value="municiones">MUNICIONES</option><option value="ambos">SUMINISTROS Y MUNICIONES</option></select></label>
+   <label id="dfThrWrap">POR CADA (UNIDADES)<input id="dfThr" type="number" inputmode="numeric" min="1" step="1" placeholder="Ej.: 25"></label>
+   <label>TIPO DE BENEFICIO<select id="dfBenefit"><option value="">Seleccionar…</option><option value="porcentaje">DESCUENTO POR PORCENTAJE</option><option value="gratis">UNIDADES GRATIS</option><option value="precios">PRECIOS ESPECIALES POR PRODUCTO</option></select></label>
+   <div id="dfPreciosWrap" hidden><p class="bk-note" style="margin:6px 0">Escribe el precio de convenio de cada producto (en dólares). Los que dejes en blanco se cobran a su precio normal.</p>${convProdList().map(([n,c])=>`<label class="conv-pr">${esc(n)}<input type="number" inputmode="decimal" min="0" step="0.01" data-cp="${esc(n)}" placeholder="${(c/100).toFixed(2)}"></label>`).join('')}</div>
    <label id="dfPctWrap" hidden>DESCUENTO (%)<input id="dfPctN" type="number" inputmode="decimal" min="0.01" max="100" step="any" placeholder="Ej.: 5"></label>
    <label id="dfFreeWrap" hidden>UNIDADES GRATIS<input id="dfFree" type="number" inputmode="numeric" min="1" step="1" placeholder="Ej.: 1"></label>`:
    `<label>PORCENTAJE DE DESCUENTO<select id="dfPct"><option value="">Seleccionar…</option>${[1,2,3,4,5].map(n=>`<option value="${n}">${n} %</option>`).join('')}</select></label>`)+`
@@ -4502,6 +4512,13 @@ function saveDiscForm(){
  if(conv){
   if(!type)return err('Selecciona el tipo de cliente');
   const group=document.getElementById('dfGroup').value, thrRaw=document.getElementById('dfThr').value, thr=Number(thrRaw), benefit=document.getElementById('dfBenefit').value;
+  if(benefit==='precios'){
+   const precios={};let bad='';
+   document.querySelectorAll('#dfPreciosWrap [data-cp]').forEach(x=>{const v=String(x.value||'').trim().replace(',','.');if(!v)return;const n=Number(v);if(!(n>=0&&n<100000))bad=x.dataset.cp;else precios[x.dataset.cp]=Math.round(n*100)/100});
+   if(bad)return err('Precio no válido en «'+bad+'»');
+   if(!Object.keys(precios).length)return err('Escribe al menos un precio de convenio');
+   Object.assign(rec,{benefit:'precios',precios:precios,pct:0,freeUnits:0,group:'',threshold:0});
+  }else{
   if(!group)return err('Selecciona el grupo al que se aplica');
   if(!(Number.isInteger(thr)&&thr>0))return err('«Por cada» debe ser un número entero mayor que 0');
   if(!benefit)return err('Selecciona el tipo de beneficio');
@@ -4515,6 +4532,7 @@ function saveDiscForm(){
    rec.freeUnits=fr;rec.pct=0;
   }
   rec.group=group;rec.threshold=thr;rec.benefit=benefit;
+  }
  }else{
   const pct=parseInt(document.getElementById('dfPct').value);
   if(!(pct>=1&&pct<=5))return err('Selecciona el porcentaje de descuento');
@@ -4690,6 +4708,8 @@ dirModal.addEventListener('change',e=>{
  if(e.target.id!=='dfBenefit')return;
  document.getElementById('dfPctWrap').hidden=e.target.value!=='porcentaje';
  document.getElementById('dfFreeWrap').hidden=e.target.value!=='gratis';
+ const pr=e.target.value==='precios';['dfGroupWrap','dfThrWrap'].forEach(id=>{const el=document.getElementById(id);if(el)el.hidden=pr});
+ const w=document.getElementById('dfPreciosWrap');if(w)w.hidden=!pr;
 });
 dirModal.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='empName'){e.preventDefault();empAdd()}});
 function empInput(t){
@@ -4913,7 +4933,7 @@ const TUTORIAL=[
 <p><b>Botón ENCARGOS</b>: lista con total, adelanto, pendiente, estado y fecha (en rojo si está vencido). Tócalo para abrir la ficha.</p>
 <ul><li><b>Al marcarlo FABRICADO y guardar</b>, las unidades que tienen receta se <b>suman solas al stock</b> y se gastan sus materiales del almacén (como al fabricar en STOCK, con su balance de fabricación en Discord). Si faltan materiales, te dice cuáles y no lo marca. Si lo vuelves a poner en PENDIENTE, se deshace esa fabricación.</li><li>Estado de fabricación: <b>PENDIENTE / FABRICADO</b>. «¿Cliente avisado?» solo se puede poner en SÍ si está FABRICADO. Si vuelve a PENDIENTE, el aviso vuelve a NO.</li><li><b>GUARDAR CAMBIOS</b> guarda sin cargar ni finalizar.</li><li>Cuando lo marcas <b>FABRICADO</b> y aún no hay stock suficiente, la ficha te recuerda que el jefe tiene que sumar esas unidades en STOCK (así se gastan sus materiales) para poder entregarlo.</li><li>En la lista ves también <b>hace cuánto</b> se hizo cada encargo.</li><li><b>COPIAR AVISO (TELEGRAMA)</b> genera el mensaje para el cliente cuando está fabricado.</li><li><b>CANCELAR ENCARGO</b> pregunta si se devuelve el adelanto.</li></ul>
 <p><b>Entregarlo</b>: en la ficha, <b>CARGAR ENCARGO</b>. Se cargan productos, precios, convenio y adelanto. Puedes añadir más cosas. El adelanto se descuenta <b>una sola vez</b> y no es un descuento. Al terminar, <b>FINALIZAR ENCARGO</b>.</p>`],
-['Convenios, ofertas y precios especiales',`<ul><li><b>Convenio</b> (lo crea el jefe): para un tipo de cliente y un grupo (suministros, municiones o ambos). Puede dar un <b>porcentaje</b> a partir de X unidades (no se multiplica por bloques) o <b>unidades gratis</b> por cada X (se repiten por bloque completo; son las más baratas de las elegidas, y salen del stock igualmente).</li><li><b>Oferta</b>: un porcentaje del 1 al 5 % sobre toda la compra.</li><li>Caducan solas y en el desplegable ves «caduca en N días».</li><li><b>Precio especial</b> de un cliente: se aplica al elegirlo.</li></ul>`],
+['Convenios, ofertas y precios especiales',`<ul><li><b>Convenio</b> (lo crea el jefe): para un tipo de cliente y un grupo (suministros, municiones o ambos). Puede dar un <b>porcentaje</b> a partir de X unidades (no se multiplica por bloques) o <b>unidades gratis</b> por cada X (se repiten por bloque completo; son las más baratas de las elegidas, y salen del stock igualmente).</li><li><b>Convenio con precios especiales por producto</b> (desde el 22 de octubre): en TIPO DE BENEFICIO elige <b>PRECIOS ESPECIALES POR PRODUCTO</b> y escribe el precio de convenio de cada producto; los que dejes en blanco se cobran a su precio normal. Al vender, elige el tipo de cliente del convenio (por ejemplo <b>Empresa</b>) y el convenio en el desplegable: cada producto pasa a su precio de convenio (verás el precio normal tachado) y en el desglose sale «Precios de convenio …». Así está el de <b>Parker Security</b>.</li><li><b>Oferta</b>: un porcentaje del 1 al 5 % sobre toda la compra.</li><li>Caducan solas y en el desplegable ves «caduca en N días».</li><li><b>Precio especial</b> de un cliente: se aplica al elegirlo.</li></ul>`],
 ['Ticket, copias y Discord',`<p>Al finalizar se abre el <b>ticket</b>: número de venta (HG-fecha-contador), fecha y hora de España, empleado, cliente, productos, desglose y el sello PAGADO (o ANOTADO en un encargo).</p>
 <ul><li><b>Copiar para Discord</b>: copia el texto limpio.</li><li><b>Descargar comprobante</b>: archivo de texto.</li><li><b>Descargar imagen / Copiar imagen</b>: el ticket como imagen.</li><li><b>Nueva venta</b> y <b>Cerrar</b>: el carrito ya se ha vaciado solo al finalizar, así que los dos cierran el ticket y puedes atender al siguiente.</li></ul>
 <p><b>Discord automático</b> (si el jefe lo configuró en Dirección → Discord, cada tipo a su propio canal). Los mensajes llegan como <b>tarjetas</b> con una franja de color según el tipo (ventas doradas, gastos rojos, pedidos verdes…), el título destacado, los datos ordenados y el emblema de la casa:</p>
@@ -7361,6 +7381,7 @@ const PARCHES=[
  {f:'20/10/2026',t:'Más escenas en Dirección',v:'3.0',i:['Cierre de caja: la caja registradora abierta con billetes y monedas','Balance: la balanza con oro en un platillo y hierro y piezas en el otro','Estadísticas: el libro mayor con gráficas a tinta','Stock y Registro de stock: la trastienda','Agenda: el tarjetero con el telégrafo','Historial de cambios y Auditoría: el archivo con legajos lacrados','Revisión de datos: el escritorio del dueño con la lupa y el reloj de bolsillo','Registros horarios: el reloj de péndulo y el tablero de turnos','Compra a un particular: el saco de pieles, grasa y botellas en el mostrador','Discord: la oficina de telégrafos','Copia de seguridad y Nube: la cámara acorazada','Historial de parches: la imprenta','Productos y precios: la vitrina con las armas sobre terciopelo y sus etiquetas']},
  {f:'20/10/2026',t:'Libro, papel, ticket y quinqué',v:'3.0',i:['Tutorial: cada capítulo se abre pasando la página como en un libro','Mientras se cargan datos de la nube, en vez de un hueco vacío sale una hoja de papel que se va escribiendo','Al cerrar el ticket de una venta, se arranca por la línea de puntos y sale volando','En el ordenador, la luz de un quinqué sigue al ratón por las filas del catálogo; en el móvil se enciende al tocar un producto','Con Animaciones: LIGERAS nada de esto se mueve']},
  {f:'20/10/2026',t:'Propuestas de pedido automático',v:'3.0',i:['Los pedidos automáticos de la herrería y de la mina nacen como propuesta y llegan a tu privado de Discord con el botón «Aceptar propuesta»','Mientras no se acepta, la propuesta se ajusta sola cada minuto: en la herrería pide justo lo que falta hasta el mínimo y en la mina añade los materiales nuevos que bajen del umbral','Los cambios se ven a la vez en el privado, en PEDIDOS de la web (etiqueta PROPUESTA · SE AJUSTA SOLA) y en la tarjeta del canal de pedidos de la empresa','Al aceptarla queda cerrada: ya no se suma nada y lo que falte después va a una propuesta nueva','Al aceptarla llega al privado un telegrama IC de Vincent Harrington para el proveedor, sin número de pedido, con saludo, encargo, pago a la entrega, agradecimiento y despedida','Si deja de hacer falta antes de aceptarla, se anula sola; si se paga o se recibe desde la web, deja de ajustarse','El pedido automático que ya estaba abierto pasa a ser propuesta']},
+ {f:'22/10/2026',t:'Convenios con precios por producto: Parker Security',v:'3.0',i:['Los convenios pueden llevar su propia lista de precios por producto: nuevo tipo de beneficio «PRECIOS ESPECIALES POR PRODUCTO» en Dirección → Convenios','Al vender con ese convenio, cada producto se cobra a su precio de convenio (se ve el precio normal tachado) y el desglose lo indica','En la ficha del convenio, «Ver precios del convenio» muestra la lista','Nuevo convenio «Parker Security» (cliente Empresa, 365 días) con los precios de su lista: revólveres, pistolas, carabinas, rifles, escopetas, armas cuerpo a cuerpo, munición y consumibles']},
  {f:'21/10/2026',t:'Entrada en vídeo también en el ordenador',v:'3.0',i:['En el ordenador, al pulsar ENTRAR, las puertas de la fachada se abren y la cámara entra en la tienda hasta el mostrador del tapete verde, donde aparecen las tarjetas','Al cerrar la sesión en el ordenador, el mismo vídeo al revés: sales de la tienda y vuelves a la fachada con ENTRAR','El vídeo ocupa exactamente el mismo sitio que la fachada, en cualquier tamaño de pantalla, así que no se nota el cambio','De momento lleva la marca de agua del programa con el que se hizo; se cambiará por la versión limpia','Si el vídeo no ha cargado, hay ahorro de datos o batería baja, o tienes «Animaciones: LIGERAS», sale la animación de siempre']},
  {f:'20/10/2026',t:'Pedido automático de la Agricultura Jacksons Farm',v:'3.0',i:['Tela: si baja de 40 en el almacén, llega a tu privado de Discord una propuesta de pedido de 100','Precio de la tela de Jacksons Farm: $0.50 la unidad (su ficha de proveedor en Discord, al día)','Funciona igual que la tala: se acepta en el privado y llegan el telegrama IC y el albarán','Por dentro, la tala y la granja usan la misma función: para añadir otro proveedor con lote fijo por material basta con su configuración']},
  {f:'20/10/2026',t:'Pedido automático de la Tala Annesburg',v:'3.0',i:['La Tala Annesburg tiene pedido automático, como la herrería y la mina','Trozos de madera: si bajan de 200 se piden 300','Fibra: si baja de 300 se piden 300','Papel: si baja de 300 se piden 300','Tablas de madera (antes «Tablones»): si bajan de 10 se piden 20','Llega a tu privado de Discord como propuesta; si después baja otro de esos materiales, se añade a la misma propuesta hasta que la aceptas','Al aceptarla llegan el telegrama IC para la tala y el albarán','Los mínimos quedan puestos en el almacén (Stock de materiales)']},
