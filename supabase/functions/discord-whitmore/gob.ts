@@ -131,7 +131,7 @@ export async function tarjetaReunion(ctx: Ctx, r: Any) {
     footer: { text: `Convocada por ${r.autor} · Sr. Whitmore` } }],
     components: cerrada ? [] : [fila(btn("Asistiré", (acto ? "act" : "reu") + ":si:" + r.id, 3), btn("No podré", (acto ? "act" : "reu") + ":no:" + r.id, 2), ...(acto ? [] : [btn("Escribir acta", "reu:acta:" + r.id, 1, "📜")]))] };
 }
-function tarjetaActa(r: Any) {
+export function tarjetaActa(r: Any) {
   const d = r.datos;
   return { embeds: [{ title: `📜 Acta n.º ${r.numero} · ${d.titulo}`, color: GRIS, thumbnail:{url:"https://juancarlos15022-maker.github.io/harrington-gunsmith/gobierno/img/escudo-republicano.webp"},url:"https://juancarlos15022-maker.github.io/harrington-gunsmith/gobierno/#archivo",
     description: `**Reunión del** ${fechaTxt(d.fecha)}\n**Asistentes:** ${d.asistentes || "—"}\n\n**Acuerdos**\n${d.acuerdos}` + (d.notas ? `\n\n**Notas**\n${d.notas}` : ""), footer: { text: `Redactada por ${r.autor} · Sr. Whitmore` } }] };
@@ -168,7 +168,7 @@ export async function tarjetaPropuesta(ctx: Ctx, r: Any) {
   const d = r.datos, v = await votos(ctx, r.id), est = r.estado;
   return { embeds: [{ title: `💡 Propuesta n.º ${r.numero} · ${d.titulo}`, color: est === "aprobada" ? VERDE : est === "rechazada" ? ROJO : AZUL,
     description: `${d.texto}\n\n👍 **A favor (${v.si.length}):** ${v.txt(v.si)}\n👎 **En contra (${v.no.length}):** ${v.txt(v.no)}` +
-      (est === "aprobada" ? "\n\n✅ **Aprobada.** Pasa al programa de gobierno." : est === "rechazada" ? "\n\n❌ **Rechazada.**" : ""),
+      (est === "aprobada" ? "\n\n✅ **Aprobada por el Consejo.** Sigue pendiente de la autorización de la Presidencia; no constituye un compromiso de ejecución ni un plazo." : est === "rechazada" ? "\n\n❌ **Rechazada.**" : ""),
     footer: { text: `Presentada por ${r.autor}${d.cierra ? " · votación cerrada por " + d.cierra : ""} · Sr. Whitmore` } }],
     components: est === "abierta" ? [fila(btn("A favor", "pro:si:" + r.id, 3, "👍"), btn("En contra", "pro:no:" + r.id, 4, "👎"), btn("Cerrar votación", "pro:cerrar:" + r.id, 2, "🔒"))] : [] };
 }
@@ -188,7 +188,7 @@ const AYUDA = [
   "**Campaña** — `/acto nuevo`, `/acto proximos`, `/elecciones fijar` y `/elecciones ver`, `/programa` (propuestas aprobadas).",
   "**Telegramas** — `/telegrama recibido` (con botón para redactar la respuesta), `/telegrama redactar`, `/telegrama lista`. Te los dejo listos para copiar, con la firma.",
   "**Documentos** — `/decreto nuevo` (decreto, comunicado o carta): queda como borrador y el gobernador pulsa **Firmar**; se numera y se archiva. `/firma` cambia el cargo y el nombre de la firma.",
-  "**Propuestas** — `/propuesta nueva`: votación A favor / En contra; el gobernador la cierra. Las aprobadas forman el programa.",
+  "**Propuestas** — `/propuesta nueva`: votación A favor / En contra; el gobernador la cierra. Las votadas favorablemente se trasladan para valoración; no autorizan compromisos.",
   "**Tareas** — `/tarea nueva` con plazo; aviso el día del plazo. `/tarea lista`.",
   "**Contactos y negocios** — `/contacto nuevo|buscar|lista`, `/negocio nuevo|buscar|lista`.",
   "**Cuentas** — `/cuenta ingreso`, `/cuenta gasto`, `/cuenta saldo` (Economía y el gobernador). Informe cada domingo en #economía.",
@@ -288,10 +288,10 @@ export async function orden(ctx: Ctx, i: Any): Promise<Response> {
     if (!(data || []).length) return eph("El programa está vacío: todavía no se ha aprobado ninguna propuesta.");
     const txt = data.map((r: Any, k: number) => `**${k + 1}. ${r.datos.titulo}**\n${r.datos.texto}`).join("\n\n");
     if (o.publicar) {
-      await ctx.api("POST", `/channels/${c.canal_campana}/messages`, { allowed_mentions: { parse: [] }, embeds: [{ title: "📘 Programa de gobierno", color: ORO, description: txt.slice(0, 4000), footer: { text: `${data.length} propuestas aprobadas · Sr. Whitmore` } }] });
-      return eph("📘 Programa publicado en #campaña.");
+      await ctx.api("POST", `/channels/${c.canal_campana}/messages`, { allowed_mentions: { parse: [] }, embeds: [{ title: "📘 Propuestas del Consejo para valoración de la Presidencia", color: ORO, description: txt.slice(0, 4000), footer: { text: `${data.length} propuestas votadas por el Consejo; pendientes de autorización · Sr. Whitmore` } }] });
+      return eph("📘 Propuestas internas publicadas en campaña; no constituyen compromisos autorizados.");
     }
-    return eph("📘 **Programa de gobierno**\n\n" + txt);
+    return eph("📘 **Propuestas del Consejo pendientes de valoración de la Presidencia**\n\n" + txt);
   }
 
   if (n === "tarea") {
@@ -472,7 +472,7 @@ export async function formulario(ctx: Ctx, i: Any): Promise<Response> {
     if (r.estado !== "pendiente") return eph("Esa audiencia ya estaba contestada.");
     if (accion === "no") { const r2 = await cambiar(ctx, id, { estado: "rechazada", datos: { ...r.datos, decide: x.nombre, razon: limpio(v.razon, 400) } }); await repintar(ctx, r2, tarjetaAudiencia(r2)); return eph("Audiencia rechazada."); }
     const ms = leerFecha(v.fecha, v.hora); if (!ms) return eph("No entiendo la fecha o la hora. Ejemplo: `25/10` y `18:30`. Vuelve a pulsar Aceptar.");
-    const cita = await nuevo(ctx, "cita", { ...base, cuando: new Date(ms).toISOString(), datos: { con: r.datos.quien, lugar: limpio(v.lugar, 100), motivo: r.datos.motivo, audiencia: r.numero } });
+    const cita = await nuevo(ctx, "cita", { ...base, cuando: new Date(ms).toISOString(), datos: { con: r.datos.quien, lugar: limpio(v.lugar, 100), motivo: r.datos.motivo, audiencia: r.numero,peticion_id:r.datos.peticion_id||null } });
     await publicar(ctx, cita, c.canal_agenda, tarjetaCita(cita));
     const r2 = await cambiar(ctx, id, { estado: "aceptada", cuando: new Date(ms).toISOString(), datos: { ...r.datos, decide: x.nombre, lugar: limpio(v.lugar, 100), cita: cita.numero } });
     await repintar(ctx, r2, tarjetaAudiencia(r2));
@@ -480,8 +480,9 @@ export async function formulario(ctx: Ctx, i: Any): Promise<Response> {
     return eph(`✅ Audiencia aceptada y apuntada en la agenda (cita n.º ${cita.numero}).\nTelegrama para avisarle, listo para copiar:\n\`\`\`\n${tel}\n\`\`\``);
   }
   if (k === "reu" && accion === "acta") {
+    if(["cerrada","cancelada"].includes(r.estado))return eph("La reunión ya está cerrada; consulte el acta archivada.");
     const vt = await votos(ctx, id);
-    const acta = await nuevo(ctx, "acta", { ...base, datos: { reunion: id, titulo: r.datos.titulo, fecha: new Date(r.cuando).getTime(), asistentes: vt.si.map((z: Any) => z.nombre).join(", "), acuerdos: limpio(v.acuerdos, 2500), notas: limpio(v.notas, 1000) } });
+    const acta = await nuevo(ctx, "acta", { ...base, datos: { reunion: id,reunion_id:id,asuntos:r.datos.asuntos||[], titulo: r.datos.titulo, fecha: new Date(r.cuando).getTime(), asistentes: vt.si.map((z: Any) => z.nombre).join(", "), acuerdos: limpio(v.acuerdos, 2500), notas: limpio(v.notas, 1000) } });
     await publicar(ctx, acta, (c.canal_actas||c.canal_documentos), tarjetaActa(acta));
     const r2 = await cambiar(ctx, id, { estado: "cerrada", datos: { ...r.datos, acta: acta.numero } }); await repintar(ctx, r2, await tarjetaReunion(ctx, r2));
     return eph(`📜 Acta n.º ${acta.numero} archivada en #documentos.`);
@@ -503,6 +504,8 @@ export async function revision(ctx: Ctx) {
   const {data:pendientes}=await ctx.sb.from("gob_registros").select("*").not("datos->_discord","is",null).order("actualizado").limit(10);
   for(const r of pendientes||[]) {const q=r.datos._discord;if(q)await sincronizar(ctx,r,q.canal,q.payload);}
 
+  const pet=await ctx.sb.from('gob_registros').select('*').eq('tipo','peticion').in('estado',['recibida','en_valoracion','aclaraciones']).eq('avisado',false).lte('cuando',new Date().toISOString()).limit(8);
+  for(const r of pet.data||[]){await ctx.api('POST',`/channels/${c.canal_tareas}/messages`,{allowed_mentions:{parse:[]},content:`Revisión interna de la petición n.º ${r.numero}: **${r.datos.titulo}**. Compruebe si hay respuesta de la Presidencia. Esta revisión no es un plazo de ejecución comunicado al ciudadano.`,components:[{type:1,components:[{type:2,style:5,label:'Consultar petición',url:'https://juancarlos15022-maker.github.io/harrington-gunsmith/gobierno/#oficina/peticiones/'+r.id}]}]});await ctx.sb.from('gob_registros').update({avisado:true}).eq('id',r.id);}
   const ahora = Date.now();
   // 1) una hora antes: citas, reuniones y actos
   const { data: prox } = await ctx.sb.from("gob_registros").select("*").in("tipo", ["cita", "reunion", "acto"]).eq("avisado", false).not("estado", "in", "(cancelada,cerrada)")

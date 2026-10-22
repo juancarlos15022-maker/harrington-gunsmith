@@ -3,7 +3,7 @@ type Any=any;
 const BASE='https://juancarlos15022-maker.github.io/harrington-gunsmith/';
 const LOGO=BASE+'gobierno/img/escudo-republicano.webp';
 const EST:Record<string,string>={asentado:'Asentado',borrador:'Pendiente de firma',firmado:'Firmado y registrado',descartado:'Descartado',en_tramite:'En tramitación',pendiente_firma:'Elevado para firma',autorizado:'Autorizado',devuelto:'Devuelto para enmienda',ejecutado:'Ejecutado',concluido:'Concluido',archivado:'Archivado'};
-export function enlaceRegistro(r:Any){return BASE+'gobierno/#'+(r.tipo==='decreto'?'documentos/'+r.id:r.tipo==='secretaria'?'secretarias/'+r.datos.area+'/'+r.id:r.tipo==='telegrama'?'telegramas/'+r.id:['acta','organizacion'].includes(r.tipo)?'archivo':r.tipo==='movimiento'||r.tipo.startsWith('hci_')?'hacienda/movimientos':r.tipo==='tarea'?'despacho':['campana','idea_campana','hito_electoral','acto'].includes(r.tipo)?'campana':'agenda');}
+export function enlaceRegistro(r:Any){return BASE+'gobierno/#'+(['peticion','oficio_presidencia','relevo'].includes(r.tipo)?'oficina/'+(r.tipo==='peticion'?'peticiones/'+r.id:r.tipo==='relevo'?'relevo':'correspondencia'):r.tipo==='decreto'?'documentos/'+r.id:r.tipo==='secretaria'?'secretarias/'+r.datos.area+'/'+r.id:r.tipo==='telegrama'?'telegramas/'+r.id:['acta','organizacion'].includes(r.tipo)?'archivo':r.tipo==='movimiento'||r.tipo.startsWith('hci_')?'hacienda/movimientos':r.tipo==='tarea'?'despacho':['campana','idea_campana','hito_electoral','acto'].includes(r.tipo)?'campana':'agenda');}
 export function tarjetaDifusion(job:Any){
  const r=job.registro,d=r.datos||{},url=enlaceRegistro(r),estado=EST[r.estado]||r.estado;
  if(r.tipo==='decreto'&&job.destino!=='seguimiento'){

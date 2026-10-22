@@ -1,6 +1,6 @@
 import {type Ctx,leer,publicar,repintar,tarjetaDecreto,leerFecha,dolar,fechaTxt} from './gob.ts';
 type Any=any;
-const COMUN={informe:'Informe',tarea:'Encargo de Secretaría',compromiso:'Compromiso de gobierno',contacto:'Directorio institucional',registro:'Correspondencia de entrada y salida',acta:'Acta y acuerdos',relevo:'Nota de relevo'};
+const COMUN={informe:'Informe',tarea:'Encargo de Secretaría',contacto:'Directorio institucional',registro:'Correspondencia de entrada y salida',acta:'Acta y acuerdos',relevo:'Nota de relevo'};
 export const AREAS=[
  {id:'economia',nombre:'Economía',lema:'Tesorería, presupuestos y cuentas del Gobierno',icono:'i-moneda.webp',clases:{presupuesto:'Propuesta de presupuesto',gasto:'Autorización de gasto',ingreso:'Asiento de ingreso',...COMUN}},
  {id:'comercio',nombre:'Comercio',lema:'Negocios, licencias, convenios y abastecimiento',icono:'i-telegrafo.webp',clases:{negocio:'Registro de empresa',mina:'Empresa minera',granja:'Explotación agrícola',rancho:'Explotación ganadera',tierras:'Empresa de tierras y propiedades',licencia:'Solicitud de licencia',convenio:'Propuesta de convenio',abastecimiento:'Abastecimiento y rutas',...COMUN}},

@@ -55,3 +55,14 @@ Cada expediente dispone de pestañas para Antecedentes y gestión, Documentos, A
 Las constancias se consultan en el servidor para el expediente y el documento vinculado. Solo las entregas confirmadas muestran un enlace al mensaje de Discord; los errores internos no se devuelven al navegador. Esta consulta requiere la misma sesión privada del Consejo que el resto del despacho.
 
 Pruebas adicionales: `node --test test-gobierno-carpetas.cjs` (requiere jsdom) y `node --experimental-strip-types --test test-gobierno-constancias.mjs`.
+
+
+## Secretaría personal y Presidencia
+
+La Secretaría personal reúne el parte diario de Whitmore, las peticiones, audiencias, reuniones, compromisos autorizados, correspondencia y notas de relevo. El parte se calcula con los asuntos recientes; no inventa actuaciones. Las reuniones pueden incorporar asuntos pendientes; su cierre registra acta y encargos relacionados de forma atómica.
+
+Las peticiones siguen este circuito: recibida → borrador de consulta → consulta realmente trasladada con referencia → respuesta real registrada → autorización (con condiciones si procede), denegación o petición de aclaraciones. Para el rol, la administración del servidor está representada por la Presidencia de los Estados Unidos. Preparar o copiar un escrito no lo envía. No hay respuesta automática ni aprobación por silencio.
+
+Solo Gobernador/administrador registra la respuesta presidencial; Secretaría gestiona el trámite. El servidor bloquea iniciar actuaciones sin autorización, impide plazos en denegaciones o aclaraciones y exige condiciones en autorizaciones condicionadas. El plazo de ejecución solo se comunica si figura expresamente autorizado. Fechas de revisión y encargos son internas. Las ideas de campaña requieren vincular una petición autorizada para incorporarse.
+
+Los canales privados `📬・peticiones-ciudadanas` y `🦅・correspondencia-presidencial` conservan las fichas y los borradores, con enlaces al original. La creación de borradores no remite mensajes al staff. Las audiencias, actas y encargos usan los canales existentes. Los relevos conservan lo hecho, lo pendiente y la próxima actuación.

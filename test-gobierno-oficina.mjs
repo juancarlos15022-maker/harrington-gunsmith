@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {respuestaCiudadano,consultaPresidente,oficina} from './supabase/functions/discord-whitmore/oficina.ts';
+const pet=estado=>({id:7,tipo:'peticion',estado,datos:{titulo:'Mercado',ciudadano:'Ana',texto:'Abrir mercado',resolucion:'Solo una ubicación',condiciones:'Sin gasto público',plazo_autorizado:'25 de octubre'}});
+test('Las respuestas pendientes y denegadas nunca anuncian un plazo ni una realización',()=>{for(const estado of ['recibida','en_valoracion','aclaraciones','denegada']){const t=respuestaCiudadano(pet(estado));assert.doesNotMatch(t,/25 de octubre|Unidos ha autorizado la actuación/)}assert.match(consultaPresidente(pet('recibida')),/No se ha comprometido su realización/)});
+test('Una autorización conserva condiciones y solo comunica el plazo registrado',()=>{const r=pet('condicionada');assert.match(respuestaCiudadano(r),/Sin gasto público/);assert.match(respuestaCiudadano(r),/25 de octubre/);delete r.datos.plazo_autorizado;assert.match(respuestaCiudadano(r),/No se ha confirmado un plazo/)});
+test('Solo el superior puede registrar respuestas y solo Secretaría gestiona los trámites',async()=>{let rpc=false;const ctx={sb:{rpc(){rpc=true;throw Error('No debe invocarse')}}};await assert.rejects(()=>oficina(ctx,{accion:'oficina_resolucion'},{roles:{gobernacion:true}}),/Solo el Gobernador/);await assert.rejects(()=>oficina(ctx,{accion:'oficina_iniciar'},{roles:{}}),/Secretaría/);assert.equal(rpc,false)});

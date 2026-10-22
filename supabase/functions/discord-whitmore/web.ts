@@ -1,3 +1,4 @@
+import {oficina} from "./oficina.ts";
 import {actualizarCuentas} from './cuentas.ts';
 // Web del Gobierno de Silver Peak (22/10/2026): la web llama aquí ({web:true, accion, sesion, …}).
 // Entrada con el enlace de /acceso; sesiones de 30 días; los roles se vuelven a mirar en Discord cada 10 minutos
@@ -80,7 +81,7 @@ const necesita = (y: Any, ...k: string[]) => { if (!k.some((r) => y.roles[r] || 
 const quien = (y: Any) => ({ id: y.id, nombre: y.nombre });
 
 async function organizacion(ctx:Ctx){
- const claves=['web','comandos','chat','agenda','campana','telegramas','documentos','cuentas','area_economia','area_comercio','area_justicia','area_seguridad','registro','actas','seguimiento'];
+ const claves=['web','comandos','chat','agenda','campana','telegramas','documentos','cuentas','area_economia','area_comercio','area_justicia','area_seguridad','registro','actas','seguimiento','peticiones','presidencia'];
  const canales=Object.fromEntries(claves.filter(k=>/^\d{17,20}$/.test(ctx.c['canal_'+k]||'')).map(k=>[k,'https://discord.com/channels/'+ctx.c.guild_id+'/'+ctx.c['canal_'+k]]));
  const pendientes=await ctx.sb.from('gob_difusion').select('id',{count:'exact',head:true}).is('enviado',null);
  const fallos=await ctx.sb.from('gob_difusion').select('id',{count:'exact',head:true}).is('enviado',null).not('error','is',null);
@@ -113,6 +114,7 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
       const rows=r.data||[],mas=rows.length>60;rows.splice(60);
       return J({ok:true,yo,registros:rows.map((x:Any)=>({...plano(x),datos:{...x.datos,_discord:undefined}})),mas,antes:rows.at(-1)?.id,organizacion:await organizacion(ctx)});
     }
+    if(a.startsWith("oficina")){return J({ok:true,...await oficina(ctx,b,y)});}
     if(a.startsWith("hacienda")) {const r=await hacienda(ctx,b,y);return J({ok:true,...r});}
     if(a.startsWith("secretarias")) {const r=await secretarias(ctx,b,y);if(a!=="secretarias")await actualizarCuentas(ctx);return J({ok:true,...r});}
     if(a.startsWith("campana")) {const r=await campana(ctx,b,y);return J({ok:true,...r});}
@@ -159,7 +161,7 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
       if (r.estado !== "pendiente") throw new Fallo("YA_CONTESTADA", 409);
       if (!b.aceptar) { const r2 = await cambiar(ctx, r.id, { estado: "rechazada", datos: { ...r.datos, decide: y.nombre, razon: limpio(b.razon, 400) } }); await repintar(ctx, r2, tarjetaAudiencia(r2)); return J({ ok: true }); }
       const t = leerFecha(String(b.fecha || ""), String(b.hora || "")); if (!t) throw new Fallo("FECHA");
-      const cita = await nuevo(ctx, "cita", { ...base, cuando: new Date(t).toISOString(), datos: { con: r.datos.quien, lugar: limpio(b.lugar, 100), motivo: r.datos.motivo, audiencia: r.numero } });
+      const cita = await nuevo(ctx, "cita", { ...base, cuando: new Date(t).toISOString(), datos: { con: r.datos.quien, lugar: limpio(b.lugar, 100), motivo: r.datos.motivo, audiencia: r.numero,peticion_id:r.datos.peticion_id||null } });
       await publicar(ctx, cita, c.canal_agenda, tarjetaCita(cita));
       const r2 = await cambiar(ctx, r.id, { estado: "aceptada", cuando: new Date(t).toISOString(), datos: { ...r.datos, decide: y.nombre, lugar: limpio(b.lugar, 100), cita: cita.numero } });
       await repintar(ctx, r2, tarjetaAudiencia(r2));

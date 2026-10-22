@@ -8,7 +8,7 @@ export async function campana(ctx:Ctx,b:Any,y:Any):Promise<Any>{
  const admin=y.roles.admin||y.roles.gobernador;
  const lista=async()=>{const r=await ctx.sb.from('gob_registros').select('*').in('tipo',['campana','idea_campana','hito_electoral','acto']).order('creado',{ascending:false}).limit(250);if(r.error)throw Error('No he podido abrir el archivo de campaña.');return r.data||[];};
  const rows=await lista(), expediente=rows.find((r:Any)=>r.tipo==='campana');
- if(b.accion==='campana')return {registros:rows.map((r:Any)=>({...r,datos:{...r.datos,_discord:undefined}})),puedeEditar:jefe,puedeResolver:admin};
+ if(b.accion==='campana'){const av=await ctx.sb.from('gob_registros').select('id,estado,datos').eq('tipo','peticion').in('estado',['autorizada','condicionada','en_curso','cumplida']).order('id',{ascending:false}).limit(100);if(av.error)throw Error('No he podido consultar las autorizaciones.');return {autorizaciones:(av.data||[]).map((r:Any)=>({id:r.id,titulo:r.datos.titulo})),registros:rows.map((r:Any)=>({...r,datos:{...r.datos,_discord:undefined}})),puedeEditar:jefe,puedeResolver:admin};}
  const base={autor:y.nombre,autor_id:y.id};
  if(b.accion==='campana_expediente'){
   if(!jefe)throw Error('No tiene permiso para modificar la postulación.');
@@ -38,7 +38,8 @@ export async function campana(ctx:Ctx,b:Any,y:Any):Promise<Any>{
  if(b.accion==='campana_estado'){
   const r=await leer(ctx,Number(b.id));if(!r||!['idea_campana','hito_electoral','acto'].includes(r.tipo))throw Error('No encuentro ese asiento.');if(!jefe)throw Error('Solo la Secretaría o el Gobernador pueden cerrar ese asiento.');
   const permitidos=r.tipo==='idea_campana'?['propuesta','incorporada','descartada']:r.tipo==='acto'?['previsto','cerrada','cancelada']:['previsto','cumplido','cancelado'];if(!permitidos.includes(b.estado))throw Error('Situación no válida.');
-  const u=await cambiar(ctx,r.id,{estado:b.estado,datos:{...r.datos,seguimiento:limpio(b.notas,2000)}});if(!u)throw Error('No he podido guardar el seguimiento.');await repintar(ctx,u,r.tipo==='acto'?await tarjetaReunion(ctx,u):tarjeta(u));return {registro:u};
+  let aval=r.datos.peticion_autorizada||null;if(r.tipo==='idea_campana'&&b.estado==='incorporada'){const a=await leer(ctx,Number(b.peticion_id));if(a?.tipo!=='peticion'||!['autorizada','condicionada','en_curso','cumplida'].includes(a.estado))throw Error('Antes de incorporar una actuación comprometida al escrito, vincule una petición autorizada por la Presidencia.');aval=a.id;}
+  const u=await cambiar(ctx,r.id,{estado:b.estado,datos:{...r.datos,peticion_autorizada:aval,seguimiento:limpio(b.notas,2000)}});if(!u)throw Error('No he podido guardar el seguimiento.');await repintar(ctx,u,r.tipo==='acto'?await tarjetaReunion(ctx,u):tarjeta(u));return {registro:u};
  }
  throw Error('Orden de campaña desconocida.');
 }
