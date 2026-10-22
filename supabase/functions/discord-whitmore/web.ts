@@ -79,6 +79,13 @@ async function conVotos(ctx: Ctx, l: Any[]) {
 const necesita = (y: Any, ...k: string[]) => { if (!k.some((r) => y.roles[r] || y.roles.admin)) throw new Fallo("SIN_PERMISO", 403); };
 const quien = (y: Any) => ({ id: y.id, nombre: y.nombre });
 
+async function organizacion(ctx:Ctx){
+ const claves=['web','comandos','chat','agenda','campana','telegramas','documentos','cuentas','area_economia','area_comercio','area_justicia','area_seguridad','registro','actas','seguimiento'];
+ const canales=Object.fromEntries(claves.filter(k=>/^\d{17,20}$/.test(ctx.c['canal_'+k]||'')).map(k=>[k,'https://discord.com/channels/'+ctx.c.guild_id+'/'+ctx.c['canal_'+k]]));
+ const pendientes=await ctx.sb.from('gob_difusion').select('id',{count:'exact',head:true}).is('enviado',null);
+ const fallos=await ctx.sb.from('gob_difusion').select('id',{count:'exact',head:true}).is('enviado',null).not('error','is',null);
+ return {canales,pendientes:pendientes.error?null:pendientes.count,reintentos:fallos.error?null:fallos.count};
+}
 export async function web(ctx: Ctx, b: Any): Promise<Response> {
   const J=(o:any,status=200)=>respuesta({...o,...(ctx.avisos?.length?{avisos:[...new Set(ctx.avisos)]}:{})},status);
   try {
@@ -86,9 +93,16 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
     if (a === "entrar") return J({ ok: true, ...(await entrar(ctx, String(b.t || ""))) });
     const y = await sesionDe(ctx, String(b.sesion || ""));
     const base = { autor: y.nombre, autor_id: y.id };
-    if(a==="yo")return J({ok:true,yo:{...y,cargo:cargo(y.roles),h:undefined}});
+    if(a==="yo")return J({ok:true,yo:{...y,cargo:cargo(y.roles),h:undefined},organizacion:await organizacion(ctx)});
     const yo = { id: y.id, nombre: y.nombre, avatar: y.avatar, roles: y.roles, cargo: cargo(y.roles) };
 
+    if(a==='archivo'){
+      let q=ctx.sb.from('gob_registros').select('*').in('tipo',['decreto','acta']).neq('estado','descartado').order('id',{ascending:false}).limit(61);
+      if(b.antes)q=q.lt('id',Number(b.antes));
+      const r=await q;if(r.error)throw Error('No he podido consultar el archivo.');
+      const rows=r.data||[],mas=rows.length>60;rows.splice(60);
+      return J({ok:true,yo,registros:rows.map((x:Any)=>({...plano(x),datos:{...x.datos,_discord:undefined}})),mas,antes:rows.at(-1)?.id,organizacion:await organizacion(ctx)});
+    }
     if(a.startsWith("hacienda")) {const r=await hacienda(ctx,b,y);return J({ok:true,...r});}
     if(a.startsWith("secretarias")) {const r=await secretarias(ctx,b,y);if(a!=="secretarias")await actualizarCuentas(ctx);return J({ok:true,...r});}
     if(a.startsWith("campana")) {const r=await campana(ctx,b,y);return J({ok:true,...r});}
@@ -144,6 +158,7 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
     }
     if (a === "docs") {
       const docs = await lista(ctx, "decreto", (q) => q.neq("estado", "descartado").order("creado", { ascending: false }), 60);
+      if(b.id&&!docs.some((d:Any)=>d.id===Number(b.id))){const elegido=await leer(ctx,Number(b.id));if(elegido?.tipo==='decreto'&&elegido.estado!=='descartado')docs.unshift(plano(elegido));}
       for (const d of docs) d.texto = textoDocumento({ datos: d.datos });
       return J({ ok: true, yo, docs, firma: { nombre: c.firma_nombre || "", cargo: c.firma_cargo || "Gobernador" } });
     }

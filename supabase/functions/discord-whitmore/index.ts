@@ -1,3 +1,4 @@
+import {difundir,difundirEnSegundoPlano} from "./difusion.ts";
 // Señor Whitmore · bot de Discord del gobierno (22/10/2026).
 // Recibe las órdenes con /, los botones y los formularios de Whitmore (Interactions Endpoint URL del portal de Discord).
 // Va aparte del Señor Harrington y de la web de la armería: configuración en whitmore_cfg, datos en gob_registros / gob_votos.
@@ -43,7 +44,7 @@ async function control(body: any, c: Record<string, string>) {
   const tk = token(c);
   if (body.preview) return json({ ok: true, token: !!tk, app: c.app_id });
   if (!tk) return json({ error: "FALTA_TOKEN" }, 503);
-  if (body.cron) { try { return json({ ok: true, hecho: await revision(ctxDe(c)) }); } catch (e) { return json({ error: String((e as Error).message || e) }, 500); } }
+  if (body.cron) { try { const ctx=ctxDe(c);const hecho=await revision(ctx);const publicados=await difundir(ctx,12);return json({ ok: true, hecho, publicados }); } catch (e) { return json({ error: String((e as Error).message || e) }, 500); } }
   if (body.registrar) {
     const r = await fetch(`https://discord.com/api/v10/applications/${c.app_id}/guilds/${c.guild_id}/commands`, { method: "PUT", headers: { Authorization: "Bot " + tk, "Content-Type": "application/json" }, body: JSON.stringify(COMANDOS) });
     const d = await r.json().catch(() => null);
@@ -85,7 +86,7 @@ Deno.serve(async (req) => {
   if (!req.headers.get("x-signature-ed25519")) {
     let b: any = null; try { b = JSON.parse(cuerpo); } catch { /* */ }
     // la web del gobierno (con su sesión), sin la clave de control
-    if (b && b.web === true) return web(ctxDe(c), b);
+    if (b && b.web === true) {const ctx=ctxDe(c);const respuesta=await web(ctx,b);if(respuesta.ok)difundirEnSegundoPlano(ctx);return respuesta;}
     return control(b, c);
   }
   if (!(await firmaOk(req, cuerpo, c.public_key))) return new Response("firma no válida", { status: 401 });
@@ -95,9 +96,7 @@ Deno.serve(async (req) => {
   if (i.guild_id && c.guild_id && i.guild_id !== c.guild_id) return eph("El Sr. Whitmore solo atiende en el servidor de la casa.");
   try {
     const ctx = ctxDe(c);
-    if (i.type === 2) return await orden(ctx, i);
-    if (i.type === 3) return await boton(ctx, i);
-    if (i.type === 5) return await formulario(ctx, i);
+    if ([2,3,5].includes(i.type)) {const respuesta=await (i.type===2?orden(ctx,i):i.type===3?boton(ctx,i):formulario(ctx,i));difundirEnSegundoPlano(ctx);return respuesta;}
     return eph("No sé qué hacer con esto.");
   } catch (e) {
     const m = String((e as Error)?.message || e);

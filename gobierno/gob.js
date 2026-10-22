@@ -5,7 +5,7 @@
 'use strict';
 var API='https://mrlpvjxuifvspeaqtscm.supabase.co/functions/v1/discord-whitmore', KS='gob_sesion';
 var D=document, $=function(s,r){return (r||D).querySelector(s)}, $$=function(s,r){return [].slice.call((r||D).querySelectorAll(s))};
-var vista=$('#vista'), YO=null, cache={};
+var vista=$('#vista'), YO=null, cache={},ORGANIZACION={canales:{}};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function store(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}}
 var MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
@@ -24,7 +24,7 @@ function api(accion,datos){
  return fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cuerpo)})
   .then(function(r){return r.json().catch(function(){return {ok:false,error:'ERROR'}}).then(function(j){
    if(j&&(j.error==='SIN_SESION'||j.error==='SIN_ROL')){store(KS,null);mostrarEntrada(j.error==='SIN_ROL'?'Su rol del Consejo de Gobierno ya no está en Discord, así que se ha cerrado la sesión.':'Su sesión ha caducado. Escriba /acceso en Discord para volver a entrar.');throw j}
-   if(!j.ok)throw j;if(j.yo){YO=j.yo;pintarYo()}if(j.avisos)setTimeout(function(){aviso(j.avisos.join(' '),true)},100);return j})},function(){throw {error:'RED'}});
+   if(!j.ok)throw j;if(j.organizacion){ORGANIZACION=j.organizacion;repConexion()}if(j.yo){YO=j.yo;pintarYo()}if(j.avisos)setTimeout(function(){aviso(j.avisos.join(' '),true)},100);return j})},function(){throw {error:'RED'}});
 }
 function fallo(e){if(e&&(e.error==='SIN_SESION'||e.error==='SIN_ROL'))return;aviso(e&&e.detalle||ERR[e&&e.error]||ERR.ERROR,true)}
 
@@ -49,11 +49,11 @@ $('#salir').onclick=function(){api('salir').catch(function(){}).then(function(){
 var esGob=function(){return YO&&(YO.roles.gobernador||YO.roles.admin)};
 
 /* ---------- rutas ---------- */
-var VISTAS={despacho:vDespacho,agenda:vAgenda,documentos:vDocumentos,telegramas:vTelegramas,campana:vCampana,secretarias:vSecretarias,hacienda:vHacienda};
+var VISTAS={despacho:vDespacho,agenda:vAgenda,documentos:vDocumentos,telegramas:vTelegramas,campana:vCampana,secretarias:vSecretarias,hacienda:vHacienda,archivo:vArchivo};
 function ruta(){
  var v=(location.hash||'#despacho').slice(1).split('/')[0];if(!VISTAS[v])v='despacho';
  $$('.menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v===v);if(a.dataset.v){if(a.dataset.v===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')}});
- document.title=({despacho:'Mesa de trabajo',campana:'Oficina de campaña',agenda:'Agenda y encuentros',telegramas:'Telégrafo',documentos:'Documentos y firmas',secretarias:'Secretarías',hacienda:'Tesorería y cuentas'}[v])+' · Partido Republicano · Silver Peak';repMenuCerrar();
+ document.title=({despacho:'Mesa de trabajo',campana:'Oficina de campaña',agenda:'Agenda y encuentros',telegramas:'Telégrafo',documentos:'Documentos y firmas',secretarias:'Secretarías',hacienda:'Tesorería y cuentas',archivo:'Archivo oficial'}[v])+' · Partido Republicano · Silver Peak';repMenuCerrar();
  vista.innerHTML='<p class="cargando" role="status">Whitmore está abriendo el libro…</p>';VISTAS[v]();try{vista.focus({preventScroll:true})}catch(e){}
 }
 window.addEventListener('hashchange',ruta);
@@ -62,7 +62,15 @@ var repMenu=$('#repMenu');if(repMenu)repMenu.onclick=function(){var abrir=this.g
 document.addEventListener('keydown',function(e){if(e.key==='Escape')repMenuCerrar()});
 var repSaltar=$('[data-rep-saltar]');if(repSaltar)repSaltar.onclick=function(e){e.preventDefault();vista.focus();vista.scrollIntoView({block:'start'})};
 
-function cab(pre,titulo,lado){var e=(location.hash||'#despacho').slice(1).split('/')[0];return '<div class="cab" data-e="'+esc(VISTAS[e]?e:'despacho')+'"><div><div class="pre">'+pre+'</div><h1>'+titulo+'</h1><img class="sep" src="img/separador.webp" alt="" width="230" height="39"></div>'+(lado?'<div class="lado">'+lado+'</div>':'')+'</div>'}
+function repCanal(k,label){var u=(ORGANIZACION.canales||{})[k];return u?'<a class="btn rep-discord" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(label||'Abrir el canal de Discord')+' <span aria-hidden="true">↗</span></a>':''}
+function repConexion(){var el=$('#repConexion');if(!el)return;var n=ORGANIZACION.pendientes;el.textContent=n==null?'Registro de publicaciones':n?n+' publicaciones en la bandeja':'Publicaciones al día';el.className=n?'rep-sinc pendiente':'rep-sinc';}
+function cab(pre,titulo,lado){
+ var e=(location.hash||'#despacho').slice(1).split('/')[0],area=location.hash.split('/')[1]||'';
+ var defs={agenda:['Una semana, todos los encuentros.','Citas, audiencias y reuniones con su fecha y sus acuerdos.','agenda'],documentos:['Cada escrito, con su firma.','Prepare el borrador, revíselo y autorice el documento antes de archivarlo.','documentos'],telegramas:['La correspondencia, en orden.','Entrada, respuesta y constancia de cada comunicación.','telegramas'],secretarias:['Un libro para cada competencia.','Expedientes, responsables y seguimiento de principio a fin.',area?'area_'+area:'seguimiento'],hacienda:['El destino de cada centavo.','Autorizaciones, movimientos y comprobación de los fondos.','cuentas'],archivo:['La memoria de nuestro trabajo.','Documentos, actas y registro de las publicaciones oficiales.','registro']};
+ var h='<div class="cab" data-e="'+esc(VISTAS[e]?e:'despacho')+'"><div><div class="pre">'+pre+'</div><h1>'+titulo+'</h1></div>'+(lado?'<div class="lado">'+lado+'</div>':'')+'</div>';
+ var d=defs[e];if(d)h+='<section class="rep-lamina" data-libro="'+esc(e)+'" data-area="'+esc(area)+'"><div><span class="pre">LOS LIBROS DEL COMITÉ · 1880</span><h2>'+d[0]+'</h2><p>'+d[1]+'</p>'+repCanal(d[2])+'</div><img src="img/escudo-republicano.webp" alt="" width="100" height="100"></section>';
+ return h;
+}
 function vacioImg(img,txt){return '<div class="vacio-img"><img src="img/'+img+'" alt="" width="110" height="74">'+txt+'</div>'}
 function plural(n,uno,varios){return n+' '+(n===1?uno:varios)}
 function saludo(){var h=new Date().getHours();return h>=6&&h<14?'Buenos días':h>=14&&h<21?'Buenas tardes':'Buenas noches'}
@@ -79,6 +87,7 @@ function vDespacho(){
   h+=cab('LA MESA DEL COMITÉ',saludo()+', '+esc(YO.nombre.split(' ')[0]),'<span class="rep-edicion">EL PARTE DE HOY · 1880</span>');
   h+='<section class="rep-portada"><div class="rep-portada-imagen"><div class="rep-portada-texto"><span class="rep-cintillo">PARTIDO REPUBLICANO · SILVER PEAK</span><h2>Una candidatura.<br>Un trabajo compartido.</h2><p>El lugar donde se prepara el proyecto, se reúne al equipo y se deja constancia de cada acuerdo.</p><a class="btn oro" href="#campana">Abrir la oficina de campaña <span aria-hidden="true">→</span></a></div></div><aside class="rep-carpeta"><span class="pre">LOS LIBROS DE LA SEDE</span><h2>¿Por dónde empezamos?</h2><a href="#documentos"><span class="rep-numero">01</span><span><b>Preparar o firmar un escrito</b><small>Documentos y autorizaciones</small></span><span aria-hidden="true">→</span></a><a href="#agenda"><span class="rep-numero">02</span><span><b>Organizar un encuentro</b><small>Citas, reuniones y audiencias</small></span><span aria-hidden="true">→</span></a><a href="#hacienda"><span class="rep-numero">03</span><span><b>Revisar los fondos</b><small>Movimientos, sueldos y alcaldías</small></span><span aria-hidden="true">→</span></a><a href="#secretarias"><span class="rep-numero">04</span><span><b>Atender un expediente</b><small>Los asuntos de cada Secretaría</small></span><span aria-hidden="true">→</span></a></aside></section>';
 
+  h+='<nav class="rep-accesos" aria-label="Trámites habituales"><a href="#documentos"><img src="img/i-pluma.webp" alt=""><span><b>Revisar y firmar</b><small>La mesa del Gobernador</small></span><span>→</span></a><a href="#secretarias"><img src="img/i-pergamino.webp" alt=""><span><b>Gestionar un asunto</b><small>Los libros de las áreas</small></span><span>→</span></a><a href="#archivo"><img src="img/i-sobre-abierto.webp" alt=""><span><b>Consultar el archivo</b><small>Documentos y acuerdos</small></span><span>→</span></a></nav>';
   h+='<div class="cifras">'+
    '<div class="tarjeta cifra"><img src="img/i-reloj.webp" alt="" width="40" height="62"><div class="et">Elecciones</div><div class="num oro">'+(faltan!=null?faltan+(faltan===1?' día':' días'):'—')+'</div><div class="et">'+(faltan!=null?esc(diaLargo(j.elecciones)):'Calendario electoral pendiente')+'</div></div>'+
    '<div class="tarjeta cifra"><img src="img/i-pluma.webp" alt="" width="62" height="62"><div class="et">Por firmar</div><div class="num">'+j.borradores.length+'</div><div class="et">documentos</div></div>'+
@@ -162,19 +171,40 @@ function vAgenda(){
  }).catch(fallo);
 }
 
+/* ---------- archivo oficial ---------- */
+var ARCHIVO=[],ARC_CURSOR=null,ARC_MAS=false;
+function vArchivo(anterior){
+ if(typeof anterior!=='number')ARCHIVO=[];
+ api('archivo',{antes:typeof anterior==='number'?anterior:null}).then(function(j){
+  ARCHIVO=ARCHIVO.concat(j.registros);ARC_CURSOR=j.antes;ARC_MAS=j.mas;
+  var h=cab('MEMORIA Y CONTROL DOCUMENTAL','Archivo oficial','<a class="btn oro" href="#documentos">Ir a la mesa de firmas</a>');
+  h+='<section class="rep-archivo-ruta" aria-label="Recorrido de un documento"><div><span>01</span><b>Preparación</b><small>Borrador en su área</small></div><div><span>02</span><b>Autorización</b><small>Firma del Gobernador</small></div><div><span>03</span><b>Registro</b><small>Documento numerado</small></div><div><span>04</span><b>Seguimiento</b><small>Estado y constancia</small></div></section>';
+  h+='<section class="tarjeta rep-archivo"><div class="tit"><div><span class="pre">ÍNDICE DE ESCRITOS Y ACTAS</span><h2>Consultar un documento</h2></div><span class="etq">'+ARCHIVO.length+' cargados</span></div><div class="rep-filtros"><label class="campo">Buscar<input type="search" id="arcBuscar" placeholder="Asunto, firmante, número o contenido"></label><label class="campo">Área<select id="arcArea"><option value="">Todas las áreas</option><option value="general">Consejo y actas</option><option value="economia">Economía</option><option value="comercio">Comercio</option><option value="justicia">Justicia</option><option value="seguridad">Seguridad</option></select></label><label class="campo">Estado<select id="arcEstado"><option value="">Todos</option><option value="firmado">Firmados</option><option value="borrador">Pendientes de firma</option><option value="acta">Actas</option></select></label></div><div id="arcLista"></div><p class="nota" id="arcCantidad" role="status" aria-live="polite"></p>'+(ARC_MAS?'<button class="btn" id="arcMas">Cargar documentos anteriores</button>':'')+'</section>';
+  h+='<section class="tarjeta rep-canales"><div><span class="pre">LOS MISMOS LIBROS, EN DISCORD</span><h2>Canales del archivo</h2><p>Cada publicación enlaza con su asiento en la web. Los cambios de estado quedan en seguimiento y los documentos firmados, en el registro oficial.</p></div><div>'+repCanal('registro','Documentos firmados')+repCanal('actas','Actas y acuerdos')+repCanal('seguimiento','Seguimiento de trámites')+repCanal('cuentas','Libro de cuentas')+'</div><p class="nota">'+(ORGANIZACION.pendientes==null?'Estado de la bandeja no disponible.':ORGANIZACION.pendientes?ORGANIZACION.pendientes+' publicaciones pendientes de entrega.':'No hay publicaciones pendientes de entrega.')+(ORGANIZACION.reintentos?' '+ORGANIZACION.reintentos+' se volverán a intentar.':'')+'</p></section>';vista.innerHTML=h;
+  function pintar(){var q=$('#arcBuscar').value.trim().toLocaleLowerCase(),area=$('#arcArea').value,estado=$('#arcEstado').value;
+   var rows=ARCHIVO.filter(function(r){return (!area||(r.datos.area||'general')===area)&&(!estado||(estado==='acta'?r.tipo==='acta':r.tipo==='decreto'&&r.estado===estado))&&(!q||[r.datos.titulo,r.datos.texto,r.datos.acuerdos,r.datos.firmadoPor,r.datos.area_nombre,r.datos.numDoc,r.numero].join(' ').toLocaleLowerCase().indexOf(q)>=0)});
+   $('#arcCantidad').textContent=rows.length+' de '+ARCHIVO.length+' documentos cargados'+(ARC_MAS?' · puede consultar los anteriores.':'.');
+   $('#arcLista').innerHTML=rows.length?rows.map(function(r){var d=r.datos,acta=r.tipo==='acta',estado=acta?'Acta archivada':r.estado==='firmado'?'Firmado':'Pendiente de firma';return '<article class="rep-archivo-ficha"><div class="rep-archivo-icono"><img src="img/'+(acta?'i-pergamino.webp':r.estado==='firmado'?'i-sobre-abierto.webp':'i-pluma.webp')+'" alt="" width="38" height="38"></div><div><div class="pre">'+esc(d.area_nombre||'Consejo de Silver Peak')+' · '+(acta?'Acta n.º '+r.numero:esc(cap(d.clase))+(d.numDoc?' n.º '+d.numDoc:''))+'</div><h3>'+esc(d.titulo)+'</h3><p>'+esc(acta?r.autor:d.firmadoPor||r.autor)+' · '+esc(secFecha(d.firmadoMs||r.creado))+'</p><span class="etq '+(r.estado==='firmado'?'ok':'')+'">'+estado+'</span></div>'+(acta?'<details class="rep-acta"><summary>Leer el acta</summary><div class="recibido">'+esc((d.asistentes?'Asistentes: '+d.asistentes+'\n\n':'')+(d.acuerdos||d.texto||'')+(d.notas?'\n\n'+d.notas:''))+'</div></details>':'<a class="btn" href="#documentos/'+r.id+'">Consultar escrito →</a>')+'</article>'}).join(''):'<div class="vacio-img"><img src="img/v-pergamino.webp" alt="" width="100" height="70"><p>No hay documentos con estos filtros.</p></div>';
+  }
+  $('#arcBuscar').oninput=pintar;$('#arcArea').onchange=pintar;$('#arcEstado').onchange=pintar;var mas=$('#arcMas');if(mas)mas.onclick=function(){mas.disabled=true;vArchivo(ARC_CURSOR)};pintar();
+ }).catch(fallo);
+}
+
 /* ---------- documentos ---------- */
 var docSel=null;
 function vDocumentos(){
  var pre=(location.hash.split('/')[1]||'');
- api('docs').then(function(j){
+ api('docs',{id:pre?Number(pre):null}).then(function(j){
   cache.docs=j;var docs=j.docs;
   if(pre&&docs.some(function(d){return String(d.id)===pre}))docSel=Number(pre);
   var h=cab('DOCUMENTOS','Redactar y firmar','<button type="button" class="btn oro" id="docNuevo">Nuevo documento</button>');
   var lis=docs.length?docs.map(function(d){return '<button type="button" class="doc-it'+(d.id===docSel?' on':'')+'" data-doc="'+d.id+'">'+(d.estado==='firmado'?'<span class="lacre-mini" aria-hidden="true"></span>':'<img src="img/i-pluma.webp" alt="" width="34" height="34">')+'<span class="tx"><span>'+esc(cap(d.datos.clase))+(d.datos.numDoc?' n.º '+d.datos.numDoc:'')+' · '+esc(d.datos.titulo)+'</span><span class="s">'+(d.estado==='firmado'?'Firmado':'Borrador · '+esc(d.autor))+'</span></span></button>'}).join(''):vacioImg('v-pergamino.webp','Todavía no hay documentos.');
-  h+='<div class="fila"><section class="tarjeta doc-lista"><h2>Archivo</h2>'+lis+'</section><section class="tarjeta" style="flex:1 1 340px" id="docEd"></section><div style="flex:1 1 460px;min-width:0" id="docPrev"></div></div>';
+  h+='<div class="fila"><section class="tarjeta doc-lista"><h2>Escritos</h2><label class="campo">Buscar documento<input id="docBuscar" type="search" placeholder="Asunto, número o Secretaría"></label><label class="campo">Estado<select id="docEstado"><option value="">Todos los escritos</option><option value="borrador">Pendientes de firma</option><option value="firmado">Firmados</option></select></label><p class="nota">Últimos escritos consultados · <a href="#archivo">abrir el archivo completo</a></p>'+lis+'<p class="vacio" id="docSinResultados" hidden>No hay escritos con estos filtros.</p></section><section class="tarjeta" style="flex:1 1 340px" id="docEd"></section><div style="flex:1 1 460px;min-width:0" id="docPrev"></div></div>';
   vista.innerHTML=h;
   $('#docNuevo').onclick=function(){docSel=null;history.replaceState(null,'','#documentos');editor(null)};
   $$('[data-doc]').forEach(function(b){b.onclick=function(){docSel=Number(b.dataset.doc);$$('.doc-it').forEach(function(x){x.classList.toggle('on',x===b)});editor(docs.find(function(d){return d.id===docSel}))}});
+  function filtrarDocs(){var q=$('#docBuscar').value.trim().toLocaleLowerCase(),est=$('#docEstado').value;$$('[data-doc]').forEach(function(b){var d=docs.find(function(x){return x.id===Number(b.dataset.doc)}),txt=[d.datos.titulo,d.datos.numDoc,d.datos.area_nombre].join(' ').toLocaleLowerCase();b.hidden=!!(est&&d.estado!==est||q&&txt.indexOf(q)<0)});var v=$('#docSinResultados');if(v)v.hidden=$$('[data-doc]').some(function(b){return !b.hidden})||!docs.length;}
+  $('#docBuscar').oninput=filtrarDocs;$('#docEstado').onchange=filtrarDocs;
   editor(docSel?docs.find(function(d){return d.id===docSel}):null);
  }).catch(fallo);
 }

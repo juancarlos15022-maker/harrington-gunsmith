@@ -133,7 +133,7 @@ export async function tarjetaReunion(ctx: Ctx, r: Any) {
 }
 function tarjetaActa(r: Any) {
   const d = r.datos;
-  return { embeds: [{ title: `📜 Acta n.º ${r.numero} · ${d.titulo}`, color: GRIS,
+  return { embeds: [{ title: `📜 Acta n.º ${r.numero} · ${d.titulo}`, color: GRIS, thumbnail:{url:"https://juancarlos15022-maker.github.io/harrington-gunsmith/gobierno/img/escudo-republicano.webp"},url:"https://juancarlos15022-maker.github.io/harrington-gunsmith/gobierno/#archivo",
     description: `**Reunión del** ${fechaTxt(d.fecha)}\n**Asistentes:** ${d.asistentes || "—"}\n\n**Acuerdos**\n${d.acuerdos}` + (d.notas ? `\n\n**Notas**\n${d.notas}` : ""), footer: { text: `Redactada por ${r.autor} · Sr. Whitmore` } }] };
 }
 function saludo() { const h = partes(Date.now()).h; return h >= 6 && h < 14 ? "Buenos días" : h >= 14 && h < 21 ? "Buenas tardes" : "Buenas noches"; }
@@ -158,6 +158,8 @@ export function textoDocumento(r: Any) {
 export function tarjetaDecreto(r: Any) {
   const d = r.datos, est = r.estado;
   return { embeds: [{ title: `${est === "firmado" ? "🖋️" : est === "descartado" ? "🗑️" : "📝"} ${TIPO_DOC[d.clase] || "Documento"}${d.numDoc ? " n.º " + d.numDoc : ""} · ${d.titulo}`, color: est === "firmado" ? ORO : est === "descartado" ? GRIS : AZUL,
+    thumbnail:{url:"https://juancarlos15022-maker.github.io/harrington-gunsmith/gobierno/img/escudo-republicano.webp"},
+    url:"https://juancarlos15022-maker.github.io/harrington-gunsmith/gobierno/#documentos/"+r.id,
     description: (d.area_nombre ? `**Secretaría de ${d.area_nombre} · Expediente ${d.expediente}**\n${d.importeCents ? "Importe del expediente: "+dolar(d.importeCents)+"\n" : ""}` : "") + (est === "borrador" ? "*Borrador pendiente de la firma del gobernador.*\n\n" : "") + "```\n" + textoDocumento(r).replace(/```/g, "ˋˋˋ").slice(0, 3800) + "\n```",
     footer: { text: (est === "firmado" ? `Firmado el ${fechaTxt(d.firmadoMs)}` : est === "descartado" ? "Descartado" : `Redactado por ${r.autor}`) + " · Sr. Whitmore" } }],
     components: est === "borrador" ? [fila(btn("Firmar", "dec:firmar:" + r.id, 3, "🖋️"), btn("Editar", "dec:editar:" + r.id, 2, "✏️"), btn("Descartar", "dec:descartar:" + r.id, 4))] : [] };
@@ -480,7 +482,7 @@ export async function formulario(ctx: Ctx, i: Any): Promise<Response> {
   if (k === "reu" && accion === "acta") {
     const vt = await votos(ctx, id);
     const acta = await nuevo(ctx, "acta", { ...base, datos: { reunion: id, titulo: r.datos.titulo, fecha: new Date(r.cuando).getTime(), asistentes: vt.si.map((z: Any) => z.nombre).join(", "), acuerdos: limpio(v.acuerdos, 2500), notas: limpio(v.notas, 1000) } });
-    await publicar(ctx, acta, c.canal_documentos, tarjetaActa(acta));
+    await publicar(ctx, acta, (c.canal_actas||c.canal_documentos), tarjetaActa(acta));
     const r2 = await cambiar(ctx, id, { estado: "cerrada", datos: { ...r.datos, acta: acta.numero } }); await repintar(ctx, r2, await tarjetaReunion(ctx, r2));
     return eph(`📜 Acta n.º ${acta.numero} archivada en #documentos.`);
   }
