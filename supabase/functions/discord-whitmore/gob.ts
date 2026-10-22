@@ -157,7 +157,7 @@ export function textoDocumento(r: Any) {
 export function tarjetaDecreto(r: Any) {
   const d = r.datos, est = r.estado;
   return { embeds: [{ title: `${est === "firmado" ? "🖋️" : est === "descartado" ? "🗑️" : "📝"} ${TIPO_DOC[d.clase] || "Documento"}${d.numDoc ? " n.º " + d.numDoc : ""} · ${d.titulo}`, color: est === "firmado" ? ORO : est === "descartado" ? GRIS : AZUL,
-    description: (est === "borrador" ? "*Borrador pendiente de la firma del gobernador.*\n\n" : "") + "```\n" + textoDocumento(r).replace(/```/g, "ˋˋˋ").slice(0, 3800) + "\n```",
+    description: (d.area_nombre ? `**Secretaría de ${d.area_nombre} · Expediente ${d.expediente}**\n${d.importeCents ? "Importe del expediente: "+dolar(d.importeCents)+"\n" : ""}` : "") + (est === "borrador" ? "*Borrador pendiente de la firma del gobernador.*\n\n" : "") + "```\n" + textoDocumento(r).replace(/```/g, "ˋˋˋ").slice(0, 3800) + "\n```",
     footer: { text: (est === "firmado" ? `Firmado el ${fechaTxt(d.firmadoMs)}` : est === "descartado" ? "Descartado" : `Redactado por ${r.autor}`) + " · Sr. Whitmore" } }],
     components: est === "borrador" ? [fila(btn("Firmar", "dec:firmar:" + r.id, 3, "🖋️"), btn("Editar", "dec:editar:" + r.id, 2, "✏️"), btn("Descartar", "dec:descartar:" + r.id, 4))] : [] };
 }
@@ -408,6 +408,7 @@ export async function boton(ctx: Ctx, i: Any): Promise<Response> {
   if (k === "tel" && accion === "resp") return modal("tel:resp:" + id, "Respuesta a " + r.datos.de, [{ id: "texto", label: "Lo que quieres decir", largo: true, max: 1500 }]);
   if (k === "dec") {
     if (r.estado !== "borrador") return actualizar(tarjetaDecreto(r));
+    if(accion === "editar" && r.datos.area && !tiene(x,c,"gobernador"))return eph("Este escrito ya está en la mesa del Gobernador. Las enmiendas deben hacerse tras su devolución.");
     if (accion === "editar") return modal("dec:editar:" + id, "Editar documento", [{ id: "titulo", label: "Título", max: 100, value: r.datos.titulo }, { id: "texto", label: "Texto", largo: true, max: 3000, value: r.datos.texto }]);
     if (!tiene(x, c, "gobernador")) return eph("Solo el gobernador puede " + (accion === "firmar" ? "firmar" : "descartar") + " documentos.");
     if (accion === "descartar") { const r2 = await cambiar(ctx, id, { estado: "descartado" }); return actualizar(tarjetaDecreto(r2)); }
@@ -459,6 +460,7 @@ export async function formulario(ctx: Ctx, i: Any): Promise<Response> {
   }
   const r = await leer(ctx, id); if (!r) return eph("Ya no encuentro ese registro.");
   if (k === "dec" && accion === "editar") {
+    if(r.datos.area && !tiene(x,c,"gobernador"))return eph("Este escrito ya está elevado al Gobernador.");
     if (r.estado !== "borrador") return eph("Ese documento ya no es un borrador.");
     const r2 = await cambiar(ctx, id, { datos: { ...r.datos, titulo: limpio(v.titulo, 100), texto: limpio(v.texto, 3000), editadoPor: x.nombre } });
     await repintar(ctx, r2, tarjetaDecreto(r2)); return eph("✏️ Borrador actualizado.");

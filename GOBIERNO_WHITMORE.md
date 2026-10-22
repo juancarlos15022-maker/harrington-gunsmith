@@ -56,3 +56,14 @@ whitmore ← whitmore-avatar · marco-ovalado · esq-si/sd/ii/id ← esquina-orn
 i-reloj ← reloj-bolsillo · i-pluma ← dc-libro · i-llave ← dc-llave · i-moneda ← moneda-oro · i-calendario ← dc-calendario ·
 i-pergamino ← dc-pergamino · i-telegrafo ← icono-telegrafo · i-sobre / i-sobre-abierto ← sobre-cerrado / sobre-abierto ·
 v-telegrafo ← vacio-avisos · v-pergamino ← vacio-encargos · i-reloj2 ← dc-reloj (sin usar aún).
+
+## Secretarías y expedientes (22/10/2026)
+Economía, Comercio, Justicia y Seguridad, accesibles en `#secretarias`. Cada área incluye clases de expediente propias y libros comunes de correspondencia, encargos, compromisos, directorio, actas y relevo. El Consejo consulta los libros; solo el titular del área o el Gobernador los modifica.
+
+El Gobernador distribuye competencias desde cada Secretaría: puede asumirlas, delegarlas a varios miembros verificados del Consejo o conservar el cargo existente de Economía y Comercio para esas dos áreas. Las encomiendas se guardan en `whitmore_cfg.competencia_*` y se comprueban de nuevo en cada operación.
+
+Los escritos se elevan a Documentos y aparecen en el Despacho para firma. La remisión, devolución y ejecución son transacciones con bloqueo y versión del expediente. Un escrito elevado solo puede enmendarlo el Gobernador; si lo devuelve, la Secretaría prepara la nueva versión. El historial conserva las actuaciones y el expediente enlaza con su documento.
+
+Presupuestos, ingresos, gastos, licencias, convenios, disposiciones y órdenes requieren firma. Firmar autoriza; ejecutar un pago o ingreso exige un justificante y crea un único movimiento en las cuentas ya existentes. El parte del Despacho reúne los plazos pendientes y los libros admiten búsqueda, filtro y consulta de asientos anteriores.
+
+Servidor: `secretarias.ts`, acciones `secretarias*`. Las funciones SQL `gob_secretaria_asentar`, `gob_secretaria_cuentas` y `gob_secretaria_resumen` son invocables solo por service_role. No conceden roles de Discord ni designan automáticamente a nuevos secretarios.

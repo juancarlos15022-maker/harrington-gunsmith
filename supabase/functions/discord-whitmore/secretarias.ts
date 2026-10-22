@@ -1,0 +1,52 @@
+import {type Ctx,leer,publicar,repintar,tarjetaDecreto,leerFecha,dolar,fechaTxt} from './gob.ts';
+type Any=any;
+const COMUN={informe:'Informe',tarea:'Encargo de Secretaría',compromiso:'Compromiso de gobierno',contacto:'Directorio institucional',registro:'Correspondencia de entrada y salida',acta:'Acta y acuerdos',relevo:'Nota de relevo'};
+export const AREAS=[
+ {id:'economia',nombre:'Economía',lema:'Tesorería, presupuestos y cuentas del Gobierno',icono:'i-moneda.webp',clases:{presupuesto:'Propuesta de presupuesto',gasto:'Autorización de gasto',ingreso:'Asiento de ingreso',...COMUN}},
+ {id:'comercio',nombre:'Comercio',lema:'Negocios, licencias, convenios y abastecimiento',icono:'i-telegrafo.webp',clases:{negocio:'Registro de negocio',licencia:'Solicitud de licencia',convenio:'Propuesta de convenio',abastecimiento:'Abastecimiento y rutas',...COMUN}},
+ {id:'justicia',nombre:'Justicia',lema:'Peticiones, consultas y correspondencia con la judicatura',icono:'i-pergamino.webp',clases:{consulta:'Consulta a la judicatura',peticion:'Petición de amparo o revisión',disposicion:'Propuesta de disposición',...COMUN}},
+ {id:'seguridad',nombre:'Seguridad',lema:'Partes, incidencias y coordinación con los cuerpos de seguridad',icono:'i-llave.webp',clases:{parte:'Parte de seguridad',incidencia:'Incidencia de una localidad',orden:'Propuesta de orden de coordinación',...COMUN}}
+];
+const FIRMA=new Set(['presupuesto','gasto','ingreso','licencia','convenio','disposicion','orden']);
+const texto=(v:unknown,n=3000)=>String(v??'').trim().slice(0,n);
+export const esSuperior=(y:Any)=>!!(y.roles.gobernador||y.roles.admin);
+async function competencias(ctx:Ctx){const r=await ctx.sb.from('whitmore_cfg').select('clave,valor').like('clave','competencia_%');if(r.error)throw Error('No he podido abrir el libro de competencias.');return Object.fromEntries((r.data||[]).map((x:Any)=>{try{return [x.clave.slice(12),JSON.parse(x.valor)]}catch{return [x.clave.slice(12),{modo:'gobernador',titulares:[]}]}}));}
+async function facultades(ctx:Ctx,y:Any){const cfg=await competencias(ctx);const areas=AREAS.map(a=>{const c=cfg[a.id]||{modo:['economia','comercio'].includes(a.id)&&ctx.c.rol_economia?'secretaria_economia':'gobernador',titulares:[]};return {...a,competencia:c,gestiona:esSuperior(y)||(c.modo==='secretaria_economia'&&y.roles.economia)||(c.modo==='delegada'&&(c.titulares||[]).some((t:Any)=>t.id===y.id))};});return areas;}
+export function estadoExp(r:Any,docs:Any[]){const doc=docs.find(d=>d.id===r.datos.doc_id);return r.estado==='pendiente_firma'?(doc?.estado==='firmado'?'autorizado':doc?.estado==='descartado'?'devuelto':'pendiente_firma'):r.estado;}
+export async function secretarias(ctx:Ctx,b:Any,y:Any):Promise<Any>{
+ const areas=await facultades(ctx,y),superior=esSuperior(y),area=areas.find(a=>a.id===String(b.area||''));
+ if(b.accion==='secretarias_competencia'){
+  if(!superior)throw Error('Solo el Gobernador distribuye las competencias.');if(!area)throw Error('Secretaría desconocida.');
+  const modo=String(b.modo);if(!['gobernador','delegada','secretaria_economia'].includes(modo)||modo==='secretaria_economia'&&!['economia','comercio'].includes(area.id))throw Error('Competencia no válida.');
+  const ids=[...new Set(String(b.titulares||'').split(/[\s,;]+/).filter(Boolean))];if(ids.length>6||ids.some(id=>!/^\d{17,20}$/.test(id)))throw Error('Indique los identificadores de Discord de los titulares, separados por comas.');
+  if(modo==='delegada'&&!ids.length)throw Error('Indique al menos un titular para delegar el área.');
+  const titulares=[];for(const id of ids){let m;try{m=await ctx.api('GET',`/guilds/${ctx.c.guild_id}/members/${id}`)}catch{throw Error('No encuentro a uno de los titulares en este servidor.');}if(m.user?.bot)throw Error('La competencia debe recaer en una persona.');const roles=m.roles||[];if(![ctx.c.rol_consejo,ctx.c.rol_gobernador,ctx.c.rol_gobernacion,ctx.c.rol_economia].filter(Boolean).some(r=>roles.includes(r)))throw Error('El titular debe tener un rol del Consejo para acceder al despacho.');titulares.push({id,nombre:texto(m.nick||m.user.global_name||m.user.username,60)});}
+  const cfg={modo,titulares:modo==='delegada'?titulares:[]};const r=await ctx.sb.from('whitmore_cfg').upsert({clave:'competencia_'+area.id,valor:JSON.stringify(cfg),actualizado:new Date().toISOString()});if(r.error)throw Error('No he podido asentar el reparto de competencias.');await ctx.sb.from('whitmore_registro').insert({metodo:'COMPETENCIA',ruta:area.id,estado:200,motivo:('Encomienda por '+y.nombre+': '+JSON.stringify(cfg)).slice(0,400)});return {competencia:cfg};
+ }
+ if(b.accion==='secretarias'){
+  let q=ctx.sb.from('gob_registros').select('*').eq('tipo','secretaria').order('actualizado',{ascending:false});if(area)q=q.eq('datos->>area',area.id);if(b.antes)q=q.lt('actualizado',String(b.antes));const rr=await q.limit(101);if(rr.error)throw Error('No he podido abrir los expedientes.');
+  const rows=rr.data||[],hayMas=rows.length>100;rows.splice(100);if(b.expediente&&!rows.some((r:Any)=>r.id===Number(b.expediente))){const elegido=await leer(ctx,Number(b.expediente));if(elegido?.tipo==='secretaria'&&elegido.datos.area===area?.id)rows.unshift(elegido);}const ids=rows.map((r:Any)=>r.datos.doc_id).filter(Boolean);const dd=ids.length?await ctx.sb.from('gob_registros').select('id,estado,datos').in('id',ids):{data:[]};if(dd.error)throw Error('No he podido comprobar las firmas.');
+  const registros=rows.map((r:Any)=>({...r,estadoActual:estadoExp(r,dd.data||[]),datos:{...r.datos,_discord:undefined}}));
+  const verCuentas=area?.id==='economia'||superior;const balance=verCuentas?await ctx.sb.rpc('gob_secretaria_cuentas'):null;if(balance?.error)throw Error('No he podido consultar las cuentas.');const resumen=await ctx.sb.rpc('gob_secretaria_resumen');if(resumen.error)throw Error('No he podido consultar el parte de Secretarías.');return {areas,superior,resumen:resumen.data,registros,hayMas,antes:rows.at(-1)?.actualizado,cuentas:balance?.data||null};
+ }
+ const original=b.id?await leer(ctx,Number(b.id)):null;
+ if(b.id&&(!original||original.tipo!=='secretaria'))throw Error('No encuentro ese expediente.');
+ const a=original?areas.find(x=>x.id===original.datos.area):area;if(!a)throw Error('Indique una Secretaría.');
+ if(!a.gestiona)throw Error('La gestión de este libro corresponde a su Secretaría o al Gobernador.');
+ const accion=String(b.accion).replace('secretarias_','');if(!['guardar','remitir','devolver','ejecutar','cerrar','nota'].includes(accion))throw Error('Trámite desconocido.');if(accion==='devolver'&&!superior)throw Error('Solo el Gobernador devuelve los escritos para enmienda.');
+ let datos:Any={nota:texto(b.nota,1500)};
+ if(accion==='guardar'){
+  const clase=String(b.clase),titulo=texto(b.titulo,100),descripcion=texto(b.texto,3000);if(!(a.clases as Any)[clase]||!titulo||!descripcion)throw Error('Indique la clase de asunto, un título y su contenido.');
+  const raw=String(b.importe||'').trim();let cents=0;if(raw){if(!/^\d{1,8}(?:[.,]\d{1,2})?$/.test(raw))throw Error('El importe debe ser positivo y tener como máximo dos decimales.');cents=Math.round(Number(raw.replace(',','.'))*100);}if(['presupuesto','gasto','ingreso'].includes(clase)&&cents<=0)throw Error('Indique el importe de este asiento.');
+  const f=String(b.fecha||'').trim();const plazo=f?leerFecha(f,'12:00'):null;if(f&&!plazo)throw Error('El plazo no es válido. Use día y mes, por ejemplo 25/10.');
+  const relacionado=Number(b.relacionado)||null;if(relacionado){const p=await leer(ctx,relacionado);if(!p||p.tipo!=='secretaria'||p.datos.area!==a.id||p.id===original?.id)throw Error('El asunto vinculado debe ser otro expediente de esta Secretaría.');}
+  datos={area:a.id,area_nombre:a.nombre,clase,titulo,texto:descripcion,importeCents:cents,responsable:texto(b.responsable,100),interesado:texto(b.interesado,100),localidad:texto(b.localidad,100),telegrama:texto(b.telegrama,20),referencia:texto(b.referencia,200),sentido:b.sentido==='salida'?'salida':'entrada',relacionado,plazo:plazo?new Date(plazo).toISOString():null,requiereFirma:FIRMA.has(clase)||b.requiereFirma===true};
+ }
+ if(accion==='remitir'){const pre=original!.datos;datos={clase:['carta','comunicado'].includes(b.claseDocumento)?b.claseDocumento:'decreto',texto:texto(b.escrito,3000)};if(!datos.texto)throw Error('Prepare el escrito que se elevará al Gobernador.');if(['presupuesto','gasto','ingreso'].includes(pre.clase)&&!datos.texto.includes(dolar(pre.importeCents)))datos.texto+='\n\nImporte sometido a autorización: '+dolar(pre.importeCents)+'.';}
+ const r=await ctx.sb.rpc('gob_secretaria_asentar',{p_accion:accion==='guardar'&&!original?'nuevo':accion,p_id:original?.id||null,p_version:b.version||null,p_datos:datos,p_autor:y.nombre,p_autor_id:y.id});
+ if(r.error){const err=String(r.error.message||'');const msgs:Any={VERSION_CAMBIADA:'Otro miembro ha actualizado el expediente. Ábralo de nuevo antes de guardar.',EXPEDIENTE_CERRADO:'El expediente ya está elevado para firma o concluido. Puede añadir una nota de seguimiento.',YA_REMITIDO:'Este escrito ya fue elevado al Gobernador.',FALTA_FIRMA:'Este asunto requiere la firma del Gobernador antes de ejecutarse o concluirse.',FALTA_NOTA:'Anote el motivo de la devolución.',FALTA_JUSTIFICANTE:'Anote el justificante del ingreso o gasto.',YA_CONCLUIDO:'Este expediente ya está concluido.',USE_EJECUTAR:'Use Asentar pago o ingreso para registrar este movimiento una sola vez.'};throw Error(Object.keys(msgs).map(k=>err.includes(k)?msgs[k]:null).find(Boolean)||'No he podido asentar el trámite.');}
+ const result=r.data;
+ if(result.documento){const d=result.documento;await repintar(ctx,d,{...(accion==='remitir'?{content:ctx.c.rol_gobernador?`<@&${ctx.c.rol_gobernador}>, ${a.nombre} eleva el expediente n.º ${result.registro.numero} para su firma.`:''}:{}),...tarjetaDecreto(d)});}
+ if(result.movimiento){const m=result.movimiento;await publicar(ctx,m,ctx.c.canal_economia,{embeds:[{title:'Asiento de Tesorería · '+a.nombre,description:result.registro.datos.titulo+'\n'+dolar(m.datos.cents)+'\nJustificante: '+m.datos.justificante,color:0xc9a24a,footer:{text:'Expediente n.º '+result.registro.numero+' · Sr. Whitmore'}}]});}
+ return {registro:{...result.registro,datos:{...result.registro.datos,_discord:undefined}},documento:result.documento?{id:result.documento.id}:null};
+}

@@ -1,6 +1,7 @@
 // Web del Gobierno de Silver Peak (22/10/2026): la web llama aquí ({web:true, accion, sesion, …}).
 // Entrada con el enlace de /acceso; sesiones de 30 días; los roles se vuelven a mirar en Discord cada 10 minutos
 // (si alguien pierde el rol del Consejo, su sesión se cierra). Lo que se hace en la web se publica en Discord igual que con las órdenes.
+import { secretarias } from "./secretarias.ts";
 import { campana } from "./campana.ts";
 import { type Ctx, nuevo, publicar, repintar, cambiar, leer, tarjetaCita, tarjetaAudiencia, tarjetaDecreto, tarjetaTelegrama, tarjetaPropuesta,
   telegramaTxt, firmaDe, votos, votar, saldo, textoDocumento, leerFecha, fechaTxt, inicioDia, limpio, TIPO_DOC } from "./gob.ts";
@@ -86,6 +87,7 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
     if(a==="yo")return J({ok:true,yo:{...y,cargo:cargo(y.roles),h:undefined}});
     const yo = { id: y.id, nombre: y.nombre, avatar: y.avatar, roles: y.roles, cargo: cargo(y.roles) };
 
+    if(a.startsWith("secretarias")) {const r=await secretarias(ctx,b,y);return J({ok:true,...r});}
     if(a.startsWith("campana")) {const r=await campana(ctx,b,y);return J({ok:true,...r});}
     if (a === "salir") { await ctx.sb.from("gob_sesiones").update({ revocado: new Date().toISOString() }).eq("token_hash", y.h); return J({ ok: true }); }
     if (a === "despacho") {
@@ -96,8 +98,9 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
       const propuestas = await conVotos(ctx, await lista(ctx, "propuesta", (q) => q.eq("estado", "abierta").order("creado"), 10));
       const tareas = await lista(ctx, "tarea", (q) => q.eq("estado", "abierto").order("cuando", { nullsFirst: false }), 15);
       const telegramas = await lista(ctx, "telegrama", (q) => q.order("creado", { ascending: false }), 6);
+      const parte=await ctx.sb.rpc("gob_secretaria_resumen");if(parte.error)throw Error("No he podido consultar el parte de las Secretarías.");
       const verCuentas = y.roles.economia || y.roles.gobernador || y.roles.admin;
-      return J({ ok: true, yo, agenda, borradores, audiencias, propuestas, tareas, telegramas, saldo: verCuentas ? await saldo(ctx) : null, elecciones: Number(c.elecciones || 0), hoy: hoy0 });
+      return J({ ok: true, yo, agenda, borradores, audiencias, propuestas, tareas, telegramas, secretarias:parte.data,saldo: verCuentas ? await saldo(ctx) : null, elecciones: Number(c.elecciones || 0), hoy: hoy0 });
     }
     if (a === "agenda") {
       const desde = Number(b.desde) || inicioDia(), hasta = Number(b.hasta) || desde + 7 * 86400000;
@@ -147,6 +150,7 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
       if (b.id) {
         const r = await leer(ctx, Number(b.id)); if (!r || r.tipo !== "decreto") throw new Fallo("NO_EXISTE", 404);
         if (r.estado !== "borrador") throw new Fallo("YA_FIRMADO", 409);
+        if(r.datos.area&&!y.roles.gobernador&&!y.roles.admin)throw new Fallo("SIN_PERMISO",403);
         const r2 = await cambiar(ctx, r.id, { datos: { ...r.datos, clase, titulo, texto, editadoPor: y.nombre } }); await repintar(ctx, r2, tarjetaDecreto(r2));
         return J({ ok: true, doc: plano(r2) });
       }
