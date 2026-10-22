@@ -9,9 +9,10 @@ var vista=$('#vista'), YO=null, cache={};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function store(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}}
 var MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-function hm(ms){var d=new Date(ms);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
-function diaLargo(ms){var d=new Date(ms);return DIAS[d.getDay()]+' '+d.getDate()+' de '+MESES[d.getMonth()]}
-function fechaCorta(ms){var d=new Date(ms);return d.getDate()+'/'+(d.getMonth()+1)}
+function fechaMadrid(ms){return new Date(new Date(ms).toLocaleString('en-US',{timeZone:'Europe/Madrid'}))}
+function hm(ms){var d=fechaMadrid(ms);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function diaLargo(ms){var d=fechaMadrid(ms);return DIAS[d.getDay()]+' '+d.getDate()+' de '+MESES[d.getMonth()]}
+function fechaCorta(ms){var d=fechaMadrid(ms);return d.getDate()+'/'+(d.getMonth()+1)}
 function dolar(c){c=Number(c||0);return (c<0?'−':'')+'$'+(Math.abs(c)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function inicioDia(ms){var d=new Date(ms==null?Date.now():ms);d.setHours(0,0,0,0);return d.getTime()}
 function aviso(t,mal){var e=$('#toast');e.textContent=t;e.className='toast'+(mal?' mal':'');e.hidden=false;clearTimeout(aviso.t);aviso.t=setTimeout(function(){e.hidden=true},mal?6000:3500)}
@@ -23,9 +24,9 @@ function api(accion,datos){
  return fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cuerpo)})
   .then(function(r){return r.json().catch(function(){return {ok:false,error:'ERROR'}}).then(function(j){
    if(j&&(j.error==='SIN_SESION'||j.error==='SIN_ROL')){store(KS,null);mostrarEntrada(j.error==='SIN_ROL'?'Su rol del Consejo de Gobierno ya no está en Discord, así que se ha cerrado la sesión.':'Su sesión ha caducado. Escriba /acceso en Discord para volver a entrar.');throw j}
-   if(!j.ok)throw j;return j})},function(){throw {error:'RED'}});
+   if(!j.ok)throw j;if(j.yo){YO=j.yo;pintarYo()}if(j.avisos)setTimeout(function(){aviso(j.avisos.join(' '),true)},100);return j})},function(){throw {error:'RED'}});
 }
-function fallo(e){if(e&&(e.error==='SIN_SESION'||e.error==='SIN_ROL'))return;aviso(ERR[e&&e.error]||ERR.ERROR,true)}
+function fallo(e){if(e&&(e.error==='SIN_SESION'||e.error==='SIN_ROL'))return;aviso(e&&e.detalle||ERR[e&&e.error]||ERR.ERROR,true)}
 
 /* ---------- entrada ---------- */
 function mostrarEntrada(msg){$('#app').hidden=true;$('#entrada').hidden=false;var m=$('#entradaMsg');m.hidden=!msg;m.className='aviso';if(msg)m.textContent=msg}
@@ -42,13 +43,13 @@ function arrancar(){
  if(!store(KS))return mostrarEntrada();
  abrirApp();
 }
-function abrirApp(){$('#entrada').hidden=true;$('#app').hidden=false;if(!location.hash)location.hash='#despacho';else ruta();pintarYo()}
+function abrirApp(){api('yo').then(function(){ $('#entrada').hidden=true;$('#app').hidden=false;if(!location.hash)location.hash='#despacho';else ruta();pintarYo()}).catch(fallo)}
 function pintarYo(){if(!YO)return;$('#yo').innerHTML=(YO.avatar?'<img src="'+esc(YO.avatar)+'" alt="">':'')+'<div>'+esc(YO.nombre)+'<small>'+esc(YO.cargo)+'</small></div>'}
 $('#salir').onclick=function(){api('salir').catch(function(){}).then(function(){store(KS,null);YO=null;mostrarEntrada('Ha cerrado la sesión.');$('#entradaMsg').className='aviso bien'})};
 var esGob=function(){return YO&&(YO.roles.gobernador||YO.roles.admin)};
 
 /* ---------- rutas ---------- */
-var VISTAS={despacho:vDespacho,agenda:vAgenda,documentos:vDocumentos,telegramas:vTelegramas};
+var VISTAS={despacho:vDespacho,agenda:vAgenda,documentos:vDocumentos,telegramas:vTelegramas,campana:vCampana};
 function ruta(){
  var v=(location.hash||'#despacho').slice(1).split('/')[0];if(!VISTAS[v])v='despacho';
  $$('.menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v===v)});
@@ -190,13 +191,13 @@ function confirmar(b,txt){if(b.dataset.seguro){return true}b.dataset.seguro='1';
 var TIPO={decreto:'DECRETO',comunicado:'COMUNICADO',carta:'CARTA'};
 function firmaPartes(d){var f=cache.docs&&cache.docs.firma||{};if(d.datos.firma){var p=d.datos.firma.split('\n');return {nombre:p[0],cargo:(p[1]||'').replace(/ · Silver Peak$/,'')}}return {nombre:f.nombre||(esGob()?YO.nombre:'[Nombre del Gobernador]'),cargo:f.cargo||'Gobernador'}}
 function prev(d){
- var x=d.datos,firm=d.estado==='firmado',fp=firmaPartes(d),fecha=new Date(x.firmadoMs||Date.now());
- $('#docPrev').innerHTML='<article class="papel" aria-label="Vista previa del documento"><div class="enc"><img src="escudo.svg" alt="" width="72" height="72" style="filter:sepia(1) saturate(.6) brightness(.7)"><span>GOBIERNO DE SILVER PEAK</span><img class="sep" src="img/separador.webp" alt="" width="260" height="45"></div><div class="cl">'+(TIPO[x.clase]||'DOCUMENTO')+(x.numDoc?' N.º '+x.numDoc:firm?'':' (borrador)')+'</div><div class="ti">'+esc(x.titulo||'Título')+'</div><div class="cu">'+esc(x.texto||'Texto del documento…')+'</div><div style="font-size:18px">Dado en Silver Peak, a '+fecha.getDate()+' de '+MESES[fecha.getMonth()]+' de '+fecha.getFullYear()+'.</div><div class="pie"><div>'+(firm?'<div class="rubrica">'+esc(fp.nombre)+'</div>':'<div class="pend">Pendiente de firma</div>')+'<div style="font-size:17px">'+esc(fp.nombre)+'</div><div style="font-size:16px;font-style:italic">'+esc(fp.cargo)+' de Silver Peak</div></div>'+(firm?'<svg class="lacre" width="96" height="96" viewBox="0 0 120 120" role="img" aria-label="Sello de lacre"><defs><radialGradient id="lg" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#c6493b"/><stop offset=".55" stop-color="#8b2e25"/><stop offset="1" stop-color="#561a14"/></radialGradient></defs><path d="M60 4 C74 6 80 2 90 10 C100 18 110 20 112 34 C116 46 120 54 114 66 C110 78 116 88 104 98 C94 108 86 116 72 114 C60 118 50 120 38 112 C26 106 14 104 10 90 C4 78 2 70 6 58 C8 46 2 36 12 26 C22 14 30 10 42 8 C50 4 54 4 60 4Z" fill="url(#lg)"/><circle cx="60" cy="60" r="46" fill="url(#lg)" stroke="#5e1c16" stroke-opacity=".35"/><circle cx="60" cy="60" r="42" fill="none" stroke="#c45a4a" stroke-width="2"/><path d="M30 78 L48 52 L56 62 L66 46 L90 78 Z" fill="none" stroke="#e9b3a6" stroke-width="3" stroke-linejoin="round"/><path d="M60 26 l2.4 5.6 6 .5 -4.6 3.9 1.4 5.8 -5.2-3.2 -5.2 3.2 1.4-5.8 -4.6-3.9 6-.5z" fill="#e9b3a6"/></svg>':'')+'</div></article>';
+ var x=d.datos,firm=d.estado==='firmado',fp=firmaPartes(d),fecha=fechaMadrid(x.firmadoMs||Date.now());
+ $('#docPrev').innerHTML='<article class="papel" aria-label="Vista previa del documento"><div class="enc"><img src="escudo.svg" alt="" width="72" height="72" style="filter:sepia(1) saturate(.6) brightness(.7)"><span>GOBIERNO DE SILVER PEAK</span><img class="sep" src="img/separador.webp" alt="" width="260" height="45"></div><div class="cl">'+(TIPO[x.clase]||'DOCUMENTO')+(x.numDoc?' N.º '+x.numDoc:firm?'':' (borrador)')+'</div><div class="ti">'+esc(x.titulo||'Título')+'</div><div class="cu">'+esc(x.texto||'Texto del documento…')+'</div><div style="font-size:18px">Dado en Silver Peak, a '+fecha.getDate()+' de '+MESES[fecha.getMonth()]+' de '+1880+'.</div><div class="pie"><div>'+(firm?'<div class="rubrica">'+esc(fp.nombre)+'</div>':'<div class="pend">Pendiente de firma</div>')+'<div style="font-size:17px">'+esc(fp.nombre)+'</div><div style="font-size:16px;font-style:italic">'+esc(fp.cargo)+' de Silver Peak</div></div>'+(firm?'<svg class="lacre" width="96" height="96" viewBox="0 0 120 120" role="img" aria-label="Sello de lacre"><defs><radialGradient id="lg" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#c6493b"/><stop offset=".55" stop-color="#8b2e25"/><stop offset="1" stop-color="#561a14"/></radialGradient></defs><path d="M60 4 C74 6 80 2 90 10 C100 18 110 20 112 34 C116 46 120 54 114 66 C110 78 116 88 104 98 C94 108 86 116 72 114 C60 118 50 120 38 112 C26 106 14 104 10 90 C4 78 2 70 6 58 C8 46 2 36 12 26 C22 14 30 10 42 8 C50 4 54 4 60 4Z" fill="url(#lg)"/><circle cx="60" cy="60" r="46" fill="url(#lg)" stroke="#5e1c16" stroke-opacity=".35"/><circle cx="60" cy="60" r="42" fill="none" stroke="#c45a4a" stroke-width="2"/><path d="M30 78 L48 52 L56 62 L66 46 L90 78 Z" fill="none" stroke="#e9b3a6" stroke-width="3" stroke-linejoin="round"/><path d="M60 26 l2.4 5.6 6 .5 -4.6 3.9 1.4 5.8 -5.2-3.2 -5.2 3.2 1.4-5.8 -4.6-3.9 6-.5z" fill="#e9b3a6"/></svg>':'')+'</div></article>';
 }
 /* imagen del documento (papel, escudo, firma y sello) */
 function cargaImg(src){return new Promise(function(ok){var i=new Image();i.onload=function(){ok(i)};i.onerror=function(){ok(null)};i.src=src})}
 function imagenDoc(d){
- var x=d.datos,firm=d.estado==='firmado',fp=firmaPartes(d),fecha=new Date(x.firmadoMs||Date.now()),IM={};
+ var x=d.datos,firm=d.estado==='firmado',fp=firmaPartes(d),fecha=fechaMadrid(x.firmadoMs||Date.now()),IM={};
  var fuentes=['700 30px Cinzel','24px "IM Fell English"','italic 24px "IM Fell English"','56px "Pinyon Script"'].map(function(f){return D.fonts&&D.fonts.load?D.fonts.load(f).catch(function(){}):0});
  var imgs=['pergamino','esq-si','esq-sd','esq-ii','esq-id','separador'].map(function(n){return cargaImg('img/'+n+'.webp').then(function(i){IM[n]=i})});
  Promise.all(fuentes.concat(imgs)).then(function(){
@@ -217,7 +218,7 @@ function imagenDoc(d){
   g.fillStyle='#2a2116';g.font='700 30px Cinzel, Georgia, serif';g.fillText((TIPO[x.clase]||'DOCUMENTO')+(x.numDoc?' N.º '+x.numDoc:firm?'':' (BORRADOR)'),W/2,285);
   g.font='italic 26px "IM Fell English", Georgia, serif';g.fillText(String(x.titulo||''),W/2,330);
   g.textAlign='left';g.font='24px "IM Fell English", Georgia, serif';var y=390;lin.forEach(function(l){g.fillText(l,80,y);y+=36});
-  y+=20;g.fillText('Dado en Silver Peak, a '+fecha.getDate()+' de '+MESES[fecha.getMonth()]+' de '+fecha.getFullYear()+'.',80,y);
+  y+=20;g.fillText('Dado en Silver Peak, a '+fecha.getDate()+' de '+MESES[fecha.getMonth()]+' de '+1880+'.',80,y);
   y+=110;
   if(firm){g.fillStyle='#1f2a44';g.font='56px "Pinyon Script", cursive';g.fillText(fp.nombre,80,y)}else{g.fillStyle='#7a6a4a';g.font='italic 22px "IM Fell English", Georgia, serif';g.fillText('Pendiente de firma',80,y)}
   g.fillStyle='#2a2116';g.font='22px "IM Fell English", Georgia, serif';g.fillText(fp.nombre,80,y+40);g.font='italic 21px "IM Fell English", Georgia, serif';g.fillText(fp.cargo+' de Silver Peak',80,y+70);
@@ -267,6 +268,25 @@ function registrar(){
  $('#rOk').onclick=function(){var b=this;if(!$('#rDe').value.trim()||!$('#rTxt').value.trim())return aviso('Ponga de quién es y lo que dice.',true);b.disabled=true;
   api('tel_recibido',{de:$('#rDe').value,texto:$('#rTxt').value,telegrama:$('#rNum').value}).then(function(r){aviso('Telegrama registrado.');telPest='entrada';telSel=r.tel.id;vTelegramas()}).catch(function(e){b.disabled=false;fallo(e)})};
 }
+
+/* Oficina de campaña: los asientos se conservan y su copia se remite al canal privado. */
+function vCampana(){api('campana').then(function(j){
+ var rows=j.registros,exp=rows.find(function(r){return r.tipo==='campana'}),d=exp?exp.datos:{},ed=j.puedeEditar,res=j.puedeResolver;
+ var estados={borrador:'En preparación',presentada:'Presentada al staff',subsanacion:'Requiere enmiendas',aceptada:'Candidatura admitida',rechazada:'Candidatura no admitida',retirada:'Candidatura retirada'},resultados={pendiente:'Pendiente de escrutinio',provisional:'Escrutinio provisional',electos:'Electos · Gobierno oficial de Silver Peak',no_electos:'No electos'};
+ function opciones(obj,sel){return Object.keys(obj).map(function(k){return '<option value="'+k+'"'+(k===sel?' selected':'')+'>'+obj[k]+'</option>'}).join('')}
+ function campo(nombre,label,valor,multi){return '<label class="campo">'+label+(multi?'<textarea rows="7" name="'+nombre+'" maxlength="'+(['resolucion','votos','acta'].indexOf(nombre)>=0?500:3500)+'">'+esc(valor||'')+'</textarea>':'<input name="'+nombre+'" value="'+esc(valor||'')+'" maxlength="2000">')+'</label>'}
+ var h=cab('OFICINA DE CAMPAÑA','Camino a la Gobernación','<span class="etq oro">'+esc(estados[exp?exp.estado:'borrador'])+'</span>');
+ h+='<section class="tarjeta camp-exp"><div class="tit"><h2>Expediente de postulación</h2><span class="etq">'+esc(resultados[d.resultado||'pendiente'])+'</span></div><p class="nota">Aquí se prepara la postulación y se conserva la respuesta del staff. Registrar una resolución deja constancia de lo comunicado; la admisión la decide el staff.</p>';
+ if(ed){h+='<form id="campExp">'+campo('titulo','Encabezamiento',d.titulo||'Postulación a Gobernador de Silver Peak')+campo('texto','Escrito de postulación',d.texto,true)+'<div class="dos"><label class="campo">Tramitación<select name="estado"'+(!res?' disabled':'')+'>'+opciones(estados,exp?exp.estado:'borrador')+'</select></label><label class="campo">Acta del escrutinio<select name="resultado"'+(!res?' disabled':'')+'>'+opciones(resultados,d.resultado||'pendiente')+'</select></label></div>'+campo('resolucion','Correspondencia del staff: respuesta y referencia',d.resolucion,true)+campo('votos','Recuento de votos: candidatos y cifras',d.votos,true)+campo('acta','Acta o confirmación oficial del resultado',d.acta,true)+'<button class="btn oro" type="submit">Asentar en el expediente</button></form>';}else h+='<article class="recibido">'+esc(d.texto||'La postulación aún está pendiente de redacción.')+'</article><p>'+esc(d.resolucion||'No se ha recibido resolución.')+'</p><p>'+esc(d.votos||'Sin escrutinio registrado.')+'</p><p>'+esc(d.acta||'')+'</p>';
+ h+='</section><div class="fila">';
+ [['idea_campana','Cuaderno de ideas','Una idea puede incorporarse al escrito cuando el Consejo la haya revisado.'],['hito_electoral','Calendario electoral',exp&&exp.estado==='aceptada'?'Asiente aquí los plazos oficiales que se comuniquen.':'El calendario oficial quedará pendiente hasta la admisión de la candidatura.'],['acto','Libro de mítines','Fechas, lugares y seguimiento de los encuentros de campaña.']].forEach(function(def){var tipo=def[0];h+='<section class="tarjeta camp-libro"><h2>'+def[1]+'</h2><p class="nota">'+def[2]+'</p>';
+ var lis=rows.filter(function(r){return r.tipo===tipo});h+=lis.length?lis.map(function(r){var labels={propuesta:'Por estudiar',incorporada:'Incorporada al escrito',descartada:'Archivada',previsto:'Previsto',cerrada:'Celebrado',cancelada:'Cancelado',cumplido:'Cumplido',cancelado:'Cancelado'};return '<article class="camp-asiento"><div class="tit"><h3>'+esc(r.datos.titulo)+'</h3><span class="etq">'+esc(labels[r.estado]||r.estado)+'</span></div>'+(r.cuando?'<p>'+esc(diaLargo(new Date(r.cuando).getTime()))+' de 1880 · '+hm(new Date(r.cuando).getTime())+'</p>':'')+'<p>'+esc(r.datos.lugar||'')+'</p><div class="recibido">'+esc(r.datos.texto||r.datos.notas||'')+'</div><p>'+esc(r.datos.seguimiento||'')+'</p>'+(ed?'<div class="acciones">'+(tipo==='idea_campana'?[['incorporada','Incorporada'],['descartada','Archivar']]:tipo==='acto'?[['cerrada','Celebrado'],['cancelada','Cancelar']]:[['cumplido','Cumplido'],['cancelado','Cancelar']]).map(function(x){return '<button class="btn" data-camp-id="'+r.id+'" data-camp-est="'+x[0]+'">'+x[1]+'</button>'}).join('')+'</div>':'')+'</article>';}).join(''):'<p class="vacio">El libro todavía no tiene asientos.</p>';
+ if(tipo==='idea_campana'||ed&&(tipo!=='hito_electoral'||exp&&exp.estado==='aceptada'))h+='<form class="campAnotar" data-tipo="'+tipo+'"><h3>Nuevo asiento</h3>'+campo('titulo',tipo==='acto'?'Nombre del mitin':'Título','')+(tipo!=='idea_campana'?'<div class="dos">'+campo('fecha','Día y mes · ejemplo 25/10','')+'<label class="campo">Hora<input name="hora" type="time" required></label></div>':'')+(tipo==='acto'?campo('lugar','Lugar del encuentro',''):'')+(tipo==='hito_electoral'?'<label class="campo">Clase de asiento<select name="clase"><option value="plazo">Plazo del calendario</option><option value="votacion">Jornada de votación · cuenta atrás del Despacho</option></select></label>':'')+campo('texto','Notas para el Consejo','',true)+'<button class="btn oro" type="submit">Anotar en el libro</button></form>';
+ h+='</section>';});h+='</div>';vista.innerHTML=h;
+ var f=$('#campExp');if(f)f.onsubmit=function(e){e.preventDefault();var b=$('button[type=submit]',f),obj={version:exp?exp.actualizado:''};['titulo','texto','estado','resultado','resolucion','votos','acta'].forEach(function(k){obj[k]=f.elements[k].value});b.disabled=true;api('campana_expediente',obj).then(function(){aviso('Expediente asentado.');vCampana()}).catch(function(e){b.disabled=false;fallo(e)})};
+ $$('.campAnotar').forEach(function(f){f.onsubmit=function(e){e.preventDefault();var b=$('button[type=submit]',f),obj={tipo:f.dataset.tipo};new FormData(f).forEach(function(v,k){obj[k]=v});b.disabled=true;api('campana_anotar',obj).then(function(){aviso('Asiento registrado.');vCampana()}).catch(function(e){b.disabled=false;fallo(e)})}});
+ $$('[data-camp-id]').forEach(function(b){b.onclick=function(){if(!confirmar(b,'Confirmar este asiento'))return;var notas=prompt('Nota para el libro (opcional):','');if(notas===null)return;b.disabled=true;api('campana_estado',{id:Number(b.dataset.campId),estado:b.dataset.campEst,notas:notas}).then(function(){aviso('Libro actualizado.');vCampana()}).catch(function(e){b.disabled=false;fallo(e)})}});
+ }).catch(fallo)}
 
 arrancar();
 })();

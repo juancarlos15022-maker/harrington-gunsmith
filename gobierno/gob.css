@@ -245,3 +245,7 @@ input[type=date],input[type=time]{color-scheme:dark}
 .toast.mal{border-color:#8b2e25;color:#5e1c16;box-shadow:0 10px 28px rgba(0,0,0,.6),inset 4px 0 0 #8b2e25}
 .cargando{color:var(--tenue);font-style:italic}
 @media(prefers-reduced-motion:no-preference){.vista>*{animation:entra .28s ease both}@keyframes entra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}}
+
+/* Oficina de campaña: libros y expediente dentro del mismo despacho. */
+.cab[data-e="campana"]{background-image:linear-gradient(90deg,#140d07e8,#140d0780),url(img/cab-despacho.webp)}
+.camp-exp{margin-bottom:20px}.camp-exp form{display:grid;gap:14px}.camp-libro{flex:1 1 320px;min-width:0}.camp-libro form{display:grid;gap:12px;border-top:1px solid var(--linea);padding-top:18px}.camp-asiento{border-bottom:1px solid var(--linea);padding:14px 0}.camp-asiento h3{margin:0;overflow-wrap:anywhere}.camp-asiento p{margin:6px 0}.camp-exp textarea,.camp-libro textarea{resize:vertical}.camp-exp .recibido,.camp-asiento .recibido{white-space:pre-wrap;overflow-wrap:anywhere}.camp-asiento .acciones{margin-top:12px}

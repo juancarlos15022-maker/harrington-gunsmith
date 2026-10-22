@@ -6,7 +6,7 @@ const AZUL = 0x2f4a6d, ORO = 0xc9a24a, VERDE = 0x3e8e4e, ROJO = 0x8b2e25, GRIS =
 const PIE = { text: "Sr. Whitmore · Consejo de Gobierno" };
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
-export const limpio = (s: unknown, n = 300) => String(s ?? "").replace(/@(everyone|here)/g, "@\u200b$1").trim().slice(0, n);
+export const limpio = (s: unknown, n = 300) => String(s ?? "").replace(/@(everyone|here)/g, "@​$1").trim().slice(0, n);
 export const dolar = (c: number) => (c < 0 ? "−" : "") + "$" + (Math.abs(c) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /* ---------- fechas (hora de Madrid) ---------- */
@@ -21,10 +21,10 @@ export function madridMs(y: number, mo: number, d: number, h: number, mi: number
 }
 export function leerFecha(f: string, h = "09:00"): number | null {
   const ahora = partes(Date.now()); let y = ahora.y, mo = ahora.mo, d = ahora.d, conAnio = false;
-  const t = String(f || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const t = String(f || "").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   if (t === "hoy") { /* hoy */ } else if (t === "manana") { const x = partes(Date.now() + 86400000); y = x.y; mo = x.mo; d = x.d; }
   else if (t === "pasado manana") { const x = partes(Date.now() + 2 * 86400000); y = x.y; mo = x.mo; d = x.d; }
-  else { const m = /^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?$/.exec(t); if (!m) return null; d = +m[1]; mo = +m[2]; if (m[3]) { y = +m[3] < 100 ? 2000 + +m[3] : +m[3]; conAnio = true; } }
+  else { const m = /^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?$/.exec(t); if (!m) return null; d = +m[1]; mo = +m[2]; if (m[3] && +m[3] !== 1880) { y = +m[3] < 100 ? 2000 + +m[3] : +m[3]; conAnio = true; } }
   const hm = /^(\d{1,2})(?:[:.h](\d{2}))?$/.exec(String(h || "").trim()); if (!hm) return null;
   const hh = +hm[1], mi = +(hm[2] || 0); if (mo < 1 || mo > 12 || d < 1 || d > 31 || hh > 23 || mi > 59) return null;
   let ms = madridMs(y, mo, d, hh, mi);
@@ -34,9 +34,9 @@ export function leerFecha(f: string, h = "09:00"): number | null {
 }
 export function fechaTxt(ms: number, conHora = true) {
   const p = partes(ms), wd = new Date(Date.UTC(p.y, p.mo - 1, p.d)).getUTCDay();
-  return `${DIAS[wd]} ${p.d} de ${MESES[p.mo - 1]}${p.y !== partes(Date.now()).y ? " de " + p.y : ""}` + (conHora ? ` a las ${String(p.h).padStart(2, "0")}:${String(p.mi).padStart(2, "0")}` : "");
+  return `${DIAS[wd]} ${p.d} de ${MESES[p.mo - 1]} de 1880` + (conHora ? ` a las ${String(p.h).padStart(2, "0")}:${String(p.mi).padStart(2, "0")}` : "");
 }
-const ts = (ms: number, f = "F") => `<t:${Math.floor(ms / 1000)}:${f}>`;
+const ts = (ms: number, f = "F") => f === "R" ? `<t:${Math.floor(ms / 1000)}:R>` : fechaTxt(ms);
 const diaMadrid = (ms = Date.now()) => { const p = partes(ms); return `${p.y}-${String(p.mo).padStart(2, "0")}-${String(p.d).padStart(2, "0")}`; };
 export const inicioDia = (ms = Date.now()) => { const p = partes(ms); return madridMs(p.y, p.mo, p.d, 0, 0); };
 
@@ -51,7 +51,7 @@ const btn = (label: string, custom_id: string, style = 2, emoji?: string) => ({ 
 const fila = (...b: Any[]) => ({ type: 1, components: b });
 
 /* ---------- contexto ---------- */
-export type Ctx = { sb: Any; c: Record<string, string>; api: (m: string, p: string, b?: unknown) => Promise<Any> };
+export type Ctx = { sb: Any; c: Record<string, string>; avisos?: string[]; api: (m: string, p: string, b?: unknown) => Promise<Any> };
 function quien(i: Any) {
   const m = i.member || {}, u = m.user || i.user || {};
   const roles: string[] = m.roles || [];
@@ -67,14 +67,32 @@ export async function nuevo(ctx: Ctx, tipo: string, campos: Any, numerar = true)
   if (error) throw Error("No he podido guardarlo. Inténtelo de nuevo.");
   return data;
 }
-export const cambiar = async (ctx: Ctx, id: number, v: Any) => (await ctx.sb.from("gob_registros").update({ ...v, actualizado: new Date().toISOString() }).eq("id", id).select("*").single()).data;
+export const cambiar = async (ctx: Ctx, id: number, v: Any) => {const r=await ctx.sb.from("gob_registros").update({ ...v, actualizado: new Date().toISOString() }).eq("id", id).select("*").single();if(r.error||!r.data)throw Error("No he podido guardar el cambio.");return r.data;};
 export const leer = async (ctx: Ctx, id: number) => (await ctx.sb.from("gob_registros").select("*").eq("id", id).maybeSingle()).data;
-export async function publicar(ctx: Ctx, r: Any, canal: string, payload: Any, menciones: Any = { parse: [] }) {
-  const m = await ctx.api("POST", `/channels/${canal}/messages`, { allowed_mentions: menciones, ...payload });
-  if (m?.id) await ctx.sb.from("gob_registros").update({ canal_id: canal, mensaje_id: m.id }).eq("id", r.id);
-  return m;
+// La copia de Discord pendiente queda unida al registro; el aviso periódico reintenta.
+async function sincronizar(ctx: Ctx, r: Any, canal: string, payload: Any) {
+  const {data: actual,error} = await ctx.sb.from("gob_registros").select("*").eq("id",r.id).single();
+  if(error || !actual) throw Error("No he podido consultar el expediente.");
+  const pendiente={canal,payload}, datos={...actual.datos,_discord:pendiente};
+  const saved=await ctx.sb.from("gob_registros").update({datos}).eq("id",r.id);
+  if(saved.error) throw Error("No he podido registrar el envío.");
+  try {
+    const ruta=actual.mensaje_id ? `/channels/${actual.canal_id}/messages/${actual.mensaje_id}` : `/channels/${canal}/messages`;
+    let m;
+    try { m=await ctx.api(actual.mensaje_id?"PATCH":"POST",ruta,{...payload,...(!actual.mensaje_id?{nonce:String(r.id),enforce_nonce:true}:{})}); }
+    catch(e){ if(actual.mensaje_id && String(e).includes("404"))m=await ctx.api("POST",`/channels/${canal}/messages`,{...payload,nonce:String(r.id),enforce_nonce:true});else throw e; }
+    // Solo retirar la copia que acabamos de entregar: conservar una edición concurrente.
+    const fin={...actual.datos};delete fin._discord;
+    const u=await ctx.sb.from("gob_registros").update({canal_id:canal,mensaje_id:m.id,datos:fin}).eq("id",r.id).eq("datos",JSON.stringify(datos));
+    if(u.error)throw Error("No he podido confirmar el envío.");
+    return m;
+  } catch(e) { (ctx.avisos ||= []).push("El escrito está guardado. La copia para Discord queda en la bandeja de salida y el Sr. Whitmore volverá a intentarlo.");return null; }
 }
-export const repintar = (ctx: Ctx, r: Any, payload: Any) => r.canal_id && r.mensaje_id ? ctx.api("PATCH", `/channels/${r.canal_id}/messages/${r.mensaje_id}`, { allowed_mentions: { parse: [] }, ...payload }).catch(() => null) : null;
+export async function publicar(ctx: Ctx,r:Any,canal:string,payload:Any,menciones:Any={parse:[]}) {return sincronizar(ctx,r,canal,{allowed_mentions:menciones,...payload});}
+export async function repintar(ctx:Ctx,r:Any,payload:Any) {
+ const canal=r.canal_id || (r.tipo==='decreto'?ctx.c.canal_documentos:r.tipo==='telegrama'?ctx.c.canal_telegramas:r.tipo==='propuesta'?ctx.c.canal_propuestas:['acto','campana','idea_campana','hito_electoral'].includes(r.tipo)?ctx.c.canal_campana:ctx.c.canal_agenda);
+ return sincronizar(ctx,r,canal,{allowed_mentions:{parse:[]},...payload});
+}
 const enlace = (ctx: Ctx, canal: string, msg?: string) => `https://discord.com/channels/${ctx.c.guild_id}/${canal}${msg ? "/" + msg : ""}`;
 export async function votos(ctx: Ctx, id: number) {
   const { data } = await ctx.sb.from("gob_votos").select("usuario_id,nombre,voto").eq("registro_id", id);
@@ -104,7 +122,7 @@ export function tarjetaAudiencia(r: Any) {
 export async function tarjetaReunion(ctx: Ctx, r: Any) {
   const d = r.datos, v = await votos(ctx, r.id), ms = new Date(r.cuando).getTime(), acto = r.tipo === "acto";
   const orden = (d.orden || "").split(";").map((s: string) => s.trim()).filter(Boolean);
-  const cerrada = r.estado === "cerrada";
+  const cerrada = ["cerrada","cancelada"].includes(r.estado);
   return { embeds: [{ title: (acto ? "🗳️ Acto de campaña · " : "🤝 Reunión n.º " + r.numero + " · ") + d.titulo, color: cerrada ? GRIS : acto ? ORO : AZUL,
     description: `**Cuándo:** ${ts(ms)} (${ts(ms, "R")})` + (d.lugar ? `\n**Lugar:** ${d.lugar}` : "") + (d.notas ? `\n**Notas:** ${d.notas}` : "") +
       (orden.length ? "\n\n**Orden del día**\n" + orden.map((x: string, k: number) => `${k + 1}. ${x}`).join("\n") : "") +
@@ -134,7 +152,7 @@ export const TIPO_DOC: Record<string, string> = { decreto: "DECRETO", comunicado
 export function textoDocumento(r: Any) {
   const d = r.datos, p = partes(d.firmadoMs || Date.now());
   const cab = `${TIPO_DOC[d.clase] || "DOCUMENTO"}${d.numDoc ? " N.º " + d.numDoc : ""}\n${String(d.titulo).toUpperCase()}`;
-  return `${cab}\n\n${d.texto}\n\nDado en Silver Peak, a ${p.d} de ${MESES[p.mo - 1]} de ${p.y}.\n\n${d.firma || "(pendiente de firma)"}`;
+  return `${cab}\n\n${d.texto}\n\nDado en Silver Peak, a ${p.d} de ${MESES[p.mo - 1]} de 1880.\n\n${d.firma || "(pendiente de firma)"}`;
 }
 export function tarjetaDecreto(r: Any) {
   const d = r.datos, est = r.estado;
@@ -338,7 +356,7 @@ export async function orden(ctx: Ctx, i: Any): Promise<Response> {
   }
   return eph("No conozco esa orden. Escribe `/whitmore` para ver lo que hago.");
 }
-const norm = (s: unknown) => String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const norm = (s: unknown) => String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 function ficha(r: Any) {
   const d = r.datos;
   return `**${d.nombre}**` + (d.clase ? ` (${d.clase})` : "") + (d.dueno ? `\nDueño: ${d.dueno}` : "") + (d.ubicacion ? `\nUbicación: ${d.ubicacion}` : "") + (d.telegrama ? `\nTelegrama: ${d.telegrama}` : "") + (d.notas ? `\n${d.notas}` : "");
@@ -477,6 +495,9 @@ export async function formulario(ctx: Ctx, i: Any): Promise<Response> {
 /* ---------- avisos automáticos (cada minuto) ---------- */
 export async function revision(ctx: Ctx) {
   const c = ctx.c, hecho: string[] = [];
+  const {data:pendientes}=await ctx.sb.from("gob_registros").select("*").not("datos->_discord","is",null).order("actualizado").limit(10);
+  for(const r of pendientes||[]) {const q=r.datos._discord;if(q)await sincronizar(ctx,r,q.canal,q.payload);}
+
   const ahora = Date.now();
   // 1) una hora antes: citas, reuniones y actos
   const { data: prox } = await ctx.sb.from("gob_registros").select("*").in("tipo", ["cita", "reunion", "acto"]).eq("avisado", false).not("estado", "in", "(cancelada,cerrada)")
@@ -486,28 +507,28 @@ export async function revision(ctx: Ctx) {
     const roles = r.tipo === "cita" ? [c.rol_gobernador, c.rol_gobernacion].filter(Boolean) : [c.rol_consejo].filter(Boolean);
     const que = r.tipo === "cita" ? `cita con **${r.datos.con}**` : r.tipo === "reunion" ? `reunión **${r.datos.titulo}**` : `acto de campaña **${r.datos.titulo}**`;
     const canal = r.tipo === "acto" ? c.canal_campana : c.canal_agenda;
-    await ctx.api("POST", `/channels/${canal}/messages`, { allowed_mentions: { roles }, content: `${roles.map((x) => `<@&${x}>`).join(" ")} ⏰ ${ts(ms, "R")}: ${que}${r.datos.lugar ? " en " + r.datos.lugar : ""}.`, ...(r.mensaje_id ? { message_reference: { message_id: r.mensaje_id, fail_if_not_exists: false } } : {}) }).catch(() => null);
+    await ctx.api("POST", `/channels/${canal}/messages`, { allowed_mentions: { roles }, content: `${roles.map((x) => `<@&${x}>`).join(" ")} ⏰ ${ts(ms, "R")}: ${que}${r.datos.lugar ? " en " + r.datos.lugar : ""}.`, ...(r.mensaje_id ? { message_reference: { message_id: r.mensaje_id, fail_if_not_exists: false } } : {}) });
     await ctx.sb.from("gob_registros").update({ avisado: true }).eq("id", r.id); hecho.push("aviso " + r.tipo);
   }
   // 2) tareas que vencen hoy
   const { data: tar } = await ctx.sb.from("gob_registros").select("*").eq("tipo", "tarea").eq("estado", "abierto").eq("avisado", false).lte("cuando", new Date(ahora).toISOString()).limit(10);
   for (const r of tar || []) {
-    await ctx.api("POST", `/channels/${c.canal_tareas}/messages`, { allowed_mentions: { users: [r.datos.para] }, content: `<@${r.datos.para}> 📋 Hoy vence la tarea n.º ${r.numero}: ${r.datos.texto}`, ...(r.mensaje_id ? { message_reference: { message_id: r.mensaje_id, fail_if_not_exists: false } } : {}) }).catch(() => null);
+    await ctx.api("POST", `/channels/${c.canal_tareas}/messages`, { allowed_mentions: { users: [r.datos.para] }, content: `<@${r.datos.para}> 📋 Hoy vence la tarea n.º ${r.numero}: ${r.datos.texto}`, ...(r.mensaje_id ? { message_reference: { message_id: r.mensaje_id, fail_if_not_exists: false } } : {}) });
     await ctx.sb.from("gob_registros").update({ avisado: true }).eq("id", r.id); hecho.push("tarea");
   }
   // 3) resumen del día a las 9:00 y 4) cuentas los domingos a las 21:00
   const p = partes(ahora), hoy = diaMadrid(ahora);
-  const marca = async (clave: string) => { const { data } = await ctx.sb.from("whitmore_cfg").select("valor").eq("clave", clave).maybeSingle(); if (data?.valor === hoy) return false; await ctx.sb.from("whitmore_cfg").upsert({ clave, valor: hoy, actualizado: new Date().toISOString() }); return true; };
+  const marca = async (clave: string) => { const { data } = await ctx.sb.from("whitmore_cfg").select("valor").eq("clave", clave).maybeSingle(); if (data?.valor === hoy) return false; return true; };
   if (p.h >= 9 && p.h < 12 && await marca("ultimo_resumen")) {
     const roles = [c.rol_gobernador, c.rol_gobernacion].filter(Boolean);
-    await ctx.api("POST", `/channels/${c.canal_agenda}/messages`, { allowed_mentions: { roles }, content: roles.map((x) => `<@&${x}>`).join(" ") + "\n" + await resumenTxt(ctx) }).catch(() => null); hecho.push("resumen");
+    await ctx.api("POST", `/channels/${c.canal_agenda}/messages`, { allowed_mentions: { roles }, content: roles.map((x) => `<@&${x}>`).join(" ") + "\n" + await resumenTxt(ctx) }); await ctx.sb.from("whitmore_cfg").upsert({clave:"ultimo_resumen",valor:hoy,actualizado:new Date().toISOString()}); hecho.push("resumen");
   }
   const dow = new Date(Date.UTC(p.y, p.mo - 1, p.d)).getUTCDay();
   if (dow === 0 && p.h >= 21 && await marca("ultimo_informe")) {
     const desde = new Date(ahora - 7 * 86400000).toISOString();
     const { data: mv } = await ctx.sb.from("gob_registros").select("*").eq("tipo", "movimiento").gte("creado", desde).order("creado");
     const ing = (mv || []).filter((r: Any) => r.datos.cents > 0).reduce((a: number, r: Any) => a + r.datos.cents, 0), gas = (mv || []).filter((r: Any) => r.datos.cents < 0).reduce((a: number, r: Any) => a - r.datos.cents, 0);
-    await ctx.api("POST", `/channels/${c.canal_economia}/messages`, { allowed_mentions: { parse: [] }, embeds: [{ title: "📊 Informe semanal de cuentas", color: ORO, description: `**Ingresos:** ${dolar(ing)}\n**Gastos:** ${dolar(gas)}\n**Resultado:** ${dolar(ing - gas)}\n**Saldo total:** ${dolar(await saldo(ctx))}\n\n${(mv || []).length} movimientos esta semana.`, footer: PIE }] }).catch(() => null); hecho.push("informe");
+    await ctx.api("POST", `/channels/${c.canal_economia}/messages`, { allowed_mentions: { parse: [] }, embeds: [{ title: "📊 Informe semanal de cuentas", color: ORO, description: `**Ingresos:** ${dolar(ing)}\n**Gastos:** ${dolar(gas)}\n**Resultado:** ${dolar(ing - gas)}\n**Saldo total:** ${dolar(await saldo(ctx))}\n\n${(mv || []).length} movimientos esta semana.`, footer: PIE }] }); await ctx.sb.from("whitmore_cfg").upsert({clave:"ultimo_informe",valor:hoy,actualizado:new Date().toISOString()}); hecho.push("informe");
   }
   return hecho;
 }
