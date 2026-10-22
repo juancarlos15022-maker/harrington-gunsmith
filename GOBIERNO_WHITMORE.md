@@ -17,6 +17,8 @@ Las órdenes solo responden a quien tenga alguno de esos roles (o sea administra
 ## Canales
 💡 propuestas · 💬 chat-del-equipo · 📁 documentos · 📅 agenda-y-reuniones · 🔊 Reunión de gobierno ·
 📨 telegramas · 💰 economía · 📋 tareas · 🗳️ campaña (estos cuatro, nuevos; mismos permisos que la categoría).
+🌐・web-del-gobierno (22/10/2026; solo lectura, como 📜・comandos-del-sr-whitmore): mensaje fijado del Sr. Whitmore con el botón
+«Abrir la web del gobierno» y cómo entrar (/acceso la primera vez; 30 días recordado). Id en `whitmore_cfg.canal_web`.
 
 ## Órdenes
 /whitmore · /cita nueva|hoy|semana|cancelar · /audiencia nueva|pendientes · /reunion nueva|proximas (Asistiré / No podré / Escribir acta) ·
