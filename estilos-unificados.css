@@ -3486,9 +3486,13 @@ body.gate-open .hero-banner *,body.gate-open .hero-banner::before,body.gate-open
  border-width:8px 13px!important;border-image-width:8px 13px!important;padding-left:1px!important;padding-right:1px!important;letter-spacing:.01em!important}
 @media(max-width:520px){#dirBody .enc-actions.two button{font-size:11.5px!important}}
 
-
 /* El descuento conserva contraste sobre su fondo oscuro al escribir y autocompletar. */
 html body #manualDiscountFields .money{background:#040b08}
 html body #manualDiscountAmt,html body #manualDiscountAmt:focus{background:#040b08!important;color:#fff0d2!important;-webkit-text-fill-color:#fff0d2!important;caret-color:#f3d47c}
 html body #manualDiscountAmt::placeholder{color:#b4ad98!important;-webkit-text-fill-color:#b4ad98!important;opacity:1}
 html body #manualDiscountAmt:-webkit-autofill{box-shadow:inset 0 0 0 1000px #040b08!important;-webkit-text-fill-color:#fff0d2!important;caret-color:#f3d47c}
+
+
+/* Fuente: hacer-caja.css */
+.caja-panel{width:min(900px,96vw);max-height:92dvh;overflow:auto}.caja-body{padding:clamp(14px,3vw,28px)}.caja-escena{display:block;width:100%;max-height:190px;object-fit:cover;border:1px solid #96743d;margin-bottom:16px}.caja-body label{display:block;margin:14px 0 6px}.caja-body input:not([type=checkbox]),.caja-body textarea{display:block;width:100%;box-sizing:border-box;margin-top:6px}.caja-concepto{display:grid;grid-template-columns:minmax(0,1fr) 140px 42px;gap:10px;align-items:end}.caja-concepto button{margin-bottom:6px}.caja-body .caja-confirmar{display:flex;align-items:center;gap:10px}.caja-confirmar input{width:20px;height:20px;flex-shrink:0}.caja-libro{margin:24px 0;border-top:1px solid #997841;padding-top:16px}.caja-libro summary{cursor:pointer;font-weight:bold}.caja-libro .reg-line{gap:16px;overflow-wrap:anywhere}.caja-libro .reg-line b{white-space:nowrap}.caja-resultado{border:2px solid #96743d;padding:18px;margin-bottom:18px}.caja-cuadra{border-color:#64784d}.caja-enlace{color:inherit;text-decoration:underline}.caja-body .enc-card{margin:12px 0}.caja-body>button{margin:6px}.caja-body .brow{display:flex;justify-content:space-between;gap:14px}.caja-body .brow b{white-space:nowrap}@media(max-width:540px){.caja-concepto{grid-template-columns:minmax(0,1fr) 100px 35px;gap:5px}.caja-panel{width:96vw}.caja-body .enc-actions{grid-template-columns:1fr}.caja-body .brow{font-size:14px}}
+.caja-body input:not([type=checkbox]),.caja-body textarea{min-height:44px;padding:10px 12px;font:inherit;border-radius:3px}.caja-body textarea{min-height:80px}.caja-body #cajaCount{font-size:22px;font-weight:bold}.caja-body .enc-note{font-size:15px;line-height:1.55}.caja-body .reg-line{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #88703e}
