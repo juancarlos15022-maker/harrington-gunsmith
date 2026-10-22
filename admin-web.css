@@ -6,3 +6,5 @@
 @media(prefers-reduced-motion:reduce){.hg-admin-web .hg-admin-web-links a{transition:none}}
 
 body[data-admin-web=detalle].hg-admin-web-present{display:flex;flex-direction:column;align-items:center;justify-content:flex-start}body[data-admin-web=detalle].hg-admin-web-present>.hg-admin-web{flex:none}body[data-admin-web=detalle].hg-admin-web-present>.hoja{flex:none}
+
+.hg-albaran-imagen{display:block;width:100%;height:auto;margin:16px 0;border:1px solid #a58a56}
