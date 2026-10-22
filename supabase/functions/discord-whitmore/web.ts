@@ -1,6 +1,8 @@
+import {actualizarCuentas} from './cuentas.ts';
 // Web del Gobierno de Silver Peak (22/10/2026): la web llama aquí ({web:true, accion, sesion, …}).
 // Entrada con el enlace de /acceso; sesiones de 30 días; los roles se vuelven a mirar en Discord cada 10 minutos
 // (si alguien pierde el rol del Consejo, su sesión se cierra). Lo que se hace en la web se publica en Discord igual que con las órdenes.
+import { hacienda } from "./hacienda.ts";
 import { secretarias } from "./secretarias.ts";
 import { campana } from "./campana.ts";
 import { type Ctx, nuevo, publicar, repintar, cambiar, leer, tarjetaCita, tarjetaAudiencia, tarjetaDecreto, tarjetaTelegrama, tarjetaPropuesta,
@@ -87,7 +89,8 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
     if(a==="yo")return J({ok:true,yo:{...y,cargo:cargo(y.roles),h:undefined}});
     const yo = { id: y.id, nombre: y.nombre, avatar: y.avatar, roles: y.roles, cargo: cargo(y.roles) };
 
-    if(a.startsWith("secretarias")) {const r=await secretarias(ctx,b,y);return J({ok:true,...r});}
+    if(a.startsWith("hacienda")) {const r=await hacienda(ctx,b,y);return J({ok:true,...r});}
+    if(a.startsWith("secretarias")) {const r=await secretarias(ctx,b,y);if(a!=="secretarias")await actualizarCuentas(ctx);return J({ok:true,...r});}
     if(a.startsWith("campana")) {const r=await campana(ctx,b,y);return J({ok:true,...r});}
     if (a === "salir") { await ctx.sb.from("gob_sesiones").update({ revocado: new Date().toISOString() }).eq("token_hash", y.h); return J({ ok: true }); }
     if (a === "despacho") {
@@ -99,8 +102,9 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
       const tareas = await lista(ctx, "tarea", (q) => q.eq("estado", "abierto").order("cuando", { nullsFirst: false }), 15);
       const telegramas = await lista(ctx, "telegrama", (q) => q.order("creado", { ascending: false }), 6);
       const parte=await ctx.sb.rpc("gob_secretaria_resumen");if(parte.error)throw Error("No he podido consultar el parte de las Secretarías.");
+      const arqueo=await ctx.sb.rpc("gob_hacienda_tesoreria");if(arqueo.error)throw Error("No he podido consultar el arqueo de Tesorería.");
       const verCuentas = y.roles.economia || y.roles.gobernador || y.roles.admin;
-      return J({ ok: true, yo, agenda, borradores, audiencias, propuestas, tareas, telegramas, secretarias:parte.data,saldo: verCuentas ? await saldo(ctx) : null, elecciones: Number(c.elecciones || 0), hoy: hoy0 });
+      return J({ ok: true, yo, agenda, borradores, audiencias, propuestas, tareas, telegramas, secretarias:parte.data,tesoreria:arqueo.data,saldo: verCuentas ? await saldo(ctx) : null, elecciones: Number(c.elecciones || 0), hoy: hoy0 });
     }
     if (a === "agenda") {
       const desde = Number(b.desde) || inicioDia(), hasta = Number(b.hasta) || desde + 7 * 86400000;
@@ -150,8 +154,9 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
       if (b.id) {
         const r = await leer(ctx, Number(b.id)); if (!r || r.tipo !== "decreto") throw new Fallo("NO_EXISTE", 404);
         if (r.estado !== "borrador") throw new Fallo("YA_FIRMADO", 409);
+        if(r.datos.hacienda_id)throw Error("Este escrito conserva la propuesta de Hacienda. Descártelo y prepare una propuesta nueva para enmendar importes o destinatarios.");
         if(r.datos.area&&!y.roles.gobernador&&!y.roles.admin)throw new Fallo("SIN_PERMISO",403);
-        const r2 = await cambiar(ctx, r.id, { datos: { ...r.datos, clase, titulo, texto, editadoPor: y.nombre } }); await repintar(ctx, r2, tarjetaDecreto(r2));
+        const r2 = await cambiar(ctx, r.id, { datos: { ...r.datos, clase, titulo, texto, editadoPor: y.nombre } }); await repintar(ctx, r2, tarjetaDecreto(r2));await actualizarCuentas(ctx);
         return J({ ok: true, doc: plano(r2) });
       }
       const r = await nuevo(ctx, "decreto", { ...base, estado: "borrador", datos: { clase, titulo, texto } }, false);
@@ -162,10 +167,11 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
       necesita(y, "gobernador");
       const r = await leer(ctx, Number(b.id)); if (!r || r.tipo !== "decreto") throw new Fallo("NO_EXISTE", 404);
       if (r.estado !== "borrador") throw new Fallo("YA_FIRMADO", 409);
-      if (a === "doc_descartar") { const r2 = await cambiar(ctx, r.id, { estado: "descartado" }); await repintar(ctx, r2, tarjetaDecreto(r2)); return J({ ok: true }); }
-      const { data: r2 } = await ctx.sb.rpc("gob_firmar", { p_id: r.id, p_firma: firmaDe(ctx, quien(y)), p_por: y.nombre });
+      if (a === "doc_descartar") { const r2 = await cambiar(ctx, r.id, { estado: "descartado" }); await repintar(ctx, r2, tarjetaDecreto(r2));await actualizarCuentas(ctx); return J({ ok: true }); }
+      const { data: r2,error:firmaError } = await ctx.sb.rpc("gob_firmar", { p_id: r.id, p_firma: firmaDe(ctx, quien(y)), p_por: y.nombre });
+      if(firmaError)throw Error(String(firmaError.message).includes("PRESUPUESTO_INSUFICIENTE")?"La asignación supera el crédito libre de ese presupuesto.":String(firmaError.message).includes("PRESUPUESTO_SIN_FIRMA")?"Debe firmar primero el presupuesto que respalda este pago.":"No he podido firmar este escrito. Revise su presupuesto de origen.");
       if (!r2 || !r2.id) throw new Fallo("YA_FIRMADO", 409);
-      await repintar(ctx, r2, tarjetaDecreto(r2));
+      await repintar(ctx, r2, tarjetaDecreto(r2));await actualizarCuentas(ctx);
       const d = plano(r2); (d as Any).texto = textoDocumento(r2);
       return J({ ok: true, doc: d });
     }

@@ -1,3 +1,4 @@
+import {actualizarCuentas} from './cuentas.ts';
 // Señor Whitmore · funciones de gobierno (22/10/2026). Todo es interno del equipo de gobierno:
 // agenda, audiencias, reuniones y actas, actos de campaña, telegramas, decretos con firma, propuestas con votación,
 // programa, tareas, contactos, negocios, cuentas, cuenta atrás y avisos automáticos. Datos en gob_registros / gob_votos.
@@ -324,14 +325,10 @@ export async function orden(ctx: Ctx, i: Any): Promise<Response> {
   if (n === "cuenta") {
     if (sub === "ingreso" || sub === "gasto") {
       if (!tiene(x, c, "economia", "gobernador")) return eph("Las cuentas las lleva la Secretaría de Economía y Comercio (y el gobernador).");
-      const cents = Math.round(Number(o.importe) * 100) * (sub === "gasto" ? -1 : 1);
-      const r = await nuevo(ctx, "movimiento", { ...base, datos: { cents, concepto: limpio(o.concepto, 200) } });
-      const tot = await saldo(ctx);
-      await publicar(ctx, r, c.canal_economia, { embeds: [{ title: (cents < 0 ? "💸 Gasto" : "💵 Ingreso") + " n.º " + r.numero, color: cents < 0 ? ROJO : VERDE, description: `**${dolar(Math.abs(cents))}** · ${r.datos.concepto}\n**Saldo:** ${dolar(tot)}`, footer: { text: `Apuntado por ${x.nombre} · Sr. Whitmore` } }] });
-      return eph(`${cents < 0 ? "💸 Gasto" : "💵 Ingreso"} apuntado. Saldo: **${dolar(tot)}**.`);
+      return eph("Prepare el ingreso o pago en el libro de Hacienda: https://juancarlos15022-maker.github.io/harrington-gunsmith/gobierno/#hacienda/movimientos . El Gobernador lo autorizará y su ejecución quedará asentada una sola vez.");
     }
     const { data } = await ctx.sb.from("gob_registros").select("*").eq("tipo", "movimiento").order("creado", { ascending: false }).limit(10);
-    return eph(`💰 **Saldo:** ${dolar(await saldo(ctx))}` + ((data || []).length ? "\n\n**Últimos movimientos**\n" + data.map((r: Any) => `• ${dolar(r.datos.cents)} · ${r.datos.concepto} · ${fechaTxt(new Date(r.creado).getTime(), false)}`).join("\n") : ""));
+    return eph(`💰 **Balance de asientos históricos:** ${dolar(await saldo(ctx))}` + ((data || []).length ? "\n\n**Últimos movimientos**\n" + data.map((r: Any) => `• ${dolar(r.datos.cents)} · ${r.datos.concepto} · ${fechaTxt(new Date(r.creado).getTime(), false)}`).join("\n") : ""));
   }
 
   if (n === "elecciones") {
@@ -361,7 +358,7 @@ function ficha(r: Any) {
   const d = r.datos;
   return `**${d.nombre}**` + (d.clase ? ` (${d.clase})` : "") + (d.dueno ? `\nDueño: ${d.dueno}` : "") + (d.ubicacion ? `\nUbicación: ${d.ubicacion}` : "") + (d.telegrama ? `\nTelegrama: ${d.telegrama}` : "") + (d.notas ? `\n${d.notas}` : "");
 }
-export async function saldo(ctx: Ctx) { const { data } = await ctx.sb.from("gob_registros").select("datos").eq("tipo", "movimiento").limit(5000); return (data || []).reduce((a: number, r: Any) => a + Number(r.datos?.cents || 0), 0); }
+export async function saldo(ctx: Ctx) {const {data,error}=await ctx.sb.rpc('gob_secretaria_cuentas');if(error)throw Error('No he podido consultar el balance de asientos.');return Number(data.ingresos)-Number(data.gastos);}
 async function agendaTxt(ctx: Ctx, desde: number, hasta: number, titulo: string) {
   const { data } = await ctx.sb.from("gob_registros").select("*").in("tipo", ["cita", "reunion", "acto"]).not("estado", "in", "(cancelada,cerrada)").gte("cuando", new Date(desde).toISOString()).lt("cuando", new Date(hasta).toISOString()).order("cuando").limit(30);
   if (!(data || []).length) return titulo + "\nNada apuntado.";
@@ -409,12 +406,14 @@ export async function boton(ctx: Ctx, i: Any): Promise<Response> {
   if (k === "dec") {
     if (r.estado !== "borrador") return actualizar(tarjetaDecreto(r));
     if(accion === "editar" && r.datos.area && !tiene(x,c,"gobernador"))return eph("Este escrito ya está en la mesa del Gobernador. Las enmiendas deben hacerse tras su devolución.");
+    if (accion === "editar" && r.datos.hacienda_id)return eph("Este escrito reproduce una propuesta de Hacienda. Descártelo y prepare una propuesta nueva para conservar importes y destinatarios.");
     if (accion === "editar") return modal("dec:editar:" + id, "Editar documento", [{ id: "titulo", label: "Título", max: 100, value: r.datos.titulo }, { id: "texto", label: "Texto", largo: true, max: 3000, value: r.datos.texto }]);
     if (!tiene(x, c, "gobernador")) return eph("Solo el gobernador puede " + (accion === "firmar" ? "firmar" : "descartar") + " documentos.");
     if (accion === "descartar") { const r2 = await cambiar(ctx, id, { estado: "descartado" }); return actualizar(tarjetaDecreto(r2)); }
     if (accion === "firmar") {
       // numeración oficial propia de cada clase (decreto n.º 1, 2…; comunicado n.º 1, 2…), solo al firmar y de una vez
-      const { data: r2 } = await ctx.sb.rpc("gob_firmar", { p_id: id, p_firma: firmaDe(ctx, x), p_por: x.nombre });
+      const { data: r2,error:firmaError } = await ctx.sb.rpc("gob_firmar", { p_id: id, p_firma: firmaDe(ctx, x), p_por: x.nombre });
+      if(firmaError)return eph(String(firmaError.message).includes("PRESUPUESTO_INSUFICIENTE")?"La asignación supera el crédito libre del presupuesto.":"Compruebe que el presupuesto de origen esté firmado y tenga crédito disponible.");
       if (!r2 || !r2.id) return actualizar(tarjetaDecreto((await leer(ctx, id)) || r));
       return actualizar(tarjetaDecreto(r2));
     }
@@ -462,6 +461,7 @@ export async function formulario(ctx: Ctx, i: Any): Promise<Response> {
   if (k === "dec" && accion === "editar") {
     if(r.datos.area && !tiene(x,c,"gobernador"))return eph("Este escrito ya está elevado al Gobernador.");
     if (r.estado !== "borrador") return eph("Ese documento ya no es un borrador.");
+    if(r.datos.hacienda_id)return eph("Las enmiendas financieras se preparan mediante una nueva propuesta en Hacienda.");
     const r2 = await cambiar(ctx, id, { datos: { ...r.datos, titulo: limpio(v.titulo, 100), texto: limpio(v.texto, 3000), editadoPor: x.nombre } });
     await repintar(ctx, r2, tarjetaDecreto(r2)); return eph("✏️ Borrador actualizado.");
   }
@@ -497,6 +497,7 @@ export async function formulario(ctx: Ctx, i: Any): Promise<Response> {
 /* ---------- avisos automáticos (cada minuto) ---------- */
 export async function revision(ctx: Ctx) {
   const c = ctx.c, hecho: string[] = [];
+  await actualizarCuentas(ctx,true);
   const {data:pendientes}=await ctx.sb.from("gob_registros").select("*").not("datos->_discord","is",null).order("actualizado").limit(10);
   for(const r of pendientes||[]) {const q=r.datos._discord;if(q)await sincronizar(ctx,r,q.canal,q.payload);}
 
@@ -528,9 +529,9 @@ export async function revision(ctx: Ctx) {
   const dow = new Date(Date.UTC(p.y, p.mo - 1, p.d)).getUTCDay();
   if (dow === 0 && p.h >= 21 && await marca("ultimo_informe")) {
     const desde = new Date(ahora - 7 * 86400000).toISOString();
-    const { data: mv } = await ctx.sb.from("gob_registros").select("*").eq("tipo", "movimiento").gte("creado", desde).order("creado");
-    const ing = (mv || []).filter((r: Any) => r.datos.cents > 0).reduce((a: number, r: Any) => a + r.datos.cents, 0), gas = (mv || []).filter((r: Any) => r.datos.cents < 0).reduce((a: number, r: Any) => a - r.datos.cents, 0);
-    await ctx.api("POST", `/channels/${c.canal_economia}/messages`, { allowed_mentions: { parse: [] }, embeds: [{ title: "📊 Informe semanal de cuentas", color: ORO, description: `**Ingresos:** ${dolar(ing)}\n**Gastos:** ${dolar(gas)}\n**Resultado:** ${dolar(ing - gas)}\n**Saldo total:** ${dolar(await saldo(ctx))}\n\n${(mv || []).length} movimientos esta semana.`, footer: PIE }] }); await ctx.sb.from("whitmore_cfg").upsert({clave:"ultimo_informe",valor:hoy,actualizado:new Date().toISOString()}); hecho.push("informe");
+    const total=await ctx.sb.rpc('gob_hacienda_balance',{p_desde:desde});if(total.error)throw Error('No he podido preparar el informe semanal.');
+    const ing=Number(total.data.ingresos),gas=Number(total.data.gastos);
+    await ctx.api("POST", `/channels/${c.canal_economia}/messages`, { allowed_mentions: { parse: [] }, embeds: [{ title: "📊 Informe semanal de cuentas", color: ORO, description: `**Ingresos:** ${dolar(ing)}\n**Gastos:** ${dolar(gas)}\n**Resultado:** ${dolar(ing - gas)}\n**Balance de asientos históricos:** ${dolar(await saldo(ctx))}\n\n${total.data.cantidad} movimientos esta semana.`, footer: PIE }] }); await ctx.sb.from("whitmore_cfg").upsert({clave:"ultimo_informe",valor:hoy,actualizado:new Date().toISOString()}); hecho.push("informe");
   }
   return hecho;
 }
