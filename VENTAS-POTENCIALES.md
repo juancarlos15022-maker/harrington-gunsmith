@@ -1,0 +1,17 @@
+# Ventas potenciales · Dirección
+
+Canal privado **📈・ventas-potenciales** (`1562785714658091099`), dentro de **🎩 Dirección** (`1520881696277532873`). Copia los permisos de esa categoría: Dirección puede verlo; el resto del servidor no. Conserva un tablero fijado y asientos con documento adjunto para recepciones, inventarios, recuentos de caja y cierres diarios.
+
+La previsión maximiza los ingresos brutos que permite vender o fabricar con las existencias disponibles y las tarifas del catálogo. Los precios guardados prevalecen sobre las tarifas base. El modelo respeta recursos compartidos y recetas encadenadas; no permite vender una unidad que también consume otra fabricación. Excluye las unidades asignadas al NPC y las reservadas para encargos fabricados. No compra materiales. No presupone descuentos, compradores, beneficio neto ni ingresos ya cobrados. Los encargos aún sin fabricar no reservan materiales automáticamente en este cálculo.
+
+Cuando el plan entero y la cota superior coinciden, muestra una cifra exacta para el modelo y sus datos. Si no, muestra un intervalo: el extremo inferior es un plan realizable, y el superior una cota del máximo posible. El certificado superior se verifica con aritmética entera, independientemente de que la búsqueda de la mejor combinación agote su tiempo. Las recetas inválidas, ciclos, precios desconocidos y reservas incoherentes se señalan; nunca se convierten en fabricación gratuita.
+
+Cada cambio de stock, recetas, precios, ventas, gastos o reservas solicita actualizar el tablero. El trabajador procesa la cola cada minuto, sin llenar el canal con mensajes por cada venta. Las recepciones completas o parciales añaden un asiento y se capturan después de confirmar su transacción. Un inventario o «Hacer caja» genera su propio asiento. Los mensajes se confirman mediante su identificador real y los errores se reintentan.
+
+Al cambiar el día en **Europe/Madrid**, se crea una sola vez el cierre documental de medianoche. Incluye cobros y salidas del día registrado, caja teórica acumulada con los 190 dólares iniciales, el último recuento físico y la coherencia del stock con su fotografía anterior y el diario de movimientos. El diario nuevo cubre desde su activación; no se inventa trazabilidad anterior. Si el trabajo se ejecuta tarde, conserva la hora real del corte.
+
+El cierre automático no cuenta físicamente objetos ni efectivo. Solo las casillas rellenadas en un inventario quedan revisadas. Un inventario con diferencias publica las cantidades anteriores y contadas, junto a la capacidad de venta antes y después con los mismos precios. El ajuste de stock no borra esa diferencia histórica. Una reducción de capacidad de venta no demuestra que se haya vendido ni perdido ese dinero. Los conteos de caja mantienen igualmente su diferencia y su fecha, distinguiendo los movimientos posteriores.
+
+Las tablas de fotografías, eventos y diario están cerradas a usuarios anónimos y autenticados. Las gestiona exclusivamente el servicio; los disparadores actúan dentro de las transacciones de las herramientas existentes. El control no realiza compras, ventas, ajustes ni gastos por sí solo.
+
+Pruebas: `node --experimental-strip-types --test test-ventas-potenciales.mjs` y `node test-potencial-sql.cjs`. Incluyen recetas compartidas y anidadas, intervalos contrastados con enumeración, NPC/reservas, diferencias de inventario, recepciones parciales, medianoche idempotente y permisos.
