@@ -93,6 +93,7 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
     const c = ctx.c, a = String(b?.accion || "");
     if (a === "entrar") return J({ ok: true, ...(await entrar(ctx, String(b.t || ""))) });
     const y = await sesionDe(ctx, String(b.sesion || ""));
+    if(a==='admin_web'){const r=await ctx.sb.rpc('hg_admin_web_gobierno',{p_usuario:y.id,p_pedidos:b.pedidos===true});if(r.error)throw new Fallo('SIN_PERMISO',403);return J({ok:true,administracion:r.data});}
     const base = { autor: y.nombre, autor_id: y.id };
     if(a==="yo")return J({ok:true,yo:{...y,cargo:cargo(y.roles),h:undefined},organizacion:await organizacion(ctx)});
     const yo = { id: y.id, nombre: y.nombre, avatar: y.avatar, roles: y.roles, cargo: cargo(y.roles) };

@@ -6,6 +6,7 @@
 var API='https://mrlpvjxuifvspeaqtscm.supabase.co/functions/v1/discord-whitmore', KS='gob_sesion';
 var D=document, $=function(s,r){return (r||D).querySelector(s)}, $$=function(s,r){return [].slice.call((r||D).querySelectorAll(s))};
 var vista=$('#vista'), YO=null, cache={},ORGANIZACION={canales:{}};
+window.HGAdminWeb?.setAdapter({identity:function(){return YO&&store(KS)?YO.id:''},load:function(){return api('admin_web').then(function(j){return j.administracion})}});
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function store(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}}
 var MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
@@ -29,7 +30,7 @@ function api(accion,datos){
 function fallo(e){if(e&&(e.error==='SIN_SESION'||e.error==='SIN_ROL'))return;aviso(e&&e.detalle||ERR[e&&e.error]||ERR.ERROR,true)}
 
 /* ---------- entrada ---------- */
-function mostrarEntrada(msg){$('#app').hidden=true;$('#entrada').hidden=false;var m=$('#entradaMsg');m.hidden=!msg;m.className='aviso';if(msg)m.textContent=msg}
+function mostrarEntrada(msg){window.HGAdminWeb?.clear();YO=null;$('#app').hidden=true;$('#entrada').hidden=false;var m=$('#entradaMsg');m.hidden=!msg;m.className='aviso';if(msg)m.textContent=msg}
 function arrancar(){
  var t=(new URLSearchParams(location.search).get('t')||'').toLowerCase();
  if(t){try{history.replaceState(null,'',location.pathname+location.hash)}catch(e){}
@@ -44,7 +45,7 @@ function arrancar(){
  abrirApp();
 }
 function abrirApp(){api('yo').then(function(){ $('#entrada').hidden=true;$('#app').hidden=false;if(!location.hash)location.hash='#despacho';else ruta();pintarYo()}).catch(fallo)}
-function pintarYo(){if(!YO)return;var rf=$('#repFecha');if(rf)rf.textContent=diaLargo(Date.now())+' de 1880';$('#yo').innerHTML=(YO.avatar?'<img src="'+esc(YO.avatar)+'" alt="">':'')+'<div>'+esc(YO.nombre)+'<small>'+esc(YO.cargo)+'</small></div>'}
+function pintarYo(){window.HGAdminWeb?.refresh();if(!YO)return;var rf=$('#repFecha');if(rf)rf.textContent=diaLargo(Date.now())+' de 1880';$('#yo').innerHTML=(YO.avatar?'<img src="'+esc(YO.avatar)+'" alt="">':'')+'<div>'+esc(YO.nombre)+'<small>'+esc(YO.cargo)+'</small></div>'}
 $('#salir').onclick=function(){api('salir').catch(function(){}).then(function(){store(KS,null);YO=null;mostrarEntrada('Ha cerrado la sesión.');$('#entradaMsg').className='aviso bien'})};
 var esGob=function(){return YO&&(YO.roles.gobernador||YO.roles.admin)};
 

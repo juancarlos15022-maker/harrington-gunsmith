@@ -1,0 +1,13 @@
+# Administración web privada
+
+La barra «Administración web» enlaza Armería, Gobierno y Pedidos automáticos. Aparece bajo la cabecera y adapta sus colores al sitio: verde y latón, marfil y azul, o papel comercial. En móvil las pestañas se ajustan y conservan objetivos táctiles de 44 px. Tiene foco visible y pestaña actual accesible. No aparece en el código HTML ningún enlace del menú: el servidor devuelve sus destinos tras autorizar al propietario.
+
+El permiso de administrador web corresponde exclusivamente a la identidad configurada en `hg_security_config`. No se deriva del puesto Jefe, Dirección, gobernador ni Administrador de Discord. La armería exige la cuenta propietaria y su sesión vigente, mediante `hg_admin_web_panel`. Gobierno valida primero su propia sesión y usa el usuario de esa sesión para llamar a `hg_admin_web_gobierno`, reservado a service_role. El cliente no puede indicar qué usuario debe autorizarse. La configuración del propietario y los permisos de cada web no se modifican.
+
+Las webs conservan sus métodos de acceso: la barra no traslada contraseñas, sesiones o permisos de una a otra. Si una sesión no está iniciada o ha caducado, se usa la entrada habitual del destino. La página de pedidos reconoce la sesión actual de la armería, incluida su renovación, o la sesión de Gobierno si no hay una sesión de armería activa. No busca otras cuentas guardadas en el dispositivo. Nunca usa el enlace de una propuesta como prueba de ser administrador.
+
+`pedidos-automaticos.html` es la portada privada del circuito existente de propuestas y albaranes (`aceptar.html`). Muestra hasta 100 pedidos automáticos recientes enviados al propietario. Los datos y enlaces personales solo llegan desde el servidor tras autorizar. Abrir una propuesta con «Aceptar propuesta y ver albarán» usa el flujo existente de aceptación, sin crear otro pedido. Las propuestas de otras personas no se incluyen. Entrar sin autorización solo muestra un aviso de acceso reservado.
+
+Cerrar sesión o cambiar de usuario elimina los enlaces y el contenido privado. Las respuestas pendientes de la cuenta anterior se descartan. Al volver a la ventana o cambiar de pestaña del navegador se revalida la sesión; los enlaces no conceden acceso por sí mismos. Las webs y funciones existentes siguen comprobando sus propios permisos.
+
+Pruebas: `node test-admin-web-sql.cjs`, `node --test test-admin-web-ui.cjs`, `node --experimental-strip-types --test test-admin-web-gobierno.mjs`. Cubren otros jefes y administradores, sesiones caducadas, cambio de usuario, respuestas tardías, privacidad de pedidos, permisos del puente de Gobierno y ausencia de credenciales en los enlaces de navegación.
