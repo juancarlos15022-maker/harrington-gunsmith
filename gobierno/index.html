@@ -6,24 +6,28 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.discordapp.com; connect-src https://mrlpvjxuifvspeaqtscm.supabase.co; base-uri 'none'; form-action 'none'">
-<meta name="theme-color" content="#0d1626">
+<meta name="theme-color" content="#140d07">
 <title>Gobierno de Silver Peak</title>
 <link rel="icon" href="escudo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&amp;family=EB+Garamond:ital,wght@0,400;0,600;1,400&amp;family=IM+Fell+English:ital@0;1&amp;family=Pinyon+Script&amp;family=Special+Elite&amp;display=swap" rel="stylesheet">
-<link rel="stylesheet" href="gob.css?v=1">
+<link rel="stylesheet" href="gob.css?v=2">
 </head>
 <body>
 <div id="entrada" class="entrada" hidden>
  <div class="entrada-in">
   <div class="sello-grande">
-   <img src="escudo.svg" alt="Escudo del Gobierno de Silver Peak" width="168" height="168">
+   <div class="medalla"><img src="escudo.svg" alt="Escudo del Gobierno de Silver Peak" width="150" height="150"></div>
    <div class="pre">GOBIERNO DE</div>
    <h1>SILVER PEAK</h1>
+   <img class="sep" src="img/separador.webp" alt="" width="300" height="51">
    <p>Despacho del Gobernador y del Consejo de Gobierno. Solo para el equipo de gobierno.</p>
   </div>
-  <div class="tarjeta entrar">
-   <h2>Entrar con Discord</h2>
+  <div class="entrar">
+   <div class="quien">
+    <div class="retrato"><img class="cara" src="img/whitmore.webp" alt="" width="56" height="78"><img class="marco" src="img/marco-ovalado.webp" alt="" width="84" height="111"></div>
+    <h2>Entrar con Discord<small>El Sr. Whitmore le abre la puerta del despacho.</small></h2>
+   </div>
    <ol class="pasos">
     <li><span>1</span><div>En cualquier canal de gobierno del Discord escriba <b>/acceso</b>.</div></li>
     <li><span>2</span><div>El Sr. Whitmore le contesta con un botón personal. Solo lo ve usted y sirve una vez, durante 10 minutos.</div></li>
@@ -37,17 +41,17 @@
 
 <div id="app" class="app" hidden>
  <nav class="menu" aria-label="Secciones">
-  <div class="marca"><img src="escudo.svg" alt="" width="40" height="40"><div>SILVER PEAK<small>GOBIERNO</small></div></div>
-  <a href="#despacho" data-v="despacho">Despacho</a>
-  <a href="#agenda" data-v="agenda">Agenda</a>
-  <a href="#documentos" data-v="documentos">Documentos</a>
-  <a href="#telegramas" data-v="telegramas">Telegramas</a>
+  <div class="marca"><span class="mini"><img src="escudo.svg" alt="" width="40" height="40"></span><div>SILVER PEAK<small>GOBIERNO</small></div></div>
+  <a href="#despacho" data-v="despacho"><img src="img/i-llave.webp" alt="" width="30" height="30">Despacho</a>
+  <a href="#agenda" data-v="agenda"><img src="img/i-calendario.webp" alt="" width="30" height="30">Agenda</a>
+  <a href="#documentos" data-v="documentos"><img src="img/i-pergamino.webp" alt="" width="30" height="30">Documentos</a>
+  <a href="#telegramas" data-v="telegramas"><img src="img/i-telegrafo.webp" alt="" width="30" height="30">Telegramas</a>
   <div class="yo" id="yo"></div>
   <button type="button" class="salir" id="salir">Cerrar sesión</button>
  </nav>
  <main id="vista" class="vista" tabindex="-1"></main>
 </div>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-<script src="gob.js?v=1"></script>
+<script src="gob.js?v=2"></script>
 </body>
 </html>

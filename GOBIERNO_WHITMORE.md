@@ -42,3 +42,15 @@ https://juancarlos15022-maker.github.io/harrington-gunsmith/gobierno/ · aparte 
 - Todo lo que se hace en la web se publica o actualiza en los canales de Discord igual que con las órdenes.
 - Servidor: la misma función, cuerpo `{web:true, accion, sesion, …}`; CORS solo para juancarlos15022-maker.github.io.
 - Lugar: Gobierno de Silver Peak (no Saint Denis). Firma «cargo · Silver Peak»; documentos «Dado en Silver Peak».
+
+### Aspecto «despacho» (22/10/2026, gob.css v2)
+Madera de fondo, menú de cuero verde con canto de latón, cabeceras con escena por sección, botones de latón,
+agenda en papel rayado, documentos en pergamino con esquinas de ornamento y lacre, telegramas en papel con tipografía
+de máquina, nota diaria del Sr. Whitmore en el Despacho y dibujos en los apartados vacíos.
+Imágenes en `gobierno/img/` (copias reducidas, **recicladas de la web de Harrington y provisionales**; se cambian por
+imágenes propias sin tocar la armería): madera, cuero, latón, papel, pergamino ← texturas de la armería ·
+cab-despacho ← whitmore-banner · cab-agenda ← escena-agenda · cab-documentos ← fondo-carga · cab-telegramas ← escena-discord ·
+whitmore ← whitmore-avatar · marco-ovalado · esq-si/sd/ii/id ← esquina-ornamento · separador ← separador-ornamento ·
+i-reloj ← reloj-bolsillo · i-pluma ← dc-libro · i-llave ← dc-llave · i-moneda ← moneda-oro · i-calendario ← dc-calendario ·
+i-pergamino ← dc-pergamino · i-telegrafo ← icono-telegrafo · i-sobre / i-sobre-abierto ← sobre-cerrado / sobre-abierto ·
+v-telegrafo ← vacio-avisos · v-pergamino ← vacio-encargos · i-reloj2 ← dc-reloj (sin usar aún).
