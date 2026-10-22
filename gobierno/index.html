@@ -6,27 +6,29 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.discordapp.com; connect-src https://mrlpvjxuifvspeaqtscm.supabase.co; base-uri 'none'; form-action 'none'">
-<meta name="theme-color" content="#140d07">
-<title>Gobierno de Silver Peak</title>
+<meta name="theme-color" content="#172c40">
+<title>Partido Republicano · Silver Peak · 1880</title>
 <link rel="icon" href="escudo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&amp;family=EB+Garamond:ital,wght@0,400;0,600;1,400&amp;family=IM+Fell+English:ital@0;1&amp;family=Pinyon+Script&amp;family=Special+Elite&amp;display=swap" rel="stylesheet">
-<link rel="stylesheet" href="gob.css?v=7-cuentas">
+<link rel="stylesheet" href="gob.css?v=8-republicano">
+<link rel="stylesheet" href="republicano.css?v=8-republicano">
 </head>
 <body>
+<a class="rep-saltar" href="#vista" data-rep-saltar>Ir al contenido</a>
 <div id="entrada" class="entrada" hidden>
  <div class="entrada-in">
   <div class="sello-grande">
-   <div class="medalla"><img src="escudo.svg" alt="Escudo del Gobierno de Silver Peak" width="150" height="150"></div>
-   <div class="pre">GOBIERNO DE</div>
-   <h1>SILVER PEAK</h1>
+   <div class="rep-monograma rep-monograma-grande" aria-label="Monograma provisional del Partido Republicano">PR<span>1880</span></div>
+   <div class="pre">COMITÉ DE SILVER PEAK · 1880</div>
+   <h1>PARTIDO<br>REPUBLICANO</h1>
    <img class="sep" src="img/separador.webp" alt="" width="300" height="51">
-   <p>Despacho del Gobernador y del Consejo de Gobierno. Solo para el equipo de gobierno.</p>
+   <p>La sede de trabajo de nuestra candidatura. Correspondencia, acuerdos y administración del Consejo, en un mismo escritorio.</p>
   </div>
   <div class="entrar">
    <div class="quien">
     <div class="retrato"><img class="cara" src="img/whitmore.webp" alt="" width="56" height="78"><img class="marco" src="img/marco-ovalado.webp" alt="" width="84" height="111"></div>
-    <h2>Entrar con Discord<small>El Sr. Whitmore le abre la puerta del despacho.</small></h2>
+    <h2>Entrar con Discord<small>El Sr. Whitmore le abre la puerta de la sede.</small></h2>
    </div>
    <ol class="pasos">
     <li><span>1</span><div>En cualquier canal de gobierno del Discord escriba <b>/acceso</b>.</div></li>
@@ -40,21 +42,30 @@
 </div>
 
 <div id="app" class="app" hidden>
- <nav class="menu" aria-label="Secciones">
-  <div class="marca"><span class="mini"><img src="escudo.svg" alt="" width="40" height="40"></span><div>SILVER PEAK<small>GOBIERNO</small></div></div>
-  <a href="#despacho" data-v="despacho"><img src="img/i-llave.webp" alt="" width="30" height="30">Despacho</a>
-  <a href="#agenda" data-v="agenda"><img src="img/i-calendario.webp" alt="" width="30" height="30">Agenda</a>
-  <a href="#documentos" data-v="documentos"><img src="img/i-pergamino.webp" alt="" width="30" height="30">Documentos</a>
-  <a href="#telegramas" data-v="telegramas"><img src="img/i-telegrafo.webp" alt="" width="30" height="30">Telegramas</a>
-  <a href="#campana" data-v="campana"><img src="img/i-pluma.webp" alt="" width="30" height="30">Campaña</a>
-  <a href="#secretarias" data-v="secretarias"><img src="img/i-pergamino.webp" alt="" width="30" height="30">Secretarías</a>
-  <a href="#hacienda" data-v="hacienda"><img src="img/i-moneda.webp" alt="" width="30" height="30">Hacienda</a>
-  <div class="yo" id="yo"></div>
-  <button type="button" class="salir" id="salir">Cerrar sesión</button>
+ <nav class="menu" aria-label="Libros y oficinas de la sede">
+  <a class="marca" href="#despacho" aria-label="Partido Republicano, mesa de trabajo"><span class="rep-monograma" aria-hidden="true">PR<span>1880</span></span><div>PARTIDO<br>REPUBLICANO<small>COMITÉ DE SILVER PEAK</small></div></a>
+  <button class="rep-menu-boton" id="repMenu" type="button" aria-expanded="false" aria-controls="repNavegacion">Abrir los libros <span aria-hidden="true">☰</span></button>
+  <div class="rep-navegacion" id="repNavegacion">
+   <a href="#despacho" data-v="despacho"><img src="img/i-llave.webp" alt="" width="30" height="30"><span>Mesa de trabajo<small>El parte y los asuntos de hoy</small></span></a>
+   <div class="rep-menu-titulo">I. LA CANDIDATURA</div>
+   <a href="#campana" data-v="campana"><img src="img/i-pluma.webp" alt="" width="30" height="30"><span>Oficina de campaña<small>Postulación, ideas y mítines</small></span></a>
+   <a href="#agenda" data-v="agenda"><img src="img/i-calendario.webp" alt="" width="30" height="30"><span>Agenda y encuentros<small>Citas, audiencias y reuniones</small></span></a>
+   <div class="rep-menu-titulo">II. CORRESPONDENCIA</div>
+   <a href="#telegramas" data-v="telegramas"><img src="img/i-telegrafo.webp" alt="" width="30" height="30"><span>Telégrafo<small>Entrada y salida de mensajes</small></span></a>
+   <a href="#documentos" data-v="documentos"><img src="img/i-pergamino.webp" alt="" width="30" height="30"><span>Documentos y firmas<small>Preparar, revisar y autorizar</small></span></a>
+   <div class="rep-menu-titulo">III. ADMINISTRACIÓN</div>
+   <a href="#secretarias" data-v="secretarias"><img src="img/i-pergamino.webp" alt="" width="30" height="30"><span>Secretarías<small>Competencias y expedientes</small></span></a>
+   <a href="#hacienda" data-v="hacienda"><img src="img/i-moneda.webp" alt="" width="30" height="30"><span>Tesorería y cuentas<small>Fondos, alcaldías y nóminas</small></span></a>
+  </div>
+  <div class="rep-miembro"><div class="yo" id="yo"></div><button type="button" class="salir" id="salir">Cerrar el despacho</button></div>
  </nav>
+ <div class="rep-cuerpo">
+  <header class="rep-membrete"><div>SEDE DEL COMITÉ REPUBLICANO<small>Silver Peak · Estados Unidos de América</small></div><span id="repFecha">Año de 1880</span></header>
  <main id="vista" class="vista" tabindex="-1"></main>
+  <footer class="rep-pie"><span>PARTIDO REPUBLICANO · SILVER PEAK</span><span>Correspondencia y libros internos · 1880</span></footer>
+ </div>
 </div>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-<script src="gob.js?v=7-cuentas"></script>
+<script src="gob.js?v=8-republicano"></script>
 </body>
 </html>
