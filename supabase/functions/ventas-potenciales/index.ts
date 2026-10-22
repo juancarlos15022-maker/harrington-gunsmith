@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2.118.0';
+import {textoComprobacion,tarjetaComprobacion} from './comprobacion.ts';
 import {historico} from './historico.ts';
 import {potencial,auditarStock,impactoInventario} from './calculo.ts';
 import {informe,tarjeta,rango} from './informe.ts';
@@ -22,7 +23,7 @@ Deno.serve(async req=>{
   if(e.tipo!=='actualizacion'){
    // Recupera entregas ya aceptadas por Discord si se perdió la confirmación de la base de datos.
    if(!message){const history=await api('GET','/channels/'+c.canal_ventas_potenciales+'/messages?limit=100');message=history.find((m:any)=>m.author?.bot&&m.embeds?.some((x:any)=>x.footer?.text==='Ventas potenciales · registro '+e.id))?.id;}
-   const filename='Ventas_potenciales_'+e.id+'.txt',f=new FormData();f.set('payload_json',JSON.stringify({...tarjeta(e,p,audit,impact,hist),attachments:[{id:0,filename}]}));f.set('files[0]',new File([informe(e,p,audit,impact,hist)],filename,{type:'text/plain;charset=utf-8'}));message=(await api(message?'PATCH':'POST','/channels/'+c.canal_ventas_potenciales+'/messages'+(message?'/'+message:''),f)).id;
+   const filename='Ventas_potenciales_'+e.id+'.txt',f=new FormData();f.set('payload_json',JSON.stringify({...(e.tipo==='comprobacion'?tarjetaComprobacion(e):tarjeta(e,p,audit,impact,hist)),attachments:[{id:0,filename}]}));f.set('files[0]',new File([e.tipo==='comprobacion'?textoComprobacion(e):informe(e,p,audit,impact,hist)],filename,{type:'text/plain;charset=utf-8'}));message=(await api(message?'PATCH':'POST','/channels/'+c.canal_ventas_potenciales+'/messages'+(message?'/'+message:''),f)).id;
   }
   const {error:save}=await sb.from('hg_potencial_eventos').update({resultado:result,mensaje:message||null,enviado:new Date().toISOString(),error:null,bloqueado_hasta:null}).eq('id',e.id);if(save)throw Error('CONFIRMACION_PENDIENTE');n++;
  }catch(err){await sb.from('hg_potencial_eventos').update({error:String(err).slice(0,200),bloqueado_hasta:new Date(Date.now()+60000).toISOString()}).eq('id',e.id);break;}}
