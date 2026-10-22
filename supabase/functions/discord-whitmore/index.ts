@@ -5,6 +5,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { COMANDOS } from "./comandos.ts";
 import { orden, boton, formulario, revision, eph, type Ctx } from "./gob.ts";
+import { web, CORS } from "./web.ts";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { "Content-Type": "application/json" } });
 const hex = (h: string) => new Uint8Array((h.match(/../g) || []).map((b) => parseInt(b, 16)));
@@ -77,10 +78,16 @@ async function control(body: any, c: Record<string, string>) {
   return json({ ok: true, res });
 }
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return new Response("Señor Whitmore", { status: 200 });
   const cuerpo = await req.text();
   const c = await cfg();
-  if (!req.headers.get("x-signature-ed25519")) { let b: any = null; try { b = JSON.parse(cuerpo); } catch { /* */ } return control(b, c); }
+  if (!req.headers.get("x-signature-ed25519")) {
+    let b: any = null; try { b = JSON.parse(cuerpo); } catch { /* */ }
+    // la web del gobierno (con su sesión), sin la clave de control
+    if (b && b.web === true) return web(ctxDe(c), b);
+    return control(b, c);
+  }
   if (!(await firmaOk(req, cuerpo, c.public_key))) return new Response("firma no válida", { status: 401 });
   let i: any;
   try { i = JSON.parse(cuerpo); } catch { return new Response("JSON", { status: 400 }); }

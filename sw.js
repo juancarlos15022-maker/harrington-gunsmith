@@ -32,6 +32,7 @@ self.addEventListener('fetch',e=>{
  if(req.method!=='GET'||req.headers.has('authorization'))return;
  const fonts=/(^|\.)fonts\.(googleapis|gstatic)\.com$/.test(url.hostname);
  if(!fonts&&(url.origin!==scope.origin||!url.pathname.startsWith(scope.pathname)))return;
+ if(url.origin===scope.origin&&url.pathname.startsWith(scope.pathname+'gobierno/'))return;   // la web del gobierno va aparte (sin la caché de la armería)
  const nav=req.mode==='navigate'||url.pathname.endsWith('/')||url.pathname.endsWith('.html');
  if(!nav&&!fonts&&!/\.(js|css|webmanifest|png|jpe?g|webp|svg|ico|woff2?|ttf|mp3|wav|ogg)$/i.test(url.pathname))return;
  const cachedFrom=async(name,key)=>{try{return await(await caches.open(name)).match(key)}catch{return undefined}};

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.discordapp.com; connect-src https://mrlpvjxuifvspeaqtscm.supabase.co; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#0d1626">
+<title>Gobierno de Silver Peak</title>
+<link rel="icon" href="escudo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&amp;family=EB+Garamond:ital,wght@0,400;0,600;1,400&amp;family=IM+Fell+English:ital@0;1&amp;family=Pinyon+Script&amp;family=Special+Elite&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="gob.css?v=1">
+</head>
+<body>
+<div id="entrada" class="entrada" hidden>
+ <div class="entrada-in">
+  <div class="sello-grande">
+   <img src="escudo.svg" alt="Escudo del Gobierno de Silver Peak" width="168" height="168">
+   <div class="pre">GOBIERNO DE</div>
+   <h1>SILVER PEAK</h1>
+   <p>Despacho del Gobernador y del Consejo de Gobierno. Solo para el equipo de gobierno.</p>
+  </div>
+  <div class="tarjeta entrar">
+   <h2>Entrar con Discord</h2>
+   <ol class="pasos">
+    <li><span>1</span><div>En cualquier canal de gobierno del Discord escriba <b>/acceso</b>.</div></li>
+    <li><span>2</span><div>El Sr. Whitmore le contesta con un botón personal. Solo lo ve usted y sirve una vez, durante 10 minutos.</div></li>
+    <li><span>3</span><div>Púlselo y entrará aquí. Este dispositivo le recuerda 30 días; no hay contraseñas.</div></li>
+   </ol>
+   <p id="entradaMsg" class="aviso" hidden></p>
+   <p class="nota">Solo entra quien tenga un rol del Consejo de Gobierno en Discord. Si le quitan el rol, el acceso se cierra solo.</p>
+  </div>
+ </div>
+</div>
+
+<div id="app" class="app" hidden>
+ <nav class="menu" aria-label="Secciones">
+  <div class="marca"><img src="escudo.svg" alt="" width="40" height="40"><div>SILVER PEAK<small>GOBIERNO</small></div></div>
+  <a href="#despacho" data-v="despacho">Despacho</a>
+  <a href="#agenda" data-v="agenda">Agenda</a>
+  <a href="#documentos" data-v="documentos">Documentos</a>
+  <a href="#telegramas" data-v="telegramas">Telegramas</a>
+  <div class="yo" id="yo"></div>
+  <button type="button" class="salir" id="salir">Cerrar sesión</button>
+ </nav>
+ <main id="vista" class="vista" tabindex="-1"></main>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script src="gob.js?v=1"></script>
+</body>
+</html>

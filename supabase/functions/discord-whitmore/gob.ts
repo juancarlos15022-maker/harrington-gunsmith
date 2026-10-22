@@ -6,8 +6,8 @@ const AZUL = 0x2f4a6d, ORO = 0xc9a24a, VERDE = 0x3e8e4e, ROJO = 0x8b2e25, GRIS =
 const PIE = { text: "Sr. Whitmore · Consejo de Gobierno" };
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
-const limpio = (s: unknown, n = 300) => String(s ?? "").replace(/@(everyone|here)/g, "@​$1").trim().slice(0, n);
-const dolar = (c: number) => (c < 0 ? "−" : "") + "$" + (Math.abs(c) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const limpio = (s: unknown, n = 300) => String(s ?? "").replace(/@(everyone|here)/g, "@\u200b$1").trim().slice(0, n);
+export const dolar = (c: number) => (c < 0 ? "−" : "") + "$" + (Math.abs(c) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /* ---------- fechas (hora de Madrid) ---------- */
 function partes(ms: number) {
@@ -21,7 +21,7 @@ export function madridMs(y: number, mo: number, d: number, h: number, mi: number
 }
 export function leerFecha(f: string, h = "09:00"): number | null {
   const ahora = partes(Date.now()); let y = ahora.y, mo = ahora.mo, d = ahora.d, conAnio = false;
-  const t = String(f || "").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const t = String(f || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (t === "hoy") { /* hoy */ } else if (t === "manana") { const x = partes(Date.now() + 86400000); y = x.y; mo = x.mo; d = x.d; }
   else if (t === "pasado manana") { const x = partes(Date.now() + 2 * 86400000); y = x.y; mo = x.mo; d = x.d; }
   else { const m = /^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?$/.exec(t); if (!m) return null; d = +m[1]; mo = +m[2]; if (m[3]) { y = +m[3] < 100 ? 2000 + +m[3] : +m[3]; conAnio = true; } }
@@ -38,7 +38,7 @@ export function fechaTxt(ms: number, conHora = true) {
 }
 const ts = (ms: number, f = "F") => `<t:${Math.floor(ms / 1000)}:${f}>`;
 const diaMadrid = (ms = Date.now()) => { const p = partes(ms); return `${p.y}-${String(p.mo).padStart(2, "0")}-${String(p.d).padStart(2, "0")}`; };
-const inicioDia = (ms = Date.now()) => { const p = partes(ms); return madridMs(p.y, p.mo, p.d, 0, 0); };
+export const inicioDia = (ms = Date.now()) => { const p = partes(ms); return madridMs(p.y, p.mo, p.d, 0, 0); };
 
 /* ---------- respuestas a Discord ---------- */
 const R = (o: unknown) => new Response(JSON.stringify(o), { headers: { "Content-Type": "application/json" } });
@@ -61,38 +61,38 @@ function quien(i: Any) {
 const tiene = (x: ReturnType<typeof quien>, c: Record<string, string>, ...k: string[]) => x.admin || k.some((r) => c["rol_" + r] && x.roles.includes(c["rol_" + r]));
 const enConsejo = (x: ReturnType<typeof quien>, c: Record<string, string>) => tiene(x, c, "consejo", "gobernador", "gobernacion", "economia");
 
-async function nuevo(ctx: Ctx, tipo: string, campos: Any, numerar = true) {
+export async function nuevo(ctx: Ctx, tipo: string, campos: Any, numerar = true) {
   const numero = numerar ? (await ctx.sb.rpc("gob_siguiente", { p_tipo: tipo })).data : null;
   const { data, error } = await ctx.sb.from("gob_registros").insert({ tipo, numero, ...campos }).select("*").single();
   if (error) throw Error("No he podido guardarlo. Inténtelo de nuevo.");
   return data;
 }
-const cambiar = async (ctx: Ctx, id: number, v: Any) => (await ctx.sb.from("gob_registros").update({ ...v, actualizado: new Date().toISOString() }).eq("id", id).select("*").single()).data;
-const leer = async (ctx: Ctx, id: number) => (await ctx.sb.from("gob_registros").select("*").eq("id", id).maybeSingle()).data;
-async function publicar(ctx: Ctx, r: Any, canal: string, payload: Any, menciones: Any = { parse: [] }) {
+export const cambiar = async (ctx: Ctx, id: number, v: Any) => (await ctx.sb.from("gob_registros").update({ ...v, actualizado: new Date().toISOString() }).eq("id", id).select("*").single()).data;
+export const leer = async (ctx: Ctx, id: number) => (await ctx.sb.from("gob_registros").select("*").eq("id", id).maybeSingle()).data;
+export async function publicar(ctx: Ctx, r: Any, canal: string, payload: Any, menciones: Any = { parse: [] }) {
   const m = await ctx.api("POST", `/channels/${canal}/messages`, { allowed_mentions: menciones, ...payload });
   if (m?.id) await ctx.sb.from("gob_registros").update({ canal_id: canal, mensaje_id: m.id }).eq("id", r.id);
   return m;
 }
-const repintar = (ctx: Ctx, r: Any, payload: Any) => r.canal_id && r.mensaje_id ? ctx.api("PATCH", `/channels/${r.canal_id}/messages/${r.mensaje_id}`, { allowed_mentions: { parse: [] }, ...payload }).catch(() => null) : null;
+export const repintar = (ctx: Ctx, r: Any, payload: Any) => r.canal_id && r.mensaje_id ? ctx.api("PATCH", `/channels/${r.canal_id}/messages/${r.mensaje_id}`, { allowed_mentions: { parse: [] }, ...payload }).catch(() => null) : null;
 const enlace = (ctx: Ctx, canal: string, msg?: string) => `https://discord.com/channels/${ctx.c.guild_id}/${canal}${msg ? "/" + msg : ""}`;
-async function votos(ctx: Ctx, id: number) {
+export async function votos(ctx: Ctx, id: number) {
   const { data } = await ctx.sb.from("gob_votos").select("usuario_id,nombre,voto").eq("registro_id", id);
   const si = (data || []).filter((v: Any) => v.voto === "si"), no = (data || []).filter((v: Any) => v.voto === "no");
   return { si, no, txt: (l: Any[]) => l.length ? l.map((v: Any) => v.nombre).join(", ") : "—" };
 }
-async function votar(ctx: Ctx, id: number, x: Any, voto: string) {
+export async function votar(ctx: Ctx, id: number, x: Any, voto: string) {
   await ctx.sb.from("gob_votos").upsert({ registro_id: id, usuario_id: x.id, nombre: x.nombre, voto, creado: new Date().toISOString() }, { onConflict: "registro_id,usuario_id" });
 }
 
 /* ---------- tarjetas ---------- */
-function tarjetaCita(r: Any) {
+export function tarjetaCita(r: Any) {
   const d = r.datos, can = r.estado === "cancelada";
   return { embeds: [{ title: `📅 Cita n.º ${r.numero} · ${d.con}`, color: can ? GRIS : AZUL,
     description: (can ? "~~" : "") + `**Cuándo:** ${ts(new Date(r.cuando).getTime())} (${ts(new Date(r.cuando).getTime(), "R")})` + (can ? "~~" : "") + (d.lugar ? `\n**Lugar:** ${d.lugar}` : "") + (d.motivo ? `\n**Motivo:** ${d.motivo}` : "") + (d.audiencia ? `\n*Viene de la audiencia n.º ${d.audiencia}.*` : "") + (can ? `\n\n❌ **Cancelada** por ${d.canceladaPor || "—"}.` : ""),
     footer: { text: `Apuntada por ${r.autor} · Sr. Whitmore` } }], components: can ? [] : [fila(btn("Cancelar cita", "cita:cancel:" + r.id, 4))] };
 }
-function tarjetaAudiencia(r: Any) {
+export function tarjetaAudiencia(r: Any) {
   const d = r.datos, est = r.estado;
   const col = est === "aceptada" ? VERDE : est === "rechazada" ? ROJO : ORO;
   return { embeds: [{ title: `🏛️ Audiencia n.º ${r.numero} · ${d.quien}`, color: col,
@@ -101,7 +101,7 @@ function tarjetaAudiencia(r: Any) {
     footer: { text: `Apuntada por ${r.autor} · Sr. Whitmore` } }],
     components: est === "pendiente" ? [fila(btn("Aceptar", "aud:ok:" + r.id, 3, "✅"), btn("Rechazar", "aud:no:" + r.id, 4, "✖️"))] : [] };
 }
-async function tarjetaReunion(ctx: Ctx, r: Any) {
+export async function tarjetaReunion(ctx: Ctx, r: Any) {
   const d = r.datos, v = await votos(ctx, r.id), ms = new Date(r.cuando).getTime(), acto = r.tipo === "acto";
   const orden = (d.orden || "").split(";").map((s: string) => s.trim()).filter(Boolean);
   const cerrada = r.estado === "cerrada";
@@ -118,32 +118,32 @@ function tarjetaActa(r: Any) {
     description: `**Reunión del** ${fechaTxt(d.fecha)}\n**Asistentes:** ${d.asistentes || "—"}\n\n**Acuerdos**\n${d.acuerdos}` + (d.notas ? `\n\n**Notas**\n${d.notas}` : ""), footer: { text: `Redactada por ${r.autor} · Sr. Whitmore` } }] };
 }
 function saludo() { const h = partes(Date.now()).h; return h >= 6 && h < 14 ? "Buenos días" : h >= 14 && h < 21 ? "Buenas tardes" : "Buenas noches"; }
-function firmaDe(ctx: Ctx, x: Any) { return `${ctx.c.firma_nombre || x.nombre}\n${ctx.c.firma_cargo || "Gobernador"} · Saint Denis`; }
-function telegramaTxt(ctx: Ctx, x: Any, para: string, texto: string) {
+export function firmaDe(ctx: Ctx, x: Any) { return `${ctx.c.firma_nombre || x.nombre}\n${ctx.c.firma_cargo || "Gobernador"} · Silver Peak`; }
+export function telegramaTxt(ctx: Ctx, x: Any, para: string, texto: string) {
   const t = texto.trim().replace(/\s+$/, ""), fin = /[.!?…]$/.test(t) ? "" : ".";
   return `${para}:\n\n${saludo()}. ${t}${fin}\n\nReciba un cordial saludo,\n${firmaDe(ctx, x)}`;
 }
-function tarjetaTelegrama(r: Any) {
+export function tarjetaTelegrama(r: Any) {
   const d = r.datos, entra = d.sentido === "entrada";
   return { embeds: [{ title: (entra ? "📥 Telegrama recibido · de " : "📤 Telegrama para ") + (entra ? d.de : d.para), color: entra ? ORO : AZUL,
     description: (entra ? d.texto : "```\n" + d.texto.replace(/```/g, "ˋˋˋ") + "\n```") + (d.telegrama ? `\n**Telegrama:** ${d.telegrama}` : "") + (d.respondido ? `\n\n✅ Respondido por ${d.respondido}.` : ""),
     footer: { text: `${entra ? "Registrado" : "Redactado"} por ${r.autor} · n.º ${r.numero} · Sr. Whitmore` } }],
     components: entra && !d.respondido ? [fila(btn("Redactar respuesta", "tel:resp:" + r.id, 1, "✍️"))] : [] };
 }
-const TIPO_DOC: Record<string, string> = { decreto: "DECRETO", comunicado: "COMUNICADO", carta: "CARTA" };
-function textoDocumento(r: Any) {
+export const TIPO_DOC: Record<string, string> = { decreto: "DECRETO", comunicado: "COMUNICADO", carta: "CARTA" };
+export function textoDocumento(r: Any) {
   const d = r.datos, p = partes(d.firmadoMs || Date.now());
   const cab = `${TIPO_DOC[d.clase] || "DOCUMENTO"}${d.numDoc ? " N.º " + d.numDoc : ""}\n${String(d.titulo).toUpperCase()}`;
-  return `${cab}\n\n${d.texto}\n\nDado en Saint Denis, a ${p.d} de ${MESES[p.mo - 1]} de ${p.y}.\n\n${d.firma || "(pendiente de firma)"}`;
+  return `${cab}\n\n${d.texto}\n\nDado en Silver Peak, a ${p.d} de ${MESES[p.mo - 1]} de ${p.y}.\n\n${d.firma || "(pendiente de firma)"}`;
 }
-function tarjetaDecreto(r: Any) {
+export function tarjetaDecreto(r: Any) {
   const d = r.datos, est = r.estado;
   return { embeds: [{ title: `${est === "firmado" ? "🖋️" : est === "descartado" ? "🗑️" : "📝"} ${TIPO_DOC[d.clase] || "Documento"}${d.numDoc ? " n.º " + d.numDoc : ""} · ${d.titulo}`, color: est === "firmado" ? ORO : est === "descartado" ? GRIS : AZUL,
     description: (est === "borrador" ? "*Borrador pendiente de la firma del gobernador.*\n\n" : "") + "```\n" + textoDocumento(r).replace(/```/g, "ˋˋˋ").slice(0, 3800) + "\n```",
     footer: { text: (est === "firmado" ? `Firmado el ${fechaTxt(d.firmadoMs)}` : est === "descartado" ? "Descartado" : `Redactado por ${r.autor}`) + " · Sr. Whitmore" } }],
     components: est === "borrador" ? [fila(btn("Firmar", "dec:firmar:" + r.id, 3, "🖋️"), btn("Editar", "dec:editar:" + r.id, 2, "✏️"), btn("Descartar", "dec:descartar:" + r.id, 4))] : [] };
 }
-async function tarjetaPropuesta(ctx: Ctx, r: Any) {
+export async function tarjetaPropuesta(ctx: Ctx, r: Any) {
   const d = r.datos, v = await votos(ctx, r.id), est = r.estado;
   return { embeds: [{ title: `💡 Propuesta n.º ${r.numero} · ${d.titulo}`, color: est === "aprobada" ? VERDE : est === "rechazada" ? ROJO : AZUL,
     description: `${d.texto}\n\n👍 **A favor (${v.si.length}):** ${v.txt(v.si)}\n👎 **En contra (${v.no.length}):** ${v.txt(v.no)}` +
@@ -151,7 +151,7 @@ async function tarjetaPropuesta(ctx: Ctx, r: Any) {
     footer: { text: `Presentada por ${r.autor}${d.cierra ? " · votación cerrada por " + d.cierra : ""} · Sr. Whitmore` } }],
     components: est === "abierta" ? [fila(btn("A favor", "pro:si:" + r.id, 3, "👍"), btn("En contra", "pro:no:" + r.id, 4, "👎"), btn("Cerrar votación", "pro:cerrar:" + r.id, 2, "🔒"))] : [] };
 }
-function tarjetaTarea(r: Any) {
+export function tarjetaTarea(r: Any) {
   const d = r.datos, hecha = r.estado === "hecha";
   return { content: hecha ? "" : `<@${d.para}>`, embeds: [{ title: `${hecha ? "✅" : "📋"} Tarea n.º ${r.numero}`, color: hecha ? VERDE : AZUL,
     description: `${d.texto}\n\n**Para:** <@${d.para}>` + (r.cuando ? `\n**Plazo:** ${ts(new Date(r.cuando).getTime(), "D")} (${ts(new Date(r.cuando).getTime(), "R")})` : "") + (hecha ? `\n\n✅ Hecha por ${d.hechaPor}.` : ""),
@@ -172,6 +172,7 @@ const AYUDA = [
   "**Contactos y negocios** — `/contacto nuevo|buscar|lista`, `/negocio nuevo|buscar|lista`.",
   "**Cuentas** — `/cuenta ingreso`, `/cuenta gasto`, `/cuenta saldo` (Economía y el gobernador). Informe cada domingo en #economía.",
   "**Resumen** — `/resumen`; además, cada día a las 9:00 dejo el resumen del día en #agenda-y-reuniones.",
+  "**Web del gobierno** — `/acceso` le da un enlace personal (10 minutos, un solo uso) para entrar en la web.",
 ].join("\n");
 
 /* ---------- órdenes ---------- */
@@ -183,6 +184,14 @@ export async function orden(ctx: Ctx, i: Any): Promise<Response> {
   const { sub, o } = opciones(i), n = i.data.name;
   const base = { autor: x.nombre, autor_id: x.id };
   if (n === "whitmore") return eph(AYUDA);
+  if (n === "acceso") {
+    const bytes = crypto.getRandomValues(new Uint8Array(32)), token = [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+    const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token)))].map((b) => b.toString(16).padStart(2, "0")).join("");
+    const { error } = await ctx.sb.from("gob_accesos").insert({ token_hash: hash, usuario_id: x.id, nombre: x.nombre, expira: new Date(Date.now() + 10 * 60000).toISOString() });
+    if (error) return eph("No he podido preparar su entrada. Inténtelo de nuevo.");
+    const web = c.web_gobierno || "https://juancarlos15022-maker.github.io/harrington-gunsmith/gobierno/";
+    return eph("🔐 Aquí tiene su entrada al despacho. Es personal: no la comparta. Sirve una sola vez y caduca en 10 minutos.", { components: [fila({ type: 2, style: 5, label: "Entrar en el despacho", url: web + "?t=" + token })] });
+  }
 
   if (n === "cita") {
     if (sub === "nueva") {
@@ -325,16 +334,16 @@ export async function orden(ctx: Ctx, i: Any): Promise<Response> {
     if (!tiene(x, c, "gobernador")) return eph("La firma solo la cambia el gobernador.");
     const filas = [{ clave: "firma_cargo", valor: limpio(o.cargo, 60) }, ...(o.nombre ? [{ clave: "firma_nombre", valor: limpio(o.nombre, 60) }] : [])];
     await ctx.sb.from("whitmore_cfg").upsert(filas.map((f) => ({ ...f, actualizado: new Date().toISOString() })));
-    return eph(`🖋️ A partir de ahora firmo así:\n${o.nombre ? limpio(o.nombre, 60) : c.firma_nombre || x.nombre}\n${limpio(o.cargo, 60)} · Saint Denis`);
+    return eph(`🖋️ A partir de ahora firmo así:\n${o.nombre ? limpio(o.nombre, 60) : c.firma_nombre || x.nombre}\n${limpio(o.cargo, 60)} · Silver Peak`);
   }
   return eph("No conozco esa orden. Escribe `/whitmore` para ver lo que hago.");
 }
-const norm = (s: unknown) => String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+const norm = (s: unknown) => String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 function ficha(r: Any) {
   const d = r.datos;
   return `**${d.nombre}**` + (d.clase ? ` (${d.clase})` : "") + (d.dueno ? `\nDueño: ${d.dueno}` : "") + (d.ubicacion ? `\nUbicación: ${d.ubicacion}` : "") + (d.telegrama ? `\nTelegrama: ${d.telegrama}` : "") + (d.notas ? `\n${d.notas}` : "");
 }
-async function saldo(ctx: Ctx) { const { data } = await ctx.sb.from("gob_registros").select("datos").eq("tipo", "movimiento").limit(5000); return (data || []).reduce((a: number, r: Any) => a + Number(r.datos?.cents || 0), 0); }
+export async function saldo(ctx: Ctx) { const { data } = await ctx.sb.from("gob_registros").select("datos").eq("tipo", "movimiento").limit(5000); return (data || []).reduce((a: number, r: Any) => a + Number(r.datos?.cents || 0), 0); }
 async function agendaTxt(ctx: Ctx, desde: number, hasta: number, titulo: string) {
   const { data } = await ctx.sb.from("gob_registros").select("*").in("tipo", ["cita", "reunion", "acto"]).not("estado", "in", "(cancelada,cerrada)").gte("cuando", new Date(desde).toISOString()).lt("cuando", new Date(hasta).toISOString()).order("cuando").limit(30);
   if (!(data || []).length) return titulo + "\nNada apuntado.";
