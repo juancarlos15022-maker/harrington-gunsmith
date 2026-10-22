@@ -5801,8 +5801,9 @@ async function autoVentaConfirmar(){
   let res;
   try{res=await sbRpc('vender_fabricando',pending)}catch(e){
    const t=String(e.message||'');
-   if(/FALTAN_MATERIALES|RECETA_INVALIDA|CANTIDAD_INVALIDA|EMPLEADO_INVALIDO|SIN_CUENTA|VENTA_INVALIDA|VENTA_VACIA|PETICION_INVALIDA|DESCUENTO_MANUAL_|TOTAL_CAMBIADO|ANTICIPO_INVALIDO/.test(t)){
-    store.remove(key);try{await refreshStock()}catch(x){}
+   if(/FALTAN_MATERIALES|RECETA_INVALIDA|CANTIDAD_INVALIDA|EMPLEADO_INVALIDO|SIN_CUENTA|VENTA_INVALIDA|VENTA_VACIA|PETICION_INVALIDA|DESCUENTO_MANUAL_|TOTAL_CAMBIADO|PRECIO_CAMBIADO|DESCUENTO_CAMBIADO|ANTICIPO_INVALIDO/.test(t)){
+    store.remove(key);try{await Promise.all([cloudPullRecords(),refreshStock()])}catch(x){}
+    if(/PRECIO_CAMBIADO|TOTAL_CAMBIADO|DESCUENTO_CAMBIADO/.test(t)){calc(false);say('Los precios o el convenio han cambiado. Revisa el total actualizado y pulsa FINALIZAR de nuevo.','err');return null}
     const m=t.match(/FALTAN_MATERIALES: ([^"\\]+)/);say(m?'Faltan materiales · '+m[1].replace(/^mat:/,''):'No se puede completar la venta: '+t,'err');
    }else say('No se pudo confirmar la respuesta. Pulsa FINALIZAR otra vez para recuperar la misma venta sin duplicarla.','err');
    return null;

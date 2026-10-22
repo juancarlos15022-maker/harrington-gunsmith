@@ -57,6 +57,14 @@ test('DOM: cambios de precio durante la sincronización requieren revisar antes 
  }finally{dom.window.close()}
 });
 
+test('Precio rechazado elimina petición fallida, actualiza datos y permite revisar antes de cobrar',async()=>{
+ const {dom,w}=mount();try{
+ let pulls=0;w.eval(`offlineBlock=()=>false;customerOk=()=>true;refreshStock=async()=>{};`);w.cloudPullRecords=async()=>{pulls++};
+ w.localStorage.setItem('harrington_autoventa_pendiente_v1',JSON.stringify({p_peticion:'peticion-precio-viejo',p_venta:{}}));
+ w.sbRpc=async()=>{throw Error('PRECIO_CAMBIADO: Winchester Repetición')};
+ assert.equal(await w.autoVentaConfirmar(),null);assert.equal(w.localStorage.getItem('harrington_autoventa_pendiente_v1'),null);assert.equal(pulls,1);
+ }finally{dom.window.close()}
+});
 test('todos los productos conservan controles + y − operativos y accesos rápidos de munición',()=>{
  const {dom,w}=mount();try{
  w.__testMode('presupuesto');w.calc(false);
