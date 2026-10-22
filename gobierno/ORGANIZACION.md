@@ -45,3 +45,13 @@ Las claves `canal_area_economia`, `canal_area_comercio`, `canal_area_justicia`, 
 - `node --experimental-strip-types --test test-gobierno-oficios.mjs`: membrete, firma por identidad, autor de la última actuación, concurrencia y reintentos.
 - La migración `20261022093413_gobierno_publicaciones_por_area.sql` crea la bandeja y el disparador transaccional.
 - El archivo de la web permite buscar entre los documentos cargados, filtrar por área y estado, y cargar escritos anteriores. Los enlaces directos también recuperan documentos antiguos fuera de la primera página.
+
+## Bandeja y carpeta de expediente
+
+La Bandeja de asuntos reúne los documentos, expedientes, telegramas, audiencias y encargos recientes cargados desde sus libros. Los separa en Por atender, Por firmar, En espera y Resueltos; cada acceso conserva los controles de su función original. Sus cantidades describen la selección cargada, no el total histórico.
+
+Cada expediente dispone de pestañas para Antecedentes y gestión, Documentos, Actuaciones y Constancias. El cambio de pestaña oculta el panel sin reconstruir el formulario, para conservar lo escrito sin guardar. El recorrido y la siguiente acción se calculan a partir del estado y las competencias actuales.
+
+Las constancias se consultan en el servidor para el expediente y el documento vinculado. Solo las entregas confirmadas muestran un enlace al mensaje de Discord; los errores internos no se devuelven al navegador. Esta consulta requiere la misma sesión privada del Consejo que el resto del despacho.
+
+Pruebas adicionales: `node --test test-gobierno-carpetas.cjs` (requiere jsdom) y `node --experimental-strip-types --test test-gobierno-constancias.mjs`.

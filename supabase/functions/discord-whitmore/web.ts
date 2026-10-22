@@ -96,6 +96,16 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
     if(a==="yo")return J({ok:true,yo:{...y,cargo:cargo(y.roles),h:undefined},organizacion:await organizacion(ctx)});
     const yo = { id: y.id, nombre: y.nombre, avatar: y.avatar, roles: y.roles, cargo: cargo(y.roles) };
 
+    if(a==='constancias'){
+      const r=await leer(ctx,Number(b.id));if(!r||!['secretaria','decreto'].includes(r.tipo))throw new Fallo('NO_EXISTE',404);
+      const ids=[r.id];if(r.tipo==='secretaria'&&r.datos.doc_id)ids.push(Number(r.datos.doc_id));
+      const [p,n]=await Promise.all([
+        ctx.sb.from('gob_difusion').select('id,registro_id,destino,creado,enviado,canal_id,mensaje_id,error').in('registro_id',ids).order('id',{ascending:false}).limit(40),
+        ctx.sb.from('gob_difusion').select('id',{count:'exact',head:true}).in('registro_id',ids).is('enviado',null)
+      ]);
+      if(p.error||n.error)throw Error('No he podido consultar las constancias del expediente.');
+      return J({ok:true,pendientes:n.count||0,publicaciones:(p.data||[]).map((x:Any)=>({id:x.id,registro_id:x.registro_id,destino:x.destino,creado:x.creado,enviado:x.enviado,reintento:!!x.error,url:x.enviado&&/^\d{17,20}$/.test(x.canal_id||'')&&/^\d{17,20}$/.test(x.mensaje_id||'')?'https://discord.com/channels/'+ctx.c.guild_id+'/'+x.canal_id+'/'+x.mensaje_id:null}))});
+    }
     if(a==='archivo'){
       let q=ctx.sb.from('gob_registros').select('*').in('tipo',['decreto','acta']).neq('estado','descartado').order('id',{ascending:false}).limit(61);
       if(b.antes)q=q.lt('id',Number(b.antes));
