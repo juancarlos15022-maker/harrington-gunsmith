@@ -1,15 +1,16 @@
 // Señor Whitmore · bot de Discord del gobierno (22/10/2026).
-// Recibe las órdenes con / y los botones de Whitmore (Interactions Endpoint URL del portal de Discord).
-// Va aparte del Señor Harrington: su configuración está en whitmore_cfg y su token en el secreto WHITMORE_TOKEN
-// (o en whitmore_cfg.token). De momento solo se presenta; las funciones de gobierno se añaden después.
+// Recibe las órdenes con /, los botones y los formularios de Whitmore (Interactions Endpoint URL del portal de Discord).
+// Va aparte del Señor Harrington y de la web de la armería: configuración en whitmore_cfg, datos en gob_registros / gob_votos.
+// Además: control desde aquí ({secreto, ops}), registro de órdenes ({secreto, registrar:true}) y avisos ({secreto, cron:true}).
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
+import { COMANDOS } from "./comandos.ts";
+import { orden, boton, formulario, revision, eph, type Ctx } from "./gob.ts";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { "Content-Type": "application/json" } });
 const hex = (h: string) => new Uint8Array((h.match(/../g) || []).map((b) => parseInt(b, 16)));
-const AZUL = 0x2f4a6d;
 let CFG: { t: number; c: Record<string, string> } | null = null;
 async function cfg() {
-  if (CFG && Date.now() - CFG.t < 60000) return CFG.c;
+  if (CFG && Date.now() - CFG.t < 15000) return CFG.c;
   const { data } = await sb.from("whitmore_cfg").select("clave,valor");
   const c = Object.fromEntries((data || []).map((r: { clave: string; valor: string }) => [r.clave, r.valor]));
   CFG = { t: Date.now(), c };
@@ -25,13 +26,29 @@ async function firmaOk(req: Request, cuerpo: string, pub: string) {
   } catch { return false; }
 }
 const token = (c: Record<string, string>) => Deno.env.get("WHITMORE_TOKEN") || c.token || "";
-// Control desde aquí (Claude): {secreto, ops:[{metodo, ruta, cuerpo, motivo}]} → llamadas a Discord con el token de Whitmore.
+function ctxDe(c: Record<string, string>): Ctx {
+  const tk = token(c);
+  return { sb, c, api: async (metodo: string, ruta: string, cuerpo?: unknown) => {
+    const r = await fetch("https://discord.com/api/v10" + ruta, { method: metodo, headers: { Authorization: "Bot " + tk, "Content-Type": "application/json" }, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo), signal: AbortSignal.timeout(8000) });
+    const d = r.status === 204 ? null : await r.json().catch(() => null);
+    if (!r.ok) { await sb.from("whitmore_registro").insert({ metodo, ruta: ruta.slice(0, 300), estado: r.status, motivo: "Error: " + JSON.stringify(d).slice(0, 300) }); throw Error("DISCORD_" + r.status); }
+    return d;
+  } };
+}
+// Control desde aquí (Claude): {secreto, ops:[{metodo, ruta, cuerpo, motivo, imagenes}]} → llamadas a Discord con el token de Whitmore.
 // Solo rutas de la API de Discord; cada llamada queda en whitmore_registro. Nada de la web de la armería.
 async function control(body: any, c: Record<string, string>) {
   if (!c.secreto || c.secreto.length < 32 || body?.secreto !== c.secreto) return json({ error: "NO" }, 403);
   const tk = token(c);
   if (body.preview) return json({ ok: true, token: !!tk, app: c.app_id });
   if (!tk) return json({ error: "FALTA_TOKEN" }, 503);
+  if (body.cron) { try { return json({ ok: true, hecho: await revision(ctxDe(c)) }); } catch (e) { return json({ error: String((e as Error).message || e) }, 500); } }
+  if (body.registrar) {
+    const r = await fetch(`https://discord.com/api/v10/applications/${c.app_id}/guilds/${c.guild_id}/commands`, { method: "PUT", headers: { Authorization: "Bot " + tk, "Content-Type": "application/json" }, body: JSON.stringify(COMANDOS) });
+    const d = await r.json().catch(() => null);
+    await sb.from("whitmore_registro").insert({ metodo: "PUT", ruta: "/applications/commands", estado: r.status, motivo: "Registrar órdenes de gobierno" });
+    return json({ ok: r.ok, st: r.status, n: Array.isArray(d) ? d.length : 0, error: r.ok ? null : d });
+  }
   const ops = Array.isArray(body.ops) ? body.ops.slice(0, 25) : [];
   const res = [];
   for (const o of ops) {
@@ -68,9 +85,16 @@ Deno.serve(async (req) => {
   let i: any;
   try { i = JSON.parse(cuerpo); } catch { return new Response("JSON", { status: 400 }); }
   if (i.type === 1) return json({ type: 1 }); // PING de Discord al guardar el enlace
-  // Por ahora, cualquier orden o botón recibe su presentación (solo la ve quien la usa).
-  return json({ type: 4, data: { flags: 64, allowed_mentions: { parse: [] }, embeds: [{
-    title: "🏛️ Señor Whitmore",
-    description: "A su servicio. Soy el secretario del Consejo de Gobierno.\nMis funciones se están preparando: muy pronto me ocuparé de los asuntos de gobierno.",
-    color: AZUL, footer: { text: "Consejo de Gobierno · Saint Denis · 1880" } }] } });
+  if (i.guild_id && c.guild_id && i.guild_id !== c.guild_id) return eph("El Sr. Whitmore solo atiende en el servidor de la casa.");
+  try {
+    const ctx = ctxDe(c);
+    if (i.type === 2) return await orden(ctx, i);
+    if (i.type === 3) return await boton(ctx, i);
+    if (i.type === 5) return await formulario(ctx, i);
+    return eph("No sé qué hacer con esto.");
+  } catch (e) {
+    const m = String((e as Error)?.message || e);
+    await sb.from("whitmore_registro").insert({ metodo: "ORDEN", ruta: String(i?.data?.name || i?.data?.custom_id || "?").slice(0, 300), estado: 500, motivo: m.slice(0, 400) });
+    return eph(/^No /.test(m) ? m : "Ha habido un problema y no he podido hacerlo. Inténtelo otra vez en un momento.");
+  }
 });
