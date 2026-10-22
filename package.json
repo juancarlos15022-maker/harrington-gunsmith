@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.14",
+    "@resvg/resvg-wasm": "2.6.2",
     "javascript-lp-solver": "1.0.3",
     "jsdom": "26.1.0"
   }

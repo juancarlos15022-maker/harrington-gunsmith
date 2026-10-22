@@ -32,7 +32,8 @@ function fallo(e){if(e&&(e.error==='SIN_SESION'||e.error==='SIN_ROL'))return;avi
 /* ---------- entrada ---------- */
 function mostrarEntrada(msg){window.HGAdminWeb?.clear();YO=null;$('#app').hidden=true;$('#entrada').hidden=false;var m=$('#entradaMsg');m.hidden=!msg;m.className='aviso';if(msg)m.textContent=msg}
 function arrancar(){
- var t=(new URLSearchParams(location.search).get('t')||'').toLowerCase();
+ var puente='';try{puente=sessionStorage.getItem('hg_admin_gob_entrada')||'';sessionStorage.removeItem('hg_admin_gob_entrada')}catch(e){}
+ var t=(new URLSearchParams(location.search).get('t')||puente).toLowerCase();
  if(t){try{history.replaceState(null,'',location.pathname+location.hash)}catch(e){}
   fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({web:true,accion:'entrar',t:t})})
    .then(function(r){return r.json()}).then(function(j){

@@ -253,7 +253,7 @@ var firmaTicket=ok(function(){
 var firmaAlbaran=ok(function(){
  var a=D.querySelector('#pedBody .albaran');if(!a||a.querySelector('.rc-firma'))return;
  var x=null;try{x=pendingPed().find(function(p){return p.id===pedView})}catch(e){}
- var f=x&&firmaDe(x.by);
+ var f='firma-vincent.webp';
  a.insertAdjacentHTML('beforeend','<div class="rc-firma alb">'+(f?'<img class="fi" src="'+f+'" alt="">':'')+'<img class="se" src="sello-harrington.webp" alt=""></div>');
 });
 

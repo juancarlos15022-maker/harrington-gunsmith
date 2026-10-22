@@ -1,0 +1,15 @@
+# Pedidos y albaranes unificados
+
+La portada privada `pedidos-automaticos.html` incluye todos los pedidos manuales y automáticos no eliminados, incluidos recibidos y pagados. Cada pedido aceptado permite abrir y descargar el albarán desde su registro, sin depender de un enlace de propuesta ni volver a aceptar nada. Las propuestas aún pendientes mantienen su botón de aceptación. Un pedido cancelado conserva su estado y liquidación.
+
+`albaranes-pedidos/modelo.ts` es la plantilla única para el PNG utilizado en la portada, la descarga de pedidos de la armería, los enlaces originales de aceptación y Discord. Detalla referencia, proveedor y telegrama, emisor registrado, aceptación cuando consta, cantidades pedidas/recibidas/pendientes, precios unitarios, subtotales, total, valor recibido, abonos, pendientes, responsables y fechas de recepción/pago, entregas parciales y liquidaciones. Las fechas se presentan en el año 1880 para el rol; los registros originales no se modifican. La firma original de Vincent Harrington y el sello se incluyen como PNG para que el renderizador los muestre correctamente. Las propuestas no aceptadas no se firman. Los datos que faltan se identifican sin inventarlos.
+
+El renderizador usa resvg WASM 2.6.2 y EB Garamond. Solo el servidor genera el PNG: las vistas y publicaciones reutilizan ese documento. No modifica pagos, recepciones, caja ni existencias. Al emitir o cambiar un pedido aceptado, un disparador actualiza su fotografía y versión en la cola privada `hg_albaranes_pedidos`. El trabajador periódico publica el albarán en el canal de pedidos y actualiza el mismo mensaje al recibir/pagar. También actualiza el albarán automático del privado cuando existe. La cola conserva errores y reintenta; ante una confirmación perdida busca el mensaje por su referencia para no duplicarlo. Incluye el archivo histórico de pedidos.
+
+Las imágenes requieren una sesión vigente de empleado, la sesión de Gobierno del propietario o el enlace personal del pedido concreto. La portada de archivo y la barra siguen siendo exclusivas del propietario. No se exponen claves de servicio ni tokens de Discord. Las imágenes se sirven con `private, no-store`. El navegador no envía imágenes arbitrarias para crear el albarán común.
+
+## Entrada directa a Gobierno
+
+Desde la barra del propietario, `hg_admin_web_entrada_gobierno()` valida la cuenta y su sesión en el servidor y crea una entrada de un uso con 60 segundos de vigencia. Solo su hash queda en `gob_accesos`. El navegador la transporta en `sessionStorage`, nunca en el enlace, y Gobierno la elimina antes de canjearla mediante su entrada habitual. Whitmore comprueba además la pertenencia actual en Discord. La navegación abre el despacho operativo; no obliga al propietario a solicitar otro enlace en Discord. No autoriza a otros jefes o administradores. Desde una sesión de Gobierno vigente se reutiliza esa sesión.
+
+Pruebas: `test-albaranes-modelo.mjs`, `test-albaranes-sql.cjs`, `test-entrada-directa.cjs` y las regresiones de administración web. El PNG también se comprueba mediante el renderizador real desplegado.
