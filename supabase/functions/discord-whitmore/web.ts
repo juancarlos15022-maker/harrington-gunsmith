@@ -32,12 +32,12 @@ async function miembro(ctx: Ctx, uid: string) {
   const roles: string[] = m.roles || [], c = ctx.c, g = await guild(ctx);
   const admin = !!g && (g.owner === uid || roles.some((r) => g.admins.has(r)));
   const tiene = (k: string) => admin || (!!c["rol_" + k] && roles.includes(c["rol_" + k]));
-  const flags = { gobernador: tiene("gobernador"), gobernacion: tiene("gobernacion"), economia: tiene("economia"), consejo: tiene("consejo") || tiene("gobernador") || tiene("gobernacion") || tiene("economia"), admin };
+  const flags = { gobernador: tiene("gobernador"), gobernacion: tiene("gobernacion"), economia: tiene("economia"), festejos: tiene("festejos"), consejo: tiene("consejo") || tiene("gobernador") || tiene("gobernacion") || tiene("economia") || tiene("festejos"), admin };
   const u = m.user || {};
   const avatar = u.avatar ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=96` : "";
   return { nombre: limpio(m.nick || u.global_name || u.username || "—", 60), avatar, roles: flags };
 }
-function cargo(r: Any) { return r.gobernador ? "Gobernador" : r.gobernacion ? "Secretaría de Gobernación" : r.economia ? "Secretaría de Economía y Comercio" : "Consejo de Gobierno"; }
+function cargo(r: Any) { return r.gobernador ? "Gobernador" : r.gobernacion ? "Secretaría de Gobernación" : r.economia ? "Secretaría de Economía y Comercio" : r.festejos ? "Secretaría de Festejos y Cultura" : "Consejo de Gobierno"; }
 
 async function entrar(ctx: Ctx, t: string) {
   if (!/^[0-9a-f]{64}$/.test(t)) throw new Fallo("ENLACE_NO_VALIDO");
@@ -81,7 +81,7 @@ const necesita = (y: Any, ...k: string[]) => { if (!k.some((r) => y.roles[r] || 
 const quien = (y: Any) => ({ id: y.id, nombre: y.nombre });
 
 async function organizacion(ctx:Ctx){
- const claves=['web','comandos','chat','agenda','campana','telegramas','documentos','cuentas','area_economia','area_comercio','area_justicia','area_seguridad','registro','actas','seguimiento','peticiones','presidencia'];
+ const claves=['web','comandos','chat','agenda','campana','telegramas','documentos','cuentas','area_economia','area_comercio','area_justicia','area_seguridad','area_festejos','festejos_calendario','festejos_presupuestos','festejos_cultura','festejos_programa','festejos_despacho','registro','actas','seguimiento','peticiones','presidencia'];
  const canales=Object.fromEntries(claves.filter(k=>/^\d{17,20}$/.test(ctx.c['canal_'+k]||'')).map(k=>[k,'https://discord.com/channels/'+ctx.c.guild_id+'/'+ctx.c['canal_'+k]]));
  const pendientes=await ctx.sb.from('gob_difusion').select('id',{count:'exact',head:true}).is('enviado',null);
  const fallos=await ctx.sb.from('gob_difusion').select('id',{count:'exact',head:true}).is('enviado',null).not('error','is',null);

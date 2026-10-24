@@ -60,7 +60,7 @@ function quien(i: Any) {
   return { id: String(u.id || ""), nombre: limpio(m.nick || u.global_name || u.username || "—", 60), roles, admin };
 }
 const tiene = (x: ReturnType<typeof quien>, c: Record<string, string>, ...k: string[]) => x.admin || k.some((r) => c["rol_" + r] && x.roles.includes(c["rol_" + r]));
-const enConsejo = (x: ReturnType<typeof quien>, c: Record<string, string>) => tiene(x, c, "consejo", "gobernador", "gobernacion", "economia");
+const enConsejo = (x: ReturnType<typeof quien>, c: Record<string, string>) => tiene(x, c, "consejo", "gobernador", "gobernacion", "economia", "festejos");
 
 export async function nuevo(ctx: Ctx, tipo: string, campos: Any, numerar = true) {
   const numero = numerar ? (await ctx.sb.rpc("gob_siguiente", { p_tipo: tipo })).data : null;

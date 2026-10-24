@@ -14,3 +14,9 @@ await assert.rejects(secretarias(context(),{...ficha('economia'),clase:'gasto',i
 const gasto=context();await secretarias(gasto,{...ficha('economia'),clase:'gasto',importe:'12,35',requiereFirma:false},eco);assert.equal(gasto.writes[0].p_datos.requiereFirma,true);assert.equal(gasto.writes[0].p_datos.importeCents,1235);
 assert.equal(estadoExp({estado:'pendiente_firma',datos:{doc_id:1}},[{id:1,estado:'firmado'}]),'autorizado');assert.equal(estadoExp({estado:'pendiente_firma',datos:{doc_id:1}},[{id:1,estado:'descartado'}]),'devuelto');
 console.log('OK · competencias múltiples, supervisión, revocación, importe y firma obligatoria en el servidor');
+const cultura={id:'4',nombre:'Festejos',roles:{consejo:true,festejos:true}};
+const fiesta=context();await secretarias(fiesta,{...ficha('festejos'),clase:'evento',fecha:'25/10',hora:'18:30',requiereFirma:false},cultura);assert.equal(fiesta.writes[0].p_datos.requiereFirma,true);assert.equal(fiesta.writes[0].p_datos.area,'festejos');assert.ok(fiesta.writes[0].p_datos.plazo);
+await assert.rejects(secretarias(context(),ficha('festejos'),eco),/corresponde/);
+await assert.rejects(secretarias(context(),ficha('economia'),cultura),/corresponde/);
+await assert.rejects(secretarias(context({}, {id:77,tipo:'secretaria',datos:{area:'festejos',clase:'evento'}}),{accion:'secretarias_remitir',id:77,escrito:'Anunciar una feria'},cultura),/Presidencia/);
+console.log('OK · Festejos: rol propio, presupuesto aislado, fechas provisionales y Presidencia obligatoria.');
