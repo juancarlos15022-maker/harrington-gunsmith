@@ -3,6 +3,7 @@
    lo que se hace aquí se publica también en los canales de gobierno. */
 (function(){
 'use strict';
+function pruebaDispositivo(){var p=localStorage.getItem('gob_prueba_dispositivo');if(!/^[a-f0-9]{64}$/.test(p||'')){p=Array.from(crypto.getRandomValues(new Uint8Array(32))).map(function(x){return x.toString(16).padStart(2,'0')}).join('');localStorage.setItem('gob_prueba_dispositivo',p)}return p}
 var API='https://mrlpvjxuifvspeaqtscm.supabase.co/functions/v1/discord-whitmore', KS='gob_sesion';
 var D=document, $=function(s,r){return (r||D).querySelector(s)}, $$=function(s,r){return [].slice.call((r||D).querySelectorAll(s))};
 var vista=$('#vista'), YO=null, cache={},ORGANIZACION={canales:{}};
@@ -21,23 +22,27 @@ var ERR={FECHA:'No entiendo la fecha o la hora.',FALTAN_DATOS:'Faltan datos por 
 
 /* ---------- conexión ---------- */
 function api(accion,datos){
- var cuerpo=Object.assign({web:true,accion:accion,sesion:store(KS)||''},datos||{});
+ var cuerpo=Object.assign({web:true,accion:accion,sesion:store(KS)||'',prueba:pruebaDispositivo()},datos||{});
  return fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cuerpo)})
   .then(function(r){return r.json().catch(function(){return {ok:false,error:'ERROR'}}).then(function(j){
-   if(j&&(j.error==='SIN_SESION'||j.error==='SIN_ROL')){store(KS,null);mostrarEntrada(j.error==='SIN_ROL'?'Su rol del Consejo de Gobierno ya no está en Discord, así que se ha cerrado la sesión.':'Su sesión ha caducado. Escriba /acceso en Discord para volver a entrar.');throw j}
+   if(j&&(j.error==='SIN_SESION'||j.error==='SIN_ROL'||j.error==='SIN_DISPOSITIVO')){store(KS,null);mostrarEntrada(j.error==='SIN_ROL'?'Su rol del Consejo de Gobierno ya no está en Discord, así que se ha cerrado la sesión.':'Su sesión ha caducado. Escriba /acceso en Discord para volver a entrar.');throw j}
    if(!j.ok)throw j;if(j.organizacion){ORGANIZACION=j.organizacion;repConexion()}if(j.yo){YO=j.yo;pintarYo()}if(j.avisos)setTimeout(function(){aviso(j.avisos.join(' '),true)},100);return j})},function(){throw {error:'RED'}});
 }
 function fallo(e){if(e&&(e.error==='SIN_SESION'||e.error==='SIN_ROL'))return;aviso(e&&e.detalle||ERR[e&&e.error]||ERR.ERROR,true)}
 
 /* ---------- entrada ---------- */
 function mostrarEntrada(msg){window.HGAdminWeb?.clear();YO=null;$('#app').hidden=true;$('#entrada').hidden=false;var m=$('#entradaMsg');m.hidden=!msg;m.className='aviso';if(msg)m.textContent=msg}
+var vinculoActual=null,vinculoTimer=0;
+async function prepararEntrada(){var b=$('#vincularDiscord');b.disabled=true;try{var raw=pruebaDispositivo(),hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(raw)))).map(function(x){return x.toString(16).padStart(2,'0')}).join('');var r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({web:true,accion:'vinculo_preparar',pruebaHash:hash})}),j=await r.json();if(!j.ok)throw Error(j.detalle||'No se pudo preparar la entrada.');vinculoActual=j;$('#vinculoPanel').hidden=false;$('#vinculoCodigo').value='/acceso codigo:'+j.codigo;$('#vinculoEstado').textContent='Ejecute esta orden desde su cuenta de Discord. El código caduca en cinco minutos.';if(vinculoTimer)clearTimeout(vinculoTimer);consultarEntrada();}catch(e){$('#entradaMsg').hidden=false;$('#entradaMsg').textContent=e.message}finally{b.disabled=false}}
+async function consultarEntrada(){if(!vinculoActual||YO)return;var current=vinculoActual;if(Date.now()>=new Date(current.expira).getTime()){$('#vinculoEstado').textContent='El código ha caducado. Pulse Vincular mi Discord para generar otro.';return}try{var r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({web:true,accion:'vinculo_consultar',codigo:current.codigo,prueba:pruebaDispositivo()})}),j=await r.json();if(current!==vinculoActual)return;if(j.sesion){store(KS,j.sesion);YO=j.yo;vinculoActual=null;abrirApp();return}if(j.error==='DISCORD_NO_DISPONIBLE'){vinculoTimer=setTimeout(consultarEntrada,4000);return}if(j.error){$('#vinculoEstado').textContent=j.error==='SIN_ROL'?'Acceso denegado: su cuenta no tiene un cargo del Gobierno.':'El código no es válido. Genere otro desde este navegador.';return}}catch{}vinculoTimer=setTimeout(consultarEntrada,2500)}
+$('#vincularDiscord').onclick=prepararEntrada;$('#vinculoCopiar').onclick=function(){copiar($('#vinculoCodigo').value,this)};
 function arrancar(){
  var puente='';try{puente=sessionStorage.getItem('hg_admin_gob_entrada')||'';sessionStorage.removeItem('hg_admin_gob_entrada')}catch(e){}
  var t=(new URLSearchParams(location.search).get('t')||puente).toLowerCase();
  if(t){try{history.replaceState(null,'',location.pathname+location.hash)}catch(e){}
-  fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({web:true,accion:'entrar',t:t})})
+  fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({web:true,accion:'entrar',t:t,prueba:pruebaDispositivo()})})
    .then(function(r){return r.json()}).then(function(j){
-    if(!j.ok)return mostrarEntrada(j.error==='ENLACE_CADUCADO'?'Ese enlace ya se usó o ha caducado (dura 10 minutos). Escriba /acceso en Discord para pedir otro.':j.error==='SIN_ROL'?'Su usuario de Discord no tiene ningún rol del Consejo de Gobierno.':'Ese enlace no es válido. Escriba /acceso en Discord para pedir otro.');
+    if(!j.ok)return mostrarEntrada(j.error==='ENLACE_CADUCADO'?'Ese enlace ya se usó o ha caducado (dura 10 minutos). Escriba /acceso en Discord para pedir otro.':j.error==='SIN_ROL'?'Su cuenta no tiene un cargo del Gobierno autorizado.':'Ese enlace no es válido. Escriba /acceso en Discord para pedir otro.');
     store(KS,j.sesion);YO=j.yo;abrirApp();
    }).catch(function(){mostrarEntrada('Sin conexión. Vuelva a pulsar el botón de Discord cuando tenga internet.')});
   return;

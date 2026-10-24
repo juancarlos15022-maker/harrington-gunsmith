@@ -6,7 +6,7 @@ const FECHA = o("fecha", "Día: 25/10, 25/10/2026, hoy o mañana", S, true, { ma
 const HORA = o("hora", "Hora: 18:30", S, true, { max_length: 5 });
 export const COMANDOS = [
   { name: "whitmore", description: "Lo que puede hacer el Sr. Whitmore por el gobierno", options: [] },
-  { name: "acceso", description: "Enlace personal para entrar en la web del gobierno", options: [] },
+  { name: "acceso", description: "Vincular el navegador con su cuenta del Gobierno", options: [o("codigo","Código que muestra su navegador al abrir la web",S,false,{max_length:20})] },
   { name: "cita", description: "Agenda del gobernador", options: [
     sub("nueva", "Apuntar una cita en la agenda del gobernador", [FECHA, HORA, o("con", "Con quién", S, true, { max_length: 100 }), o("lugar", "Dónde", S, false, { max_length: 100 }), o("motivo", "Para qué", S, false, { max_length: 300 })]),
     sub("hoy", "Agenda de hoy"),

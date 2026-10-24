@@ -1,3 +1,4 @@
+import {sinEnlaceWeb,limpiarEnlaces} from './enlaces.ts';
 import {difundir,difundirEnSegundoPlano} from "./difusion.ts";
 // Señor Whitmore · bot de Discord del gobierno (22/10/2026).
 // Recibe las órdenes con /, los botones y los formularios de Whitmore (Interactions Endpoint URL del portal de Discord).
@@ -31,6 +32,7 @@ const token = (c: Record<string, string>) => Deno.env.get("WHITMORE_TOKEN") || c
 function ctxDe(c: Record<string, string>): Ctx {
   const tk = token(c);
   return { sb, c, api: async (metodo: string, ruta: string, cuerpo?: unknown) => {
+    const channel=/^\/channels\/(\d+)\/messages/.exec(ruta)?.[1];if(cuerpo&&channel&&channel!==c.canal_web&&["POST","PATCH"].includes(metodo))cuerpo=sinEnlaceWeb(cuerpo);
     const r = await fetch("https://discord.com/api/v10" + ruta, { method: metodo, headers: { Authorization: "Bot " + tk, "Content-Type": "application/json" }, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo), signal: AbortSignal.timeout(8000) });
     const d = r.status === 204 ? null : await r.json().catch(() => null);
     if (!r.ok) { await sb.from("whitmore_registro").insert({ metodo, ruta: ruta.slice(0, 300), estado: r.status, motivo: "Error: " + JSON.stringify(d).slice(0, 300) }); throw Error("DISCORD_" + r.status); }
@@ -44,13 +46,14 @@ async function control(body: any, c: Record<string, string>) {
   const tk = token(c);
   if (body.preview) return json({ ok: true, token: !!tk, app: c.app_id });
   if (!tk) return json({ error: "FALTA_TOKEN" }, 503);
-  if (body.cron) { try { const ctx=ctxDe(c);const hecho=await revision(ctx);const publicados=await difundir(ctx,12);return json({ ok: true, hecho, publicados }); } catch (e) { return json({ error: String((e as Error).message || e) }, 500); } }
+  if (body.cron) { try { const ctx=ctxDe(c);const hecho=await revision(ctx);const publicados=await difundir(ctx,12);const limpieza=await limpiarEnlaces(ctx);return json({ ok: true, hecho, publicados,limpieza }); } catch (e) { return json({ error: String((e as Error).message || e) }, 500); } }
   if (body.registrar) {
     const r = await fetch(`https://discord.com/api/v10/applications/${c.app_id}/guilds/${c.guild_id}/commands`, { method: "PUT", headers: { Authorization: "Bot " + tk, "Content-Type": "application/json" }, body: JSON.stringify(COMANDOS) });
     const d = await r.json().catch(() => null);
     await sb.from("whitmore_registro").insert({ metodo: "PUT", ruta: "/applications/commands", estado: r.status, motivo: "Registrar órdenes de gobierno" });
     return json({ ok: r.ok, st: r.status, n: Array.isArray(d) ? d.length : 0, error: r.ok ? null : d });
   }
+  if(body.limpiar_enlaces===true)return json({ok:true,...await limpiarEnlaces(ctxDe(c))});
   const ops = Array.isArray(body.ops) ? body.ops.slice(0, 25) : [];
   const res = [];
   for (const o of ops) {
@@ -70,7 +73,7 @@ async function control(body: any, c: Record<string, string>) {
       }
     }
     if (fallo) continue;
-    const r = await fetch("https://discord.com/api/v10" + ruta, { method: metodo, headers: { Authorization: "Bot " + tk, "Content-Type": "application/json", "X-Audit-Log-Reason": encodeURIComponent(String(o.motivo || "Señor Whitmore").slice(0, 400)) }, body: o.cuerpo === undefined ? undefined : JSON.stringify(o.cuerpo) });
+    const r = await fetch("https://discord.com/api/v10" + ruta, { method: metodo, headers: { Authorization: "Bot " + tk, "Content-Type": "application/json", "X-Audit-Log-Reason": encodeURIComponent(String(o.motivo || "Señor Whitmore").slice(0, 400)) }, body: o.cuerpo === undefined ? undefined : JSON.stringify(/^\/channels\/\d+\/messages/.test(ruta)&&!ruta.startsWith("/channels/"+c.canal_web+"/")?sinEnlaceWeb(o.cuerpo):o.cuerpo) });
     const datos = r.status === 204 ? null : await r.json().catch(() => null);
     await sb.from("whitmore_registro").insert({ metodo, ruta: ruta.slice(0, 300), estado: r.status, motivo: String(o.motivo || "").slice(0, 400) });
     res.push({ ruta, metodo, st: r.status, datos });

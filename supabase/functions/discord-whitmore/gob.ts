@@ -1,3 +1,4 @@
+import {aprobarVinculo} from './acceso.ts';
 import {puedeFirmar,llevaEconomia,perfil} from './competencias.ts';
 import {actualizarCuentas} from './cuentas.ts';
 // Señor Whitmore · funciones de gobierno (22/10/2026). Todo es interno del equipo de gobierno:
@@ -202,18 +203,11 @@ const opciones = (i: Any) => { const s = (i.data.options || [])[0]; const sub = 
 
 export async function orden(ctx: Ctx, i: Any): Promise<Response> {
   const x = quien(i), c = ctx.c;
-  if (!enConsejo(x, c)) return eph("Estas órdenes son solo para el Consejo de Gobierno.");
   const { sub, o } = opciones(i), n = i.data.name;
+  if(n==="acceso")return eph(await aprobarVinculo(ctx,x.id,o.codigo));
+  if (!enConsejo(x, c)) return eph("Estas órdenes son solo para el Consejo de Gobierno.");
   const base = { autor: x.nombre, autor_id: x.id };
   if (n === "whitmore") return eph(AYUDA);
-  if (n === "acceso") {
-    const bytes = crypto.getRandomValues(new Uint8Array(32)), token = [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
-    const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token)))].map((b) => b.toString(16).padStart(2, "0")).join("");
-    const { error } = await ctx.sb.from("gob_accesos").insert({ token_hash: hash, usuario_id: x.id, nombre: x.nombre, expira: new Date(Date.now() + 10 * 60000).toISOString() });
-    if (error) return eph("No he podido preparar su entrada. Inténtelo de nuevo.");
-    const web = c.web_gobierno || "https://juancarlos15022-maker.github.io/harrington-gunsmith/gobierno/";
-    return eph("🔐 Aquí tiene su entrada al despacho. Es personal: no la comparta. Sirve una sola vez y caduca en 10 minutos.", { components: [fila({ type: 2, style: 5, label: "Entrar en el despacho", url: web + "?t=" + token })] });
-  }
 
   if (n === "cita") {
     if (sub === "nueva") {

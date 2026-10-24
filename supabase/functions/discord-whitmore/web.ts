@@ -1,3 +1,4 @@
+import {tieneCargoGobierno,prepararVinculo,consultarVinculo} from './acceso.ts';
 import {esGobernador,esDireccion,areasDe,perfil,llevaEconomia,puedeFirmar,puedeVer} from './competencias.ts';
 import {oficina} from "./oficina.ts";
 import {actualizarCuentas} from './cuentas.ts';
@@ -27,36 +28,39 @@ async function guild(ctx: Ctx) {
   GUILD = { t: Date.now(), owner: String(g.owner_id || ""), admins };
   return GUILD;
 }
-async function miembro(ctx: Ctx, uid: string) {
+async function miembroActual(ctx: Ctx, uid: string) {
   let m: Any;
-  try { m = await ctx.api("GET", `/guilds/${ctx.c.guild_id}/members/${uid}`); } catch { return null; }
-  const roles: string[] = m.roles || [], c = ctx.c, g = await guild(ctx);
-  const admin = !!g && (g.owner === uid || roles.some((r) => g.admins.has(r)));
-  const tiene = (k: string) => admin || (!!c["rol_" + k] && roles.includes(c["rol_" + k]));
-  const flags = { gobernador: tiene("gobernador"), gobernacion: tiene("gobernacion"), vicegobernador: tiene("vicegobernador"), comercio: tiene("comercio"), economia: false, festejos: tiene("festejos"), consejo: tiene("consejo") || tiene("gobernador") || tiene("gobernacion") || tiene("vicegobernador") || tiene("comercio") || tiene("festejos"), admin };
+  try { m = await ctx.api("GET", `/guilds/${ctx.c.guild_id}/members/${uid}`); } catch(e) { if(String(e).includes("404"))return null;throw new Fallo("DISCORD_NO_DISPONIBLE",503); }
+  const roles: string[] = m.roles || [], c = ctx.c;if(!tieneCargoGobierno(c,roles))return null;
+  const admin = false;
+  const tiene = (k: string) => (!!c["rol_" + k] && roles.includes(c["rol_" + k]));
+  const flags = { gobernador: tiene("gobernador"), gobernacion: tiene("gobernacion"), vicegobernador: tiene("vicegobernador"), comercio: tiene("comercio"), economia: false, festejos: tiene("festejos"), consejo: tiene("gobernador") || tiene("gobernacion") || tiene("vicegobernador") || tiene("comercio") || tiene("festejos"), admin };
   const u = m.user || {};
   const avatar = u.avatar ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=96` : "";
   return { nombre: limpio(m.nick || u.global_name || u.username || "—", 60), avatar, roles: flags };
 }
+const comprobaciones=new Map<string,Promise<any>>();
+function miembro(ctx:Ctx,uid:string){const key=ctx.c.guild_id+':'+uid;if(comprobaciones.has(key))return comprobaciones.get(key)!;const p=miembroActual(ctx,uid).finally(()=>comprobaciones.delete(key));comprobaciones.set(key,p);return p}
 function cargo(r: Any) { return r.gobernador ? "Gobernador" : r.vicegobernador ? "Vicegobernador" : r.comercio ? "Secretaría de Comercio, Minas y Explotaciones" : r.gobernacion ? "Secretaría de Gobernación" : r.economia ? "Secretaría de Economía y Comercio" : r.festejos ? "Secretaría de Festejos y Cultura" : "Consejo de Gobierno"; }
 
-async function entrar(ctx: Ctx, t: string) {
+async function entrar(ctx: Ctx, t: string, prueba:string) {
   if (!/^[0-9a-f]{64}$/.test(t)) throw new Fallo("ENLACE_NO_VALIDO");
+  if(!/^[0-9a-f]{64}$/.test(prueba))throw new Fallo("SIN_DISPOSITIVO",401);const proof=await sha(prueba);
   const h = await sha(t);
-  const { data: a } = await ctx.sb.from("gob_accesos").update({ usado: new Date().toISOString() }).eq("token_hash", h).is("usado", null).gt("expira", new Date().toISOString()).select("*").maybeSingle();
+  const { data: a } = await ctx.sb.from("gob_accesos").update({ usado: new Date().toISOString() }).eq("token_hash", h).eq("browser_hash",proof).eq("origen","admin_web").is("usado", null).gt("expira", new Date().toISOString()).select("*").maybeSingle();
   if (!a) throw new Fallo("ENLACE_CADUCADO", 401);
   const m = await miembro(ctx, a.usuario_id);
   if (!m || !m.roles.consejo) throw new Fallo("SIN_ROL", 403);
   const sesion = nuevoToken();
-  await ctx.sb.from("gob_sesiones").insert({ token_hash: await sha(sesion), usuario_id: a.usuario_id, nombre: m.nombre, avatar: m.avatar, roles: m.roles, expira: new Date(Date.now() + 30 * 86400000).toISOString() });
+  await ctx.sb.from("gob_sesiones").insert({ token_hash: await sha(sesion), usuario_id: a.usuario_id, nombre: m.nombre, avatar: m.avatar, roles: m.roles, browser_hash:proof, expira: new Date(Date.now() + 30 * 86400000).toISOString() });
   return { sesion, yo: { id: a.usuario_id, nombre: m.nombre, avatar: m.avatar, roles: m.roles, cargo: cargo(m.roles) } };
 }
-async function sesionDe(ctx: Ctx, s: string, actualizar=false) {
+async function sesionDe(ctx: Ctx, s: string, prueba:string) {
   if (!/^[0-9a-f]{64}$/.test(s || "")) throw new Fallo("SIN_SESION", 401);
   const h = await sha(s);
   const { data: r } = await ctx.sb.from("gob_sesiones").select("*").eq("token_hash", h).is("revocado", null).gt("expira", new Date().toISOString()).maybeSingle();
-  if (!r) throw new Fallo("SIN_SESION", 401);
-  if (actualizar || Date.now() - new Date(r.comprobado).getTime() > 60000) {
+  if (!r) throw new Fallo("SIN_SESION", 401);if(!/^[a-f0-9]{64}$/.test(prueba||'')||!r.browser_hash||await sha(prueba)!==r.browser_hash)throw new Fallo("SIN_DISPOSITIVO",401);
+  {
     const m = await miembro(ctx, r.usuario_id);
     if (!m || !m.roles.consejo) { await ctx.sb.from("gob_sesiones").update({ revocado: new Date().toISOString() }).eq("usuario_id", r.usuario_id).is("revocado", null); throw new Fallo("SIN_ROL", 403); }
     await ctx.sb.from("gob_sesiones").update({ nombre: m.nombre, avatar: m.avatar, roles: m.roles, comprobado: new Date().toISOString() }).eq("token_hash", h);
@@ -92,8 +96,10 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
   let actor:Any=null;const J=(o:any,status=200)=>{if(actor)for(const key of ["docs","registros","tels"])if(Array.isArray(o[key]))o[key]=o[key].filter((r:Any)=>puedeVer(actor,r,ctx.c));return respuesta({...o,...(ctx.avisos?.length?{avisos:[...new Set(ctx.avisos)]}:{})},status)};
   try {
     const c = ctx.c, a = String(b?.accion || "");
-    if (a === "entrar") return J({ ok: true, ...(await entrar(ctx, String(b.t || ""))) });
-    const y = await sesionDe(ctx, String(b.sesion || ""),a==="yo");actor=y;const despacho=perfil(y,c);
+    if(a==='vinculo_preparar')return J({ok:true,...await prepararVinculo(ctx,b.pruebaHash)});
+    if(a==='vinculo_consultar'){const r=await consultarVinculo(ctx,b,miembro);return J({ok:!r.error,...r},r.error?401:200);}
+    if (a === "entrar") return J({ ok: true, ...(await entrar(ctx, String(b.t || ""),String(b.prueba||''))) });
+    const y = await sesionDe(ctx, String(b.sesion || ""),String(b.prueba||''));actor=y;const despacho=perfil(y,c);
     const alcance=(q:Any)=>{if(esGobernador(y)||y.roles.vicegobernador)return q;const ids=areasDe(y,c);return q.or((ids.length?'datos->>area.in.('+ids.join(',')+'),':'')+'and(autor_id.eq.'+y.id+',datos->>area.is.null)')};
     const dominio=a.startsWith('secretarias')?'secretarias':a.startsWith('hacienda')?'hacienda':a.startsWith('oficina')?'oficina':a.startsWith('campana')?'campana':a==='docs'||a.startsWith('doc_')?'documentos':a==='tels'||a.startsWith('tel_')?'telegramas':a==='agenda'||a.startsWith('cita_')||a.startsWith('audiencia_')?'agenda':['despacho','archivo','pendientes'].includes(a)?a:'';
     if(dominio&&!despacho.rutas.includes(dominio))throw new Fallo('SIN_PERMISO',403);

@@ -32,12 +32,14 @@
     <h2>Entrar con Discord<small>El Sr. Whitmore le abre la puerta de la sede.</small></h2>
    </div>
    <ol class="pasos">
-    <li><span>1</span><div>En cualquier canal de gobierno del Discord escriba <b>/acceso</b>.</div></li>
-    <li><span>2</span><div>El Sr. Whitmore le contesta con un botón personal. Solo lo ve usted y sirve una vez, durante 10 minutos.</div></li>
-    <li><span>3</span><div>Púlselo y entrará aquí. Este dispositivo le recuerda 30 días; no hay contraseñas.</div></li>
+    <li><span>1</span><div>Pulse <b>Vincular mi Discord</b> para preparar una entrada en este navegador.</div></li>
+    <li><span>2</span><div>Copie la orden y ejecútela desde su cuenta en el canal web de Discord. Whitmore comprobará su cargo del Gobierno.</div></li>
+    <li><span>3</span><div>Esta ventana abrirá automáticamente su propio despacho. El código no autoriza otro navegador.</div></li>
    </ol>
+   <button type="button" class="btn oro" id="vincularDiscord">Vincular mi Discord</button>
+   <section id="vinculoPanel" hidden><label class="campo">Orden personal para Discord<input id="vinculoCodigo" readonly></label><button type="button" class="btn" id="vinculoCopiar">Copiar orden</button><p id="vinculoEstado" role="status"></p></section>
    <p id="entradaMsg" class="aviso" hidden></p>
-   <p class="nota">Solo entra quien tenga un rol del Consejo de Gobierno en Discord. Si le quitan el rol, el acceso se cierra solo.</p>
+   <p class="nota">Acceso exclusivo para Gobernador, Vicegobernador y Secretarías. Se vincula a su cuenta de Discord y a este navegador. Si pierde el cargo, se deniega el acceso.</p>
   </div>
  </div>
 </div>
@@ -72,6 +74,6 @@
 </div>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 <script src="../admin-web.js?v=20261022-albaran1"></script>
-<script src="gob.js?v=20261024-reparto1"></script>
+<script src="gob.js?v=20261024-acceso1"></script>
 </body>
 </html>
