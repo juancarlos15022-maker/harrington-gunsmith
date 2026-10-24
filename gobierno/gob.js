@@ -260,8 +260,8 @@ var FIRMAS_EQUIPO={
 function firmaEquipo(nombre){return FIRMAS_EQUIPO[String(nombre||'').trim().replace(/\s+/g,' ').toLowerCase()]||null}
 function firmasDocumento(d){
  var x=d.datos||{},lista=[],autor=firmaEquipo(d.autor),fp=firmaPartes(d),firmante=firmaEquipo(x.firmadoPor||fp.nombre);
- // Remitir un expediente deja constancia de la firma de su emisor; la autorización queda pendiente.
- if((x.expediente||x.hacienda_id)&&autor)lista.push(Object.assign({},autor,{motivo:'Presentado por'}));
+ // Guardar o remitir un escrito a la mesa deja constancia de su emisor; la autorización queda pendiente.
+ if((d.id||x.expediente||x.hacienda_id)&&autor)lista.push(Object.assign({},autor,{motivo:'Presentado por'}));
  if(d.estado==='firmado'){
   var f=firmante||{nombre:x.firmadoPor||fp.nombre,cargo:fp.cargo};
   if(!lista.some(function(a){return a.nombre===f.nombre}))lista.push(Object.assign({},f,{motivo:'Firmado por'}));
