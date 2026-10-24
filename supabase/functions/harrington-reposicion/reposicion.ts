@@ -152,7 +152,7 @@ export async function runReposicion(sb:Any,c:Record<string,string>,request=fetch
     const r=await api('POST','/channels/'+job.channel_id+'/messages',{allowed_mentions:{parse:[]},nonce:('ic'+job.nonce).slice(0,25),enforce_nonce:true,content:telegramaIC(order)});
     checked(await avisos({ic_status:'sent',ic_message_id:r?.id||null},job.pedido_id));
    }
-   if(c.canal_pedidos&&Number(job.card_version||0)<ver){
+   if(!order.propuesta&&!order.cancelled&&c.canal_pedidos&&Number(job.card_version||0)<ver){
     const {data:f}=await sb.from('bot_pedmsg').select('mensaje_id').eq('pedido_id',job.pedido_id).maybeSingle();
     if(f?.mensaje_id){await api('PATCH','/channels/'+c.canal_pedidos+'/messages/'+f.mensaje_id,{allowed_mentions:{parse:[]},...tarjetaEmpresa(order)});checked(await avisos({card_version:ver},job.pedido_id));}
    }

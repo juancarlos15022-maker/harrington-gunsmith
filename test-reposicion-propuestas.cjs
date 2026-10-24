@@ -31,3 +31,14 @@ test('revisión: edita el privado y la tarjeta al cambiar la propuesta y manda e
  assert.equal(r.updated,1);assert.deepEqual(calls,['PATCH /channels/dm/messages/m1','POST /channels/dm/messages','PATCH /channels/canal/messages/card1']);
  assert.equal(job.sent_version,3);assert.equal(job.card_version,3);assert.equal(job.ic_status,'sent');
 });
+
+test('propuesta sin aceptar: actualiza solo el privado, sin publicar ni editar el canal de pedidos',async()=>{
+ const a=load();const job={pedido_id:'auto-x',status:'sent',cerrado:false,version:3,sent_version:2,card_version:2,ic_status:'sent',channel_id:'dm',message_id:'m1',nonce:'rep-x',token:'a'.repeat(64)};
+ const order={...base,propuesta:true};const calls=[];
+ const tables={hg_reposicion_avisos:[job],datos:[{clave:'pedido:auto-x',valor:order}],bot_pedmsg:[{pedido_id:'auto-x',mensaje_id:'card1'}],hg_discord_leases:[]};
+ const sb={rpc:async()=>({data:true}),from(table){let f=[],up=null,one=false;const q={select(){return q},eq(k,v){f.push(r=>r[k]===v);return q},lte(){return q},order(){return q},limit(){return q},upsert(){return q},single(){one=true;return q},maybeSingle(){one=true;return q},update(v){up=v;return q},delete(){return q},then(res){let rows=(tables[table]||[]).filter(r=>f.every(x=>x(r)));if(up)rows.forEach(r=>Object.assign(r,up));return Promise.resolve(res({data:one?rows[0]:rows}));}};return q;}};
+ const request=async(url,o)=>{calls.push(o.method+' '+url.replace('https://discord.com/api/v10',''));return new Response(JSON.stringify({id:'nuevo'}));};
+ const r=await a.runReposicion(sb,{token:'x',canal_pedidos:'canal'},request,'auto-x');
+ assert.equal(r.updated,1);assert.deepEqual(calls,['PATCH /channels/dm/messages/m1']);
+ assert.equal(job.sent_version,3);assert.equal(job.card_version,2);assert.equal(job.ic_status,'sent');
+});
