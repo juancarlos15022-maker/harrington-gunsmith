@@ -12,7 +12,7 @@ const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { sta
 const hex = (h: string) => new Uint8Array((h.match(/../g) || []).map((b) => parseInt(b, 16)));
 let CFG: { t: number; c: Record<string, string> } | null = null;
 async function cfg() {
-  if (CFG && Date.now() - CFG.t < 15000) return CFG.c;
+  // Consultar la configuración vigente: retirar una delegación económica tiene efecto inmediato.
   const { data } = await sb.from("whitmore_cfg").select("clave,valor");
   const c = Object.fromEntries((data || []).map((r: { clave: string; valor: string }) => [r.clave, r.valor]));
   CFG = { t: Date.now(), c };

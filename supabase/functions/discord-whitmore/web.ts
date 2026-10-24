@@ -1,3 +1,4 @@
+import {esGobernador,esDireccion,areasDe,perfil,llevaEconomia,puedeFirmar,puedeVer} from './competencias.ts';
 import {oficina} from "./oficina.ts";
 import {actualizarCuentas} from './cuentas.ts';
 // Web del Gobierno de Silver Peak (22/10/2026): la web llama aquí ({web:true, accion, sesion, …}).
@@ -32,12 +33,12 @@ async function miembro(ctx: Ctx, uid: string) {
   const roles: string[] = m.roles || [], c = ctx.c, g = await guild(ctx);
   const admin = !!g && (g.owner === uid || roles.some((r) => g.admins.has(r)));
   const tiene = (k: string) => admin || (!!c["rol_" + k] && roles.includes(c["rol_" + k]));
-  const flags = { gobernador: tiene("gobernador"), gobernacion: tiene("gobernacion"), economia: tiene("economia"), festejos: tiene("festejos"), consejo: tiene("consejo") || tiene("gobernador") || tiene("gobernacion") || tiene("economia") || tiene("festejos"), admin };
+  const flags = { gobernador: tiene("gobernador"), gobernacion: tiene("gobernacion"), vicegobernador: tiene("vicegobernador"), comercio: tiene("comercio"), economia: false, festejos: tiene("festejos"), consejo: tiene("consejo") || tiene("gobernador") || tiene("gobernacion") || tiene("vicegobernador") || tiene("comercio") || tiene("festejos"), admin };
   const u = m.user || {};
   const avatar = u.avatar ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=96` : "";
   return { nombre: limpio(m.nick || u.global_name || u.username || "—", 60), avatar, roles: flags };
 }
-function cargo(r: Any) { return r.gobernador ? "Gobernador" : r.gobernacion ? "Secretaría de Gobernación" : r.economia ? "Secretaría de Economía y Comercio" : r.festejos ? "Secretaría de Festejos y Cultura" : "Consejo de Gobierno"; }
+function cargo(r: Any) { return r.gobernador ? "Gobernador" : r.vicegobernador ? "Vicegobernador" : r.comercio ? "Secretaría de Comercio, Minas y Explotaciones" : r.gobernacion ? "Secretaría de Gobernación" : r.economia ? "Secretaría de Economía y Comercio" : r.festejos ? "Secretaría de Festejos y Cultura" : "Consejo de Gobierno"; }
 
 async function entrar(ctx: Ctx, t: string) {
   if (!/^[0-9a-f]{64}$/.test(t)) throw new Fallo("ENLACE_NO_VALIDO");
@@ -50,12 +51,12 @@ async function entrar(ctx: Ctx, t: string) {
   await ctx.sb.from("gob_sesiones").insert({ token_hash: await sha(sesion), usuario_id: a.usuario_id, nombre: m.nombre, avatar: m.avatar, roles: m.roles, expira: new Date(Date.now() + 30 * 86400000).toISOString() });
   return { sesion, yo: { id: a.usuario_id, nombre: m.nombre, avatar: m.avatar, roles: m.roles, cargo: cargo(m.roles) } };
 }
-async function sesionDe(ctx: Ctx, s: string) {
+async function sesionDe(ctx: Ctx, s: string, actualizar=false) {
   if (!/^[0-9a-f]{64}$/.test(s || "")) throw new Fallo("SIN_SESION", 401);
   const h = await sha(s);
   const { data: r } = await ctx.sb.from("gob_sesiones").select("*").eq("token_hash", h).is("revocado", null).gt("expira", new Date().toISOString()).maybeSingle();
   if (!r) throw new Fallo("SIN_SESION", 401);
-  if (Date.now() - new Date(r.comprobado).getTime() > 10 * 60000) {
+  if (actualizar || Date.now() - new Date(r.comprobado).getTime() > 60000) {
     const m = await miembro(ctx, r.usuario_id);
     if (!m || !m.roles.consejo) { await ctx.sb.from("gob_sesiones").update({ revocado: new Date().toISOString() }).eq("usuario_id", r.usuario_id).is("revocado", null); throw new Fallo("SIN_ROL", 403); }
     await ctx.sb.from("gob_sesiones").update({ nombre: m.nombre, avatar: m.avatar, roles: m.roles, comprobado: new Date().toISOString() }).eq("token_hash", h);
@@ -66,7 +67,7 @@ async function sesionDe(ctx: Ctx, s: string) {
 
 /* ---------- datos para la web ---------- */
 const ms = (v: Any) => v ? new Date(v).getTime() : 0;
-function plano(r: Any) { return { id: r.id, tipo: r.tipo, numero: r.numero, estado: r.estado, cuando: ms(r.cuando), creado: ms(r.creado), autor: r.autor, datos: r.datos }; }
+function plano(r: Any) { return { id: r.id, tipo: r.tipo, numero: r.numero, estado: r.estado, cuando: ms(r.cuando), creado: ms(r.creado), autor: r.autor, autor_id:r.autor_id, datos: r.datos }; }
 async function lista(ctx: Ctx, tipo: string | string[], f: (q: Any) => Any = (q) => q, lim = 50) {
   let q = ctx.sb.from("gob_registros").select("*");
   q = Array.isArray(tipo) ? q.in("tipo", tipo) : q.eq("tipo", tipo);
@@ -78,29 +79,34 @@ async function conVotos(ctx: Ctx, l: Any[]) {
   return l;
 }
 const necesita = (y: Any, ...k: string[]) => { if (!k.some((r) => y.roles[r] || y.roles.admin)) throw new Fallo("SIN_PERMISO", 403); };
-const quien = (y: Any) => ({ id: y.id, nombre: y.nombre });
+const quien = (y: Any) => ({ id: y.id, nombre: y.nombre, roles:y.roles });
 
 async function organizacion(ctx:Ctx){
- const claves=['web','comandos','chat','agenda','campana','telegramas','documentos','cuentas','area_economia','area_comercio','area_justicia','area_seguridad','area_festejos','festejos_calendario','festejos_presupuestos','festejos_cultura','festejos_programa','festejos_despacho','registro','actas','seguimiento','peticiones','presidencia'];
+ const claves=['web','comandos','chat','agenda','campana','telegramas','documentos','cuentas','area_economia','area_comercio','area_justicia','area_seguridad','area_festejos','comercio_despacho','comercio_licencias','comercio_explotaciones','comercio_empresas','comercio_seguimiento','gobernacion_despacho','festejos_calendario','festejos_presupuestos','festejos_cultura','festejos_programa','festejos_despacho','registro','actas','seguimiento','peticiones','presidencia'];
  const canales=Object.fromEntries(claves.filter(k=>/^\d{17,20}$/.test(ctx.c['canal_'+k]||'')).map(k=>[k,'https://discord.com/channels/'+ctx.c.guild_id+'/'+ctx.c['canal_'+k]]));
  const pendientes=await ctx.sb.from('gob_difusion').select('id',{count:'exact',head:true}).is('enviado',null);
  const fallos=await ctx.sb.from('gob_difusion').select('id',{count:'exact',head:true}).is('enviado',null).not('error','is',null);
  return {canales,pendientes:pendientes.error?null:pendientes.count,reintentos:fallos.error?null:fallos.count};
 }
 export async function web(ctx: Ctx, b: Any): Promise<Response> {
-  const J=(o:any,status=200)=>respuesta({...o,...(ctx.avisos?.length?{avisos:[...new Set(ctx.avisos)]}:{})},status);
+  let actor:Any=null;const J=(o:any,status=200)=>{if(actor)for(const key of ["docs","registros","tels"])if(Array.isArray(o[key]))o[key]=o[key].filter((r:Any)=>puedeVer(actor,r,ctx.c));return respuesta({...o,...(ctx.avisos?.length?{avisos:[...new Set(ctx.avisos)]}:{})},status)};
   try {
     const c = ctx.c, a = String(b?.accion || "");
     if (a === "entrar") return J({ ok: true, ...(await entrar(ctx, String(b.t || ""))) });
-    const y = await sesionDe(ctx, String(b.sesion || ""));
+    const y = await sesionDe(ctx, String(b.sesion || ""),a==="yo");actor=y;const despacho=perfil(y,c);
+    const alcance=(q:Any)=>{if(esGobernador(y)||y.roles.vicegobernador)return q;const ids=areasDe(y,c);return q.or((ids.length?'datos->>area.in.('+ids.join(',')+'),':'')+'and(autor_id.eq.'+y.id+',datos->>area.is.null)')};
+    const dominio=a.startsWith('secretarias')?'secretarias':a.startsWith('hacienda')?'hacienda':a.startsWith('oficina')?'oficina':a.startsWith('campana')?'campana':a==='docs'||a.startsWith('doc_')?'documentos':a==='tels'||a.startsWith('tel_')?'telegramas':a==='agenda'||a.startsWith('cita_')||a.startsWith('audiencia_')?'agenda':['despacho','archivo','pendientes'].includes(a)?a:'';
+    if(dominio&&!despacho.rutas.includes(dominio))throw new Fallo('SIN_PERMISO',403);
+    if(a==='gobernanza_economia'){if(!esGobernador(y))throw new Fallo('SIN_PERMISO',403);if(typeof b.delegar!=='boolean')throw new Fallo('FALTAN_DATOS');const r=await ctx.sb.from('whitmore_cfg').upsert({clave:'delegacion_economia_vice',valor:String(b.delegar),actualizado:new Date().toISOString()});if(r.error)throw Error('No he podido asentar la delegación.');await nuevo(ctx,'organizacion',{autor:y.nombre,autor_id:y.id,estado:'asentado',datos:{area:'economia',titulo:b.delegar?'Delegación económica en el Vicegobernador':'Retirada de la delegación económica',texto:'La responsabilidad principal de Economía continúa correspondiendo al Gobernador.'}},false);return J({ok:true});}
+
     if(a==='admin_web'){const r=await ctx.sb.rpc('hg_admin_web_gobierno',{p_usuario:y.id,p_pedidos:b.pedidos===true});if(r.error)throw new Fallo('SIN_PERMISO',403);return J({ok:true,administracion:r.data});}
     const base = { autor: y.nombre, autor_id: y.id };
-    if(a==="yo")return J({ok:true,yo:{...y,cargo:cargo(y.roles),h:undefined},organizacion:await organizacion(ctx)});
-    const yo = { id: y.id, nombre: y.nombre, avatar: y.avatar, roles: y.roles, cargo: cargo(y.roles) };
+    if(a==="yo")return J({ok:true,yo:{...y,cargo:cargo(y.roles),perfil:despacho,h:undefined},organizacion:await organizacion(ctx)});
+    const yo = { id: y.id, nombre: y.nombre, avatar: y.avatar, roles: y.roles, perfil:despacho, cargo: cargo(y.roles) };
 
     if(a==='constancias'){
       const r=await leer(ctx,Number(b.id));if(!r||!['secretaria','decreto'].includes(r.tipo))throw new Fallo('NO_EXISTE',404);
-      const ids=[r.id];if(r.tipo==='secretaria'&&r.datos.doc_id)ids.push(Number(r.datos.doc_id));
+      if(!puedeVer(y,r,c))throw new Fallo('SIN_PERMISO',403);const ids=[r.id];if(r.tipo==='secretaria'&&r.datos.doc_id)ids.push(Number(r.datos.doc_id));
       const [p,n]=await Promise.all([
         ctx.sb.from('gob_difusion').select('id,registro_id,destino,creado,enviado,canal_id,mensaje_id,error').in('registro_id',ids).order('id',{ascending:false}).limit(40),
         ctx.sb.from('gob_difusion').select('id',{count:'exact',head:true}).in('registro_id',ids).is('enviado',null)
@@ -109,14 +115,14 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
       return J({ok:true,pendientes:n.count||0,publicaciones:(p.data||[]).map((x:Any)=>({id:x.id,registro_id:x.registro_id,destino:x.destino,creado:x.creado,enviado:x.enviado,reintento:!!x.error,url:x.enviado&&/^\d{17,20}$/.test(x.canal_id||'')&&/^\d{17,20}$/.test(x.mensaje_id||'')?'https://discord.com/channels/'+ctx.c.guild_id+'/'+x.canal_id+'/'+x.mensaje_id:null}))});
     }
     if(a==='archivo'){
-      let q=ctx.sb.from('gob_registros').select('*').in('tipo',['decreto','acta']).neq('estado','descartado').order('id',{ascending:false}).limit(61);
+      let q=alcance(ctx.sb.from('gob_registros').select('*').in('tipo',['decreto','acta'])).neq('estado','descartado').order('id',{ascending:false}).limit(61);
       if(b.antes)q=q.lt('id',Number(b.antes));
       const r=await q;if(r.error)throw Error('No he podido consultar el archivo.');
       const rows=r.data||[],mas=rows.length>60;rows.splice(60);
       return J({ok:true,yo,registros:rows.map((x:Any)=>({...plano(x),datos:{...x.datos,_discord:undefined}})),mas,antes:rows.at(-1)?.id,organizacion:await organizacion(ctx)});
     }
     if(a.startsWith("oficina")){return J({ok:true,...await oficina(ctx,b,y)});}
-    if(a.startsWith("hacienda")) {const r=await hacienda(ctx,b,y);return J({ok:true,...r});}
+    if(a.startsWith("hacienda")) {if(!llevaEconomia(y,c)&&!['hacienda','hacienda_padron'].includes(a))throw new Fallo('SIN_PERMISO',403);const r=await hacienda(ctx,b,y);return J({ok:true,...r});}
     if(a.startsWith("secretarias")) {const r=await secretarias(ctx,b,y);if(a!=="secretarias")await actualizarCuentas(ctx);return J({ok:true,...r});}
     if(a.startsWith("campana")) {const r=await campana(ctx,b,y);return J({ok:true,...r});}
     if (a === "salir") { await ctx.sb.from("gob_sesiones").update({ revocado: new Date().toISOString() }).eq("token_hash", y.h); return J({ ok: true }); }
@@ -130,8 +136,8 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
       const telegramas = await lista(ctx, "telegrama", (q) => q.order("creado", { ascending: false }), 6);
       const parte=await ctx.sb.rpc("gob_secretaria_resumen");if(parte.error)throw Error("No he podido consultar el parte de las Secretarías.");
       const arqueo=await ctx.sb.rpc("gob_hacienda_tesoreria");if(arqueo.error)throw Error("No he podido consultar el arqueo de Tesorería.");
-      const verCuentas = y.roles.economia || y.roles.gobernador || y.roles.admin;
-      return J({ ok: true, yo, agenda, borradores, audiencias, propuestas, tareas, telegramas, secretarias:parte.data,tesoreria:arqueo.data,saldo: verCuentas ? await saldo(ctx) : null, elecciones: Number(c.elecciones || 0), hoy: hoy0 });
+      const verCuentas = llevaEconomia(y,c);
+      return J({ ok: true, yo, agenda, borradores:borradores.filter((r:Any)=>puedeVer(y,r,c)), audiencias, propuestas, tareas, telegramas, secretarias:esGobernador(y)?parte.data:{areas:(parte.data?.areas||[]).filter((r:Any)=>despacho.areas.includes(r.area)),proximos:(parte.data?.proximos||[]).filter((r:Any)=>despacho.areas.includes(r.area))},tesoreria:verCuentas?arqueo.data:null,saldo: verCuentas ? await saldo(ctx) : null, elecciones: Number(c.elecciones || 0), hoy: hoy0 });
     }
     if (a === "agenda") {
       const desde = Number(b.desde) || inicioDia(), hasta = Number(b.hasta) || desde + 7 * 86400000;
@@ -157,7 +163,7 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
       return J({ ok: true });
     }
     if (a === "audiencia_decidir") {
-      necesita(y, "gobernador");
+      necesita(y, "gobernador","vicegobernador");
       const r = await leer(ctx, Number(b.id)); if (!r || r.tipo !== "audiencia") throw new Fallo("NO_EXISTE", 404);
       if (r.estado !== "pendiente") throw new Fallo("YA_CONTESTADA", 409);
       if (!b.aceptar) { const r2 = await cambiar(ctx, r.id, { estado: "rechazada", datos: { ...r.datos, decide: y.nombre, razon: limpio(b.razon, 400) } }); await repintar(ctx, r2, tarjetaAudiencia(r2)); return J({ ok: true }); }
@@ -170,10 +176,10 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
       return J({ ok: true, telegrama: tel });
     }
     if (a === "docs") {
-      const docs = await lista(ctx, "decreto", (q) => q.neq("estado", "descartado").order("creado", { ascending: false }), 60);
-      if(b.id&&!docs.some((d:Any)=>d.id===Number(b.id))){const elegido=await leer(ctx,Number(b.id));if(elegido?.tipo==='decreto'&&elegido.estado!=='descartado')docs.unshift(plano(elegido));}
+      const docs = await lista(ctx, "decreto", (q) => alcance(q).neq("estado", "descartado").order("creado", { ascending: false }), 60);
+      if(b.id&&!docs.some((d:Any)=>d.id===Number(b.id))){const elegido=await leer(ctx,Number(b.id));if(elegido?.tipo==='decreto'&&elegido.estado!=='descartado'&&puedeVer(y,elegido,c))docs.unshift(plano(elegido));}
       for (const d of docs) d.texto = textoDocumento({ datos: d.datos });
-      return J({ ok: true, yo, docs, firma: { nombre: c.firma_nombre || "", cargo: c.firma_cargo || "Gobernador" } });
+      return J({ ok: true, yo, docs, firma: { nombre: y.roles.vicegobernador&&!esGobernador(y)?y.nombre:c.firma_nombre||"", cargo: y.roles.vicegobernador&&!esGobernador(y)?"Vicegobernador":c.firma_cargo||"Gobernador" } });
     }
     if (a === "doc_guardar") {
       const clase = TIPO_DOC[String(b.clase)] ? String(b.clase) : "decreto";
@@ -183,18 +189,19 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
         const r = await leer(ctx, Number(b.id)); if (!r || r.tipo !== "decreto") throw new Fallo("NO_EXISTE", 404);
         if (r.estado !== "borrador") throw new Fallo("YA_FIRMADO", 409);
         if(r.datos.hacienda_id)throw Error("Este escrito conserva la propuesta de Hacienda. Descártelo y prepare una propuesta nueva para enmendar importes o destinatarios.");
-        if(r.datos.area&&!y.roles.gobernador&&!y.roles.admin)throw new Fallo("SIN_PERMISO",403);
+        if(!puedeVer(y,r,c)||(r.datos.expediente&&!puedeFirmar(y,r,c)))throw new Fallo("SIN_PERMISO",403);
         const r2 = await cambiar(ctx, r.id, { datos: { ...r.datos, clase, titulo, texto, editadoPor: y.nombre } }); await repintar(ctx, r2, tarjetaDecreto(r2));await actualizarCuentas(ctx);
         return J({ ok: true, doc: plano(r2) });
       }
-      const r = await nuevo(ctx, "decreto", { ...base, estado: "borrador", datos: { clase, titulo, texto } }, false);
+      const r = await nuevo(ctx, "decreto", { ...base, estado: "borrador", datos: { clase, titulo, texto,...(!esDireccion(y)&&despacho.areas[0]?{area:despacho.areas[0],area_nombre:despacho.areas[0]}:{}) } }, false);
       await publicar(ctx, r, c.canal_documentos, { content: c.rol_gobernador ? `<@&${c.rol_gobernador}>, hay un documento para firmar.` : "", ...tarjetaDecreto(r) }, c.rol_gobernador ? { roles: [c.rol_gobernador] } : { parse: [] });
       return J({ ok: true, doc: plano(r) });
     }
     if (a === "doc_firmar" || a === "doc_descartar") {
-      necesita(y, "gobernador");
+      necesita(y, "gobernador","vicegobernador");
       const r = await leer(ctx, Number(b.id)); if (!r || r.tipo !== "decreto") throw new Fallo("NO_EXISTE", 404);
       if (r.estado !== "borrador") throw new Fallo("YA_FIRMADO", 409);
+      if(!puedeFirmar(y,r,c))throw new Fallo('SIN_PERMISO',403);
       if (a === "doc_descartar") { const r2 = await cambiar(ctx, r.id, { estado: "descartado" }); await repintar(ctx, r2, tarjetaDecreto(r2));await actualizarCuentas(ctx); return J({ ok: true }); }
       const { data: r2,error:firmaError } = await ctx.sb.rpc("gob_firmar", { p_id: r.id, p_firma: firmaDe(ctx, quien(y)), p_por: y.nombre });
       if(firmaError)throw Error(String(firmaError.message).includes("PRESUPUESTO_INSUFICIENTE")?"La asignación supera el crédito libre de ese presupuesto.":String(firmaError.message).includes("PRESUPUESTO_SIN_FIRMA")?"Debe firmar primero el presupuesto que respalda este pago.":"No he podido firmar este escrito. Revise su presupuesto de origen.");
@@ -204,7 +211,7 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
       return J({ ok: true, doc: d });
     }
     if (a === "tels") {
-      const tels = await lista(ctx, "telegrama", (q) => q.order("creado", { ascending: false }), 80);
+      const tels = await lista(ctx, "telegrama", (q) => alcance(q).order("creado", { ascending: false }), 80);
       return J({ ok: true, yo, tels });
     }
     if (a === "tel_recibido") {
@@ -218,7 +225,7 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
       const para = limpio(b.para, 100); if (!para || !String(b.texto || "").trim()) throw new Fallo("FALTAN_DATOS");
       const texto = telegramaTxt(ctx, quien(y), para, limpio(b.texto, 1500));
       let respuestaA: Any = null;
-      if (b.respondeA) { const r0 = await leer(ctx, Number(b.respondeA)); if (r0 && r0.tipo === "telegrama") { respuestaA = r0; } }
+      if (b.respondeA) { const r0 = await leer(ctx, Number(b.respondeA)); if(r0&&!puedeVer(y,r0,c))throw new Fallo('SIN_PERMISO',403);if (r0 && r0.tipo === "telegrama") { respuestaA = r0; } }
       const r = await nuevo(ctx, "telegrama", { ...base, datos: { sentido: "salida", para, texto, telegrama: limpio(b.telegrama, 20) || respuestaA?.datos?.telegrama || "", respuestaA: respuestaA?.numero || null } });
       await publicar(ctx, r, c.canal_telegramas, tarjetaTelegrama(r));
       if (respuestaA) { const r2 = await cambiar(ctx, respuestaA.id, { datos: { ...respuestaA.datos, respondido: y.nombre } }); await repintar(ctx, r2, tarjetaTelegrama(r2)); }
@@ -230,7 +237,7 @@ export async function web(ctx: Ctx, b: Any): Promise<Response> {
       return J({ ok: true });
     }
     if (a === "propuesta_cerrar") {
-      necesita(y, "gobernador");
+      necesita(y, "gobernador","vicegobernador");
       const r = await leer(ctx, Number(b.id)); if (!r || r.tipo !== "propuesta" || r.estado !== "abierta") throw new Fallo("NO_EXISTE", 404);
       const v = await votos(ctx, r.id);
       const r2 = await cambiar(ctx, r.id, { estado: v.si.length > v.no.length ? "aprobada" : "rechazada", datos: { ...r.datos, cierra: y.nombre } });

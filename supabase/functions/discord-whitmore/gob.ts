@@ -1,3 +1,4 @@
+import {puedeFirmar,llevaEconomia,perfil} from './competencias.ts';
 import {actualizarCuentas} from './cuentas.ts';
 // Señor Whitmore · funciones de gobierno (22/10/2026). Todo es interno del equipo de gobierno:
 // agenda, audiencias, reuniones y actas, actos de campaña, telegramas, decretos con firma, propuestas con votación,
@@ -60,7 +61,7 @@ function quien(i: Any) {
   return { id: String(u.id || ""), nombre: limpio(m.nick || u.global_name || u.username || "—", 60), roles, admin };
 }
 const tiene = (x: ReturnType<typeof quien>, c: Record<string, string>, ...k: string[]) => x.admin || k.some((r) => c["rol_" + r] && x.roles.includes(c["rol_" + r]));
-const enConsejo = (x: ReturnType<typeof quien>, c: Record<string, string>) => tiene(x, c, "consejo", "gobernador", "gobernacion", "economia", "festejos");
+const enConsejo = (x: ReturnType<typeof quien>, c: Record<string, string>) => tiene(x, c, "consejo", "gobernador", "gobernacion", "comercio", "vicegobernador", "festejos");
 
 export async function nuevo(ctx: Ctx, tipo: string, campos: Any, numerar = true) {
   const numero = numerar ? (await ctx.sb.rpc("gob_siguiente", { p_tipo: tipo })).data : null;
@@ -137,7 +138,7 @@ export function tarjetaActa(r: Any) {
     description: `**Reunión del** ${fechaTxt(d.fecha)}\n**Asistentes:** ${d.asistentes || "—"}\n\n**Acuerdos**\n${d.acuerdos}` + (d.notas ? `\n\n**Notas**\n${d.notas}` : ""), footer: { text: `Redactada por ${r.autor} · Sr. Whitmore` } }] };
 }
 function saludo() { const h = partes(Date.now()).h; return h >= 6 && h < 14 ? "Buenos días" : h >= 14 && h < 21 ? "Buenas tardes" : "Buenas noches"; }
-export function firmaDe(ctx: Ctx, x: Any) { return `${ctx.c.firma_nombre || x.nombre}\n${ctx.c.firma_cargo || "Gobernador"} · Silver Peak`; }
+export function firmaDe(ctx: Ctx, x: Any) { const vice=Array.isArray(x.roles)?x.roles.includes(ctx.c.rol_vicegobernador):x.roles?.vicegobernador;const gov=Array.isArray(x.roles)?x.roles.includes(ctx.c.rol_gobernador):x.roles?.gobernador;if(vice&&!gov&&!x.admin)return `${x.nombre}\nVicegobernador · Silver Peak`;return `${ctx.c.firma_nombre || x.nombre}\n${ctx.c.firma_cargo || "Gobernador"} · Silver Peak`; }
 export function telegramaTxt(ctx: Ctx, x: Any, para: string, texto: string) {
   const t = texto.trim().replace(/\s+$/, ""), fin = /[.!?…]$/.test(t) ? "" : ".";
   return `${para}:\n\n${saludo()}. ${t}${fin}\n\nReciba un cordial saludo,\n${firmaDe(ctx, x)}`;
@@ -324,9 +325,9 @@ export async function orden(ctx: Ctx, i: Any): Promise<Response> {
     return eph((tipo === "contacto" ? "📇 **Contactos**\n" : "🏪 **Negocios**\n") + l.slice(0, 15).map((r: Any) => "• " + ficha(r).replace(/\n/g, " · ")).join("\n") + (l.length > 15 ? `\n…y ${l.length - 15} más (usa buscar).` : ""));
   }
 
-  if (n === "cuenta") {
+  if (n === "cuenta") {if(!llevaEconomia({id:x.id,roles:{admin:x.admin,gobernador:tiene(x,c,"gobernador"),vicegobernador:tiene(x,c,"vicegobernador")}},c))return eph("Economía corresponde al Gobernador y al Vicegobernador solo cuando existe delegación expresa.");
     if (sub === "ingreso" || sub === "gasto") {
-      if (!tiene(x, c, "economia", "gobernador")) return eph("Las cuentas las lleva la Secretaría de Economía y Comercio (y el gobernador).");
+      if (!llevaEconomia({id:x.id,roles:{admin:x.admin,gobernador:tiene(x,c,"gobernador"),vicegobernador:tiene(x,c,"vicegobernador")}},c)) return eph("Las cuentas las lleva la Secretaría de Economía y Comercio (y el gobernador).");
       return eph("Prepare el ingreso o pago en el libro de Hacienda: https://juancarlos15022-maker.github.io/harrington-gunsmith/gobierno/#hacienda/movimientos . El Gobernador lo autorizará y su ejecución quedará asentada una sola vez.");
     }
     const { data } = await ctx.sb.from("gob_registros").select("*").eq("tipo", "movimiento").order("creado", { ascending: false }).limit(10);
@@ -395,7 +396,7 @@ export async function boton(ctx: Ctx, i: Any): Promise<Response> {
     return actualizar(tarjetaCita(r2));
   }
   if (k === "aud") {
-    if (!tiene(x, c, "gobernador")) return eph("Las audiencias las acepta o rechaza el gobernador.");
+    if (!tiene(x, c, "gobernador", "vicegobernador")) return eph("Las audiencias las acepta o rechaza el gobernador.");
     if (r.estado !== "pendiente") return actualizar(tarjetaAudiencia(r));
     if (accion === "ok") return modal("aud:ok:" + id, "Aceptar audiencia", [{ id: "fecha", label: "Día (25/10, hoy, mañana)", max: 20 }, { id: "hora", label: "Hora (18:30)", max: 5 }, { id: "lugar", label: "Lugar", req: false, max: 100 }]);
     return modal("aud:no:" + id, "Rechazar audiencia", [{ id: "razon", label: "Motivo (opcional)", req: false, largo: true, max: 400 }]);
@@ -407,10 +408,10 @@ export async function boton(ctx: Ctx, i: Any): Promise<Response> {
   if (k === "tel" && accion === "resp") return modal("tel:resp:" + id, "Respuesta a " + r.datos.de, [{ id: "texto", label: "Lo que quieres decir", largo: true, max: 1500 }]);
   if (k === "dec") {
     if (r.estado !== "borrador") return actualizar(tarjetaDecreto(r));
-    if(accion === "editar" && r.datos.area && !tiene(x,c,"gobernador"))return eph("Este escrito ya está en la mesa del Gobernador. Las enmiendas deben hacerse tras su devolución.");
+    if(accion === "editar" && r.datos.area && !puedeFirmar({id:x.id,roles:{admin:x.admin,gobernador:tiene(x,c,"gobernador"),vicegobernador:tiene(x,c,"vicegobernador")}},r,c))return eph("Este escrito ya está en la mesa del Gobernador. Las enmiendas deben hacerse tras su devolución.");
     if (accion === "editar" && r.datos.hacienda_id)return eph("Este escrito reproduce una propuesta de Hacienda. Descártelo y prepare una propuesta nueva para conservar importes y destinatarios.");
     if (accion === "editar") return modal("dec:editar:" + id, "Editar documento", [{ id: "titulo", label: "Título", max: 100, value: r.datos.titulo }, { id: "texto", label: "Texto", largo: true, max: 3000, value: r.datos.texto }]);
-    if (!tiene(x, c, "gobernador")) return eph("Solo el gobernador puede " + (accion === "firmar" ? "firmar" : "descartar") + " documentos.");
+    if (!puedeFirmar({id:x.id,roles:{admin:x.admin,gobernador:tiene(x,c,"gobernador"),vicegobernador:tiene(x,c,"vicegobernador")}},r,c)) return eph("La autoridad competente puede " + (accion === "firmar" ? "firmar" : "descartar") + " documentos.");
     if (accion === "descartar") { const r2 = await cambiar(ctx, id, { estado: "descartado" }); return actualizar(tarjetaDecreto(r2)); }
     if (accion === "firmar") {
       // numeración oficial propia de cada clase (decreto n.º 1, 2…; comunicado n.º 1, 2…), solo al firmar y de una vez
@@ -424,14 +425,14 @@ export async function boton(ctx: Ctx, i: Any): Promise<Response> {
     if (r.estado !== "abierta") return actualizar(await tarjetaPropuesta(ctx, r));
     if (accion === "si" || accion === "no") { await votar(ctx, id, x, accion); return actualizar(await tarjetaPropuesta(ctx, r)); }
     if (accion === "cerrar") {
-      if (!tiene(x, c, "gobernador")) return eph("La votación la cierra el gobernador.");
+      if (!tiene(x, c, "gobernador", "vicegobernador")) return eph("La votación la cierra el gobernador.");
       const v = await votos(ctx, id);
       const r2 = await cambiar(ctx, id, { estado: v.si.length > v.no.length ? "aprobada" : "rechazada", datos: { ...r.datos, cierra: x.nombre } });
       return actualizar(await tarjetaPropuesta(ctx, r2));
     }
   }
   if (k === "tar" && accion === "hecha") {
-    if (r.datos.para !== x.id && !tiene(x, c, "gobernador")) return eph("La marca como hecha quien la tiene encargada (o el gobernador).");
+    if (r.datos.para !== x.id && !tiene(x, c, "gobernador", "vicegobernador")) return eph("La marca como hecha quien la tiene encargada (o el gobernador).");
     const r2 = await cambiar(ctx, id, { estado: "hecha", avisado: true, datos: { ...r.datos, hechaPor: x.nombre } });
     return actualizar(tarjetaTarea(r2));
   }
@@ -461,14 +462,14 @@ export async function formulario(ctx: Ctx, i: Any): Promise<Response> {
   }
   const r = await leer(ctx, id); if (!r) return eph("Ya no encuentro ese registro.");
   if (k === "dec" && accion === "editar") {
-    if(r.datos.area && !tiene(x,c,"gobernador"))return eph("Este escrito ya está elevado al Gobernador.");
+    if(r.datos.area && !puedeFirmar({id:x.id,roles:{admin:x.admin,gobernador:tiene(x,c,"gobernador"),vicegobernador:tiene(x,c,"vicegobernador")}},r,c))return eph("Este escrito ya está elevado al Gobernador.");
     if (r.estado !== "borrador") return eph("Ese documento ya no es un borrador.");
     if(r.datos.hacienda_id)return eph("Las enmiendas financieras se preparan mediante una nueva propuesta en Hacienda.");
     const r2 = await cambiar(ctx, id, { datos: { ...r.datos, titulo: limpio(v.titulo, 100), texto: limpio(v.texto, 3000), editadoPor: x.nombre } });
     await repintar(ctx, r2, tarjetaDecreto(r2)); return eph("✏️ Borrador actualizado.");
   }
   if (k === "aud") {
-    if (!tiene(x, c, "gobernador")) return eph("Las audiencias las acepta o rechaza el gobernador.");
+    if (!tiene(x, c, "gobernador", "vicegobernador")) return eph("Las audiencias las acepta o rechaza el gobernador.");
     if (r.estado !== "pendiente") return eph("Esa audiencia ya estaba contestada.");
     if (accion === "no") { const r2 = await cambiar(ctx, id, { estado: "rechazada", datos: { ...r.datos, decide: x.nombre, razon: limpio(v.razon, 400) } }); await repintar(ctx, r2, tarjetaAudiencia(r2)); return eph("Audiencia rechazada."); }
     const ms = leerFecha(v.fecha, v.hora); if (!ms) return eph("No entiendo la fecha o la hora. Ejemplo: `25/10` y `18:30`. Vuelve a pulsar Aceptar.");
