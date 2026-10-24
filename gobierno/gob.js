@@ -239,7 +239,7 @@ function editor(d){
  var cb=$('#docCop');if(cb)cb.onclick=function(){copiar(d.texto||'',cb)};
  if(d&&d.datos.area)ed.insertAdjacentHTML('afterbegin','<p class="nota"><a href="#secretarias/'+esc(d.datos.area)+'/'+d.datos.expediente+'">Secretaría de '+esc(d.datos.area_nombre)+' · Expediente '+d.datos.expediente+'</a>'+(d.datos.importeCents?' · '+dolar(d.datos.importeCents):'')+'</p>');
  prev(firm?d:(d?Object.assign({},d,{datos:Object.assign({},d.datos)}):borrador()));
- function borrador(){return {estado:'borrador',datos:{clase:$('#dClase').value,titulo:$('#dTit').value,texto:$('#dTxt').value}}}
+ function borrador(){return Object.assign({},d||{},{estado:'borrador',datos:Object.assign({},d&&d.datos||{},{clase:$('#dClase').value,titulo:$('#dTit').value,texto:$('#dTxt').value})})}
 }
 function confirmar(b,txt){if(b.dataset.seguro){return true}b.dataset.seguro='1';var o=b.textContent;b.textContent=txt;setTimeout(function(){delete b.dataset.seguro;b.textContent=o},3500);return false}
 var TIPO={decreto:'DECRETO',comunicado:'COMUNICADO',carta:'CARTA'};
@@ -249,25 +249,52 @@ function firmaVincent(d){
  var nombre=d.datos.firmadoPor||firmaPartes(d).nombre;
  return String(nombre||'').trim().replace(/\s+/g,' ').toLowerCase()==='vincent harrington';
 }
-function rubricaDocumento(d,fp){return firmaVincent(d)?'<img class="doc-firma-vincent" src="../firma-vincent.webp" alt="Firma de Vincent Harrington" width="320" height="96">':'<div class="rubrica">'+esc(fp.nombre)+'</div>'}
+// Las rúbricas se eligen por identidad registrada, nunca por el área ni por quien consulta.
+var FIRMAS_EQUIPO={
+ 'vincent harrington':{archivo:'vincent-harrington',nombre:'Vincent Harrington',cargo:'Gobernador'},
+ 'iver larsen':{archivo:'iver-larsen',nombre:'Iver Larsen',cargo:'Vicegobernador'},
+ 'jacob datton':{archivo:'jacob-datton',nombre:'Jacob Datton',cargo:'Secretario de Festejos, Cultura y Asuntos Religiosos'},
+ 'francis vernay':{archivo:'francis-vernay',nombre:'Francis Vernay',cargo:'Secretario de Comercio, Explotación y Transportes'},
+ 'mery sawyer':{archivo:'mery-sawyer',nombre:'Mery Sawyer',cargo:'Secretaria de Gobernación'}
+};
+function firmaEquipo(nombre){return FIRMAS_EQUIPO[String(nombre||'').trim().replace(/\s+/g,' ').toLowerCase()]||null}
+function firmasDocumento(d){
+ var x=d.datos||{},lista=[],autor=firmaEquipo(d.autor),fp=firmaPartes(d),firmante=firmaEquipo(x.firmadoPor||fp.nombre);
+ // Remitir un expediente deja constancia de la firma de su emisor; la autorización queda pendiente.
+ if((x.expediente||x.hacienda_id)&&autor)lista.push(Object.assign({},autor,{motivo:'Presentado por'}));
+ if(d.estado==='firmado'){
+  var f=firmante||{nombre:x.firmadoPor||fp.nombre,cargo:fp.cargo};
+  if(!lista.some(function(a){return a.nombre===f.nombre}))lista.push(Object.assign({},f,{motivo:'Firmado por'}));
+  else lista[0].motivo='Firmado por';
+ }
+ return lista;
+}
+function firmaImagen(f){return f.archivo?'img/firmas/'+f.archivo+'.png':''}
+function bloqueFirma(f){return '<div class="doc-firmante"><small>'+esc(f.motivo||'Firmado por')+'</small>'+(f.archivo?'<img class="doc-firma-equipo" src="'+firmaImagen(f)+'" alt="Firma de '+esc(f.nombre)+'" width="280" height="90">':'')+'<div>'+esc(f.nombre)+'</div><div class="doc-cargo">'+esc(f.cargo||'')+'</div></div>'}
+function rubricaDocumento(d,fp){return '<div class="doc-firmas-equipo">'+firmasDocumento(d).map(bloqueFirma).join('')+(d.estado!=='firmado'?'<div class="doc-firmante"><div class="pend">Pendiente de firma</div><div>'+esc(fp.nombre)+'</div><div class="doc-cargo">'+esc(fp.cargo)+'</div></div>':'')+'</div>'}
+function firmaCompetencia(r){
+ if(r.datos.doc_id||['concluido','ejecutado','archivado'].indexOf(r.estadoActual||r.estado)<0)return '';
+ var hist=(r.datos.historial||[]).slice().reverse(),acto=hist.find(function(x){return ['Conclusión del asunto','Asiento de ejecución'].indexOf(x.acto)>=0}),f=acto&&firmaEquipo(acto.por);
+ return f?'<div class="doc-firmas-equipo">'+bloqueFirma(f)+'</div>':'';
+}
 function prev(d){
  var x=d.datos,firm=d.estado==='firmado',fp=firmaPartes(d),fecha=fechaMadrid(x.firmadoMs||Date.now());
- $('#docPrev').innerHTML='<article class="papel" aria-label="Vista previa del documento"><div class="enc"><img src="img/escudo-republicano.webp" alt="Escudo del Partido Republicano de Silver Peak" width="132" height="132" class="doc-escudo"><span>PARTIDO REPUBLICANO · SILVER PEAK</span><img class="sep" src="img/separador.webp" alt="" width="260" height="45"></div><div class="cl">'+(TIPO[x.clase]||'DOCUMENTO')+(x.numDoc?' N.º '+x.numDoc:firm?'':' (borrador)')+'</div><div class="ti">'+esc(x.titulo||'Título')+'</div><div class="cu">'+esc(x.texto||'Texto del documento…')+'</div><div style="font-size:18px">Dado en Silver Peak, a '+fecha.getDate()+' de '+MESES[fecha.getMonth()]+' de '+1880+'.</div><div class="pie"><div>'+(firm?rubricaDocumento(d,fp):'<div class="pend">Pendiente de firma</div>')+'<div style="font-size:17px">'+esc(fp.nombre)+'</div><div style="font-size:16px;font-style:italic">'+esc(fp.cargo)+' de Silver Peak</div></div>'+(firm?'<svg class="lacre" width="96" height="96" viewBox="0 0 120 120" role="img" aria-label="Sello de lacre"><defs><radialGradient id="lg" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#c6493b"/><stop offset=".55" stop-color="#8b2e25"/><stop offset="1" stop-color="#561a14"/></radialGradient></defs><path d="M60 4 C74 6 80 2 90 10 C100 18 110 20 112 34 C116 46 120 54 114 66 C110 78 116 88 104 98 C94 108 86 116 72 114 C60 118 50 120 38 112 C26 106 14 104 10 90 C4 78 2 70 6 58 C8 46 2 36 12 26 C22 14 30 10 42 8 C50 4 54 4 60 4Z" fill="url(#lg)"/><circle cx="60" cy="60" r="46" fill="url(#lg)" stroke="#5e1c16" stroke-opacity=".35"/><circle cx="60" cy="60" r="42" fill="none" stroke="#c45a4a" stroke-width="2"/><path d="M30 78 L48 52 L56 62 L66 46 L90 78 Z" fill="none" stroke="#e9b3a6" stroke-width="3" stroke-linejoin="round"/><path d="M60 26 l2.4 5.6 6 .5 -4.6 3.9 1.4 5.8 -5.2-3.2 -5.2 3.2 1.4-5.8 -4.6-3.9 6-.5z" fill="#e9b3a6"/></svg>':'')+'</div></article>';
+ $('#docPrev').innerHTML='<article class="papel" aria-label="Vista previa del documento"><div class="enc"><img src="img/escudo-republicano.webp" alt="Escudo del Partido Republicano de Silver Peak" width="132" height="132" class="doc-escudo"><span>PARTIDO REPUBLICANO · SILVER PEAK</span><img class="sep" src="img/separador.webp" alt="" width="260" height="45"></div><div class="cl">'+(TIPO[x.clase]||'DOCUMENTO')+(x.numDoc?' N.º '+x.numDoc:firm?'':' (borrador)')+'</div><div class="ti">'+esc(x.titulo||'Título')+'</div><div class="cu">'+esc(x.texto||'Texto del documento…')+'</div><div style="font-size:18px">Dado en Silver Peak, a '+fecha.getDate()+' de '+MESES[fecha.getMonth()]+' de '+1880+'.</div><div class="pie"><div>'+rubricaDocumento(d,fp)+'</div>'+(firm?'<svg class="lacre" width="96" height="96" viewBox="0 0 120 120" role="img" aria-label="Sello de lacre"><defs><radialGradient id="lg" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#c6493b"/><stop offset=".55" stop-color="#8b2e25"/><stop offset="1" stop-color="#561a14"/></radialGradient></defs><path d="M60 4 C74 6 80 2 90 10 C100 18 110 20 112 34 C116 46 120 54 114 66 C110 78 116 88 104 98 C94 108 86 116 72 114 C60 118 50 120 38 112 C26 106 14 104 10 90 C4 78 2 70 6 58 C8 46 2 36 12 26 C22 14 30 10 42 8 C50 4 54 4 60 4Z" fill="url(#lg)"/><circle cx="60" cy="60" r="46" fill="url(#lg)" stroke="#5e1c16" stroke-opacity=".35"/><circle cx="60" cy="60" r="42" fill="none" stroke="#c45a4a" stroke-width="2"/><path d="M30 78 L48 52 L56 62 L66 46 L90 78 Z" fill="none" stroke="#e9b3a6" stroke-width="3" stroke-linejoin="round"/><path d="M60 26 l2.4 5.6 6 .5 -4.6 3.9 1.4 5.8 -5.2-3.2 -5.2 3.2 1.4-5.8 -4.6-3.9 6-.5z" fill="#e9b3a6"/></svg>':'')+'</div></article>';
 }
 /* imagen del documento (papel, escudo, firma y sello) */
 function cargaImg(src){return new Promise(function(ok){var i=new Image();i.onload=function(){ok(i)};i.onerror=function(){ok(null)};i.src=src})}
 function imagenDoc(d){
- var x=d.datos,firm=d.estado==='firmado',fp=firmaPartes(d),fecha=fechaMadrid(x.firmadoMs||Date.now()),IM={};
+ var x=d.datos,firm=d.estado==='firmado',fp=firmaPartes(d),fecha=fechaMadrid(x.firmadoMs||Date.now()),IM={},firmas=firmasDocumento(d);
  var fuentes=['700 30px Cinzel','24px "IM Fell English"','italic 24px "IM Fell English"','56px "Pinyon Script"'].map(function(f){return D.fonts&&D.fonts.load?D.fonts.load(f).catch(function(){}):0});
  var imgs=['pergamino','esq-si','esq-sd','esq-ii','esq-id','separador'].map(function(n){return cargaImg('img/'+n+'.webp').then(function(i){IM[n]=i})});
  imgs.push(cargaImg('img/escudo-republicano.webp').then(function(i){IM.escudo=i}));
- if(firmaVincent(d))imgs.push(cargaImg('../firma-vincent.webp').then(function(i){IM.firma=i}));
+ firmas.forEach(function(f,k){if(f.archivo)imgs.push(cargaImg(firmaImagen(f)).then(function(i){IM['firma'+k]=i}))});
  return Promise.all(fuentes.concat(imgs)).then(function(){
-  if(!IM.escudo||(firmaVincent(d)&&!IM.firma))throw {detalle:'No se ha podido cargar el escudo o la firma. Vuelva a descargar el documento.'};
+  if(!IM.escudo||firmas.some(function(f,k){return f.archivo&&!IM['firma'+k]}))throw {detalle:'No se ha podido cargar el escudo o la firma. Vuelva a descargar el documento.'};
   var W=1000,c=D.createElement('canvas'),g=c.getContext('2d'),lin=[];
   g.font='24px "IM Fell English", Georgia, serif';
   String(x.texto||'').split('\n').forEach(function(p){if(!p.trim()){lin.push('');return}var w=p.split(' '),l='';w.forEach(function(t){var z=l?l+' '+t:t;if(g.measureText(z).width>W-160){lin.push(l);l=t}else l=z});lin.push(l)});
-  var H=Math.max(1100,520+lin.length*36+260);c.width=W;c.height=H;
+  var H=Math.max(1100,520+lin.length*36+Math.max(1,firmas.length+(firm?0:1))*210);c.width=W;c.height=H;
   var gr=g.createLinearGradient(0,0,W,H);gr.addColorStop(0,'#f3e9cf');gr.addColorStop(1,'#e6d6b0');g.fillStyle=gr;g.fillRect(0,0,W,H);
   if(IM.pergamino)g.drawImage(IM.pergamino,0,0,W,H);
   var vg=g.createRadialGradient(W/2,H/2,Math.min(W,H)*.35,W/2,H/2,Math.max(W,H)*.75);vg.addColorStop(0,'rgba(120,80,20,0)');vg.addColorStop(1,'rgba(120,80,20,.28)');g.fillStyle=vg;g.fillRect(0,0,W,H);
@@ -280,9 +307,14 @@ function imagenDoc(d){
   g.font='italic 26px "IM Fell English", Georgia, serif';g.fillText(String(x.titulo||''),W/2,330);
   g.textAlign='left';g.font='24px "IM Fell English", Georgia, serif';var y=390;lin.forEach(function(l){g.fillText(l,80,y);y+=36});
   y+=20;g.fillText('Dado en Silver Peak, a '+fecha.getDate()+' de '+MESES[fecha.getMonth()]+' de '+1880+'.',80,y);
-  y+=110;
-  if(firm){if(IM.firma){var fw=320,fh=fw*IM.firma.naturalHeight/IM.firma.naturalWidth;g.drawImage(IM.firma,80,y-fh,fw,fh)}else{g.fillStyle='#1f2a44';g.font='56px "Pinyon Script", cursive';g.fillText(fp.nombre,80,y)}}else{g.fillStyle='#7a6a4a';g.font='italic 22px "IM Fell English", Georgia, serif';g.fillText('Pendiente de firma',80,y)}
-  g.fillStyle='#2a2116';g.font='22px "IM Fell English", Georgia, serif';g.fillText(fp.nombre,80,y+40);g.font='italic 21px "IM Fell English", Georgia, serif';g.fillText(fp.cargo+' de Silver Peak',80,y+70);
+  y+=35;
+  var bloques=firmas.slice();if(!firm)bloques.push({nombre:fp.nombre,cargo:fp.cargo,pendiente:true});
+  bloques.forEach(function(f,k){
+   g.fillStyle='#6b5222';g.font='18px "IM Fell English", Georgia, serif';g.fillText(f.pendiente?'Pendiente de firma':f.motivo,80,y+20);
+   var im=IM['firma'+k];if(im){var fw=Math.min(280,90*im.naturalWidth/im.naturalHeight),fh=fw*im.naturalHeight/im.naturalWidth;g.drawImage(im,80,y+35,fw,fh)}
+   g.fillStyle='#2a2116';g.font='22px "IM Fell English", Georgia, serif';g.fillText(f.nombre,80,y+150);
+   g.font='italic 18px "IM Fell English", Georgia, serif';g.fillText(f.cargo||'',80,y+180);y+=210;
+  });y-=150;
   if(firm){g.save();g.translate(W-230,y-70);g.fillStyle='#8b2e25';g.beginPath();g.arc(70,70,66,0,Math.PI*2);g.fill();g.strokeStyle='#c45a4a';g.lineWidth=2;g.beginPath();g.arc(70,70,54,0,Math.PI*2);g.stroke();
    g.translate(10,8);g.strokeStyle='#e9b3a6';g.fillStyle='#e9b3a6';g.lineWidth=3;g.stroke(new Path2D('M30 78 L48 52 L56 62 L66 46 L90 78 Z'));g.fill(new Path2D('M60 26 l2.4 5.6 6 .5 -4.6 3.9 1.4 5.8 -5.2-3.2 -5.2 3.2 1.4-5.8 -4.6-3.9 6-.5z'));g.restore()}
   c.toBlob(function(bl){var a=D.createElement('a');a.href=URL.createObjectURL(bl);a.download=(TIPO[x.clase]||'Documento').toLowerCase()+(x.numDoc?'-'+x.numDoc:'-borrador')+'.png';D.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},2000)},'image/png');
@@ -502,6 +534,7 @@ function secEditor(r,a,j){
  if(ed){h+='<form id="secGuardar"><label class="campo">Clase de asunto<select name="clase">'+Object.keys(a.clases).map(function(k){return '<option value="'+k+'">'+esc(a.clases[k])+'</option>'}).join('')+'</select></label><p class="nota" id="secAyuda"></p>'+secCampo('titulo','Asunto',d.titulo,false,100)+secCampo('texto','Antecedentes, contenido y actuaciones',d.texto,true)+'<div class="dos">'+secCampo('interesado','Persona, cargo o establecimiento',d.interesado,false,100)+secCampo('localidad','Localidad',d.localidad,false,100)+secCampo('telegrama','Telegrama de contacto',d.telegrama,false,20)+secCampo('referencia','Referencia de la carta, documento o comunicación',d.referencia,false,200)+secCampo('responsable','Encargado de atender el asunto',d.responsable||YO.nombre,false,100)+secCampo('fecha',a.id==='festejos'?'Fecha prevista · provisional · día/mes':'Plazo · día/mes',r&&r.cuando?secFecha(r.cuando).split('/').slice(0,2).join('/'):'',false,20)+(a.id==='festejos'?secCampo('hora','Hora prevista · provisional',r&&r.cuando?hm(new Date(r.cuando).getTime()):'12:00',false,5):'')+'</div>'+(a.id==='festejos'?'<label class="campo">Autorización de la Presidencia<select name="presidenciaId"><option value="">Pendiente de consulta o autorización</option>'+(j.peticionesPresidencia||[]).map(function(p){return '<option value="'+p.id+'"'+(Number(d.presidenciaId)===p.id?' selected':'')+'>Petición n.º '+p.numero+' · '+esc(p.titulo)+'</option>'}).join('')+'</select></label>'+'<p class="nota">Puede preparar ideas sin autorización. Antes de remitir una actividad o anuncio para firma, vincule una petición favorable de la Presidencia. <a href="#oficina/peticiones">Abrir peticiones y consultas</a>.</p>':'')+(a.id==='comercio'?'<section id="comLicencia"><label class="campo">Tipo de licencia<select name="licenciaTipo">'+[['negocio','Negocio fijo'],['ambulante','Venta ambulante'],['minera','Mina'],['agricola','Explotación agrícola'],['ganadera','Explotación ganadera'],['otras','Otras explotaciones']].map(function(x){return '<option value="'+x[0]+'"'+(d.licenciaTipo===x[0]?' selected':'')+'>'+x[1]+'</option>'}).join('')+'</select></label>'+secCampo('tasa','Tasa propuesta en dólares · 0 si es gratuita',d.importeCents?(d.importeCents/100).toFixed(2):'0',false,12)+secCampo('vence','Vencimiento propuesto · día/mes',d.vence?secFecha(d.vence).split('/').slice(0,2).join('/'):'',false,20)+'</section>':'')+'<div id="secDinero">'+secCampo('importe','Importe en dólares',d.importeCents?(d.importeCents/100).toFixed(2):'',false,12)+'</div><label class="campo" id="secSentido">Correspondencia<select name="sentido"><option value="entrada">Entrada al despacho</option><option value="salida">Salida del despacho</option></select></label><label class="campo">Vincular con otro expediente de esta Secretaría<select name="relacionado"><option value="">Sin vínculo</option>'+secLibro.filter(function(x){return x.id!==(r&&r.id)}).map(function(x){return '<option value="'+x.id+'">n.º '+x.numero+' · '+esc(x.datos.titulo)+'</option>'}).join('')+'</select></label><label class="sec-check"><input type="checkbox" name="requiereFirma"> Requiere autorización y firma de Gobernación</label><button type="submit" class="btn oro">'+(r?'Asentar las enmiendas':'Abrir el expediente')+'</button></form>';
  }else if(r){h+='<h3>'+esc(d.titulo)+'</h3><div class="recibido sec-texto">'+esc(d.texto)+'</div><dl class="sec-datos">'+[['Clase de asunto',a.clases[d.clase]],['Encargado',d.responsable],['Interesado',d.interesado],['Localidad',d.localidad],['Telegrama',d.telegrama],['Referencia',d.referencia],['Importe',d.importeCents?dolar(d.importeCents):''],['Plazo',r.cuando?secFecha(r.cuando):'']].filter(function(x){return x[1]}).map(function(x){return '<dt>'+x[0]+'</dt><dd>'+esc(x[1])+'</dd>'}).join('')+'</dl>';}else h+='<p class="vacio">Seleccione un expediente para consultar sus actuaciones.</p>';
  if(r&&a.id==='festejos'&&d.presidenciaId)h+='<p><a class="btn" href="#oficina/peticiones/'+Number(d.presidenciaId)+'">Consultar autorización de la Presidencia</a></p>';
+ if(r)h+=firmaCompetencia(r);
  if(r&&d.devolucion)h+='<aside class="aviso">Enmiendas solicitadas: '+esc(d.devolucion)+'</aside>';
  if(r&&d.relacionado)h+='<a class="btn" href="#secretarias/'+a.id+'/'+d.relacionado+'">Consultar el expediente vinculado</a>';
  if(r&&d.doc_id)h+='<a class="btn '+(j.superior&&r.estadoActual==='pendiente_firma'?'oro':'')+'" href="#documentos/'+d.doc_id+'">'+(j.superior&&r.estadoActual==='pendiente_firma'?'Revisar y firmar el escrito':'Consultar el escrito elevado')+'</a>';

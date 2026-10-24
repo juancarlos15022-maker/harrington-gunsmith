@@ -28,7 +28,7 @@ Los canales existentes conservan su historial. Las nuevas categorías y canales 
 5. Cada modificación relevante deja una constancia en seguimiento, con el responsable que consta en la última actuación.
 6. La ejecución de un pago sigue siendo una acción distinta de la autorización del documento.
 
-La imagen de la rúbrica original de Vincent Harrington se muestra únicamente en documentos firmados por Vincent. Los borradores conservan la indicación de firma pendiente.
+Las cinco rúbricas originales del equipo (incluida la firma rudimentaria de Mery Sawyer) se seleccionan por la identidad registrada, nunca por el área ni por quien consulta. Los escritos elevados conservan la rúbrica de su emisor y, tras autorizarse, también la de la autoridad firmante; se evita duplicarla cuando coinciden. La autorización pendiente no muestra rúbrica. Los asuntos propios concluidos muestran la firma de quien asentó su conclusión o ejecución. La vista del escrito y su imagen descargable comparten la misma selección de firmas.
 
 ## Publicaciones y reintentos
 
