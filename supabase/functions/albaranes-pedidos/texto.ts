@@ -1,3 +1,4 @@
+export function telegramaPedido(p:any){return String(p.proveedor||'Estimados señores')+':\n\nLes escribe Vincent Harrington, de la Armería Harrington Gunsmith. El encargo actualizado queda de la siguiente manera:\n\n'+(p.items||[]).map((x:any)=>'— '+x.qty+' × '+x.material).join('\n')+'\n\nTotal: $'+(Number(p.totalCents||0)/100).toFixed(2)+'.\n'+(p.paid?'El importe está abonado.':'El importe pendiente se abonará a la recepción.')+'\n\nMuchas gracias por su atención.\nAtentamente,\nVincent Harrington\nArmería Harrington Gunsmith · Saint Denis · Telegrama SD8112';}
 // La misma instantánea que genera el albarán actualiza los mensajes de texto existentes.
 export function textoPedido(p:any){
  const closed=!!(p.cancelled||p.received||p.completedAt),money=(n:any)=>'$'+(Number(n||0)/100).toFixed(2);
@@ -13,5 +14,12 @@ export async function sincronizarTexto(sb:any,api:any,canal:string,p:any,id:stri
  if(f?.mensaje_id)await patch('/channels/'+canal+'/messages/'+f.mensaje_id,text);
  const {data:a,error:ae}=await sb.from('hg_reposicion_avisos').select('message_id,channel_id,ic_message_id').eq('pedido_id',id).maybeSingle();if(ae)throw Error('TEXTO_PRIVADO_REFERENCIA');
  if(a?.message_id&&a.channel_id){const {components,...body}=text;await patch('/channels/'+a.channel_id+'/messages/'+a.message_id,{...body,content:'🎩 Pedido actualizado · '+p.proveedor});}
- if(a?.ic_message_id&&a.channel_id){const content=String(p.proveedor||'Estimados señores')+':\n\nLes escribe Vincent Harrington, de la Armería Harrington Gunsmith. El encargo actualizado queda de la siguiente manera:\n\n'+(p.items||[]).map((x:any)=>'— '+x.qty+' × '+x.material).join('\n')+'\n\nTotal: $'+(Number(p.totalCents||0)/100).toFixed(2)+'.\n'+(p.paid?'El importe está abonado.':'El importe pendiente se abonará a la recepción.')+'\n\nMuchas gracias por su atención.\nAtentamente,\nVincent Harrington\nArmería Harrington Gunsmith · Saint Denis · Telegrama SD8112';if(content.length>2000)throw Error('TELEGRAMA_DEMASIADO_LARGO');await patch('/channels/'+a.channel_id+'/messages/'+a.ic_message_id,{content,allowed_mentions:{parse:[]}});}
+ if(a?.ic_message_id&&a.channel_id){const content=telegramaPedido(p);if(content.length>2000)throw Error('TELEGRAMA_DEMASIADO_LARGO');await patch('/channels/'+a.channel_id+'/messages/'+a.ic_message_id,{content,allowed_mentions:{parse:[]}});}
+}
+
+export function formularioAlbaran(payload:any,p:any,png:Uint8Array,filename:string){
+ const telegrama=telegramaPedido(p),long=telegrama.length>2000;
+ const attachments=[{id:0,filename},...(long?[{id:1,filename:'Telegrama_'+String(p.code||p.id).replace(/[^\w-]/g,'_')+'.txt'}]:[])];
+ const body={...payload,content:long?'Telegrama para el proveedor: texto completo en el archivo adjunto. Total actualizado: $'+(Number(p.totalCents||0)/100).toFixed(2):telegrama,allowed_mentions:{parse:[]},attachments};
+ const form=new FormData();form.set('payload_json',JSON.stringify(body));form.set('files[0]',new File([png],filename,{type:'image/png'}));if(long)form.set('files[1]',new File([telegrama],attachments[1].filename,{type:'text/plain;charset=utf-8'}));return form;
 }
