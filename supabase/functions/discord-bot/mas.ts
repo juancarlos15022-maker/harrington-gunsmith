@@ -138,6 +138,7 @@ async function cronPedidos(c: C) {
   const { data: M } = await sb.from("bot_pedmsg").select("pedido_id,mensaje_id,cerrado");
   const ya = new Map(((M ?? []) as Array<{ pedido_id: string; mensaje_id: string | null; cerrado: boolean }>).map((r) => [r.pedido_id, r]));
   for (const p of P) {
+    if (p.cancelled) continue; // Las cancelaciones se publican en su canal por albaranes-pedidos.
     const f = ya.get(p.id);
     if (pendiente(p) && !f) {
       if (p.ts && Date.now() - p.ts > 14 * 86400000) continue;
