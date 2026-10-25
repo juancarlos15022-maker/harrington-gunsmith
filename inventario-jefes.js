@@ -15,10 +15,20 @@
   Object.keys(base).forEach(k=>names.set(k,{k,name:isMat(k)?k.slice(4):k,grp:isMatK(k)?'MATERIALES':'PRODUCTOS'}));
   return Array.from(names.values()).sort((a,b)=>a.grp.localeCompare(b.grp)||a.name.localeCompare(b.name,'es'));
  }
+ // A global NPC record revision is not a change to every counted article.
+ function stockChanged(a,b){return Number(a.q||0)!==Number(b.q||0)||(a.v||null)!==(b.v||null)||Number(a.npc||0)!==Number(b.npc||0)}
+ async function validateBase(){
+  const fresh=await sbRpc('inventario_preparar',{});
+  if(!fresh||typeof fresh!=='object'||Array.isArray(fresh))throw Error('Respuesta incompleta');
+  const changed=Object.keys(draft.q).filter(k=>draft.q[k]!==''&&stockChanged(base[k]||{},fresh[k]||{}));
+  if(changed.length){conflicts=changed.map(k=>(rows.find(x=>x.k===k)||{name:k}).name);review=false;render();invModal.scrollTop=0;document.getElementById('invBody').scrollTop=0;say('Han cambiado estos artículos: '+conflicts.join(', ')+'. Se conserva el recuento; actualiza y revisa los afectados.','err');return false;}
+  // Refresh only validation tokens after proving all counted stock and NPC quantities unchanged.
+  base=fresh;draft.base=fresh;rows=list();conflicts=[];persist();return true;
+ }
  async function refresh(recount){
   const fresh=await sbRpc('inventario_preparar',{});
   if(!fresh||typeof fresh!=='object'||Array.isArray(fresh))throw Error('Respuesta incompleta');
-  if(recount){Object.keys(draft.q).forEach(k=>{const a=draft.base[k]||{q:0,v:null},b=fresh[k]||{q:0,v:null};if(a.q!==b.q||a.v!==b.v||a.npc!==b.npc||a.nv!==b.nv)delete draft.q[k]})}
+  if(recount){Object.keys(draft.q).forEach(k=>{const a=draft.base[k]||{q:0,v:null},b=fresh[k]||{q:0,v:null};if(stockChanged(a,b))delete draft.q[k]})}
   base=fresh;draft.base=base;rows=list();conflicts=[];review=false;persist();
  }
  async function open(){
@@ -57,7 +67,7 @@
  async function save(){
   if(!allowed()||busy)return;busy=true;
   try{
-   if(!draft.pending){const items=counted();if(!items.length)return say('Introduce al menos una cantidad contada','err');draft.pending={p_peticion:crypto.randomUUID(),p_items:items};persist()}
+   if(!draft.pending){if(!counted().length)return say('Introduce al menos una cantidad contada','err');if(!await validateBase())return;const items=counted();draft.pending={p_peticion:crypto.randomUUID(),p_items:items};persist()}
    const request=draft.pending;
    let result;
    try{result=await sbRpc('inventario_guardar',request)}catch(e){
