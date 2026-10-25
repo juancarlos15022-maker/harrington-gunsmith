@@ -76,7 +76,7 @@ test('inventario DOM: conflicto conserva borrador y obliga a recontar artículos
  w.sbRpc=async()=>({'mat:Tornillo':{q:10,v:'1'}});await w.document.getElementById('hacerInventarioBtn').onclick();
  const input=w.document.querySelector('[data-ijq="mat:Tornillo"]');input.value='8';input.dispatchEvent(new w.Event('input',{bubbles:true}));w.document.querySelector('[data-ij="review"]').click();
  w.sbRpc=async(n)=>{if(n==='inventario_preparar')return {'mat:Tornillo':{q:10,v:'1'}};throw Error(JSON.stringify({message:'STOCK_CAMBIADO',details:'["mat:Tornillo"]'}))};w.document.querySelector('[data-ij="save"]').click();await new Promise(r=>setImmediate(r));assert.ok(w.document.querySelector('[data-ij="refresh"]'));assert.equal(w.document.querySelector('[data-ijq="mat:Tornillo"]').value,'8');
- w.sbRpc=async()=>({'mat:Tornillo':{q:9,v:'2'}});w.document.querySelector('[data-ij="refresh"]').click();await new Promise(r=>setImmediate(r));assert.equal(w.document.querySelector('[data-ijq="mat:Tornillo"]').value,'');assert.match(w.document.getElementById('invBody').textContent,/Registrado: 9/);
+ w.sbRpc=async()=>({'mat:Tornillo':{q:9,v:'2'}});w.document.querySelector('[data-ij="refresh"]').click();await new Promise(r=>setImmediate(r));assert.equal(w.document.querySelector('[data-ijq="mat:Tornillo"]').value,'0');assert.match(w.document.getElementById('invBody').textContent,/Registrado: 9/);
  }finally{dom.window.close()}
 });
 test('inventario sandbox: simula ajustes y reintentos sin acceso de escritura a la nube',async()=>{

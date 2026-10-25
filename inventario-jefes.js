@@ -35,7 +35,7 @@
   if(!allowed()||busy)return;busy=true;
   try{
    draft=JSON.parse(localStorage.getItem(draftKey())||'null');
-   if(!draft||!draft.q||!draft.base||draft.ubicacion!=='almacen')draft=draft&&draft.pending?draft:{q:{},base:{},ubicacion:'almacen'};
+   if(!draft?.pending)draft={q:{},base:{},ubicacion:'almacen'};
    saved=null;query='';conflicts=[];review=false;
    if(Object.keys(draft.q).length||draft.pending){base=draft.base;rows=list()}else await refresh(false);
    invView='jefe';render();openModal(invModal);invModal.scrollTop=0;
@@ -62,7 +62,7 @@
    const items=counted();body.innerHTML='<p class="bk-note">Revisa las diferencias antes de confirmar. Solo se actualizarán los artículos que has contado.</p>'+items.map(x=>'<div class="reg-line"><span>'+esc((rows.find(r=>r.k===x.k)||{name:x.k}).name)+'<br><small>Registrado '+(x.teo-x.npcTeo)+' → contado '+x.fisAlmacen+' · NPC conservado: '+x.npcTeo+'</small></span><b>'+(x.fis-x.teo>0?'+':'')+(x.fis-x.teo)+'</b></div>').join('')+'<div class="enc-actions"><button type="button" data-ij="back">VOLVER AL RECUENTO</button><button type="button" class="primary" data-ij="save">CONFIRMAR Y GUARDAR</button></div>';return;
   }
   let group='';
-  body.innerHTML='<p class="bk-note">Cuenta solo tu almacén, sin incluir lo que tiene el NPC. Las unidades del NPC se conservan y se suman al total del negocio. <b>Vacío = sin revisar; 0 = no hay unidades.</b> Al guardar podrás revisar las diferencias antes de ajustar el stock.</p>'+(conflicts.length?'<p class="pay-err">El stock cambió durante el recuento: '+conflicts.map(esc).join(', ')+'. Actualiza y vuelve a contar los artículos afectados.</p><button type="button" data-ij="refresh">ACTUALIZAR STOCK Y REVISAR</button>':'')+'<input class="dir-search" id="ijSearch" placeholder="Buscar producto o material…" value="'+esc(query)+'">'+rows.filter(x=>!query||norm(x.name).includes(norm(query))).map(x=>{const head=group!==x.grp?'<div class="dir-sec-title">'+x.grp+'</div>':'';group=x.grp;return head+'<div class="pr-row"><div><b>'+esc(x.name)+'</b><small>Registrado: '+Math.max(0,((base[x.k]||{}).q||0)-((base[x.k]||{}).npc||0))+' · NPC: '+((base[x.k]||{}).npc||0)+' · Total: '+((base[x.k]||{}).q||0)+'</small></div><input class="min-in" type="text" inputmode="numeric" data-ijq="'+esc(x.k)+'" placeholder="Sin revisar" value="'+esc(draft.q[x.k]===undefined?'':draft.q[x.k])+'" aria-label="Cantidad contada de '+esc(x.name)+'"></div>'}).join('')+'<div class="enc-actions"><button type="button" class="primary" data-ij="review">GUARDAR CAMBIOS</button></div>';
+  body.innerHTML='<p class="bk-note">Cuenta solo tu almacén, sin incluir lo que tiene el NPC. Las unidades del NPC se conservan. <b>Cada nuevo inventario empieza en 0.</b> Solo se guardan los artículos cuya cantidad escribas; para confirmar que no queda ninguno, introduce 0. Al guardar podrás revisar las diferencias antes de ajustar el stock.</p>'+(conflicts.length?'<p class="pay-err">El stock cambió durante el recuento: '+conflicts.map(esc).join(', ')+'. Actualiza y vuelve a contar los artículos afectados.</p><button type="button" data-ij="refresh">ACTUALIZAR STOCK Y REVISAR</button>':'')+'<input class="dir-search" id="ijSearch" placeholder="Buscar producto o material…" value="'+esc(query)+'">'+rows.filter(x=>!query||norm(x.name).includes(norm(query))).map(x=>{const head=group!==x.grp?'<div class="dir-sec-title">'+x.grp+'</div>':'';group=x.grp;return head+'<div class="pr-row"><div><b>'+esc(x.name)+'</b><small>Registrado: '+Math.max(0,((base[x.k]||{}).q||0)-((base[x.k]||{}).npc||0))+' · NPC: '+((base[x.k]||{}).npc||0)+' · Total: '+((base[x.k]||{}).q||0)+' · <span data-ijstatus="'+esc(x.k)+'">'+(draft.q[x.k]===undefined||draft.q[x.k]===''?'Sin revisar':'Contado')+'</span></small></div><input class="min-in" type="text" inputmode="numeric" data-ijq="'+esc(x.k)+'" placeholder="Sin revisar" value="'+esc(draft.q[x.k]===undefined?'0':draft.q[x.k])+'" aria-label="Cantidad contada de '+esc(x.name)+'"></div>'}).join('')+'<div class="enc-actions"><button type="button" class="primary" data-ij="review">GUARDAR CAMBIOS</button></div>';
  }
  async function save(){
   if(!allowed()||busy)return;busy=true;
@@ -90,7 +90,7 @@
  button.onclick=open;
  invModal.addEventListener('input',e=>{
   if(invView!=='jefe'||!allowed()||!draft)return;
-  if(e.target.dataset.ijq!==undefined){draft.q[e.target.dataset.ijq]=e.target.value.trim();try{persist()}catch(x){say('No se pudo conservar el borrador en este dispositivo','err')}}
+  if(e.target.dataset.ijq!==undefined){draft.q[e.target.dataset.ijq]=e.target.value.trim();const status=e.target.parentElement.querySelector('[data-ijstatus]');if(status)status.textContent=e.target.value.trim()===''?'Sin revisar':'Contado';try{persist()}catch(x){say('No se pudo conservar el borrador en este dispositivo','err')}}
   if(e.target.id==='ijSearch'){query=e.target.value;render();const i=document.getElementById('ijSearch');i.focus();i.setSelectionRange(query.length,query.length)}
  });
  invModal.addEventListener('click',async e=>{
