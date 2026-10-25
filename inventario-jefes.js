@@ -45,7 +45,7 @@
  function counted(){
   return Object.keys(draft.q).filter(k=>draft.q[k]!=='').map(k=>{
    const value=String(draft.q[k]);if(!/^\d{1,6}$/.test(value))throw Error('Cantidad no válida: '+(rows.find(x=>x.k===k)||{name:k}).name);
-   const b=base[k]||{q:0,v:null};return {k,teo:b.q,version:b.v,fis:Number(value)+(b.npc||0),fisAlmacen:Number(value),npcTeo:b.npc||0,npcVersion:b.nv||null,ubicacion:'almacen'};
+   const b=base[k]||{q:0,v:null};return {k,teo:b.q,version:b.v,fis:Number(value)+(b.npc||0),fisAlmacen:Number(value),npcTeo:b.npc||0,npcVersion:b.nv||Object.values(base).find(x=>x&&x.nv)?.nv||null,ubicacion:'almacen'};
   });
  }
  function render(){

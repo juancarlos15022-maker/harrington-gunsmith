@@ -58,15 +58,15 @@ test('inventario DOM: botón solo visible para jefe',()=>{for(const chief of [fa
 test('inventario DOM: lista material y producto, omite vacíos y revisa antes de guardar',async()=>{
  const {dom,w}=mount(true);try{let calls=[];w.sbRpc=async(n,p)=>{calls.push({n,p});return {'mat:Tornillo':{q:10,v:'1'},'Cattleman Revolver':{q:1,v:'2'},'Pólvora':{q:5,v:'3'}}};
  await w.document.getElementById('hacerInventarioBtn').onclick();const input=w.document.querySelector('[data-ijq="mat:Tornillo"]');assert.ok(input);assert.ok(w.document.querySelector('[data-ijq="Pólvora"]'));input.value='0';input.dispatchEvent(new w.Event('input',{bubbles:true}));w.document.querySelector('[data-ij="review"]').click();assert.match(w.document.getElementById('invBody').textContent,/Registrado 10 → contado 0/);assert.ok(w.document.querySelector('[data-ij="save"]'));assert.equal(calls.length,1);
- w.sbRpc=async(n,p)=>{calls.push({n,p});return {id:'ij-prueba',items:[{k:'mat:Tornillo',fis:0}],changed:1,stock:{'mat:Tornillo':0},records:[],moves:[],replayed:true}};
- w.document.querySelector('[data-ij="save"]').click();await new Promise(r=>setImmediate(r));assert.equal(calls[1].p.p_items.length,1);assert.equal(calls[1].p.p_items[0].fis,0);assert.match(w.document.getElementById('invBody').textContent,/Inventario guardado/);
+ w.sbRpc=async(n,p)=>{calls.push({n,p});if(n==='inventario_preparar')return {'mat:Tornillo':{q:10,v:'1'},'Cattleman Revolver':{q:1,v:'2'},'Pólvora':{q:5,v:'3'}};return {id:'ij-prueba',items:[{k:'mat:Tornillo',name:'Tornillo',teo:10,fis:0,diff:-10}],changed:1,stock:{'mat:Tornillo':0},records:[],moves:[],replayed:true}};
+ w.document.querySelector('[data-ij="save"]').click();await new Promise(r=>setImmediate(r));assert.equal(calls.find(c=>c.n==='inventario_guardar').p.p_items.length,1);assert.equal(calls.find(c=>c.n==='inventario_guardar').p.p_items[0].fis,0);assert.match(w.document.getElementById('invBody').textContent,/Inventario guardado/);
  }finally{dom.window.close()}
 });
 test('inventario DOM: respuesta perdida conserva y recupera la misma petición',async()=>{
  const {dom,w}=mount(true);try{
  let requests=[];w.sbRpc=async()=>({'mat:Tornillo':{q:10,v:'1'}});await w.document.getElementById('hacerInventarioBtn').onclick();
  const input=w.document.querySelector('[data-ijq="mat:Tornillo"]');input.value='8';input.dispatchEvent(new w.Event('input',{bubbles:true}));w.document.querySelector('[data-ij="review"]').click();
- w.sbRpc=async(n,p)=>{requests.push(p);throw Error('RESPUESTA_PERDIDA')};w.document.querySelector('[data-ij="save"]').click();await new Promise(r=>setImmediate(r));assert.ok(w.document.querySelector('[data-ij="retry"]'));
+ w.sbRpc=async(n,p)=>{if(n==='inventario_preparar')return {'mat:Tornillo':{q:10,v:'1'}};requests.push(p);throw Error('RESPUESTA_PERDIDA')};w.document.querySelector('[data-ij="save"]').click();await new Promise(r=>setImmediate(r));assert.ok(w.document.querySelector('[data-ij="retry"]'));
  w.sbRpc=async(n,p)=>{requests.push(p);return {id:'ij-recuperado',items:[{k:'mat:Tornillo',fis:8}],changed:1,stock:{'mat:Tornillo':8},records:[],moves:[],replayed:true}};
  w.document.querySelector('[data-ij="retry"]').click();await new Promise(r=>setImmediate(r));assert.equal(requests[0].p_peticion,requests[1].p_peticion);assert.match(w.document.getElementById('invBody').textContent,/Inventario guardado/);
  }finally{dom.window.close()}
@@ -75,7 +75,7 @@ test('inventario DOM: conflicto conserva borrador y obliga a recontar artículos
  const {dom,w}=mount(true);try{
  w.sbRpc=async()=>({'mat:Tornillo':{q:10,v:'1'}});await w.document.getElementById('hacerInventarioBtn').onclick();
  const input=w.document.querySelector('[data-ijq="mat:Tornillo"]');input.value='8';input.dispatchEvent(new w.Event('input',{bubbles:true}));w.document.querySelector('[data-ij="review"]').click();
- w.sbRpc=async()=>{throw Error(JSON.stringify({message:'STOCK_CAMBIADO',details:'["mat:Tornillo"]'}))};w.document.querySelector('[data-ij="save"]').click();await new Promise(r=>setImmediate(r));assert.ok(w.document.querySelector('[data-ij="refresh"]'));assert.equal(w.document.querySelector('[data-ijq="mat:Tornillo"]').value,'8');
+ w.sbRpc=async(n)=>{if(n==='inventario_preparar')return {'mat:Tornillo':{q:10,v:'1'}};throw Error(JSON.stringify({message:'STOCK_CAMBIADO',details:'["mat:Tornillo"]'}))};w.document.querySelector('[data-ij="save"]').click();await new Promise(r=>setImmediate(r));assert.ok(w.document.querySelector('[data-ij="refresh"]'));assert.equal(w.document.querySelector('[data-ijq="mat:Tornillo"]').value,'8');
  w.sbRpc=async()=>({'mat:Tornillo':{q:9,v:'2'}});w.document.querySelector('[data-ij="refresh"]').click();await new Promise(r=>setImmediate(r));assert.equal(w.document.querySelector('[data-ijq="mat:Tornillo"]').value,'');assert.match(w.document.getElementById('invBody').textContent,/Registrado: 9/);
  }finally{dom.window.close()}
 });
