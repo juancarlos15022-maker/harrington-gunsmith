@@ -41,7 +41,12 @@
  function render(){
   if(!allowed())return;document.getElementById('invTitle').textContent='HACER INVENTARIO';
   const body=document.getElementById('invBody');
-  if(saved){body.innerHTML='<div class="enc-note">✓ Inventario guardado. '+saved.items.length+' artículos contados · '+saved.changed+' ajustes. Las casillas vacías han conservado sus existencias.</div>'+(saved.warnings||[]).map(t=>'<p class="pay-err">'+esc(t)+'</p>').join('')+'<p class="bk-note">Registro: '+esc(saved.id)+'</p><button type="button" data-inv="cerrar">CERRAR</button>';return}
+  if(saved){
+   const differences=saved.items.filter(x=>Number(x.diff)!==0);
+   body.innerHTML='<div class="enc-note">✓ Inventario guardado. '+saved.items.length+' artículos contados · '+saved.changed+' ajustes. Las casillas vacías han conservado sus existencias.</div>'+
+    (differences.length?'<div class="dir-sec-title">DIFERENCIAS DE STOCK ('+differences.length+')</div>'+differences.map(x=>'<div class="reg-line"><span>'+esc(x.name||x.k)+'<br><small>Stock anterior: '+x.teo+' · Stock guardado: '+x.fis+'</small></span><b class="'+(x.diff<0?'neg':'mg-ok')+'">'+(x.diff>0?'+':'')+x.diff+'</b></div>').join(''):'<div class="enc-empty">Todo cuadra: no hay diferencias de stock.</div>')+
+    (saved.warnings||[]).map(t=>'<p class="pay-err">'+esc(t)+'</p>').join('')+'<p class="bk-note">Los ajustes ya están guardados y las unidades del NPC se conservan. Puedes revisar este resultado antes de continuar.</p><p class="bk-note">Registro: '+esc(saved.id)+'</p><div class="enc-actions"><button type="button" class="primary" data-ij="continue">CONTINUAR</button></div>';return;
+  }
   if(draft.pending){body.innerHTML='<p class="bk-note">Hay un inventario cuya respuesta quedó pendiente. Recupéralo antes de empezar otro para evitar duplicados.</p><button type="button" class="primary" data-ij="retry">RECUPERAR GUARDADO</button>';return}
   if(review){
    const items=counted();body.innerHTML='<p class="bk-note">Revisa las diferencias antes de confirmar. Solo se actualizarán los artículos que has contado.</p>'+items.map(x=>'<div class="reg-line"><span>'+esc((rows.find(r=>r.k===x.k)||{name:x.k}).name)+'<br><small>Registrado '+(x.teo-x.npcTeo)+' → contado '+x.fisAlmacen+' · NPC conservado: '+x.npcTeo+'</small></span><b>'+(x.fis-x.teo>0?'+':'')+(x.fis-x.teo)+'</b></div>').join('')+'<div class="enc-actions"><button type="button" data-ij="back">VOLVER AL RECUENTO</button><button type="button" class="primary" data-ij="save">CONFIRMAR Y GUARDAR</button></div>';return;
@@ -68,7 +73,7 @@
    saved=result;localStorage.removeItem(draftKey());
    try{calc(false);invChanged(result.moves||[],'Inventario físico '+result.id)}catch(e){}
    if(!result.replayed)try{discordSend('stock',['INVENTARIO FÍSICO · '+result.id,'Jefe: '+meEmp().name,result.items.length+' artículos contados · '+result.changed+' ajustes'].concat(result.items.filter(x=>x.diff).map(x=>x.name+': '+x.teo+' → '+x.fis)).join('\n'))}catch(e){}
-   render();say('Inventario guardado y stock actualizado');
+   if(!allowed())return;render();openModal(invModal);invModal.scrollTop=0;document.getElementById('invBody').scrollTop=0;say('Inventario guardado y stock actualizado');
   }catch(e){say(e.message||'No se pudo guardar el inventario. Se conserva para reintentarlo.','err')}
   finally{busy=false}
  }
@@ -81,7 +86,8 @@
  invModal.addEventListener('click',async e=>{
   const el=e.target.closest('[data-ij]');if(!el||invView!=='jefe'||!allowed()||busy)return;
   try{
-   if(el.dataset.ij==='review'){if(!counted().length)return say('Introduce al menos una cantidad contada','err');review=true;render()}
+   if(el.dataset.ij==='review'){if(!counted().length)return say('Introduce al menos una cantidad contada','err');review=true;render();invModal.scrollTop=0;document.getElementById('invBody').scrollTop=0}
+   else if(el.dataset.ij==='continue'){if(saved)closeModal(invModal)}
    else if(el.dataset.ij==='back'){review=false;render()}
    else if(el.dataset.ij==='save'||el.dataset.ij==='retry')await save();
    else if(el.dataset.ij==='refresh'){busy=true;try{await refresh(true);render();say('Stock actualizado. Vuelve a contar las casillas que se han vaciado.')}finally{busy=false}}
