@@ -3605,7 +3605,7 @@ const RECETAS_LOTES=[
  {v:'2',r:{ /* armas de fuego: pieza de arma (normal o especial), cañón y culata de su familia, y tornillos */
   'Cattleman Revolver':[['Pieza de arma',1],['Cañon de revólver',2],['Culata de revólver',4],['Tornillo',5]],
   'Doble Action Revolver':[['Pieza de arma',1],['Cañon de revólver',2],['Culata de revólver',4],['Tornillo',8]],
-  'Schofield Revolver':[['Pieza de arma',13],['Cañon de revólver',2],['Culata de revólver',4],['Tornillo',20]],
+  'Schofield Revolver':[['Pieza de arma',13],['Cañon de revólver',1],['Culata de revólver',1],['Tornillo',12]],
   'Lemat Revolver':[['Pieza de arma especial',2],['Cañon de revólver',2],['Culata de revólver',2],['Tornillo',30]],
   'Navy Revolver':[['Pieza de arma especial',3],['Cañon de revólver',2],['Culata de revólver',2],['Tornillo',20]],
   'Navy Crossover Revolver':[['Pieza de arma especial',4],['Cañon de revólver',2],['Culata de revólver',2],['Tornillo',27]],
