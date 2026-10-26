@@ -42,6 +42,17 @@
   }catch(e){say('No se pudo cargar el inventario. Es necesario estar conectado con una cuenta de jefe.','err')}
   finally{busy=false}
  }
+ function capture(){
+  if(review||saved||draft?.pending)return;
+  document.querySelectorAll('[data-ijq]').forEach(el=>{
+   const k=el.dataset.ijq,value=el.value.trim();
+   // Read what is actually visible, including browser autofill without an input event.
+   if(draft.q[k]!==undefined||value!==(el.dataset.initial||'0'))draft.q[k]=value;
+  });
+  persist();
+ }
+ const oldOpenRecuento=typeof openRecuento==='function'?openRecuento:null;
+ if(oldOpenRecuento)openRecuento=function(){if(allowed())return open();return oldOpenRecuento.apply(this,arguments)};
  function counted(){
   return Object.keys(draft.q).filter(k=>draft.q[k]!=='').map(k=>{
    const value=String(draft.q[k]);if(!/^\d{1,6}$/.test(value))throw Error('Cantidad no válida: '+(rows.find(x=>x.k===k)||{name:k}).name);
@@ -59,10 +70,10 @@
   }
   if(draft.pending){body.innerHTML='<p class="bk-note">Hay un inventario cuya respuesta quedó pendiente. Recupéralo antes de empezar otro para evitar duplicados.</p><button type="button" class="primary" data-ij="retry">RECUPERAR GUARDADO</button>';return}
   if(review){
-   const items=counted();body.innerHTML='<p class="bk-note">Revisa las diferencias antes de confirmar. Solo se actualizarán los artículos que has contado.</p>'+items.map(x=>'<div class="reg-line"><span>'+esc((rows.find(r=>r.k===x.k)||{name:x.k}).name)+'<br><small>Registrado '+(x.teo-x.npcTeo)+' → contado '+x.fisAlmacen+' · NPC conservado: '+x.npcTeo+'</small></span><b>'+(x.fis-x.teo>0?'+':'')+(x.fis-x.teo)+'</b></div>').join('')+'<div class="enc-actions"><button type="button" data-ij="back">VOLVER AL RECUENTO</button><button type="button" class="primary" data-ij="save">CONFIRMAR Y GUARDAR</button></div>';return;
+   const items=counted();body.innerHTML='<p class="bk-note">Revisa las diferencias y las cantidades que se guardarán. Solo se actualizarán los artículos contados; los demás conservarán sus existencias.</p>'+items.map(x=>'<div class="reg-line"><span>'+esc((rows.find(r=>r.k===x.k)||{name:x.k}).name)+'<br><small>Registrado '+(x.teo-x.npcTeo)+' → contado '+x.fisAlmacen+' · NPC conservado: '+x.npcTeo+'</small></span><b>'+(x.fis-x.teo>0?'+':'')+(x.fis-x.teo)+'</b></div>').join('')+'<div class="enc-actions"><button type="button" data-ij="back">VOLVER AL RECUENTO</button><button type="button" class="primary" data-ij="save">CONFIRMAR Y GUARDAR</button></div>';return;
   }
   let group='';
-  body.innerHTML='<p class="bk-note">Cuenta solo tu almacén, sin incluir lo que tiene el NPC. Las unidades del NPC se conservan. <b>Cada nuevo inventario empieza en 0.</b> Solo se guardan los artículos cuya cantidad escribas; para confirmar que no queda ninguno, introduce 0. Al guardar podrás revisar las diferencias antes de ajustar el stock.</p>'+(conflicts.length?'<p class="pay-err">El stock cambió durante el recuento: '+conflicts.map(esc).join(', ')+'. Actualiza y vuelve a contar los artículos afectados.</p><button type="button" data-ij="refresh">ACTUALIZAR STOCK Y REVISAR</button>':'')+'<input class="dir-search" id="ijSearch" placeholder="Buscar producto o material…" value="'+esc(query)+'">'+rows.filter(x=>!query||norm(x.name).includes(norm(query))).map(x=>{const head=group!==x.grp?'<div class="dir-sec-title">'+x.grp+'</div>':'';group=x.grp;return head+'<div class="pr-row"><div><b>'+esc(x.name)+'</b><small>Registrado: '+Math.max(0,((base[x.k]||{}).q||0)-((base[x.k]||{}).npc||0))+' · NPC: '+((base[x.k]||{}).npc||0)+' · Total: '+((base[x.k]||{}).q||0)+' · <span data-ijstatus="'+esc(x.k)+'">'+(draft.q[x.k]===undefined||draft.q[x.k]===''?'Sin revisar':'Contado')+'</span></small></div><input class="min-in" type="text" inputmode="numeric" data-ijq="'+esc(x.k)+'" placeholder="Sin revisar" value="'+esc(draft.q[x.k]===undefined?'0':draft.q[x.k])+'" aria-label="Cantidad contada de '+esc(x.name)+'"></div>'}).join('')+'<div class="enc-actions"><button type="button" class="primary" data-ij="review">GUARDAR CAMBIOS</button></div>';
+  body.innerHTML='<p class="bk-note">Cuenta solo tu almacén, sin incluir lo que tiene el NPC. Las unidades del NPC se conservan. <b>Cada nuevo inventario empieza en 0.</b> Solo se guardan los artículos cuya cantidad escribas; para confirmar que no queda ninguno, introduce 0. Al guardar podrás revisar las diferencias antes de ajustar el stock.</p>'+(conflicts.length?'<p class="pay-err">El stock cambió durante el recuento: '+conflicts.map(esc).join(', ')+'. Actualiza y vuelve a contar los artículos afectados.</p><button type="button" data-ij="refresh">ACTUALIZAR STOCK Y REVISAR</button>':'')+'<input class="dir-search" id="ijSearch" placeholder="Buscar producto o material…" value="'+esc(query)+'">'+rows.filter(x=>!query||norm(x.name).includes(norm(query))).map(x=>{const head=group!==x.grp?'<div class="dir-sec-title">'+x.grp+'</div>':'';group=x.grp;return head+'<div class="pr-row"><div><b>'+esc(x.name)+'</b><small>Registrado: '+Math.max(0,((base[x.k]||{}).q||0)-((base[x.k]||{}).npc||0))+' · NPC: '+((base[x.k]||{}).npc||0)+' · Total: '+((base[x.k]||{}).q||0)+' · <span data-ijstatus="'+esc(x.k)+'">'+(draft.q[x.k]===undefined||draft.q[x.k]===''?'Sin revisar':'Contado')+'</span></small></div><input class="min-in" type="text" inputmode="numeric" autocomplete="off" data-initial="0" data-ijq="'+esc(x.k)+'" placeholder="Sin revisar" value="'+esc(draft.q[x.k]===undefined?'0':draft.q[x.k])+'" aria-label="Cantidad contada de '+esc(x.name)+'"></div>'}).join('')+'<div class="enc-actions"><button type="button" class="primary" data-ij="review">GUARDAR CAMBIOS</button></div>';
  }
  async function save(){
   if(!allowed()||busy)return;busy=true;
@@ -88,6 +99,9 @@
   finally{busy=false}
  }
  button.onclick=open;
+ invModal.addEventListener('focusin',e=>{
+  if(invView==='jefe'&&e.target.dataset.ijq!==undefined)e.target.select();
+ });
  invModal.addEventListener('input',e=>{
   if(invView!=='jefe'||!allowed()||!draft)return;
   if(e.target.dataset.ijq!==undefined){draft.q[e.target.dataset.ijq]=e.target.value.trim();const status=e.target.parentElement.querySelector('[data-ijstatus]');if(status)status.textContent=e.target.value.trim()===''?'Sin revisar':'Contado';try{persist()}catch(x){say('No se pudo conservar el borrador en este dispositivo','err')}}
@@ -96,7 +110,7 @@
  invModal.addEventListener('click',async e=>{
   const el=e.target.closest('[data-ij]');if(!el||invView!=='jefe'||!allowed()||busy)return;
   try{
-   if(el.dataset.ij==='review'){if(!counted().length)return say('Introduce al menos una cantidad contada','err');review=true;render();invModal.scrollTop=0;document.getElementById('invBody').scrollTop=0}
+   if(el.dataset.ij==='review'){capture();if(!counted().length)return say('Introduce al menos una cantidad contada','err');review=true;render();invModal.scrollTop=0;document.getElementById('invBody').scrollTop=0}
    else if(el.dataset.ij==='continue'){if(saved)closeModal(invModal)}
    else if(el.dataset.ij==='back'){review=false;render()}
    else if(el.dataset.ij==='save'||el.dataset.ij==='retry')await save();
