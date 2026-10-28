@@ -1964,6 +1964,17 @@ if(Array.isArray(stockMin))stockMin={};
 let minDraft={};
 function saveStockMin(){store.set(KEY_STOCKMIN,JSON.stringify(stockMin));try{matPaint()}catch(e){}}
 setInterval(()=>{if(!document.hidden)try{matPaint()}catch(e){}},15000);
+// Objetivo orientativo: no modifica los mínimos ni los pedidos automáticos.
+function matRecommended(n){
+ const k=String(n||'').replace(/^mat:/,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+ const fixed={'pieza de arma':150,'pieza de arma especial':50,'tornillo':1200,'barra de hierro':20};
+ if(Object.hasOwn(fixed,k))return fixed[k];
+ if(/^(culata|canon) de revolver$/.test(k))return 35;
+ if(/^(culata|canon) de (pistola|repetidora|rifle|escopeta)$/.test(k))return 20;
+ return null;
+}
+function matLevel(n,v,mn){const rec=matRecommended(n);return mn>0&&v<mn?'r':(rec!==null&&v<rec||mn>0&&v===mn?'a':'g');}
+function matLevelText(n,v,mn){const rec=matRecommended(n),cl=matLevel(n,v,mn),label=cl==='r'?'BAJO MÍNIMO':cl==='a'?(mn>0&&v===mn?'EN EL MÍNIMO':'BAJO RECOMENDADO'):'STOCK SUFICIENTE';return '<small class="mat-target mat-target-'+cl+'">Mínimo: '+mn+(rec===null?'':' · Recomendado: '+rec)+' · '+label+'</small>';}
 function dotCls(n){const v=stockMap[n]||0,m=stockMin[n]||0;return v<=0?'r':(m>0&&v<=m?'a':'g')}
 function lowStock(){return inputs.map(i=>i.dataset.name).filter(n=>{if(isMatProd(n))return false;const m=stockMin[n]||0;return m>0&&(stockMap[n]||0)<=m})}
 function rollTo(el,cents,instant){
@@ -3942,7 +3953,7 @@ function renderModFabricacion(){
   return `<button type="button" class="enc-card fab-item" data-q="${esc(norm(x.n+' '+rc))}" data-dir="fab-open:${x.idx}"><div class="t">${esc(x.n)}</div><div class="it">${rc?'Receta: '+esc(rc)+`<br>Con el almacén actual: <b>${cm}</b> ${cm===1?'unidad':'unidades'}`+(cl?'<br>'+cl:''):'Sin receta (no gasta materiales)'}</div></button>`;
  }).join('');
  const low=lowMats();
- const mins=ns.length?`<details class="mat-mins"${low.length?' open':''}><summary>ALMACÉN Y MÍNIMOS DE MATERIALES${low.length?` · <span class="neg">${low.length} bajo mínimo</span>`:''}</summary>${ns.map(n=>{const v=stockMap[matKey(n)]||0,mn=stockMin[matKey(n)]||0,c=matUnitCost(n);return `<div class="stock-row"><div><b><span class="dot ${v<=0?'r':(mn>0&&v<=mn?'a':'g')}"></span>${esc(n)}</b><small>Hay ${v} · ${c!==null?money(c)+' / ud.':'sin precio'}</small></div><label class="minlbl">Mínimo <input class="min-in" type="text" inputmode="numeric" data-mmin="${esc(n)}" value="${esc(mminDraft[n]!==undefined?mminDraft[n]:(mn||''))}" placeholder="0" aria-label="Mínimo de ${esc(n)}"></label></div>`}).join('')}<div class="enc-actions" style="margin-top:8px"><button type="button" data-dir="mmin-save">GUARDAR MÍNIMOS</button></div></details>`+repoHTML():'';
+ const mins=ns.length?`<details class="mat-mins"${low.length?' open':''}><summary>ALMACÉN Y MÍNIMOS DE MATERIALES${low.length?` · <span class="neg">${low.length} bajo mínimo</span>`:''}</summary>${ns.map(n=>{const v=stockMap[matKey(n)]||0,mn=stockMin[matKey(n)]||0,c=matUnitCost(n);return `<div class="stock-row mat-level-${matLevel(n,v,mn)}"><div><b><span class="dot ${matLevel(n,v,mn)}"></span>${esc(n)}</b><small>Hay ${v} · ${c!==null?money(c)+' / ud.':'sin precio'}</small>${matLevelText(n,v,mn)}</div><label class="minlbl">Mínimo <input class="min-in" type="text" inputmode="numeric" data-mmin="${esc(n)}" value="${esc(mminDraft[n]!==undefined?mminDraft[n]:(mn||''))}" placeholder="0" aria-label="Mínimo de ${esc(n)}"></label></div>`}).join('')}<div class="enc-actions" style="margin-top:8px"><button type="button" data-dir="mmin-save">GUARDAR MÍNIMOS</button></div></details>`+repoHTML():'';
  return `<p class="bk-note">Toca un producto para indicar qué materiales gasta al fabricarlo. Para fabricar, ve a <b>FABRICACIÓN</b>: allí eliges cuántas quieres y se gastan solos del almacén. Hay ${ns.length} ${ns.length===1?'material':'materiales'} en el almacén.</p>${mins}${lotsBoxHTML()}${marginsHTML()}${searchBox('⌕  Buscar producto…')}<div class="cat-nav stock-cats">${cats}</div>${rows}`;
 }
 function fabNeedHTML(){
@@ -5182,7 +5193,7 @@ function renderMat(){
  const ns=matNames(), uses=n=>inputs.map(i=>i.dataset.name).filter(p=>recipeOf(p).some(r=>r.m===n));
  document.getElementById('matTitle').textContent=`ALMACÉN DE MATERIALES (${ns.length})`;
  const mx=Math.max(0,...ns.map(n=>stockMap[matKey(n)]||0)), lm=lowMats();
- document.getElementById('matBody').innerHTML=(ns.length?ns.map(n=>{const v=stockMap[matKey(n)]||0,u=uses(n);return `<div class="mat-line"><div><b>${esc(n)}${lm.indexOf(n)>=0?' <span class="lowtag">BAJO</span>':''}</b>${lvlBar(v,stockMin[matKey(n)]||0,mx)}${u.length?`<small>Se usa en: ${esc(u.slice(0,4).join(', '))}${u.length>4?' y '+(u.length-4)+' más':''}</small>`:''}</div><span class="${v?'':'zero'}">${v} ${v===1?'ud.':'uds.'}</span></div>`}).join(''):'<div class="enc-empty">'+emptyArt('anvil')+'Todavía no hay materiales.<br>Se suman solos cuando se recibe un pedido a un proveedor.</div>')+
+ document.getElementById('matBody').innerHTML=(ns.length?ns.map(n=>{const v=stockMap[matKey(n)]||0,u=uses(n);return `<div class="mat-line mat-level-${matLevel(n,v,stockMin[matKey(n)]||0)}"><div><b><span class="dot ${matLevel(n,v,stockMin[matKey(n)]||0)}"></span>${esc(n)}</b>${matLevelText(n,v,stockMin[matKey(n)]||0)}${lvlBar(v,stockMin[matKey(n)]||0,mx)}${u.length?`<small>Se usa en: ${esc(u.slice(0,4).join(', '))}${u.length>4?' y '+(u.length-4)+' más':''}</small>`:''}</div><span class="${v?'':'zero'}">${v} ${v===1?'ud.':'uds.'}</span></div>`}).join(''):'<div class="enc-empty">'+emptyArt('anvil')+'Todavía no hay materiales.<br>Se suman solos cuando se recibe un pedido a un proveedor.</div>')+
   '<p class="bk-note" style="margin-top:10px">Los materiales <b>entran</b> al recibir un pedido (entero o en parte) y <b>se gastan</b> al fabricar (con ⚒ FABRICAR o cuando el jefe suma stock de un producto con receta). Las ventas no los tocan, salvo los materiales que también se venden en la tienda (la pólvora): al venderlos se descuentan de aquí.</p>';
 }
 document.getElementById('matTab').onclick=async()=>{playClick();renderMat();openModal(matModal);matModal.scrollTop=0;try{await refreshStock();if(!matModal.hidden)renderMat()}catch(e){}};
