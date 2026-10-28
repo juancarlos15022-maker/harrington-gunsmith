@@ -52,12 +52,12 @@ export function vistaPrivada(o:Any,job:Any){
    components:[{type:1,components:[{type:2,style:5,label:'Aceptar propuesta',emoji:{name:'✅'},url:WEB+'aceptar.html?t='+job.token}]}]};
  }
  if(o.cancelled){
-  const motivo=o.propuestaCerrada==='sin-faltas'?'Ya no hace falta: el almacén ha vuelto a estar por encima de los mínimos.':'El pedido se ha cancelado.';
+  const motivo=o.propuestaCerrada==='sin-faltas'?'Ya no hace falta: el almacén está cubierto por las existencias o por otros pedidos.':'El pedido se ha cancelado.';
   return {content:'🎩 Propuesta para **'+o.proveedor+'** anulada. '+motivo,embeds:[{title:'Anulada · '+o.proveedor,description:lineas(o),color:APAGADO,footer:foot}],components:[]};
  }
  if(o.received||o.completedAt)return {content:'🎩 El pedido a **'+o.proveedor+'** ya está recibido y en el almacén.',embeds:[{title:'📦 Recibido · '+o.proveedor,description:lineas(o)+total,color:VERDE,footer:foot}],components:o.aceptadoAt?verAlbaran(job):[]};
  if(o.aceptadoAt)return {content:'✅ **Propuesta aceptada** el '+fechaHora(o.aceptadoAt)+'. Ya no se suman más materiales a este pedido. Debajo tienes el telegrama para **'+o.proveedor+'**, listo para copiar.',
-  embeds:[{title:'✅ Pedido aceptado · '+o.proveedor,description:lineas(o)+total,color:VERDE,footer:foot}],components:verAlbaran(job)};
+  embeds:[{title:'✅ Pedido aceptado · '+o.proveedor,description:lineas(o)+total,color:COMPRAS,footer:foot}],components:verAlbaran(job)};
  // pedido que dejó de ser propuesta por otra vía (pagado o recibido en parte desde la web)
  return {content:'🎩 El pedido a **'+o.proveedor+'** ya está en marcha (pagado o recibido en parte desde la web): ya no se ajusta solo.',embeds:[{title:'Pedido en marcha · '+o.proveedor,description:lineas(o)+total,color:VERDE,footer:foot}],components:[]};
 }

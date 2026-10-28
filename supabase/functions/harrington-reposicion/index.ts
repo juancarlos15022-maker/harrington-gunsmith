@@ -1,3 +1,4 @@
+import {enviarCopias} from './copias.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2.118.0';
 import {runReposicion,telegramaIC} from './reposicion.ts';
 const sb=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false,autoRefreshToken:false}});
@@ -13,13 +14,13 @@ Deno.serve(async(req:Request)=>{
  if(body?.accion==='aceptar'){
   const t=String(body.token||'');if(!/^[0-9a-f]{64}$/.test(t))return json({error:'ENLACE_NO_VALIDO'},400);
   const lim=await sb.rpc('hg_consumir_limite',{p_key:'aceptar:'+t.slice(0,16),p_max:10,p_segundos:60});if(lim.error||lim.data===false)return json({error:'DEMASIADOS_INTENTOS'},429);
-  const r=await sb.rpc('hg_reposicion_aceptar',{p_token:t});
+  const r=await sb.rpc('hg_reposicion_jefe_aceptar',{p_token:t});
   if(r.error)return json({error:/PROPUESTA_NO_EXISTE/.test(r.error.message||'')?'PROPUESTA_NO_EXISTE':'NO_SE_PUDO_ACEPTAR'},/PROPUESTA_NO_EXISTE/.test(r.error.message||'')?404:503);
-  const p=r.data?.pedido||{};
+  const p=r.data?.pedido||{};const tokenDocumento=r.data?.tokenDocumento||t;
   // refleja ya el cambio en el privado, el telegrama y la tarjeta (sin esperar a la revisión de cada minuto)
-  try{await runReposicion(sb,c,fetch,String(p.id||''));}catch{/* la revisión de cada minuto lo terminará */}
-  const {data:av}=await sb.from('hg_reposicion_avisos').select('img_message_id').eq('token',t).maybeSingle();
-  return json({ok:true,imagen:!!av?.img_message_id,code:p.code||'',fecha:p.date||'',proveedorTel:p.proveedorTel||'',itemsPrecio:(p.items||[]).map((x:any)=>({material:x.material,qty:x.qty,price:x.price})),aceptadoPor:p.aceptadoPor||'',aceptado:!!r.data?.aceptado,ya:!!r.data?.ya,cerrado:!!r.data?.cerrado,proveedor:p.proveedor||'',items:(p.items||[]).map((x:any)=>({material:x.material,qty:x.qty})),totalCents:p.totalCents||0,
+  try{await runReposicion(sb,c,fetch,String(p.id||''));await enviarCopias(sb,c,fetch,String(p.id||''));}catch{/* la revisión de cada minuto lo terminará */}
+  const {data:av}=await sb.from('hg_reposicion_avisos').select('img_message_id').eq('token',tokenDocumento).maybeSingle();
+  return json({ok:true,tokenDocumento,imagen:!!av?.img_message_id,code:p.code||'',fecha:p.date||'',proveedorTel:p.proveedorTel||'',itemsPrecio:(p.items||[]).map((x:any)=>({material:x.material,qty:x.qty,price:x.price})),aceptadoPor:p.aceptadoPor||'',aceptado:!!r.data?.aceptado,ya:!!r.data?.ya,cerrado:!!r.data?.cerrado,proveedor:p.proveedor||'',items:(p.items||[]).map((x:any)=>({material:x.material,qty:x.qty})),totalCents:p.totalCents||0,
    telegrama:p.aceptadoAt?telegramaIC(p):'',aceptadoAt:p.aceptadoAt||0,motivo:p.propuestaCerrada||''});
  }
  // imagen del albarán: la dibuja la página al aceptar y aquí se manda al privado una sola vez
@@ -42,5 +43,5 @@ Deno.serve(async(req:Request)=>{
  }
  if(!c.secreto||c.secreto.length<20||body?.secreto!==c.secreto)return json({error:'NO'},403);
  if(body.preview)return json({ok:true,ready:!!c.token});
- try{return json({ok:true,...await runReposicion(sb,c)});}catch{return json({error:'REPOSICION_PENDIENTE'},503);}
+ try{const result=await runReposicion(sb,c);const copias=await enviarCopias(sb,c);return json({ok:true,...result,copias});}catch{return json({error:'REPOSICION_PENDIENTE'},503);}
 });
