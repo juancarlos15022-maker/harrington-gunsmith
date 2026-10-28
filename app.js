@@ -1967,7 +1967,7 @@ setInterval(()=>{if(!document.hidden)try{matPaint()}catch(e){}},15000);
 // Objetivo orientativo: no modifica los mínimos ni los pedidos automáticos.
 function matRecommended(n){
  const k=String(n||'').replace(/^mat:/,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
- const fixed={'pieza de arma':150,'pieza de arma especial':50,'tornillo':1200,'barra de hierro':20};
+ const fixed={'pieza de arma':150,'pieza de arma especial':50,'tornillo':1200,'barra de hierro':20,'papel':1000,'fibra':700,'tabla de madera':20,'tablones':20,'tablon':20,'trozo de madera':500,'azufre':600,'carbon':600,'sal':600,'hierro':500};
  if(Object.hasOwn(fixed,k))return fixed[k];
  if(/^(culata|canon) de revolver$/.test(k))return 35;
  if(/^(culata|canon) de (pistola|repetidora|rifle|escopeta)$/.test(k))return 20;
