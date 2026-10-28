@@ -71,7 +71,7 @@ declare supplier text; previous jsonb;
  mins jsonb:='{"mat:Trozo de madera":200,"mat:Fibra":300,"mat:Papel":300,"mat:Tabla de madera":10}';
  lotes jsonb:='{"mat:Trozo de madera":300,"mat:Fibra":300,"mat:Papel":300,"mat:Tabla de madera":20}'; r record;
 begin
- select e->>'id' into supplier from public.datos d,jsonb_array_elements(d.valor) e where d.clave='proveedores' and e->>'name'='Tala Annesburg';
+ select e->>'id' into supplier from public.datos d,jsonb_array_elements(d.valor) e where d.clave='proveedores' and e->>'name' in ('Tala Graves','Tala Annesburg');
  if supplier is null then raise exception 'TALA_ANNESBURG_NO_LOCALIZADA';end if;
  select valor into previous from public.datos where clave='cfg:reposicion-herreria';
  if not exists(select 1 from public.hg_discord_bindings where emp_id=previous->>'ownerEmp' and discord_id=previous->>'recipientId') then raise exception 'DESTINATARIO_NO_VERIFICADO';end if;
