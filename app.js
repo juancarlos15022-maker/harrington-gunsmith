@@ -3957,6 +3957,13 @@ function renderModFabricacion(){
  const mins=ns.length?`<details class="mat-mins"${low.length?' open':''}><summary>ALMACÉN Y MÍNIMOS DE MATERIALES${low.length?` · <span class="neg">${low.length} bajo mínimo</span>`:''}</summary>${ns.map(n=>{const v=stockMap[matKey(n)]||0,mn=stockMin[matKey(n)]||0,c=matUnitCost(n);return `<div class="stock-row mat-level-${matLevel(n,v,mn)}"><div><b><span class="dot ${matLevel(n,v,mn)}"></span>${esc(n)}</b><small>Hay ${v} · ${c!==null?money(c)+' / ud.':'sin precio'}</small>${matLevelText(n,v,mn)}</div><label class="minlbl">Mínimo <input class="min-in" type="text" inputmode="numeric" data-mmin="${esc(n)}" value="${esc(mminDraft[n]!==undefined?mminDraft[n]:(mn||''))}" placeholder="0" aria-label="Mínimo de ${esc(n)}"></label></div>`}).join('')}<div class="enc-actions" style="margin-top:8px"><button type="button" data-dir="mmin-save">GUARDAR MÍNIMOS</button></div></details>`+repoHTML():'';
  return `<p class="bk-note">Toca un producto para indicar qué materiales gasta al fabricarlo. Para fabricar, ve a <b>FABRICACIÓN</b>: allí eliges cuántas quieres y se gastan solos del almacén. Hay ${ns.length} ${ns.length===1?'material':'materiales'} en el almacén.</p>${mins}${lotsBoxHTML()}${marginsHTML()}${searchBox('⌕  Buscar producto…')}<div class="cat-nav stock-cats">${cats}</div>${rows}`;
 }
+function matSupplierId(n){
+ const k=String(canonMat(String(n||'').replace(/^mat:/,''))).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+ if(k==='papel')return 'vmv1g8iab4zg';
+ if(k==='azufre'||k==='sal')return 'vsoberano-20261028';
+ if(k==='hierro'||k==='carbon')return 'vmv1g3lg9yub';
+ return null;
+}
 function fabNeedHTML(){
  const n=parseInt(fabWant)||0;if(!fabEdit||n<=0)return '<p class="bk-note" style="margin:0">Escribe cuántas quieres fabricar y te digo qué materiales faltan.</p>';
  const r=recipeOf(fabEdit), miss=[];
@@ -3964,7 +3971,7 @@ function fabNeedHTML(){
  if(!miss.length)return rows+`<div class="enc-actions" style="margin-top:8px"><button type="button" class="primary" data-dir="fab-go">FABRICAR ${n} AHORA</button></div>`;
  const by={}, none=[];
  const own=miss.filter(x=>isMatProd(x.m)&&recipeOf(x.m).length);
- miss.filter(x=>own.indexOf(x)<0&&matIncoming(x.m)===0).forEach(x=>{const v=proveedores.find(p=>(p.prods||[]).some(y=>sameMat(y.name,x.m)));if(v)(by[v.id]=by[v.id]||[]).push(x);else none.push(x)});
+ miss.filter(x=>own.indexOf(x)<0&&matIncoming(x.m)===0).forEach(x=>{const v=proveedores.find(p=>(!matSupplierId(x.m)||p.id===matSupplierId(x.m))&&(p.prods||[]).some(y=>sameMat(y.name,x.m)));if(v)(by[v.id]=by[v.id]||[]).push(x);else none.push(x)});
  return rows+Object.keys(by).map(id=>{const v=proveedores.find(p=>p.id===id);return `<div class="enc-actions" style="margin-top:8px"><button type="button" class="primary" data-dir="fab-order:${esc(id)}">PREPARAR PEDIDO A ${esc(v.name.toUpperCase())} (${by[id].map(x=>x.q+' '+esc(x.m)).join(', ')})</button></div>`}).join('')+
   (none.length?`<p class="bk-note" style="margin:8px 0 0">Ningún proveedor tiene en su lista: ${none.map(x=>esc(x.m)).join(', ')}. Añádelo a la lista de un proveedor o pídelo en «Otros materiales».</p>`:'')+
   (own.length?`<p class="bk-note" style="margin:8px 0 0">${own.map(x=>esc(x.m)).join(', ')}: la fabricáis vosotros. Fabrícala primero en FABRICACIÓN (o en la misma tanda).</p>`:'');
@@ -3973,7 +3980,7 @@ function fabNeedHTML(){
 function repoPlan(){
  const by={}, none=[];
  matNames().forEach(n=>{if(matIncoming(n)>0||isMatProd(n)&&recipeOf(n).length)return;const k=matKey(n), mn=stockMin[k]||0, have=stockMap[k]||0,target=matRecommended(n)||mn, q=Math.max(0,target-have);if(!q)return;
-  let best=null;proveedores.forEach(v=>(v.prods||[]).forEach(x=>{if(sameMat(x.name,n)&&x.price>0&&(!best||x.price<best.x.price))best={v:v,x:x}}));
+  let best=null;proveedores.forEach(v=>(v.prods||[]).forEach(x=>{if((!matSupplierId(n)||v.id===matSupplierId(n))&&sameMat(x.name,n)&&x.price>0&&(!best||x.price<best.x.price))best={v:v,x:x}}));
   if(!best){none.push(n);return}
   (by[best.v.id]=by[best.v.id]||{v:best.v,items:[]}).items.push({m:n,name:best.x.name,q:q,price:best.x.price})});
  return {groups:Object.values(by),none:none};
