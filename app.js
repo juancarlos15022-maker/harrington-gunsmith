@@ -690,6 +690,10 @@ let proveedores=loadObj(KEY_PROVEEDORES,[]);
 if(!Array.isArray(proveedores))proveedores=[];
 let pedidos=loadObj(KEY_PEDIDOS,[]);
 if(!Array.isArray(pedidos))pedidos=[];
+// Las propuestas automáticas se gestionan solo en el privado del propietario.
+function pedidoVisibleWeb(p){return !!p&&!p.propuesta;}
+pedidos=pedidos.filter(pedidoVisibleWeb);
+store.set(KEY_PEDIDOS,JSON.stringify(pedidos));
 function saveProveedores(){store.set(KEY_PROVEEDORES,JSON.stringify(proveedores))}
 function refreshClientList(){try{icPaint()}catch(e){}clientList.innerHTML=clientes.map(c=>`<option value="${esc(c.name)}"></option>`).join('')}
 function fmtISO(v){const t=String(v||'').split('-');return t.length===3?`${t[2]}/${t[1]}/${t[0]}`:String(v||'')}
@@ -2614,7 +2618,7 @@ let pvEdit=null, pvDraft={name:'',tel:'',tipo:'',ubic:'',extra:[],prods:[]}, npD
 const MAX_PPROD=40;
 const pedBtn=document.getElementById('pedBtn'), pedModal=document.getElementById('pedModal');
 let pedView=null, pedDraft=null;
-function pendingPed(){return pedidos.filter(x=>!x.completedAt&&!x.cancelled)}
+function pendingPed(){return pedidos.filter(x=>pedidoVisibleWeb(x)&&!x.completedAt&&!x.cancelled)}
 function updatePedBtn(){const n=pendingPed().length;pedBtn.innerHTML=ICO_PED+(n?`PEDIDOS (${n})`:'PEDIDOS')}
 const ICO_AUS='<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10M7 20h10M8 4c0 5 8 5 8 8s-8 3-8 8M16 4c0 5-8 5-8 8s8 3 8 8"/></svg>';
 function savePed(rec){LOTC=null;
@@ -5870,7 +5874,7 @@ function applyRecord(clave,valor){
  }else if(type==='ausencia'){
   upsertState(KEY_AUS,ausencias,id,valor,del,(a,b)=>(a.start||0)-(b.start||0),()=>{updateAusBtn();if(!ausModal.hidden&&ausView==='list')renderAus();});
  }else if(type==='pedido'){
-  upsertState(KEY_PEDIDOS,pedidos,id,valor,del,(a,b)=>(a.ts||0)-(b.ts||0),updatePedBtn);
+  upsertState(KEY_PEDIDOS,pedidos,id,valor,del||!pedidoVisibleWeb(valor),(a,b)=>(a.ts||0)-(b.ts||0),updatePedBtn);
  }else if(type==='cfg'&&id==='objetivo'){
   OBJ=del?{}:(valor||{});try{localStorage.setItem('harrington_objetivo_v1',JSON.stringify(OBJ))}catch(e){}renderGoal();
  }else if(type==='expulsion'){
