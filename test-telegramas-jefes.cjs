@@ -1,0 +1,5 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm'),{stripTypeScriptTypes}=require('node:module');
+for(const [file,fn] of [['harrington-reposicion/reposicion.ts','telegramaIC'],['albaranes-pedidos/texto.ts','telegramaPedido']]){
+const code=stripTypeScriptTypes(fs.readFileSync('supabase/functions/'+file,'utf8'),{mode:'strip'}).replace(/^export /gm,'');const c={Intl,Date,Set};vm.createContext(c);vm.runInContext(code+';this.telegram='+fn,c);
+test(file+' usa identidad del aceptante y conserva telegrama',()=>{for(const [nombre,tel] of [['Chester Harrington','SD2399'],['Vincent Harrington','SD8112'],['Otro jefe','SD9999']]){const p={id:'p',proveedor:'Proveedor',aceptadoPor:nombre,aceptadoTelegram:tel,items:[]};const t=c.telegram(p);assert(t.includes(nombre));assert(t.endsWith('Telegrama '+tel));if(nombre!=='Vincent Harrington')assert(!t.includes('Vincent Harrington'));}assert(c.telegram({aceptadoPor:'Chester Harrington'}).endsWith('Telegrama SD2399'));assert(!c.telegram({aceptadoPor:'Otro jefe'}).includes('SD8112'));});
+}

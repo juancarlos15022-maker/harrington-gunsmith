@@ -27,16 +27,17 @@ function pick<T>(a:T[],seed:string){let h=0;for(const ch of seed)h=(h*31+ch.char
 export function telegramaIC(o:Any){
  const ms=Number(o.aceptadoAt||o.ts||Date.now()), h=+madrid(ms).hour, seed=String(o.id||o.code||'');
  const saludo=h>=6&&h<14?'Buenos días':h>=14&&h<21?'Buenas tardes':'Buenas noches';
+ const nombre=String(o.aceptadoPor||'Vincent Harrington'), telegram=String(o.aceptadoTelegram||(nombre==='Chester Harrington'?'SD2399':nombre==='Vincent Harrington'?'SD8112':''));
  const prov=String(o.proveedor||'el establecimiento');
  const intro=pick(['Les escribe Vincent Harrington, de la Armería Harrington Gunsmith de Saint Denis. Quisiera hacerles el siguiente encargo:',
   'Soy Vincent Harrington, de la Armería Harrington Gunsmith. Les agradecería que me prepararan el siguiente encargo:',
-  'Les saluda Vincent Harrington, de la Armería Harrington Gunsmith de Saint Denis. Necesitaría que me tuvieran listo lo siguiente:'],seed);
+  'Les saluda Vincent Harrington, de la Armería Harrington Gunsmith de Saint Denis. Necesitaría que me tuvieran listo lo siguiente:'],seed).replace(/Vincent Harrington/g,nombre);
  const pago=o.paid?'El importe ya está abonado.':pick(['Abonaré el importe cuando lo reciba, como de costumbre.','Pagaré en cuanto me llegue la mercancía, como acostumbramos.','El pago, como siempre, a la recepción del encargo.'],seed+'p');
  const aviso=pick(['Les ruego que me avisen por telegrama cuando vayan a traérmelo a la armería.','Avísenme, por favor, cuando esté listo para traérmelo.','Quedo a la espera de recibirlo en la armería.'],seed+'a');
  const gracias=pick(['Les quedo muy agradecido por su diligencia.','Muchas gracias de antemano por su atención.','Les agradezco de veras su buen hacer.'],seed+'g');
  const adios=pick(['Reciban un cordial saludo,','Atentamente,','Sin otro particular, les saluda atentamente,'],seed+'d');
  const lista=(o.items||[]).map((x:Any)=>'— '+nombreIC(x.material,Number(x.qty))).join('\n');
- return `${prov}:\n\n${saludo}. ${intro}\n\n${lista}\n\n${pago} ${aviso}\n\n${gracias}\n\n${adios}\nVincent Harrington\nArmería Harrington Gunsmith · Saint Denis · Telegrama SD8112`;
+ return `${prov}:\n\n${saludo}. ${intro}\n\n${lista}\n\n${pago} ${aviso}\n\n${gracias}\n\n${adios}\n${nombre}\nArmería Harrington Gunsmith · Saint Denis${telegram?' · Telegrama '+telegram:''}`;
 }
 
 /* ---------- vistas ---------- */
@@ -57,7 +58,7 @@ export function vistaPrivada(o:Any,job:Any){
  }
  if(o.received||o.completedAt)return {content:'🎩 El pedido a **'+o.proveedor+'** ya está recibido y en el almacén.',embeds:[{title:'📦 Recibido · '+o.proveedor,description:lineas(o)+total,color:VERDE,footer:foot}],components:o.aceptadoAt?verAlbaran(job):[]};
  if(o.aceptadoAt)return {content:'✅ **Propuesta aceptada** el '+fechaHora(o.aceptadoAt)+'. Ya no se suman más materiales a este pedido. Debajo tienes el telegrama para **'+o.proveedor+'**, listo para copiar.',
-  embeds:[{title:'✅ Pedido aceptado · '+o.proveedor,description:lineas(o)+total,color:COMPRAS,footer:foot}],components:verAlbaran(job)};
+  embeds:[{title:'✅ Pedido aceptado · '+o.proveedor,description:lineas(o)+total,color:COMPRAS,footer:foot},{title:'Telegrama para el proveedor',description:telegramaIC(o),color:COMPRAS}],components:verAlbaran(job)};
  // pedido que dejó de ser propuesta por otra vía (pagado o recibido en parte desde la web)
  return {content:'🎩 El pedido a **'+o.proveedor+'** ya está en marcha (pagado o recibido en parte desde la web): ya no se ajusta solo.',embeds:[{title:'Pedido en marcha · '+o.proveedor,description:lineas(o)+total,color:VERDE,footer:foot}],components:[]};
 }
