@@ -110,3 +110,20 @@
 })();
 /* El navegador puede suspender el trabajo visual; la sincronización conserva sus reglas. */
 (function(){const pause=()=>document.documentElement.classList.toggle('hg-en-segundo-plano',document.hidden);document.addEventListener('visibilitychange',pause,{passive:true});pause();})();
+
+/* Un panel puede consultar el mismo libro decenas de veces para sus indicadores.
+   Reutiliza la deserialización solo durante esa lectura síncrona; entrega una lista
+   nueva a cada lector y desecha todo al salir, sin caché de stock ni transacciones. */
+(function(){
+ const read=loadLog;let scope=null;
+ loadLog=function(key){
+  if(!scope)return read.apply(this,arguments);
+  const raw=store.get(key)||'[]';let entry=scope.get(key);
+  if(!entry||entry.raw!==raw){entry={raw,rows:read.apply(this,arguments)};scope.set(key,entry);}
+  return entry.rows.slice();
+ };
+ for(const name of ['renderDir','renderClock','renderPayPlate','renderGoal','bellPaint']){
+  const original=window[name];if(typeof original!=='function')continue;
+  window[name]=function(){const own=!scope;if(own)scope=new Map();try{return original.apply(this,arguments);}finally{if(own)scope=null;}};
+ }
+})();

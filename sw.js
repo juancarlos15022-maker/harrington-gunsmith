@@ -56,7 +56,7 @@ self.addEventListener('fetch',e=>{
   const key=new Request(url.origin+url.pathname),net=fromNet(new Request(req,{cache:'no-store'}),key);
   e.waitUntil(net.catch(()=>{}));
   e.respondWith((async()=>{const r=await cached(key);if(!r)return net.catch(async()=>(await cached(new Request(new URL(OFFLINE,self.registration.scope).href)))||Response.error());let timer;
-   try{return await Promise.race([net.catch(()=>r),new Promise(resolve=>{timer=setTimeout(()=>resolve(r),1500)})]);}finally{if(timer)clearTimeout(timer)}
+   try{return await Promise.race([net.catch(()=>r),new Promise(resolve=>{timer=setTimeout(()=>resolve(r),250)})]);}finally{if(timer)clearTimeout(timer)}
   })());return;
  }
  if(url.searchParams.has('v')||fonts){

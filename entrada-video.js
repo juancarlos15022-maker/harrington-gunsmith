@@ -27,7 +27,7 @@ function preparar(){
  quitar();lk=k;
  vid=D.createElement('video');vid.className='g-video';vid.muted=true;vid.defaultMuted=true;vid.playsInline=true;
  ['muted','playsinline','webkit-playsinline','disablepictureinpicture','disableremoteplayback'].forEach(function(a){vid.setAttribute(a,'')});
- vid.setAttribute('aria-hidden','true');vid.preload='auto';
+ vid.setAttribute('aria-hidden','true');vid.preload='metadata';
  /* primero MP4 (H.264: lo decodifica el chip en casi todos los móviles, iPhone incluido); WebM si el navegador no lo tiene */
  var mp4=false;try{mp4=vid.canPlayType('video/mp4; codecs="avc1.640028"')==='probably'||!!vid.canPlayType('video/mp4; codecs="avc1.640028"')}catch(e){}
  vid.src=SRC[k][mp4?1:0]+'?v='+VER;
@@ -37,7 +37,9 @@ function preparar(){
  stage.insertAdjacentElement('afterend',vid);
  try{vid.load()}catch(e){}
 }
-var orig=window.gateEnter;
+function anticipar(e){if(!e.target.closest?.('#gEnter'))return;if(vid&&vid.preload!=='auto'){vid.preload='auto';try{vid.load()}catch{}}}
+ gate.addEventListener('pointerover',anticipar,{passive:true});gate.addEventListener('focusin',anticipar);gate.addEventListener('pointerdown',anticipar,{passive:true});
+ var orig=window.gateEnter;
 window.gateEnter=function(){
  if(gate.dataset.ph!=='scene')return;
  if(!vid||!listo||calm()||bajo()||lk!==capa())return orig.apply(this,arguments);
@@ -68,14 +70,14 @@ function prepSalida(){
  if(sal)sal.remove();salK=k;
  sal=D.createElement('video');sal.className='g-video g-video-salida';sal.muted=true;sal.defaultMuted=true;sal.playsInline=true;
  ['muted','playsinline','webkit-playsinline','disablepictureinpicture','disableremoteplayback'].forEach(function(a){sal.setAttribute(a,'')});
- sal.setAttribute('aria-hidden','true');sal.preload='auto';sal._listo=false;
+ sal.setAttribute('aria-hidden','true');sal.preload='metadata';sal._listo=false;
  var mp4=false;try{mp4=!!sal.canPlayType('video/mp4; codecs="avc1.640028"')}catch(e){}
  sal.src=SAL[k][mp4?1:0]+'?v='+VER;
  sal.addEventListener('canplaythrough',function(){sal._listo=true},{once:true});
  sal.addEventListener('loadeddata',function(){if(sal&&sal.readyState>=3)sal._listo=true});
 }
 /* se descarga con calma cuando ya estás dentro de la web */
-setTimeout(function(){try{if(gate.hidden)prepSalida()}catch(e){}},9000);
+// El vídeo de salida se prepara al salir, sin descargarlo durante el trabajo.
 if(typeof window.logoutToGate==='function'){
  var origOut=window.logoutToGate;
  window.logoutToGate=function(msg){

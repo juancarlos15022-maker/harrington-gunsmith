@@ -5,7 +5,7 @@ function more(s){const n=s.matches.length-s.limit;return n>0?`<div class="enc-ac
 function valid(){return current&&dirMod==='ventas'&&!dirModal.hidden&&document.querySelector('#dirBody [data-hg-history="ventas"]');}
 function filter(field){const box=valid();if(!box||!field.isConnected)return;const s=current,q=norm(field.value.trim());s.matches=s.items.filter(x=>x.q.includes(q));s.limit=50;PGL.ventas=50;box.innerHTML=s.matches.slice(0,50).map(x=>x.html).join('')+more(s);}
 renderModVentas=function(){
- const records=loadLog(KEY_SALELOG).slice().reverse().slice(0,600),items=records.map(r=>({q:norm([r.id,r.client,r.employee,r.date].join(' ')),html:rowHTML(r)})),limit=PGL.ventas||50;
+ const records=loadLog(KEY_SALELOG).slice().reverse().slice(0,600),items=records.map(r=>{let html;return {q:norm([r.id,r.client,r.employee,r.date].join(' ')),get html(){return html??=rowHTML(r)}}}),limit=PGL.ventas||50;
  current={items,matches:items,limit};
  return `<div class="dir-sec-title" style="margin-top:0">VENTAS REGISTRADAS (${records.length})</div>${searchBox('⌕  Buscar por cliente, empleado o número…')}<div class="ledger" data-hg-history="ventas">`+(items.length?items.slice(0,limit).map(x=>x.html).join('')+more(current):'<div class="enc-empty">Todavía no hay ventas registradas.<br>Se guardan a partir de ahora al finalizar cada venta.</div>')+'</div>';
 };

@@ -5222,7 +5222,8 @@ function fmtStamp(ms){return `${fmtDate(ms)} ${fmtTime(ms)}`}
 function fmtDuration(a,b){const m=Math.max(0,Math.round((b-a)/60000));return `${Math.floor(m/60)} h ${pad(m%60)} min`}
 function renderClock(){
  const el=m=>{const mm=Math.max(0,Math.floor(m/60000));return mm<60?mm+' min':Math.floor(mm/60)+' h '+pad(mm%60)+' min'};
- clockStatus.innerHTML=shifts.length?shifts.map(x=>{const lg=Date.now()-x.start>MAX_SHIFT_H*3600000;return `<span class="shift-chip${lg?' long':''}" title="Entrada: ${esc(fmtTime(x.start))}"><i></i>${lg?'⚠ ':''}${esc(x.name)} · ${el(Date.now()-x.start)}${lg?' · ¿olvidó fichar la salida?':''}</span>`}).join(''):'Sin fichar';
+ const clockHTML=shifts.length?shifts.map(x=>{const lg=Date.now()-x.start>MAX_SHIFT_H*3600000;return `<span class="shift-chip${lg?' long':''}" title="Entrada: ${esc(fmtTime(x.start))}"><i></i>${lg?'⚠ ':''}${esc(x.name)} · ${el(Date.now()-x.start)}${lg?' · ¿olvidó fichar la salida?':''}</span>`}).join(''):'Sin fichar';
+ if(clockStatus.innerHTML!==clockHTML)clockStatus.innerHTML=clockHTML;
  try{shopState()}catch(e){}
  {const me=meEmp(), mine=me&&shifts.some(x=>x.empId===me.id);clockOutBtn.hidden=me?!mine:!shifts.length;clockBtn.hidden=!!mine;try{paintPocket()}catch(e){}}
  lastShiftBtn.hidden=!lastShift;
@@ -5955,7 +5956,7 @@ async function cloudPullRecordsOnce(){
   if(hasOld.length){
    let got=0, top='';
    const keep=['encargo:','pedido:','ausencia:','fichaje:','cfg:','expulsion:','evento:','npc:','fablote:','compra:'];
-   for(const pf of keep){const x=await pullRange(pf,'',hz);got+=x.got}
+   for(let i=0;i<keep.length;i+=3){const ranges=await Promise.all(keep.slice(i,i+3).map(pf=>pullRange(pf,'',hz)));for(const x of ranges)got+=x.got}
    /* y todo lo reciente, de cualquier tipo */
    const x=await pullRange('*:',hz,'');
    got+=x.got;top=x.top;
@@ -6056,7 +6057,9 @@ async function cloudPollOnce(force){
   /* Las tareas que reservan o guardan claves de administración solo las hace el dispositivo del propietario:
      desde otra cuenta la base de datos las rechaza y se reintentarían sin fin (19/10/2026). */
   const prop=soyPropietario();
+  if(force||recordsNeeded||need.length||!cloud.maintenanceAt||Date.now()-cloud.maintenanceAt>=60000){cloud.maintenanceAt=Date.now();
   for(const f of [()=>autoWeekly(),...(prop?[()=>autoMonthly(),()=>recetasBase(),()=>icLegacy(),()=>autoFijos(),()=>contratosPend()]:[]),()=>evTick(),()=>renderEmpWeek(),()=>renderPayPlate(),()=>renderGoal()])try{const p=f();if(p&&typeof p.catch==='function')p.catch(localError);}catch(e){localError(e);}
+  }
  }catch(e){if(typeof hgSyncReportError==='function')hgSyncReportError(e,'lectura');else setCloudState(false);cloud.failures=(cloud.failures||0)+1;cloud.last=Date.now();cloud.retryAt=cloud.last+Math.min(60000,3000*Math.pow(2,Math.min(5,cloud.failures-1)));}
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){cloudPoll(true);rtConnect()}});
@@ -7413,6 +7416,7 @@ const PARCHES=[
  {f:'20/10/2026',t:'Las propuestas no se pueden recibir',v:'3.0',i:['Una propuesta de pedido automático sin aceptar todavía no está encargada, así que no se puede marcar como recibida','Su tarjeta del canal de pedidos ya no lleva el botón «Recibido entero» hasta que la aceptas en tu privado','Si se intenta recibir desde la web o desde Discord, avisa de que primero hay que aceptarla','Corregido el pedido PED-201026-1851-A3275A1, que se marcó como recibido por error: se descontó del almacén lo que había sumado y se generó una propuesta nueva']},
  {f:'20/10/2026',t:'Albarán del pedido aceptado',v:'3.0',i:['Al aceptar una propuesta de pedido, además del telegrama IC, llega al privado de Discord la imagen del albarán: proveedor, telegrama, materiales, cantidades, precio por unidad, subtotales, total, firma de Vincent Harrington y sello','La imagen se manda una sola vez por pedido','El mensaje aceptado del privado lleva el botón «🧾 Ver pedido y albarán», que vuelve a abrir la página con el telegrama para copiar y el albarán para ver y descargar','La página de aceptar no pide iniciar sesión: solo funciona con el enlace secreto del botón']},
  {f:'20/10/2026',t:'Pulido final',v:'3.0',i:['Página propia de «sin conexión» con el poste de la armería cuando se abre la web sin internet y sin copia guardada','Sonido de papel rasgado al arrancar el ticket y crujido y golpe de puertas al cerrar sesión (con el sonido de los ajustes)','Los botones de cuero estrechos de las fichas ya no parten palabras ni se salen del botón; «RESETEAR CONTRASEÑA» pasa a «RESETEAR CLAVE»']},
+ {f:'29/10/2026',t:'Parche de rendimiento y fluidez',v:'3.0',i:['Carga de los complementos en paralelo y estilos locales reunidos en una sola hoja','La entrada centra la puerta solo cuando cambia la pantalla, sin mantener un bucle continuo','Dirección reutiliza las lecturas del mismo historial durante cada repintado','El historial prepara solo las filas visibles y conserva la búsqueda en todos sus registros','Los vídeos se preparan sin descargar archivos completos durante el arranque','Las consultas sin cambios evitan repetir las tareas de administración; el stock y los pedidos conservan la sincronización','Apertura más rápida de la copia guardada cuando la conexión tarda en responder']},
 ];
 let phQ='';
 /* Versiones: cada parche lleva su versión (v); los que no la llevan son de la 1.0 */
