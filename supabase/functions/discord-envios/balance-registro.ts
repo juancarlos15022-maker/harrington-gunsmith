@@ -1,4 +1,12 @@
 import './balance-exacto-core.js';
+import {BASE} from './catalogo.ts';
+// El registro precios contiene solo cambios, no todo el catálogo.
+export function preciosCatalogo(data:any){
+ const prices:Record<string,number>={...BASE};
+ for(const p of Array.isArray(data.productos)?data.productos:[])if(p?.name&&p.price!=null&&Number.isFinite(Number(p.price))&&Number(p.price)>=0)prices[p.name]=Math.round(Number(p.price)*100);
+ for(const [name,value] of Object.entries(data.precios||{}))if(value!=null&&Number.isFinite(Number(value))&&Number(value)>=0)prices[name]=Math.round(Number(value)*100);
+ return prices;
+}
 const normal=(n:string)=>String(n||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 export function calcularBalance(data:any,ref:any){
  const recipes=data.recetas||{},names=Object.values(recipes).flat().map((x:any)=>x.m);
@@ -11,7 +19,7 @@ export function calcularBalance(data:any,ref:any){
  let groups=result.groups.filter((g:any)=>g.why==='Fabricación'&&(ref.hist?(!g.undone&&(ref.hist==='todo'||day(g.ts)>=ref.hist.s&&day(g.ts)<=ref.hist.e)):ref.autoVenta?g.ref===ref.autoVenta:ref.enc?g.ref===ref.enc&&Math.abs(g.ts-ref.ts)<2000:Math.abs(g.ts-ref.ts)<2000&&(!ref.emp||g.who===ref.emp))); 
  if(ref.undo){const u=result.groups.find((g:any)=>g.why==='Fabricación deshecha'&&Math.abs(g.ts-ref.ts)<2000&&g.who===ref.emp),prior=u?result.groups.slice(0,result.groups.indexOf(u)).reverse().find((g:any)=>g.why==='Fabricación'&&Object.keys(u.prods).some(n=>g.prods[n])):null;groups=prior?[prior]:[];}
  if(!groups.length||groups.some((g:any)=>g.unassigned.length))throw Error('BALANCE_NO_CONFIRMADO');
- const lines=core.lines(groups,(n:string)=>Math.round(Number(data.precios?.[n]||0)*100));if(!lines.length)throw Error('BALANCE_NO_CONFIRMADO');
+ const prices=preciosCatalogo(data),lines=core.lines(groups,(n:string)=>prices[n]??0);if(!lines.length)throw Error('BALANCE_NO_CONFIRMADO');
  return {lines,groups};
 }
 export function textoBalance(lines:any[],f:any){
@@ -23,6 +31,6 @@ export function textoBalance(lines:any[],f:any){
 export async function balanceRegistro(admin:any,f:any){
  const row=async(k:string)=>{const {data,error}=await admin.from('datos').select('valor').eq('clave',k).maybeSingle();if(error)throw Error('DATOS');return data?.valor;};
  const prefix=async(p:string)=>{const values=[];for(let start=0;start<100000;start+=500){const {data,error}=await admin.from('datos').select('clave,valor').like('clave',p+'%').order('clave').range(start,start+499);if(error||!Array.isArray(data))throw Error('DATOS');values.push(...data.map((x:any)=>x.valor));if(data.length<500)return values;}throw Error('HISTORIAL_INCOMPLETO');};
- const [recetas,precios,movimientos,pedidos,compras]=await Promise.all([row('recetas'),row('precios'),prefix('mov:'),prefix('pedido:'),prefix('compra:')]);
- const {lines}=calcularBalance({recetas,precios,movimientos,pedidos,compras},f);return {title:f.undo?'FABRICACIÓN DESHECHA · BALANCE ANULADO':'BALANCE DE FABRICACIÓN',description:textoBalance(lines,f)};
+ const [recetas,precios,productos,movimientos,pedidos,compras]=await Promise.all([row('recetas'),row('precios'),row('productos'),prefix('mov:'),prefix('pedido:'),prefix('compra:')]);
+ const {lines}=calcularBalance({recetas,precios,productos,movimientos,pedidos,compras},f);return {title:f.undo?'FABRICACIÓN DESHECHA · BALANCE ANULADO':'BALANCE DE FABRICACIÓN',description:textoBalance(lines,f)};
 }
